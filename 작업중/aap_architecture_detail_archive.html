@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP 아키텍처 — Detail (Archive)</title>
+<!--
+  ARCHIVE — 원본 출처: aap_proactive_offering_v100 (1).html · 구 s5 섹션
+  목적: 이 Detail 콘텐츠는 추후 'AAP 아키텍처 ver.2 (시안 v2 / s4-alt)'와 정합적으로 병합하기 위해 보존됨.
+  날짜: 본 파일 작성 시점에 s4(Overview)와 s5(Detail)를 단일 섹션으로 병합하면서 분리 보관.
+
+  ※ 본 파일은 단독으로도 브라우저에서 열어볼 수 있도록 필요한 CSS만 추출해 포함했습니다.
+  ※ 정식 통합 시에는 본문 .detail-map 영역만 가져다 v2 구조에 끼워넣으면 됩니다.
+-->
+<style>
+:root{
+  --ink:#111318; --sub:#4b5563; --muted:#6b7280; --line:#e5e7eb;
+  --blue:#2557d6; --violet:#6f3ff5; --green:#188a57; --amber:#c47a12;
+  --shadow:0 16px 42px rgba(17,19,24,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1220px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e8e8e8;padding:42px 56px}
+.archive-banner{margin:0 0 20px;padding:12px 16px;border-radius:10px;background:#fff7e8;border:1px dashed #c47a12;color:#5d3300;font-size:13px;font-weight:700}
+.archive-banner code{background:#fff;padding:2px 6px;border-radius:4px;font-size:12px}
+h1{font-size:28px;letter-spacing:-.03em;line-height:1.2;margin:0 0 8px}
+.lead{font-size:15px;color:var(--sub);margin:0 0 28px;max-width:900px}
+.lead strong{color:#111}
+
+.detail-map{display:grid;grid-template-columns:1fr;gap:16px}
+.detail-row{display:grid;grid-template-columns:230px 1fr;gap:14px;border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px}
+.detail-title{border-radius:12px;background:#111;color:#fff;padding:14px}
+.detail-title h3{margin:0;font-size:16px}
+.detail-title p{margin:6px 0 0;font-size:11px;color:rgba(255,255,255,.7)}
+.detail-items{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.detail-items span{border:1px solid var(--line);background:#fbfbfc;border-radius:9px;padding:9px;font-size:12px;color:#374151}
+.detail-row.semantic-row{border-color:#b6a8ff}
+.detail-row.semantic-row .detail-title{background:#4f3ad9}
+.detail-row.learning-row{border-color:#e9c17f}
+.detail-row.learning-row .detail-title{background:#8a5a0a}
+.detail-item-box{grid-column:span 2;border:1px solid var(--line);background:#fbfbfc;border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:6px}
+.detail-item-box strong{display:block;font-size:12px;color:#111;font-weight:800}
+.sub-items{display:flex;flex-wrap:wrap;gap:4px}
+.sub-items span{font-size:10.5px;padding:3px 7px;background:#fff;border:1px solid #e0e3eb;border-radius:6px;color:#6b7280}
+.detail-row.semantic-row .detail-item-box{border-color:#d6cdff;background:#f6f3ff}
+.detail-row.semantic-row .detail-item-box strong{color:#4f3ad9}
+.detail-row.semantic-row .sub-items span{border-color:#c9bcff;color:#5b4ad4;background:#fff}
+
+@media(max-width:1000px){
+  .detail-row{grid-template-columns:1fr}
+  .detail-items{grid-template-columns:1fr 1fr}
+  .page{padding:24px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="archive-banner">
+  ⚠️ ARCHIVE · 본 페이지는 메인 문서(<code>aap_proactive_offering_v100 (1).html</code>)에서 분리 보관한 <strong>원본 Detail 섹션</strong>입니다.
+  추후 <strong>AAP 아키텍처 ver.2(시안 v2)</strong>와 본 Detail을 정합적으로 병합할 때 참고용으로 사용합니다.
+</div>
+
+<h1>AAP 아키텍처 — Detail</h1>
+<p class="lead">7개 영역을 구성요소 단위까지 펼친 뷰입니다. <strong>이미 갖고 있는 것</strong>과 <strong>새로 필요한 것</strong>을 영역별로 분리해 보실 수 있습니다.</p>
+
+<div class="detail-map">
+  <div class="detail-row"><div class="detail-title"><h3>Service Experience</h3></div><div class="detail-items"><span>AI Agent Portal</span><span>Horizontal Agents</span><span>Vertical Agents</span><span>Human Review / Approval</span><span>Agent Marketplace</span></div></div>
+  <div class="detail-row"><div class="detail-title"><h3>Enterprise Data & Inputs</h3></div><div class="detail-items"><span>System Connectors</span><span>Data Platform Integration</span><span>Document / Knowledge Integration</span><span>Operational Log Integration</span><span>External Data Interface</span><span>Metadata Catalog</span></div></div>
+  <div class="detail-row semantic-row"><div class="detail-title"><h3>Business Semantic Modeling</h3></div><div class="detail-items"><div class="detail-item-box"><strong>Domain Ontology</strong><div class="sub-items"><span>OWL</span><span>RDF</span><span>SKOS</span></div></div><div class="detail-item-box"><strong>KMS / Domain Dictionary</strong><div class="sub-items"><span>Taxonomy</span><span>Controlled Vocabulary</span><span>Glossary Mgmt</span></div></div><div class="detail-item-box"><strong>Knowledge Graph</strong><div class="sub-items"><span>Property Graph</span><span>RDF Triplestore</span><span>SPARQL / Cypher</span></div></div><div class="detail-item-box"><strong>Process Map</strong><div class="sub-items"><span>BPMN 2.0</span><span>CMMN</span><span>Process Mining</span></div></div><div class="detail-item-box"><strong>Decision Rule Repository</strong><div class="sub-items"><span>DMN</span><span>Drools / OPA</span><span>Business Rule Engine</span></div></div><div class="detail-item-box"><strong>System Map</strong><div class="sub-items"><span>ArchiMate</span><span>API Inventory</span><span>System Capability Model</span></div></div><div class="detail-item-box"><strong>Authority Matrix</strong><div class="sub-items"><span>RBAC</span><span>ABAC</span><span>ReBAC</span></div></div></div></div>
+  <div class="detail-row"><div class="detail-title"><h3>Agentic Reasoning & Execution</h3></div><div class="detail-items"><div class="detail-item-box"><strong>Planning Engine</strong><div class="sub-items"><span>ReAct</span><span>Plan-and-Execute</span><span>Reflexion</span></div></div><div class="detail-item-box"><strong>Work Context Memory</strong><div class="sub-items"><span>Short / Long-term Memory</span><span>Vector Store</span><span>Episodic Memory</span></div></div><div class="detail-item-box"><strong>Agent Routing</strong><div class="sub-items"><span>Supervisor Pattern</span><span>Multi-agent Orchestration</span><span>Task Decomposition</span></div></div><div class="detail-item-box"><strong>Tool Registry</strong><div class="sub-items"><span>OpenAPI Spec</span><span>MCP Registry</span><span>Tool Schema</span></div></div><div class="detail-item-box"><strong>Tool Calling Runtime</strong><div class="sub-items"><span>MCP</span><span>OpenAPI</span><span>Function Calling</span></div></div><div class="detail-item-box"><strong>HITL Routing</strong><div class="sub-items"><span>Approval Workflow</span><span>Confidence Threshold</span><span>Escalation Rule</span></div></div><div class="detail-item-box"><strong>Action Policy</strong><div class="sub-items"><span>Policy as Code</span><span>OPA</span><span>Guardrails</span></div></div><div class="detail-item-box"><strong>Prompt / Skill Template</strong><div class="sub-items"><span>Prompt Library</span><span>Skill Pack</span><span>Few-shot Template</span></div></div></div></div>
+  <div class="detail-row"><div class="detail-title"><h3>Enterprise Integration & Action</h3></div><div class="detail-items"><span>Copilot UI</span><span>Review / Approval UI</span><span>Workflow Engine</span><span>API Gateway</span><span>RPA Connector</span><span>Writeback Connector</span><span>Report / Dashboard</span><span>Monitoring</span></div></div>
+  <div class="detail-row learning-row"><div class="detail-title"><h3>Operational Learning</h3></div><div class="detail-items"><span>Decision Log</span><span>System Knowledge</span><span>Skill Library</span><span>Feedback Store</span><span>Evaluation Pipeline</span><span>Versioning</span><span>Knowledge Update Workflow</span></div></div>
+  <div class="detail-row"><div class="detail-title"><h3>Trust · Security · Governance</h3></div><div class="detail-items"><span>IAM / SSO</span><span>Data Security</span><span>Audit / Lineage</span><span>Explainability</span><span>Guardrails</span><span>Closed / Private Deployment</span><span>Tenant Governance</span></div></div>
+</div>
+
+</div>
+</body>
+</html>

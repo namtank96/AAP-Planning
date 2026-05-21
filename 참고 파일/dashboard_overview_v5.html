@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Foundry · 전체 그림 (Daily Dashboard v5)</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #0f172a; line-height: 1.5; }
+.container { max-width: 1680px; margin: 0 auto; padding: 24px; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); flex-wrap: wrap; gap: 12px; }
+.toolbar h1 { margin: 0; font-size: 18px; font-weight: 700; }
+.toolbar h1 span { color: #64748b; font-weight: 400; font-size: 14px; margin-left: 8px; }
+.meta { display: flex; gap: 16px; align-items: center; font-size: 13px; color: #475569; flex-wrap: wrap; }
+.meta strong { color: #0f172a; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge.fresh { background: #dcfce7; color: #166534; }
+.badge.aging { background: #fef3c7; color: #854d0e; }
+.badge.stale { background: #fee2e2; color: #991b1b; }
+.dot { width: 6px; height: 6px; border-radius: 50%; }
+.badge.fresh .dot { background: #16a34a; }
+.badge.aging .dot { background: #eab308; }
+.badge.stale .dot { background: #dc2626; }
+.canvas { background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); padding: 8px; overflow: auto; }
+.tabs { display: flex; gap: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.tab { flex: 1; background: transparent; border: none; padding: 12px 20px; font-family: inherit; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; border-radius: 8px; transition: all 0.15s ease; }
+.tab:hover { background: #f1f5f9; color: #0f172a; }
+.tab.active { background: #0f172a; color: #ffffff; }
+.subtab-bar { display: flex; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 4px; margin-bottom: 12px; }
+.subtab { flex: 1; background: transparent; border: none; padding: 8px 16px; font-family: inherit; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; border-radius: 6px; transition: all 0.15s ease; }
+.subtab:hover { background: #ffffff; color: #0f172a; }
+.subtab.active { background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.panel { display: none; }
+.panel.active { display: block; }
+.subpanel { display: none; }
+.subpanel.active { display: block; }
+svg { width: 100%; height: auto; display: block; }
+.footer { margin-top: 16px; padding: 16px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 13px; color: #475569; }
+.footer h3 { margin: 0 0 8px 0; font-size: 14px; color: #0f172a; }
+.footer code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #1e293b; }
+.footer ul { margin: 8px 0; padding-left: 20px; }
+.footer li { margin: 4px 0; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.notice { background: #eff6ff; border: 1px solid #3b82f6; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: #1e3a8a; }
+.notice strong { color: #1e40af; }
+.notice a { color: #1d4ed8; }
+.legacy-notice { background: #fef9c3; border: 1px solid #eab308; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; color: #713f12; }
+.frame-wrap { background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+.frame-wrap iframe { width: 100%; height: 1600px; border: 0; display: block; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="toolbar">
+<h1>AI Foundry <span>· 기업 의사결정 Agentic AI 플랫폼 (v5)</span></h1>
+<div class="meta">
+<div>마지막 갱신: <strong>2026-05-18 KST</strong></div>
+<div id="staleness" class="badge fresh"><span class="dot"></span><span>—</span></div>
+</div>
+</div>
+
+<div class="tabs">
+<button class="tab active" data-target="e2e">E2E 아키텍처</button>
+<button class="tab" data-target="explain">아키텍처 설명</button>
+</div>
+
+<!-- ============ Panel 1: E2E 아키텍처 ============ -->
+<div id="e2e-panel" class="panel active">
+<div class="notice">
+<strong>📌 E2E 아키텍처 v2.1</strong> — 3축 (Asset System / Decision Flow / Control System) Layer 구조 + Lakehouse 메달리온 (Input Layer 내부) + Foundation Layer 2줄 (플랫폼 서비스 + 물리 인프라). 상세 설명은 <a href="#" onclick="document.querySelector('[data-target=explain]').click(); return false;">[아키텍처 설명] 탭</a> 참조.
+</div>
+<div class="subtab-bar">
+<button class="subtab active" data-subtarget="e2e-layer">Layer 구조 v2.1 (NEW)</button>
+<button class="subtab" data-subtarget="e2e-flow">6 Column 흐름 (v1 · 참조)</button>
+</div>
+
+<div id="e2e-layer-subpanel" class="subpanel active">
+<div class="canvas">
+<object type="image/svg+xml" data="02_E2E_아키텍처_v2.svg" style="width:100%;display:block;"></object>
+</div>
+</div>
+
+<div id="e2e-flow-subpanel" class="subpanel">
+<div class="legacy-notice">
+ℹ️ 이 그림은 v1 (HD현대삼호 Data Platform 스타일 6 column 흐름 매핑) — 서비스명 노출 버전 (Internal 검토용). 최신 외부 자료는 v2.1 Layer 구조 사용 권장.
+</div>
+<div class="canvas">
+<object type="image/svg+xml" data="02_E2E_아키텍처_internal.svg" style="width:100%;display:block;"></object>
+</div>
+</div>
+</div>
+
+<!-- ============ Panel 2: 아키텍처 설명 (NEW v5) ============ -->
+<div id="explain-panel" class="panel">
+<div class="notice">
+<strong>📖 아키텍처 상세 설명</strong> — 구조별 상세 (3축 · Asset · Flow · Control · Foundation) + 흐름 시나리오 (지급심사 의사결정) + FAQ. 인쇄 가능. 독립 파일: <code>architecture_explanation.html</code>
+</div>
+<div class="frame-wrap">
+<iframe src="architecture_explanation.html" title="AI Foundry 아키텍처 상세 설명"></iframe>
+</div>
+<div style="margin-top: 8px; font-size: 12px; color: #64748b; font-style: italic;">
+※ 위 설명 페이지는 독립 HTML로도 제공 (별도 창에서 인쇄·공유 가능) · <a href="architecture_explanation.html" target="_blank" style="color: #1d4ed8;">새 창에서 열기</a>
+</div>
+</div>
+
+<div class="footer">
+<div class="grid-2">
+<div>
+<h3>매일 열어보는 법</h3>
+<ul>
+<li>이 파일을 브라우저 즐겨찾기에 등록 (Ctrl+D)</li>
+<li>상단 2개 탭으로 전환: <strong>E2E 아키텍처</strong> / <strong>아키텍처 설명</strong></li>
+<li>진행 현황·전체 아키텍처는 별도 — <code>dashboard_overview_v2.html</code> 참조</li>
+<li>아키텍처 설명은 9개 섹션 + FAQ 8개 — 인쇄 가능</li>
+</ul>
+</div>
+<div>
+<h3>갱신 요청 (Cowork에서)</h3>
+<ul>
+<li><code>아키텍처 설명 갱신해줘</code> — 새 사실 반영</li>
+<li><code>FAQ 추가해줘 [질문]</code> — Q&A 보강</li>
+<li><code>시나리오 추가해줘 [도메인]</code> — 흐름 예시 확장</li>
+<li><code>v2.1 아키텍처 갱신해줘</code> — Layer 구조 보정</li>
+</ul>
+</div>
+</div>
+<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
+파일: <code>dashboard_overview_v5.html</code> (v1·v2·v3·v4 보존) · v5 구성: <strong>2개 탭 — E2E 아키텍처 + 아키텍처 설명</strong> (architecture_explanation.html 임베드 · 구조별 상세 + 흐름 시나리오 + FAQ) · 진행 현황·전체 아키텍처는 v2 파일 참조 · 출처: PRD-final.md, 02 v0.3, 07 SSOT, 14·15·16 워크스페이스 문서
+</div>
+</div>
+
+</div>
+
+<script>
+(function() {
+  var lastUpdate = new Date('2026-05-18T09:00:00+09:00');
+  var now = new Date();
+  var diffDays = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+  var el = document.getElementById('staleness');
+  var label = el.querySelector('span:last-child');
+  var msg, cls;
+  if (diffDays < 0) { msg = '미래 시점'; cls = 'fresh'; }
+  else if (diffDays === 0) { msg = '오늘 갱신'; cls = 'fresh'; }
+  else if (diffDays <= 2) { msg = diffDays + '일 전 갱신'; cls = 'fresh'; }
+  else if (diffDays <= 7) { msg = diffDays + '일 전 갱신 · 갱신 권고'; cls = 'aging'; }
+  else { msg = diffDays + '일 전 갱신 · STALE 갱신 필요'; cls = 'stale'; }
+  label.textContent = msg;
+  el.className = 'badge ' + cls;
+})();
+document.querySelectorAll('.tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    t.classList.add('active');
+    var target = document.getElementById(t.dataset.target + '-panel');
+    if (target) target.classList.add('active');
+  });
+});
+document.querySelectorAll('.subtab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('.subtab').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.subpanel').forEach(function(p) { p.classList.remove('active'); });
+    t.classList.add('active');
+    var target = document.getElementById(t.dataset.subtarget + '-subpanel');
+    if (target) target.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 

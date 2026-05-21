@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:claude.ai)",
+      "Bash(mkdir -p \"C:/Users/namta/.claude/projects/c--Users-namta-OneDrive-------Agentic-AI-Platform---/memory\")",
+      "Bash(ls \"C:/Users/namta/Downloads/aap_proactive_offering_v100 \\(1\\).html\" 2>&1 || echo \"NOT FOUND in Downloads\")",
+      "Read(//c/Users/namta/Downloads/**)",
+      "Bash(awk 'NR>=357 && NR<=518 {print NR\": \"$0}' \"c:/Users/namta/OneDrive/회사/업무/Agentic AI Platform 기획/aap_proactive_offering_v100 \\(1\\).html\")",
+      "WebFetch(domain:uxdesign.kt.com)",
+      "Bash(python3)",
+      "Bash(py -3 --version)",
+      "Bash(python)",
+      "Bash(python \"공유용/.tmp_edits.py\")",
+      "Bash(python -X utf8)",
+      "Bash(git config *)",
+      "Bash(git --version)",
+      "Bash(git reset *)",
+      "Bash(git add *)",
+      "Bash(awk '{print $2}')",
+      "Bash(awk -F'/' '{print $1}')"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\namta\\.claude\\projects\\c--Users-namta-OneDrive-------Agentic-AI-Platform---"
+    ]
+  }
+}

@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP Offering Map v0.7</title>
+<style>
+:root{
+  --bg:#f4f6f9;--paper:#ffffff;--ink:#111827;--muted:#667085;--line:#d9dee7;
+  --dark:#0b1020;--dark2:#111827;--blue:#1358ff;--blue2:#eaf1ff;--cyan:#0ea5e9;
+  --purple:#6d28d9;--purple2:#f1eafe;--green:#059669;--green2:#e8fbf3;
+  --orange:#ea580c;--orange2:#fff2e8;--gold:#b7791f;--gold2:#fff8df;
+  --red:#be123c;--red2:#fff1f2;
+  --shadow:0 12px 28px rgba(17,24,39,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1440px;margin:0 auto;padding:34px 38px 80px}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#07111f 0%,#101827 52%,#14213f 100%);color:white;border-radius:24px;padding:34px 38px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-90px;top:-120px;width:390px;height:390px;border-radius:50%;background:radial-gradient(circle,rgba(19,88,255,.38),rgba(19,88,255,0) 68%)}
+.kicker{font-size:13px;text-transform:uppercase;letter-spacing:.18em;color:#9fb7ff;font-weight:800;margin-bottom:10px}
+h1{margin:0;font-size:36px;letter-spacing:-.04em;line-height:1.18}
+.hero p{max-width:960px;color:#d6def5;font-size:17px;margin:16px 0 0}
+.hero b{color:white}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chip{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);border-radius:999px;padding:7px 12px;font-size:12px;color:#e8edff}
+
+/* SECTION */
+.section{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:28px;margin-top:22px;box-shadow:0 6px 20px rgba(17,24,39,.05)}
+.section-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px}
+.num{flex:0 0 auto;background:#0b1020;color:white;border-radius:12px;padding:9px 11px;font-weight:900;letter-spacing:.08em;font-size:13px}
+.title h2{margin:0;font-size:23px;letter-spacing:-.035em}
+.title p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.lead{background:#f8fafc;border-left:4px solid var(--blue);padding:14px 16px;border-radius:10px;color:#344054;font-size:14px;margin:16px 0 0}
+.lead b{color:var(--ink)}
+
+/* OFFERING MAP */
+.offering-wrap{background:#090d16;border-radius:22px;padding:24px;color:white;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.map-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.map-title strong{font-size:22px;letter-spacing:-.04em}
+.map-title span{font-size:12px;color:#b7c0d5}
+.service-band,.foundation-band{border:1px solid rgba(255,255,255,.18);border-radius:16px;background:rgba(255,255,255,.06);padding:16px 18px}
+.service-band{background:linear-gradient(90deg,rgba(19,88,255,.32),rgba(13,148,136,.15))}
+.foundation-band{background:linear-gradient(90deg,rgba(15,23,42,.88),rgba(3,7,18,.88));margin-top:18px}
+.band-top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:10px}
+.band-name{font-size:17px;font-weight:900;letter-spacing:-.02em}
+.band-desc{font-size:12px;color:#cbd5e1}
+.tag-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tag-card{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);border-radius:12px;padding:12px}
+.tag-card b{display:block;font-size:13px;margin-bottom:6px}
+.tag-card p{margin:0;color:#cbd5e1;font-size:12px;line-height:1.45}
+
+/* CORE FLOW */
+.core-flow{display:grid;grid-template-columns:1fr 34px 1.15fr 34px 1.15fr 34px 1.1fr 34px 1.1fr;gap:0;align-items:stretch;margin:18px 0}
+.arrow{display:flex;align-items:center;justify-content:center;color:#8fb3ff;font-size:28px;font-weight:900}
+.core-card{background:#fff;color:#111827;border-radius:16px;border:1px solid rgba(255,255,255,.12);padding:16px;min-height:246px;box-shadow:0 10px 22px rgba(0,0,0,.18);position:relative;overflow:hidden}
+.core-card:before{content:"";position:absolute;left:0;top:0;width:100%;height:5px;background:#94a3b8}
+.core-card.data:before{background:#64748b}
+.core-card.semantic:before{background:#6d28d9}
+.core-card.agent:before{background:#ea580c}
+.core-card.action:before{background:#1358ff}
+.core-card.learn:before{background:#059669}
+.core-card h3{margin:4px 0 4px;font-size:18px;line-height:1.15;letter-spacing:-.03em}
+.ko{font-size:12px;color:#64748b;font-weight:800;margin-bottom:10px}
+.role{font-size:12px;color:#475467;margin-bottom:12px;min-height:54px}
+.mini-list{display:flex;flex-direction:column;gap:7px}
+.mini{border:1px solid #e5e7eb;background:#f8fafc;border-radius:9px;padding:7px 8px;font-size:12px;color:#1f2937}
+.semantic .mini{background:#f5f0ff;border-color:#d8c8ff}
+.agent .mini{background:#fff4ea;border-color:#ffd2aa}
+.action .mini{background:#eef4ff;border-color:#c8d8ff}
+.learn .mini{background:#ecfdf5;border-color:#bfead5}
+.badge{position:absolute;top:12px;right:12px;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900}
+.badge.diff{background:#f5f0ff;color:#6d28d9}
+.badge.key{background:#fff4ea;color:#c2410c}
+.badge.moat{background:#ecfdf5;color:#047857}
+.foundation-items{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.f-item{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 10px;font-size:12px;text-align:center}
+.f-item.strong{background:rgba(19,88,255,.18);border-color:rgba(147,197,253,.45);color:#dbeafe;font-weight:900}
+
+.map-note{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px}
+.note-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px}
+.note-card h4{margin:0 0 8px;font-size:15px}
+.note-card p{margin:0;color:var(--muted);font-size:13px}
+
+/* PoC DIAGNOSIS */
+.poc-diag{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.poc-card{border:1px solid var(--line);border-radius:14px;padding:16px;background:#fff;border-top:4px solid var(--red)}
+.poc-card.action{border-top-color:var(--green)}
+.poc-card.ctrl{border-top-color:var(--orange)}
+.poc-card.learn{border-top-color:var(--purple)}
+.poc-tag{font-size:10.5px;font-weight:900;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.poc-card h4{margin:0 0 6px;font-size:15px}
+.poc-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+
+/* CUSTOMER TYPE */
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.type-card{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff;position:relative}
+.type-card.a{border-top:4px solid var(--blue)}
+.type-card.b{border-top:4px solid var(--green)}
+.type-card.c{border-top:4px solid var(--orange)}
+.type-tag{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.type-card.a .type-tag{color:var(--blue)}
+.type-card.b .type-tag{color:var(--green)}
+.type-card.c .type-tag{color:var(--orange)}
+.type-card h3{margin:0 0 6px;font-size:16px}
+.type-card .situation{font-size:13px;color:var(--muted);margin-bottom:14px;min-height:62px}
+.type-card .message{font-size:12.5px;color:var(--ink);background:#f8fafc;border-radius:10px;padding:10px 12px;border-left:3px solid #d9dee7;line-height:1.55}
+.type-card .message strong{display:block;color:var(--blue);font-size:11.5px;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase}
+.type-card.b .message strong{color:var(--green)}
+.type-card.c .message strong{color:var(--orange)}
+
+/* TOP 4 */
+.top4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.top4-card{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff;position:relative}
+.top4-card .rank{position:absolute;right:14px;top:14px;background:#0b1020;color:#fff;border-radius:999px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
+.top4-card h3{margin:0 36px 8px 0;font-size:15.5px}
+.top4-card p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.55}
+.top4-card .reason{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:11.5px;color:#475467;line-height:1.55}
+.top4-card .reason b{color:var(--ink)}
+
+/* SEMANTIC DETAIL */
+.semantic-detail{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.sem-card{border:1px solid var(--line);border-radius:14px;padding:16px;background:linear-gradient(180deg,#fbfaff,#fff);border-left:4px solid var(--purple)}
+.sem-tag{font-size:10.5px;font-weight:900;letter-spacing:.08em;color:var(--purple);text-transform:uppercase;margin-bottom:6px}
+.sem-card h4{margin:0 0 6px;font-size:14.5px}
+.sem-card p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.55}
+
+/* VERIFIED ASSETS */
+.assets-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.asset-card{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff;position:relative;overflow:hidden}
+.asset-card::before{content:"";position:absolute;left:0;top:0;width:100%;height:4px;background:linear-gradient(90deg,#6d28d9,#1358ff)}
+.asset-stage{font-size:10.5px;font-weight:900;letter-spacing:.08em;color:var(--green);text-transform:uppercase;margin-bottom:6px;background:#ecfdf5;display:inline-block;padding:3px 8px;border-radius:6px}
+.asset-card h4{margin:0 0 6px;font-size:16px;letter-spacing:-.01em}
+.asset-card .industry{font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:10px}
+.asset-card p{margin:0;color:#374151;font-size:13px;line-height:1.6}
+.asset-card .map-to{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:11.5px;color:#475467}
+.asset-card .map-to b{color:var(--purple);font-weight:800}
+
+/* MATRIX */
+.matrix{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:white}
+.matrix th{background:#111827;color:white;font-size:13px;text-align:left;padding:12px 14px}
+.matrix td{border-top:1px solid var(--line);padding:13px 14px;vertical-align:top;font-size:13px}
+.matrix tr:nth-child(even) td{background:#fbfcfe}
+.mark{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;margin-right:5px}
+.build{background:var(--blue2);color:#1849b8}
+.bring{background:var(--orange2);color:#b45309}
+.borrow{background:var(--purple2);color:#6d28d9}
+
+/* PARTNER */
+.partner-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.partner-card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff;border-left:4px solid var(--purple)}
+.partner-name{font-size:15px;font-weight:900;letter-spacing:-.01em;margin-bottom:2px}
+.partner-area{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.partner-card p{margin:0;font-size:12.5px;color:#374151;line-height:1.55}
+.partner-modes{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.partner-mode{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:#eef2ff;color:#3346a3}
+.partner-mode.b{background:#fff4ea;color:#b45309}
+.partner-mode.c{background:#ecfdf5;color:#047857}
+
+/* TIMELINE */
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.time-card{border:1px solid var(--line);border-radius:18px;background:white;overflow:hidden}
+.time-head{padding:16px 18px;color:white}
+.past .time-head{background:#334155}
+.present .time-head{background:#1358ff}
+.future .time-head{background:#047857}
+.time-head h3{margin:0;font-size:19px}
+.time-head p{margin:3px 0 0;color:rgba(255,255,255,.82);font-size:12px}
+.time-body{padding:16px 18px}
+.time-body ul{margin:0;padding-left:18px;color:#475467;font-size:13px}
+.time-body li{margin:7px 0}
+
+/* COMPARE */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.compare{border:1px solid var(--line);border-radius:16px;padding:16px;background:#fff}
+.compare h3{margin:0 0 10px;font-size:17px}
+.compare ul{margin:0;padding-left:18px;color:#475467;font-size:13px}
+.compare ul li{margin-bottom:5px}
+
+/* DISCOVERY WORKSHOP */
+.discovery{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.disc-step{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff;position:relative}
+.disc-step::before{content:"";position:absolute;right:-12px;top:50%;transform:translateY(-50%);font-size:24px;color:#9ca3af;font-weight:900}
+.disc-step:nth-child(1)::before{content:"→"}
+.disc-step:nth-child(2)::before{content:"→"}
+.disc-step:nth-child(3)::before{content:""}
+.disc-num{display:inline-block;background:#0b1020;color:#fff;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:900;margin-bottom:8px;letter-spacing:.06em}
+.disc-step h3{margin:0 0 6px;font-size:15.5px}
+.disc-step .duration{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:10px}
+.disc-step p{margin:0 0 10px;color:#475467;font-size:12.5px;line-height:1.55}
+.disc-step .deliverable{background:#f8fafc;border-radius:10px;padding:9px 11px;border-left:3px solid var(--green);font-size:11.5px;color:#374151;line-height:1.55}
+.disc-step .deliverable b{color:var(--green);display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+
+/* CTA */
+.cta{background:#0b1020;color:white;border-radius:22px;padding:28px;margin-top:22px}
+.cta h2{margin:0 0 8px;font-size:24px}
+.cta p{margin:0;color:#d5def2;max-width:980px}
+.cta-asks{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+.cta-ask{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px}
+.cta-ask b{display:block;font-size:13px;margin-bottom:4px;color:#fff}
+.cta-ask span{font-size:12px;color:#cbd5e1;line-height:1.5}
+
+.footer{color:#98a2b3;font-size:12px;margin-top:22px;text-align:center}
+
+@media(max-width:1180px){
+  .core-flow{grid-template-columns:1fr;gap:10px}
+  .arrow{transform:rotate(90deg);height:28px}
+  .tag-grid,.foundation-items,.map-note,.timeline,.compare-grid,.poc-diag,.type-grid,.top4,.semantic-detail,.assets-grid,.partner-grid,.discovery,.cta-asks{grid-template-columns:1fr 1fr}
+  .disc-step::before{display:none}
+}
+@media(max-width:760px){
+  .page{padding:18px}
+  .tag-grid,.foundation-items,.map-note,.timeline,.compare-grid,.poc-diag,.type-grid,.top4,.semantic-detail,.assets-grid,.partner-grid,.discovery,.cta-asks{grid-template-columns:1fr}
+  h1{font-size:28px}
+}
+@media print{
+  body{background:white}
+  .page{max-width:none;padding:0}
+  .section,.hero,.cta{box-shadow:none;break-inside:avoid}
+  .core-card,.time-card,.note-card,.poc-card,.type-card,.top4-card,.sem-card,.asset-card,.partner-card,.disc-step{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="kicker">Proactive Pitch Draft · AAP Offering Map v0.7</div>
+    <h1>Agentic AI Platform Offering Map</h1>
+    <p><b>AAP</b>는 고객의 데이터·문서·시스템을 업무 의미로 구조화하고, Agent가 판단·실행·검토하며, 운영 결과를 지식·스킬·판단 이력으로 축적하는 <b>구축형 Enterprise Agentic AI Platform</b>입니다.</p>
+    <div class="chips">
+      <span class="chip">Data Platform 이후 실행 계층</span>
+      <span class="chip">Business Semantic 중심</span>
+      <span class="chip">Writeback / HITL / Closed Network</span>
+      <span class="chip">SI 경험 기반 선제안</span>
+      <span class="chip">검증 케이스 보유</span>
+    </div>
+  </header>
+
+  <!-- ============ 00. Why Now ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">00</div><div class="title"><h2>Why Now — Data Platform 다음의 질문</h2><p>고객은 이미 Data Platform과 AI PoC를 경험했습니다. AAP는 그 다음 단계의 질문에 답합니다.</p></div></div>
+    <div class="lead"><b>핵심 메시지</b> · Data Platform이 정보를 보게 했다면, AAP는 업무를 수행하게 합니다. 기존 AI가 답변·요약에 머물렀다면, AAP는 업무 의미를 이해하고 실행·검토·반영까지 연결합니다. 시장 조사(Gartner·Deloitte 등)에서 <b>AI 도입의 70~80%가 PoC 단계에서 운영 전환에 실패</b>하는 것으로 보고되며, 그 원인은 단일 기술 한계가 아니라 다음 4가지 구조적 결핍입니다.</div>
+    <div class="poc-diag">
+      <div class="poc-card"><div class="poc-tag">Context</div><h4>업무 맥락 부족</h4><p>문서 검색은 되지만 정책·프로세스·권한·의사결정 기준을 업무 의미로 연결하지 못합니다.</p></div>
+      <div class="poc-card action"><div class="poc-tag">Action</div><h4>실행 연계 부족</h4><p>AI 답변이 실제 ERP, CRM, 그룹웨어, 업무 시스템의 처리로 이어지지 않습니다.</p></div>
+      <div class="poc-card ctrl"><div class="poc-tag">Control</div><h4>검토·통제 부족</h4><p>위험 업무에서 사람 검토·승인·감사·설명 가능성 체계가 약합니다.</p></div>
+      <div class="poc-card learn"><div class="poc-tag">Learning</div><h4>운영 자산화 부족</h4><p>결과·피드백·예외 처리 경험이 지식·스킬·판단 기준으로 누적되지 않습니다.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 01. Offering Map ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">01</div><div class="title"><h2>AAP Offering Map — 작동원리 기반 오퍼링맵</h2><p>참고 이미지의 Service / Infra / Governance 구분을 그대로 복제하지 않고, AAP의 작동원리와 고객 제공 오퍼링이 같은 7개 영역을 공유하도록 재구성했습니다.</p></div></div>
+    <div class="offering-wrap">
+      <div class="map-title"><strong>AAP Offering Map</strong><span>Service Experience + 5 Core Capabilities + Foundation</span></div>
+
+      <!-- Service Experience -->
+      <div class="service-band">
+        <div class="band-top"><div><div class="band-name">① Service Experience</div><div class="band-desc">고객이 실제로 사용하는 AI 업무 서비스</div></div><div class="band-desc">"무엇을 쓰게 되는가?"</div></div>
+        <div class="tag-grid">
+          <div class="tag-card"><b>AI Agent Portal</b><p>Works AI+ · Works AI · AI Edu · 전사 AI 업무 포털</p></div>
+          <div class="tag-card"><b>Horizontal Agents</b><p>회의록 · 보고서 · 사내자료 검색 · VOC 답변 · 데이터 분석</p></div>
+          <div class="tag-card"><b>Vertical Agents</b><p>무역 정세 · 금융 내부통제 · AI 투자 자문 · 공공·국방·교육 특화</p></div>
+          <div class="tag-card"><b>Human Review / Approval</b><p>승인·반려 UI · 예외 라우팅 · 근거 표시</p></div>
+        </div>
+      </div>
+
+      <!-- Core Flow -->
+      <div class="core-flow">
+        <div class="core-card data"><h3>② Enterprise Data & Inputs</h3><div class="ko">고객 데이터·문서·시스템 연결</div><div class="role">Data Platform, ERP/CRM/SCM, 그룹웨어, 문서 저장소, 운영 로그를 AAP 입력으로 연결합니다.</div><div class="mini-list"><div class="mini">Enterprise System Connectors</div><div class="mini">Data Platform Integration</div><div class="mini">Document / Knowledge Integration</div><div class="mini">Metadata Catalog</div></div></div>
+        <div class="arrow">→</div>
+        <div class="core-card semantic"><span class="badge diff">Differentiator</span><h3>③ Business Semantic Modeling</h3><div class="ko">업무 의미 · 정책 · 판단 기준 구조화</div><div class="role">문서와 데이터를 Agent가 이해 가능한 업무 개념, 프로세스, 정책, 권한, 판단 기준으로 전환합니다.</div><div class="mini-list"><div class="mini">Domain Ontology / KMS Dictionary</div><div class="mini">Knowledge Graph / Process Map</div><div class="mini">Decision Rule Repository</div><div class="mini">System Map / Authority Matrix</div></div></div>
+        <div class="arrow">→</div>
+        <div class="core-card agent"><span class="badge key">Agentic</span><h3>④ Agentic Reasoning & Execution</h3><div class="ko">판단 · 계획 · 도구 호출 · 사람 검토</div><div class="role">Agent가 업무 맥락을 유지하고, 실행 계획을 세우며, 도구 호출과 사람 검토 분기를 수행합니다.</div><div class="mini-list"><div class="mini">Planning Engine / Work Context Memory</div><div class="mini">Tool Registry / Tool Calling Runtime</div><div class="mini">HITL Routing / Action Policy</div><div class="mini">Prompt / Skill Template</div></div></div>
+        <div class="arrow">↔</div>
+        <div class="core-card action"><h3>⑤ Enterprise Integration & Action</h3><div class="ko">업무 실행 · 시스템 반영 · 결과 생성</div><div class="role">Copilot 화면과 업무 시스템을 연결하고, API/RPA/Workflow를 통해 결과를 실행·반영합니다.</div><div class="mini-list"><div class="mini">Copilot UI / Review UI</div><div class="mini">Workflow Engine / API Gateway</div><div class="mini">RPA / Writeback Connector</div><div class="mini">Report / Dashboard / Monitoring</div></div></div>
+        <div class="arrow">↺</div>
+        <div class="core-card learn"><span class="badge moat">Moat</span><h3>⑥ Operational Learning</h3><div class="ko">운영 이력 · 지식 · 스킬 · 피드백 축적</div><div class="role">실행 결과와 사용자 피드백을 Decision Log, System Knowledge, Skill Library로 축적합니다.</div><div class="mini-list"><div class="mini">Decision Log / Action Log</div><div class="mini">System Knowledge / Skill Library</div><div class="mini">Feedback Store / Evaluation</div><div class="mini">Knowledge Update Workflow</div></div></div>
+      </div>
+
+      <!-- Foundation -->
+      <div class="foundation-band">
+        <div class="band-top"><div><div class="band-name">⑦ Foundation — Trust · Security · Governance</div><div class="band-desc">모든 서비스와 Agent 실행을 받치는 기업형 보안·통제 기반</div></div><div class="band-desc">"안전하게 운영 가능한가?"</div></div>
+        <div class="foundation-items"><div class="f-item">IAM / SSO</div><div class="f-item">Data Security</div><div class="f-item">Audit / Lineage</div><div class="f-item">Explainability</div><div class="f-item">Guardrails</div><div class="f-item strong">Closed / Private Deployment</div></div>
+      </div>
+    </div>
+
+    <div class="map-note">
+      <div class="note-card"><h4>아키텍처와 같은 축</h4><p>Inputs → Semantic → Agentic → Action → Learning 흐름을 오퍼링맵에서도 그대로 유지합니다.</p></div>
+      <div class="note-card"><h4>고객용 언어</h4><p>고객이 쓰는 Service Experience를 상단에 두고, 작동원리는 플랫폼 구성요소로 풀어냅니다.</p></div>
+      <div class="note-card"><h4>선제안 핵심</h4><p>Business Semantic · Writeback · Operational Learning · Closed Network가 4대 차별화 축입니다.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 02. Top 4 차별화 ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">02</div><div class="title"><h2>선제안용 핵심 차별화 — Top 4</h2><p>Multi-LLM 등은 기본 기능으로 보고, 고객 의사결정에 더 직접적인 4가지를 전면에 둡니다.</p></div></div>
+    <div class="top4">
+      <div class="top4-card"><div class="rank">1</div><h3>Business Semantic Modeling</h3><p>업무 의미·정책·의사결정 기준을 구조화해 단순 검색형 AI를 넘어섭니다.</p><div class="reason"><b>왜 강한가</b> · KT DS의 KMS·AICC 경험과 SI 본업이 정면 작동하는 영역. 일반 AI Studio·LLM Gateway가 다루지 못하는 부분.</div></div>
+      <div class="top4-card"><div class="rank">2</div><h3>Enterprise System Writeback</h3><p>AI 답변에서 멈추지 않고 API·RPA·Workflow로 업무 시스템에 반영합니다.</p><div class="reason"><b>왜 강한가</b> · 답변형 AI와 실행형 AI의 가장 큰 차이. 레거시·기간계 통합 노하우가 정면 작동.</div></div>
+      <div class="top4-card"><div class="rank">3</div><h3>Operational Learning Loop</h3><p>Decision Log·Skill·Feedback이 누적되어 운영할수록 정확해지는 구조를 가집니다.</p><div class="reason"><b>왜 강한가</b> · 시간 가치가 누적되는 구조. 일반 AI 시스템은 노후화되지만 AAP는 진화. 장기 해자.</div></div>
+      <div class="top4-card"><div class="rank">4</div><h3>Closed / Private Deployment</h3><p>공공·금융·국방·제조의 폐쇄망·사내망·망분리 환경을 전제로 설계합니다.</p><div class="reason"><b>왜 강한가</b> · 1차 타겟 산업(공공·금융)이 모두 폐쇄망. KT그룹 보안 자산과 결합한 영역.</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 03. Business Semantic Modeling 상세 ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">03</div><div class="title"><h2>Business Semantic Modeling — 왜 단순 RAG가 아닌가</h2><p>AAP의 핵심은 문서를 검색하는 것이 아니라, 고객 업무의 의미·정책·권한·판단 기준을 Agent가 사용할 수 있는 구조로 만드는 것입니다.</p></div></div>
+    <div class="semantic-detail">
+      <div class="sem-card"><div class="sem-tag">01</div><h4>Domain Ontology</h4><p>업무 개념과 관계를 정의해 Agent가 고객 업무 용어를 이해하게 합니다.</p></div>
+      <div class="sem-card"><div class="sem-tag">02</div><h4>Process Map</h4><p>업무 흐름·단계·검토·승인 지점을 구조화합니다.</p></div>
+      <div class="sem-card"><div class="sem-tag">03</div><h4>Decision Rule Repository</h4><p>정책·조건·예외·판단 기준을 재사용 가능한 규칙으로 관리합니다.</p></div>
+      <div class="sem-card"><div class="sem-tag">04</div><h4>Skill Catalog</h4><p>반복 가능한 Agent 업무 능력을 스킬 단위로 축적합니다.</p></div>
+      <div class="sem-card"><div class="sem-tag">05</div><h4>System Map</h4><p>업무가 어떤 시스템과 연결되는지 인터페이스와 권한을 정의합니다.</p></div>
+      <div class="sem-card"><div class="sem-tag">06</div><h4>Authority Matrix</h4><p>누가 무엇을 자동 실행하고, 무엇은 검토·승인해야 하는지 정의합니다.</p></div>
+    </div>
+    <div class="lead"><b>왜 이 영역이 차별인가</b> · 일반 AI Studio·LLM Gateway는 "Agent를 어떻게 만드는가"의 도구이고, RAG는 "문서를 어떻게 검색하는가"의 기법입니다. AAP의 본질은 <b>고객의 업무 의미를 Agent가 일관되게 이해·실행할 수 있는 구조로 전환하는 것</b>이며, 이 영역에 의사결정 자산이 누적될수록 시간이 지날수록 더 정확해지는 시스템이 만들어집니다.</div>
+  </section>
+
+  <!-- ============ 04. 검증 자산 ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">04</div><div class="title"><h2>검증 자산 — AAP 구성 요소가 이미 작동한 사례</h2><p>AAP는 신규 개념이 아닙니다. 작동원리의 일부가 이미 KT DS의 실제 프로젝트에서 검증되었으며, 이를 통합·일반화한 것이 AAP입니다.</p></div></div>
+    <div class="assets-grid">
+      <div class="asset-card">
+        <span class="asset-stage">Wave 1 · 외부 영업</span>
+        <h4>무역 단체 정세 분석</h4>
+        <div class="industry">공공 · 무역 · 협회</div>
+        <p>국제 정세·환율·규제 변화를 통합해 회원사에 영향도를 분석·통보하는 의사결정 자동화. 온톨로지 PoC 완료, 기술 세미나 단계.</p>
+        <div class="map-to"><b>AAP 매핑</b> · ③ Business Semantic + ⑤ Enterprise Action (회원사 통보) + ⑥ Operational Learning</div>
+      </div>
+      <div class="asset-card">
+        <span class="asset-stage">Wave 1 · 딜리버리 연계</span>
+        <h4>금융지주사 내부통제</h4>
+        <div class="industry">금융 · 규제 · 폐쇄망</div>
+        <p>승인·감사·예외 처리의 의사결정 구조화. 수주 완료, hands-on 부서 존재. 컴플라이언스 자동화의 정면 케이스.</p>
+        <div class="map-to"><b>AAP 매핑</b> · ③ Business Semantic (Decision Rule) + ④ HITL + ⑦ Foundation (Audit·Closed Network)</div>
+      </div>
+      <div class="asset-card">
+        <span class="asset-stage">Reference Instance</span>
+        <h4>AI 투자 메이트</h4>
+        <div class="industry">자산운용 · 의사결정</div>
+        <p>매크로·뉴스·블룸버그 데이터를 통합해 투자 자문을 제공하는 멀티에이전트 시스템. E2E 검증, LangGraph 기반.</p>
+        <div class="map-to"><b>AAP 매핑</b> · ② Data&Inputs + ④ Agentic Reasoning (멀티에이전트) + ① Service (Vertical Agent)</div>
+      </div>
+    </div>
+    <div class="lead"><b>의미</b> · 세 케이스 모두 AAP의 핵심 작동원리(Inputs → Semantic → Agentic → Action → Learning)의 일부를 실증했습니다. AAP는 이를 통합 구조로 일반화해 다른 고객·산업에 재적용 가능하게 한 플랫폼 오퍼링입니다.</div>
+  </section>
+
+  <!-- ============ 05. 고객 유형별 진입 패턴 ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">05</div><div class="title"><h2>고객 유형별 진입 패턴</h2><p>공통 Offering Map은 유지하되, 고객 유형별 진입 메시지는 다르게 가져갑니다.</p></div></div>
+    <div class="type-grid">
+      <div class="type-card a">
+        <div class="type-tag">Type A</div>
+        <h3>대기업 / 자체 AI 조직 보유</h3>
+        <div class="situation">이미 Data Platform과 AI 조직이 있으나, 운영 전환과 실제 업무 실행이 병목입니다.</div>
+        <div class="message"><strong>제안 메시지</strong>기존 플랫폼 위에 업무 실행형 Agentic Layer를 얹어 속도와 안정성을 높입니다. Writeback·Operational Learning 강조.</div>
+      </div>
+      <div class="type-card b">
+        <div class="type-tag">Type B</div>
+        <h3>산업 특화 중견</h3>
+        <div class="situation">AI 조직은 크지 않지만, 반복 업무·문서·승인·예외처리 니즈가 명확합니다.</div>
+        <div class="message"><strong>제안 메시지</strong>업무와 시스템에 맞춘 구축형 AAP로 작은 영역부터 빠르게 시작합니다. Vertical Agent + Business Semantic 강조.</div>
+      </div>
+      <div class="type-card c">
+        <div class="type-tag">Type C</div>
+        <h3>공공·금융·국방 등 규제·폐쇄망</h3>
+        <div class="situation">보안·감사·망분리·승인 체계가 도입 가능 여부를 결정합니다.</div>
+        <div class="message"><strong>제안 메시지</strong>폐쇄망·권한·감사·HITL을 포함한 통제형 AAP로 접근합니다. Foundation(Closed Network) + HITL 강조.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 06. Build / Bring / Borrow ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">06</div><div class="title"><h2>Offering Detail — Build / Bring / Borrow 관점</h2><p>고객 업무와 시스템 통합은 직접 책임지고, 범용 모델·도구·도메인 전문성은 검증된 솔루션과 파트너로 조합합니다.</p></div></div>
+    <table class="matrix">
+      <thead><tr><th>영역</th><th>Build — 직접 설계·구축</th><th>Bring — 솔루션 조합</th><th>Borrow — 파트너 / 전문성</th></tr></thead>
+      <tbody>
+        <tr><td><b>Service Experience</b></td><td><span class="mark build">Build</span>Agent Portal, Review·Approval UI, Vertical Agent 서비스화</td><td><span class="mark bring">Bring</span>Works AI+ · Works AI · AI Edu 등 사내·그룹 자산 활용</td><td><span class="mark borrow">Borrow</span>산업별 SME, 현업 프로세스 전문가</td></tr>
+        <tr><td><b>Enterprise Data & Inputs</b></td><td><span class="mark build">Build</span>ERP·CRM·SCM·결재 연동, 데이터 수집·정제, 운영 로그 설계</td><td><span class="mark bring">Bring</span>Connector, Document Parser, Metadata Catalog, Vector DB (Pinecone·Weaviate·Qdrant)</td><td><span class="mark borrow">Borrow</span>외부 데이터, 산업 데이터 전문기업, 비투엔(RAG·데이터 정제)</td></tr>
+        <tr><td><b>Business Semantic Modeling ★</b></td><td><span class="mark build">Build</span>업무·정책·시스템 맵핑, 의사결정 기준, Authority Matrix</td><td><span class="mark bring">Bring</span>KMS, Taxonomy 도구, Knowledge Graph 도구</td><td><span class="mark borrow">Borrow</span>Ontology·KG 전문기업(인핸스·E8·서버키트), 규제·산업 도메인 SME</td></tr>
+        <tr><td><b>Agentic Reasoning & Execution</b></td><td><span class="mark build">Build</span>Agent Flow, Prompt·Skill Template, Action Policy, HITL 룰</td><td><span class="mark bring">Bring</span>LLM(GPT·Claude·Gemini), Agent Framework(LangGraph·AutoGen·CrewAI), MCP/Tool Calling, BEAST AI</td><td><span class="mark borrow">Borrow</span>국내 sLLM(스켈터랩스·아이브릭스·파수), 멀티에이전트(직스에이아이)</td></tr>
+        <tr><td><b>Enterprise Integration & Action ★</b></td><td><span class="mark build">Build</span>Writeback, API 연계, Workflow 통합, Copilot·Review UI</td><td><span class="mark bring">Bring</span>RPA(UiPath·KT DS 자사), API Gateway, Workflow Engine(Camunda·Temporal), BI(Tableau·Power BI)</td><td><span class="mark borrow">Borrow</span>UI/UX, 특수 레거시 시스템 파트너</td></tr>
+        <tr><td><b>Operational Learning ★</b></td><td><span class="mark build">Build</span>Decision Log, System Knowledge, Skill Library, Feedback Workflow</td><td><span class="mark bring">Bring</span>EvalOps, MLOps(MLflow·W&B), Monitoring(Datadog·Grafana), Versioning</td><td><span class="mark borrow">Borrow</span>AI 품질평가, 보안·감사 전문성</td></tr>
+        <tr><td><b>Foundation ★</b></td><td><span class="mark build">Build</span>권한·감사 요구사항 설계, 폐쇄망 구축, 운영 정책</td><td><span class="mark bring">Bring</span>IAM, Audit(Splunk·OpenTelemetry), Guardrails, KT그룹 보안 솔루션</td><td><span class="mark borrow">Borrow</span>보안·망분리·규제 대응 전문 파트너(디피니트 등 사내 AI 구축)</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top:14px"><b>★ 표시</b>는 KT DS가 책임지고 직접 설계·구축할 4대 차별화 영역입니다. <b>Business Semantic · Enterprise Action · Operational Learning · Foundation(Closed Network)</b>. 나머지 영역은 검증된 솔루션·국내 파트너와 전략적으로 조합합니다.</p>
+  </section>
+
+  <!-- ============ 07. 국내 파트너 후보 ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">07</div><div class="title"><h2>국내 파트너 후보 — Borrow 영역 구체화</h2><p>"전문 파트너" 일반 표현이 아니라, 2026년 기준 실제 협업 가능한 국내 기업들입니다. 활용 방식은 4가지(라이선스·공동 PoC·통합 SI·전략 협업)로 구분합니다.</p></div></div>
+    <div class="partner-grid">
+      <div class="partner-card">
+        <div class="partner-name">인핸스 (Enhans)</div>
+        <div class="partner-area">③ Business Semantic / ④ Agentic — 온톨로지·멀티에이전트</div>
+        <p>온톨로지 기반 엔터프라이즈 멀티에이전트 플랫폼 AgentOS. 자체 Act-1 에이전트가 Online-Mind2Web 리더보드 3위(구글·OpenAI 다음). 리테일·금융 도메인 검증.</p>
+        <div class="partner-modes"><span class="partner-mode">공동 PoC</span><span class="partner-mode b">통합 SI</span></div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-name">비투엔 (B2EN)</div>
+        <div class="partner-area">② Enterprise Data — RAG 플랫폼·데이터 정제</div>
+        <p>RAG 플랫폼 '하이퍼글로리' — 단순 검색·생성 도구가 아닌 데이터 관리·추론·검증·운영 전 주기 통제 가능. 기업 데이터 라이프사이클 운영 경험.</p>
+        <div class="partner-modes"><span class="partner-mode">라이선스</span><span class="partner-mode b">공동 구축</span></div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-name">스켈터랩스 (Skelterlabs)</div>
+        <div class="partner-area">④ Agentic — sLLM 도메인 특화 (공공·금융)</div>
+        <p>sLLM 'BELLA LLM' — 경찰청 도입 검증. 의료·법률 산업 확장. LoRA·양자화 기반 제한된 컴퓨팅에서 성능. 데이터 비식별화·모사 데이터 활용.</p>
+        <div class="partner-modes"><span class="partner-mode">OEM</span><span class="partner-mode b">통합 SI</span></div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-name">아이브릭스 (IBRIX)</div>
+        <div class="partner-area">④ Agentic — sLLM + LLMOps</div>
+        <p>sLLM '세레브로' + LLMOps 플랫폼 '세레브로 스튜디오'. 지식그래프 기반 RAG 실시간 참조. 내·외부 LLM 학습·평가·배포·오케스트레이션 통합.</p>
+        <div class="partner-modes"><span class="partner-mode">OEM</span><span class="partner-mode b">통합 SI</span></div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-name">파수 (Fasoo)</div>
+        <div class="partner-area">④ Agentic + ⑦ Foundation — Private LLM·DSLM</div>
+        <p>Private LLM 기반 도메인 특화 AI. 내부 지식·ACL 권한 반영. 가트너 2026 트렌드 DSLM(Domain-Specific Language Model). 보안 강조형.</p>
+        <div class="partner-modes"><span class="partner-mode">라이선스</span></div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-name">직스에이아이 (ZiggsAI)</div>
+        <div class="partner-area">④ Agentic — 멀티에이전트 오케스트레이션</div>
+        <p>각기 다른 역할 AI 에이전트들이 자율 팀 구성·협업하도록 조율하는 플랫폼. 비즈니스 워크플로우 자동화·다단계 추론. 개발자 마켓플레이스.</p>
+        <div class="partner-modes"><span class="partner-mode">공동 PoC</span></div>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:14px"><b>활용 4 모델</b> · ① <b>라이선스·OEM</b>: 파트너 솔루션을 AAP 컴포넌트로 도입 (스켈터랩스·아이브릭스·비투엔·파수). ② <b>공동 PoC</b>: 산업별 케이스 진입 (인핸스·직스에이아이). ③ <b>통합 SI</b>: 파트너 솔루션의 한국 시장 SI 파트너 자리. ④ <b>전략 협업</b>: 글로벌 Frontier(Anthropic·OpenAI·Google Cloud) 한국 진입 시 현지 SI 파트너 자리.</p>
+  </section>
+
+  <!-- ============ 08. Past / Present / Future ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">08</div><div class="title"><h2>Past / Present / Future Capability Continuum</h2><p>AAP는 갑자기 새로 시작하는 영역이 아니라, 과거 수행경험 위에 현재 솔루션을 조합하고 미래 Agentic 기술을 흡수하는 확장 구조입니다.</p></div></div>
+    <div class="timeline">
+      <div class="time-card past"><div class="time-head"><h3>Past</h3><p>이미 해온 수행 경험과 노하우</p></div><div class="time-body"><ul><li>KMS / AICC 운영 경험</li><li>그룹사·고객사 시스템 연동</li><li>폐쇄망·보안·인프라 구축</li><li>ITO 운영 및 장애 대응</li><li>콜센터·상담·지식관리 업무 이해</li></ul></div></div>
+      <div class="time-card present"><div class="time-head"><h3>Present</h3><p>지금 조합 가능한 솔루션과 기술</p></div><div class="time-body"><ul><li>LLM / RAG / Vector Search</li><li>Agent Framework / Tool Calling</li><li>Workflow / API / RPA 연동</li><li>Copilot UI / Review UI</li><li>Monitoring / Audit / Observability</li></ul></div></div>
+      <div class="time-card future"><div class="time-head"><h3>Future</h3><p>Agentic 발전에 맞춰 흡수할 역량</p></div><div class="time-body"><ul><li>자기통제 / Guardrails 고도화</li><li>EvalOps / 품질 자동평가</li><li>Tool Registry 진화</li><li>자율 실행 통제</li><li>Skill Marketplace / Agent 자산화</li></ul></div></div>
+    </div>
+    <div class="lead"><b>선제안 메시지</b> · KT DS는 Agentic AI를 처음부터 새로 시작하는 것이 아니라, 기존 SI·KMS·AICC·운영 경험을 기반으로 현재의 AI 솔루션을 조합하고, 미래 Agentic 기술을 단계적으로 내재화할 수 있습니다.</div>
+  </section>
+
+  <!-- ============ 09. Why AAP / SI / KT DS ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">09</div><div class="title"><h2>Why AAP, Why SI, Why KT DS</h2><p>프론티어 모델사나 범용 AI 플랫폼과 달리, 고객 업무·시스템·보안 환경에 들어가 실행까지 연결하는 SI형 Agentic Platform 제안입니다.</p></div></div>
+    <div class="compare-grid">
+      <div class="compare"><h3>Why AAP</h3><ul><li>Data Platform 이후의 실행 계층</li><li>PoC·챗봇을 운영 업무로 확장</li><li>업무 의미·정책·판단 기준을 Agent가 활용</li><li>의사결정 자산이 시간 누적되는 구조</li></ul></div>
+      <div class="compare"><h3>Why SI</h3><ul><li>고객 레거시 시스템과 깊은 연동</li><li>업무 프로세스·권한·승인 구조 이해</li><li>구축·운영·개선 책임 인수</li><li>폐쇄망·규제 환경 대응</li></ul></div>
+      <div class="compare"><h3>Why KT DS</h3><ul><li>KMS·AICC·SI·ITO 경험의 확장</li><li>Business Semantic·Writeback 중심 제안</li><li>폐쇄망·보안·운영 환경 대응 가능</li><li>검증 케이스 보유 (무역·금융·투자)</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ============ 10. Discovery Workshop ============ -->
+  <section class="section">
+    <div class="section-head"><div class="num">10</div><div class="title"><h2>Next Step — Discovery Workshop (2~4주)</h2><p>첫 단계는 대규모 구축이 아니라, AAP 적용 가능성이 높은 업무를 찾는 낮은 부담의 진단입니다.</p></div></div>
+    <div class="discovery">
+      <div class="disc-step">
+        <div class="disc-num">Step 1</div>
+        <h3>업무 후보 발굴</h3>
+        <div class="duration">1주차 · 워크숍 1회</div>
+        <p>문서·정책·시스템·예외 처리가 많은 업무 1~2개를 선정합니다. 현업·IT·감사 부서 합동 인터뷰.</p>
+        <div class="deliverable"><b>산출물</b>업무 후보 List · 우선순위 매트릭스 · 적용 가능성 평가</div>
+      </div>
+      <div class="disc-step">
+        <div class="disc-num">Step 2</div>
+        <h3>데이터·문서·시스템 확인</h3>
+        <div class="duration">2~3주차 · 진단·인터뷰</div>
+        <p>사용 가능한 문서·데이터 플랫폼·API·RPA 가능성·보안 제약을 확인합니다. Semantic-Ready 진단 방법론 적용.</p>
+        <div class="deliverable"><b>산출물</b>Semantic-Ready Report · 연계 시스템 명세 · 보안·폐쇄망 조건 정리</div>
+      </div>
+      <div class="disc-step">
+        <div class="disc-num">Step 3</div>
+        <h3>Pilot 범위 정의</h3>
+        <div class="duration">4주차 · 제안서 도출</div>
+        <p>8~12주 내 데모 가능한 Copilot·Tool Use·Writeback 범위를 정의합니다. 고객 환경에 맞춘 Offering Map 재구성.</p>
+        <div class="deliverable"><b>산출물</b>Pilot 제안서 · AAP 적용 Offering Map · ROI·일정·R&R 정의</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA ============ -->
+  <div class="cta">
+    <h2>Next Discussion</h2>
+    <p>고객 환경에 맞춰 AAP Offering Map을 재구성하고, 적용 후보 업무와 시스템 연계 조건을 함께 검토하는 워크세션을 제안합니다.</p>
+    <div class="cta-asks">
+      <div class="cta-ask"><b>1. 업무 후보 선정</b><span>문서·정책·시스템·예외 많은 업무 1~2개</span></div>
+      <div class="cta-ask"><b>2. 데이터·시스템 확인</b><span>Data Platform·기간계·API 가능성</span></div>
+      <div class="cta-ask"><b>3. 보안 조건 검토</b><span>폐쇄망·망분리·감사 요구사항</span></div>
+      <div class="cta-ask"><b>4. Pilot 범위 협의</b><span>8~12주 데모 가능 범위 정의</span></div>
+    </div>
+  </div>
+
+  <div class="footer">AAP Offering Map v0.7 · Draft for proactive customer pitch · KT DS · AX BD · 컨플루언스 복사 가능 · 자기완결 단일 파일</div>
+</div>
+</body>
+</html>

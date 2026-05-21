@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP Architecture — Option B · 프로세스 기반 재설계</title>
+<style>
+:root{
+  --ink:#111318; --sub:#4b5563; --muted:#6b7280; --line:#e5e7eb;
+  --blue:#2557d6; --blue2:#eef3ff; --violet:#6f3ff5; --violet2:#f5f0ff;
+  --green:#188a57; --green2:#eefaf5; --amber:#c47a12; --amber2:#fff7e8;
+  --teal:#0b7e8c; --teal2:#edfafa; --shadow:0 16px 42px rgba(17,19,24,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1280px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e8e8e8;padding:36px 50px 50px}
+.option-banner{margin:0 0 24px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,#fdf2ff,#fff);border:1px solid #d6cdff;color:#4f3ad9;font-size:13px;font-weight:700}
+.option-banner b{font-size:15px;display:block;margin-bottom:4px;color:#111}
+.option-banner .delta{display:block;margin-top:6px;font-weight:600;color:#374151}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:#6f3ff5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:900px}
+.lead strong{color:#111}
+
+.proc-frame{border:1px solid var(--line);border-radius:20px;padding:20px;background:linear-gradient(180deg,#fbfcff,#fff);box-shadow:var(--shadow)}
+.proc-grid{display:grid;grid-template-columns:0.85fr 1.6fr 0.85fr;gap:16px;align-items:stretch}
+
+/* Column boxes */
+.col-box{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px}
+.col-box-title{font-size:13px;font-weight:900;color:#111;display:flex;align-items:center;gap:8px;letter-spacing:-.01em}
+.col-box-title .col-tag{font-size:10px;font-weight:900;letter-spacing:.16em;background:#111;color:#fff;padding:3px 8px;border-radius:5px}
+.col-box-sub{font-size:11px;color:var(--muted);line-height:1.4;margin-top:-4px}
+.col-items{display:flex;flex-direction:column;gap:6px}
+.col-item{border:1px solid var(--line);background:#fbfbfc;border-radius:8px;padding:7px 9px;font-size:11.5px;color:#374151}
+.col-item strong{display:block;font-size:11.5px;font-weight:800;color:#111;margin-bottom:2px}
+.col-item em{font-style:normal;color:var(--muted);font-size:10.5px;font-weight:500}
+
+/* Center column — orchestration + agents + storage */
+.center-col{display:flex;flex-direction:column;gap:10px}
+.orch-box{border:1px solid #c8d4e8;background:linear-gradient(180deg,#f7faff,#fff);border-radius:14px;padding:14px}
+.orch-box .col-box-title .col-tag{background:#2557d6}
+.orch-items{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.orch-items .col-item{text-align:center;font-weight:700}
+
+.agents-box{border:2px solid #7663ff;background:linear-gradient(180deg,#fbf9ff,#fff);border-radius:14px;padding:14px;position:relative}
+.agents-box .col-box-title .col-tag{background:#6f3ff5}
+.agents-box .col-box-title{color:#4f3ad9}
+.agents-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.agents-grid .col-item{text-align:center;border-color:#c9bcff;color:#5b4ad4;font-weight:700;background:#fff}
+.agents-grid .col-item .ab-icon{display:block;font-size:16px;margin-bottom:3px}
+
+.storage-box{border:1px solid var(--line);background:#fbfbfd;border-radius:14px;padding:14px}
+.storage-items{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.storage-items .col-item{text-align:center}
+
+/* Process flow indicator (left → center → right) */
+.proc-arrow{display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:24px;font-weight:900}
+
+.crosscut{margin-top:14px;border:1px solid #222;border-radius:14px;background:#15171d;color:#fff;padding:14px}
+.crosscut-title{font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px}
+.crosscut-pills{display:flex;flex-wrap:wrap;gap:6px}
+.crosscut-pills span{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:600}
+.crosscut-pills .closed{background:#ffecc5;color:#5d3300;border-color:#f2c97b;font-weight:900}
+
+.note{border-left:4px solid #6f3ff5;background:#f5f0ff;padding:15px 18px;border-radius:12px;color:#3d2599;font-size:14px;margin-top:16px}
+.note strong{color:#111}
+
+/* Customer Env overlay (left of input) */
+.env-pre{margin-bottom:8px;padding:10px 12px;border-radius:10px;background:#f7f8fb;border:1px solid var(--line);font-size:11px;color:var(--muted)}
+.env-pre strong{color:#111;font-size:11.5px;display:block;margin-bottom:4px;letter-spacing:.04em}
+.env-pre .env-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.env-pre .env-list span{font-size:10.5px;padding:2px 7px;background:#fff;border:1px solid var(--line);border-radius:5px}
+
+@media(max-width:1100px){.proc-grid{grid-template-columns:1fr}.agents-grid,.orch-items,.storage-items{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="option-banner">
+  <b>📐 Option B · 프로세스 기반 재설계 (이미지 3 스타일)</b>
+  <strong>Input → Orchestration → AI Agents → Data Storage → Output → Service</strong> 흐름을 좌·중·우 3컬럼으로 재구성. 가운데에 <strong>AI Agents</strong>(Planning/Reflection/Tool use/Self-learning) 박스를 명시적으로 둠. 하단에 cross-cutting concerns(Safety/Ethics/Compliance/Interop/Versioning/Human-AI Collab) 별도 띠.
+  <span class="delta">변화량 · 큼 · 현재의 Detail 카탈로그 관점과 02★ Semantic 차별화 강조는 약해질 수 있음</span>
+</div>
+
+<div class="section-head">
+  <div class="num">04</div>
+  <div>
+    <h2>AAP 아키텍처 <span style="font-size:14px;color:var(--violet);font-weight:700">(Option B · 프로세스 기반)</span></h2>
+    <p class="lead"><strong>입력 → 오케스트레이션·에이전트·저장 → 출력</strong>의 데이터·실행 흐름을 1차 축으로. 좌측 Input부터 우측 Output·Service까지 한 방향으로 읽힙니다.</p>
+  </div>
+</div>
+
+<div class="proc-frame">
+
+  <div class="proc-grid">
+
+    <!-- LEFT: Input Layer -->
+    <div class="col-box">
+      <div class="col-box-title"><span class="col-tag">Input</span>Input Layer</div>
+      <div class="col-box-sub">사용자 요청·데이터·문서·시스템 신호를 수신</div>
+
+      <div class="env-pre">
+        <strong>Customer Environment</strong>
+        AAP가 연결되는 고객 자산
+        <div class="env-list"><span>Data Platform</span><span>ERP/CRM</span><span>KMS</span><span>Docs</span></div>
+      </div>
+
+      <div class="col-items">
+        <div class="col-item"><strong>Conversational Input</strong><em>UI · API · CLI</em></div>
+        <div class="col-item"><strong>Document / Knowledge</strong><em>RAG · OCR · Parser</em></div>
+        <div class="col-item"><strong>Real-Time Data</strong><em>Stream · Event</em></div>
+        <div class="col-item"><strong>System Signals</strong><em>Workflow · Webhook</em></div>
+        <div class="col-item"><strong>User Feedback</strong><em>HITL · Rating</em></div>
+      </div>
+    </div>
+
+    <!-- CENTER: Orchestration + Agents + Storage -->
+    <div class="center-col">
+      <!-- Orchestration -->
+      <div class="col-box orch-box">
+        <div class="col-box-title"><span class="col-tag">Orchestration</span>Agent Orchestration</div>
+        <div class="col-box-sub">작업 분해·라우팅·모니터링</div>
+        <div class="orch-items">
+          <div class="col-item"><strong>Dynamic Task Allocation</strong></div>
+          <div class="col-item"><strong>Inter-Agent Comm</strong></div>
+          <div class="col-item"><strong>Monitoring · Observability</strong></div>
+        </div>
+      </div>
+
+      <!-- AI Agents -->
+      <div class="col-box agents-box">
+        <div class="col-box-title"><span class="col-tag">Agents</span>AI Agents · 작동 핵심</div>
+        <div class="col-box-sub">업무 맥락 기반 판단·계획·실행·자기 학습 — Plan→Act→Reflect→Re-plan</div>
+        <div class="agents-grid">
+          <div class="col-item"><span class="ab-icon">🧭</span>Planning</div>
+          <div class="col-item"><span class="ab-icon">🔁</span>Reflection</div>
+          <div class="col-item"><span class="ab-icon">🔧</span>Tool Use</div>
+          <div class="col-item"><span class="ab-icon">🧠</span>Self-learning Loop</div>
+        </div>
+      </div>
+
+      <!-- Data Storage -->
+      <div class="col-box storage-box">
+        <div class="col-box-title"><span class="col-tag">Storage</span>Data Storage &amp; Retrieval</div>
+        <div class="col-box-sub">실행에 필요한 컨텍스트·지식·메모리</div>
+        <div class="storage-items">
+          <div class="col-item"><strong>Structured + Unstructured</strong><em>SQL · NoSQL · Files</em></div>
+          <div class="col-item"><strong>Vector Stores</strong><em>RAG Index · Embedding</em></div>
+          <div class="col-item"><strong>Knowledge Graph ★</strong><em>Ontology · Rules · Process</em></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output + Service -->
+    <div class="col-box">
+      <div class="col-box-title"><span class="col-tag">Output</span>Output &amp; Service</div>
+      <div class="col-box-sub">결과 전달·실행·자산화</div>
+      <div class="col-items">
+        <div class="col-item"><strong>Workflow Execution</strong><em>API · RPA · Writeback</em></div>
+        <div class="col-item"><strong>Customizable Output</strong><em>Copilot UI · Report · Email</em></div>
+        <div class="col-item"><strong>Multi-Channel Delivery</strong><em>Portal · 결재 · Mobile</em></div>
+        <div class="col-item"><strong>Knowledge Update</strong><em>KG Refresh · Skill Update</em></div>
+        <div class="col-item"><strong>Enriched Insight</strong><em>Decision Log · Synthetic Data</em></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Cross-cutting -->
+  <div class="crosscut">
+    <div class="crosscut-title">Cross-cutting · 모든 단계에 적용</div>
+    <div class="crosscut-pills">
+      <span>Safety &amp; Control</span>
+      <span>Ethics · Responsible AI</span>
+      <span>Regulatory &amp; Compliance</span>
+      <span>Interoperability</span>
+      <span>Versioning &amp; Evolution</span>
+      <span>Human–AI Collaboration</span>
+      <span>IAM / Audit / Lineage</span>
+      <span class="closed">Closed / Private Deployment</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="note">
+  <strong>읽는 법</strong> · 좌(Input) → 가운데(Orchestration / Agents / Storage 3단) → 우(Output·Service)로 한 방향 흐름. <strong>Knowledge Graph ★</strong>는 Storage 안의 차별화 자산. 하단 띠는 모든 단계에 적용되는 통제·신뢰 기준.
+</div>
+
+</div>
+</body>
+</html>

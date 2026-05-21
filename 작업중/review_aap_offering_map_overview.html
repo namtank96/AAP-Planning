@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>리뷰 · AAP Offering Map — Overview</title>
+<style>
+:root{
+  --ink:#111318; --sub:#4b5563; --muted:#6b7280; --line:#e5e7eb; --soft:#f7f8fb;
+  --blue:#2557d6; --blue2:#eef3ff; --violet:#6f3ff5; --violet2:#f5f0ff;
+  --green:#188a57; --green2:#eefaf5; --amber:#c47a12; --amber2:#fff7e8;
+  --teal:#0b7e8c; --teal2:#edfafa; --red:#c2413a; --red2:#fff2f1;
+  --shadow:0 16px 42px rgba(17,19,24,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#f3f4f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1220px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e8e8e8}
+
+/* Review-mode banner */
+.review-bar{padding:14px 56px;background:#15171d;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.review-bar .tag{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7);font-weight:800}
+.review-bar .title{font-size:14px;font-weight:800}
+.review-bar .src{font-size:11px;color:rgba(255,255,255,.55)}
+
+section{padding:42px 56px}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:.03em}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:900px}
+.lead strong{color:#111}
+
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;letter-spacing:.02em;margin-bottom:10px}
+.b-blue{background:var(--blue2);color:var(--blue)}
+.b-violet{background:var(--violet2);color:var(--violet)}
+.b-green{background:var(--green2);color:var(--green)}
+.b-amber{background:var(--amber2);color:var(--amber)}
+.b-teal{background:var(--teal2);color:var(--teal)}
+
+.note{border-left:4px solid var(--blue);background:var(--blue2);padding:15px 18px;border-radius:12px;color:#26344f;font-size:14px;margin-top:16px}
+.note strong{color:#101827}
+
+.offering{border:1px solid #d8dce5;border-radius:24px;padding:22px;background:linear-gradient(180deg,#fbfcff,#fff);box-shadow:var(--shadow)}
+
+.service{border:1px solid #cbd5e1;border-radius:18px;padding:18px;background:#111;color:#fff;margin-bottom:18px}
+.service-title{font-size:17px;font-weight:900;letter-spacing:-.01em}
+.service-sub{font-size:12px;color:rgba(255,255,255,.72);margin-top:2px}
+.service-items{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.service-items span{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-align:center}
+
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch}
+.flow-box{border:1px solid var(--line);border-radius:16px;background:#fff;padding:15px;position:relative;min-height:174px}
+.flow-box:not(:last-child):after{content:"→";position:absolute;right:-15px;top:50%;transform:translateY(-50%);font-size:24px;color:#9ca3af;font-weight:900;z-index:2}
+.flow-box h3{font-size:15px;margin:0 0 7px;line-height:1.25}
+.flow-box p{font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.45}
+.flow-box .chips{display:flex;flex-direction:column;gap:6px}
+.chip{border:1px solid var(--line);background:#fbfbfc;border-radius:8px;padding:6px 8px;font-size:11px;color:#374151}
+.semantic{border:2px solid #7663ff;background:#fbf9ff}
+.learning{border:2px solid #d99b37;background:#fffaf0}
+
+.foundation{border:1px solid #222;border-radius:18px;margin-top:18px;background:#15171d;color:#fff;padding:16px}
+.foundation .row{display:flex;justify-content:space-between;gap:14px;align-items:center}
+.foundation b{font-size:15px}
+.foundation span{display:inline-flex;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);border-radius:999px;padding:6px 10px;font-size:11px;margin:3px}
+.closed{background:#ffecc5!important;color:#5d3300!important;border-color:#f2c97b!important;font-weight:900}
+
+@media(max-width:1000px){
+  .service-items,.flow{grid-template-columns:1fr 1fr}
+  .flow-box:after{display:none}
+  section{padding:24px}
+  .review-bar{padding:14px 24px;flex-direction:column;align-items:flex-start;gap:6px}
+  .section-head{grid-template-columns:1fr}
+  .foundation .row{flex-direction:column;align-items:flex-start}
+}
+@media print{body{background:#fff}.page{box-shadow:none;max-width:none}.review-bar{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="review-bar">
+  <div>
+    <div class="tag">Review Extract</div>
+    <div class="title">AAP Offering Map — Overview</div>
+  </div>
+  <div class="src">원본: aap_proactive_offering_v100 (1).html · section #s4</div>
+</div>
+
+<section id="s4">
+  <div class="section-head">
+    <div class="num">04</div>
+    <div>
+      <h2>AAP Offering Map — Overview</h2>
+      <p class="lead">AAP 오퍼링의 전체 구성과 작동 원리를 한눈에 보여주는 맵입니다. 세부 영역은 다음 페이지에서 자세히 설명합니다.</p>
+    </div>
+  </div>
+  <div class="offering">
+    <div class="service">
+      <div class="service-title">Service Experience</div>
+      <div class="service-sub">고객이 실제로 사용하는 AI 업무 서비스</div>
+      <div class="service-items">
+        <span>AI Agent Portal</span>
+        <span>Horizontal Agents</span>
+        <span>Vertical Agents</span>
+        <span>Human Review / Approval</span>
+      </div>
+    </div>
+    <div class="flow">
+      <div class="flow-box">
+        <span class="badge b-blue">01</span>
+        <h3>Enterprise Data<br/>&amp; Inputs</h3>
+        <p>고객 데이터·문서·시스템 연결</p>
+        <div class="chips">
+          <span class="chip">Connectors</span>
+          <span class="chip">Documents</span>
+          <span class="chip">Metadata</span>
+        </div>
+      </div>
+      <div class="flow-box semantic">
+        <span class="badge b-violet">02 · Core</span>
+        <h3>Business Semantic<br/>Modeling</h3>
+        <p>업무 의미·정책·판단 기준 구조화</p>
+        <div class="chips">
+          <span class="chip">Ontology</span>
+          <span class="chip">Rules</span>
+          <span class="chip">Process Map</span>
+        </div>
+      </div>
+      <div class="flow-box">
+        <span class="badge b-green">03</span>
+        <h3>Agentic Reasoning<br/>&amp; Execution</h3>
+        <p>Agent 판단·계획·도구 호출</p>
+        <div class="chips">
+          <span class="chip">Planning</span>
+          <span class="chip">Work Context</span>
+          <span class="chip">Tool Use</span>
+        </div>
+      </div>
+      <div class="flow-box">
+        <span class="badge b-teal">04</span>
+        <h3>Enterprise Integration<br/>&amp; Action</h3>
+        <p>업무 실행·시스템 반영</p>
+        <div class="chips">
+          <span class="chip">Workflow</span>
+          <span class="chip">API / RPA</span>
+          <span class="chip">Writeback</span>
+        </div>
+      </div>
+      <div class="flow-box learning">
+        <span class="badge b-amber">05</span>
+        <h3>Operational<br/>Learning</h3>
+        <p>지식·스킬·판단 이력 축적</p>
+        <div class="chips">
+          <span class="chip">Decision Log</span>
+          <span class="chip">Skill Library</span>
+          <span class="chip">Feedback</span>
+        </div>
+      </div>
+    </div>
+    <div class="foundation">
+      <div class="row">
+        <div>
+          <b>Foundation · Trust · Security · Governance</b>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);margin-top:4px">기업 환경에서 안전하게 운영하기 위한 공통 기반</div>
+        </div>
+        <div>
+          <span>IAM</span>
+          <span>Audit</span>
+          <span>Guardrails</span>
+          <span>Explainability</span>
+          <span class="closed">Closed / Private Deployment</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>리뷰 · AAP Offering Map — Overview (시안 v2)</title>
+<style>
+:root{
+  --ink:#111318; --sub:#4b5563; --muted:#6b7280; --line:#e5e7eb; --soft:#f7f8fb;
+  --blue:#2557d6; --blue2:#eef3ff; --violet:#6f3ff5; --violet2:#f5f0ff;
+  --green:#188a57; --green2:#eefaf5; --amber:#c47a12; --amber2:#fff7e8;
+  --shadow:0 16px 42px rgba(17,19,24,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#f3f4f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1220px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e8e8e8}
+
+/* Review-mode banner */
+.review-bar{padding:14px 56px;background:#15171d;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.review-bar .tag{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7);font-weight:800}
+.review-bar .title{font-size:14px;font-weight:800}
+.review-bar .src{font-size:11px;color:rgba(255,255,255,.55)}
+
+section{padding:42px 56px}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:.03em}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:900px}
+.lead strong{color:#111}
+
+.note{border-left:4px solid var(--blue);background:var(--blue2);padding:15px 18px;border-radius:12px;color:#26344f;font-size:14px;margin-top:16px}
+.note strong{color:#101827}
+
+.offering{border:1px solid #d8dce5;border-radius:24px;padding:22px;background:linear-gradient(180deg,#fbfcff,#fff);box-shadow:var(--shadow)}
+
+/* === Offering Map Alt v2 === */
+.offering.aap-map-v2{padding:18px;background:#fff;border-color:var(--line);display:flex;flex-direction:column;gap:14px}
+.aap-map-v2 .band{border:1px solid var(--line);border-radius:16px;padding:16px;background:#fff}
+.aap-map-v2 .band-service{background:#fbfbfd}
+.aap-map-v2 .band-foundation{background:#15171d;color:#fff;border-color:#15171d}
+.aap-map-v2 .band-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.aap-map-v2 .band-label{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:#fff;flex-shrink:0}
+.aap-map-v2 .band-foundation .band-label{color:rgba(255,255,255,.65);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)}
+.aap-map-v2 .band-title{font-size:15px;font-weight:900;letter-spacing:-.01em;color:#111}
+.aap-map-v2 .band-foundation .band-title{color:#fff}
+.aap-map-v2 .band-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.aap-map-v2 .band-foundation .band-sub{color:rgba(255,255,255,.65)}
+.aap-map-v2 .service-items4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.aap-map-v2 .service-items4 .item{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.aap-map-v2 .service-items4 .item strong{font-size:13px;font-weight:800;color:#111;letter-spacing:-.01em}
+.aap-map-v2 .service-items4 .item span{font-size:11px;color:var(--muted);line-height:1.4}
+.aap-map-v2 .core-flow5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;align-items:stretch}
+.aap-map-v2 .step{position:relative;border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:9px}
+.aap-map-v2 .step:not(:last-child):after{content:"→";position:absolute;right:-14px;top:60px;font-size:22px;font-weight:900;color:#cbd5e1;z-index:2;line-height:1}
+.aap-map-v2 .step.step-core{border:2px solid #7663ff;background:#fbf9ff}
+.aap-map-v2 .step.step-loop{border:2px solid #d99b37;background:#fffaf0}
+.aap-map-v2 .step-head{display:flex;flex-direction:column;gap:5px}
+.aap-map-v2 .step-num{display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;letter-spacing:.04em;padding:4px 9px;border-radius:999px;background:#111;color:#fff;align-self:flex-start}
+.aap-map-v2 .step-num.core{background:#6f3ff5}
+.aap-map-v2 .step-num.loop{background:#c47a12}
+.aap-map-v2 .step-name{font-size:13.5px;font-weight:900;letter-spacing:-.01em;line-height:1.3;color:#111}
+.aap-map-v2 .step-desc{margin:0;font-size:11.5px;color:var(--muted);line-height:1.45}
+.aap-map-v2 .step-items{display:flex;flex-direction:column;gap:5px;margin-top:auto}
+.aap-map-v2 .step-items > span{border:1px solid var(--line);background:#fbfbfc;border-radius:8px;padding:6px 9px;font-size:11px;color:#374151}
+.aap-map-v2 .step.step-core .step-items > span{border-color:#d6cdff;background:#f6f3ff;color:#4f3ad9}
+.aap-map-v2 .step.step-loop .step-items > span{border-color:#e9c17f;background:#fff5e0;color:#8a5a0a}
+.aap-map-v2 .sub-box{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:5px}
+.aap-map-v2 .step.step-core .sub-box{border-color:#c9bcff;background:#fff}
+.aap-map-v2 .step.step-loop .sub-box{border-color:#e9c17f;background:#fff}
+.aap-map-v2 .sub-box strong{font-size:11.5px;font-weight:800;color:#111}
+.aap-map-v2 .step.step-core .sub-box strong{color:#4f3ad9}
+.aap-map-v2 .step.step-loop .sub-box strong{color:#8a5a0a}
+.aap-map-v2 .sub-chips{display:flex;flex-wrap:wrap;gap:4px}
+.aap-map-v2 .sub-chips span{font-size:10.5px;padding:3px 7px;background:#fbfbfc;border:1px solid var(--line);border-radius:6px;color:var(--muted)}
+.aap-map-v2 .step.step-core .sub-chips span{border-color:#c9bcff;color:#5b4ad4;background:#fff}
+.aap-map-v2 .step.step-loop .sub-chips span{border-color:#e9c17f;color:#8a5a0a;background:#fff}
+.aap-map-v2 .loop-line{margin-top:12px;text-align:center;font-size:11.5px;color:#8a5a0a;font-weight:800;letter-spacing:.01em}
+.aap-map-v2 .foundation-pills{display:flex;flex-wrap:wrap;gap:6px}
+.aap-map-v2 .foundation-pills span{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);border-radius:999px;padding:7px 12px;font-size:11px;font-weight:600;color:#fff}
+.aap-map-v2 .foundation-pills .closed{background:#ffecc5;color:#5d3300;border-color:#f2c97b;font-weight:900}
+.alt-banner{margin:0 0 16px;padding:10px 14px;border-radius:10px;background:#fff7e8;border:1px dashed #c47a12;color:#5d3300;font-size:12px;font-weight:700;letter-spacing:.01em}
+
+@media(max-width:1000px){
+  .aap-map-v2 .core-flow5,.aap-map-v2 .service-items4{grid-template-columns:1fr 1fr}
+  .aap-map-v2 .step:after{display:none}
+  section{padding:24px}
+  .review-bar{padding:14px 24px;flex-direction:column;align-items:flex-start;gap:6px}
+  .section-head{grid-template-columns:1fr}
+}
+@media print{body{background:#fff}.page{box-shadow:none;max-width:none}.review-bar{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="review-bar">
+  <div>
+    <div class="tag">Review Extract</div>
+    <div class="title">AAP Offering Map — Overview (시안 v2)</div>
+  </div>
+  <div class="src">원본: aap_proactive_offering_v100 (1).html · section #s4-alt</div>
+</div>
+
+<section id="s4-alt" class="offering-map">
+  <div class="section-head">
+    <div class="num" style="background:#6f3ff5">ALT</div>
+    <div>
+      <h2>AAP Offering Map — Overview <span style="font-size:14px;color:#6f3ff5;font-weight:700">(시안 v2)</span></h2>
+      <p class="lead">AAP는 <strong>Service(사용단)</strong> — <strong>Core(작동 원리)</strong> — <strong>Foundation(공통 기반)</strong> 3개 층으로 구성됩니다. Core는 좌→우 5단계 흐름(입력→의미→판단→실행→학습)으로 작동하며, <strong>02 Semantic</strong>이 핵심 차별화 축, <strong>05 Learning</strong>이 환류 축입니다.</p>
+    </div>
+  </div>
+
+  <div class="alt-banner">⚠️ 04 Overview의 시안 v2입니다. 검토 후 확정 시 04와 교체하거나 본 섹션을 제거합니다.</div>
+
+  <div class="offering aap-map-v2">
+
+    <!-- Band 1: Service Experience -->
+    <div class="band band-service">
+      <div class="band-head">
+        <div class="band-label">Service</div>
+        <div>
+          <div class="band-title">Service Experience · 현업 사용자 접점</div>
+          <div class="band-sub">현업이 실제로 사용하는 AI 업무 서비스. AAP의 결과물은 모두 이 층을 통해 사용자에게 전달됩니다.</div>
+        </div>
+      </div>
+      <div class="service-items4">
+        <div class="item"><strong>AI Agent Portal</strong><span>Agent 검색·실행·이력 조회 진입점</span></div>
+        <div class="item"><strong>Horizontal Agents</strong><span>HR·문서·고객 응대 등 공통 업무</span></div>
+        <div class="item"><strong>Vertical Agents</strong><span>제조·금융·공공 등 산업·직무 특화</span></div>
+        <div class="item"><strong>Human Review / Approval</strong><span>검토·승인·감사 UI</span></div>
+      </div>
+    </div>
+
+    <!-- Band 2: AAP Core — 좌→우 5단계 -->
+    <div class="band band-core">
+      <div class="band-head">
+        <div class="band-label">Core</div>
+        <div>
+          <div class="band-title">AAP Core · 좌→우 5단계 작동 흐름</div>
+          <div class="band-sub">입력(01) → 의미(02 ★) → 판단(03) → 실행(04) → 학습(05 ↺). 05의 결과는 다시 02 Semantic과 03 Agent Skill로 환류됩니다.</div>
+        </div>
+      </div>
+
+      <div class="core-flow5">
+
+        <!-- 01 -->
+        <div class="step">
+          <div class="step-head">
+            <span class="step-num">01</span>
+            <span class="step-name">Enterprise Data &amp; Inputs</span>
+          </div>
+          <p class="step-desc">고객 데이터·문서·시스템을 Agent가 사용 가능한 형태로 연결</p>
+          <div class="step-items">
+            <span>Data Platform 연계</span>
+            <span>ERP / CRM / SCM</span>
+            <span>KMS / Document</span>
+            <div class="sub-box">
+              <strong>System Connectors</strong>
+              <div class="sub-chips"><span>API</span><span>DB</span><span>File</span><span>Legacy</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 02 ★ Core -->
+        <div class="step step-core">
+          <div class="step-head">
+            <span class="step-num core">02 · Core</span>
+            <span class="step-name">Business Semantic Modeling</span>
+          </div>
+          <p class="step-desc">업무 의미·정책·판단 기준을 구조화 — AAP의 핵심 차별화</p>
+          <div class="step-items">
+            <span>Process Map</span>
+            <span>Decision Rule</span>
+            <span>Authority Matrix</span>
+            <div class="sub-box">
+              <strong>Knowledge Graph</strong>
+              <div class="sub-chips"><span>OWL</span><span>RDF</span><span>Property Graph</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 03 -->
+        <div class="step">
+          <div class="step-head">
+            <span class="step-num">03</span>
+            <span class="step-name">Agentic Reasoning &amp; Execution</span>
+          </div>
+          <p class="step-desc">업무 맥락 기반 판단·계획·도구 호출</p>
+          <div class="step-items">
+            <span>Planning Engine</span>
+            <span>Work Context Memory</span>
+            <span>Agent Routing · HITL</span>
+            <div class="sub-box">
+              <strong>Tool Calling Runtime</strong>
+              <div class="sub-chips"><span>MCP</span><span>OpenAPI</span><span>Function Calling</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 04 -->
+        <div class="step">
+          <div class="step-head">
+            <span class="step-num">04</span>
+            <span class="step-name">Enterprise Integration &amp; Action</span>
+          </div>
+          <p class="step-desc">판단 결과를 실제 업무 시스템에 반영·실행</p>
+          <div class="step-items">
+            <span>Workflow Engine</span>
+            <span>API Gateway</span>
+            <span>RPA Connector</span>
+            <div class="sub-box">
+              <strong>Writeback Targets</strong>
+              <div class="sub-chips"><span>ERP</span><span>CRM</span><span>Groupware</span><span>결재</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 05 ↺ Loop -->
+        <div class="step step-loop">
+          <div class="step-head">
+            <span class="step-num loop">05 · Loop ↺</span>
+            <span class="step-name">Operational Learning</span>
+          </div>
+          <p class="step-desc">실행 로그·피드백을 지식·스킬로 축적해 환류</p>
+          <div class="step-items">
+            <span>Decision Log</span>
+            <span>Skill Library</span>
+            <span>Feedback Store</span>
+            <div class="sub-box">
+              <strong>Evaluation</strong>
+              <div class="sub-chips"><span>Eval Set</span><span>Regression</span><span>HITL Review</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="loop-line">↺ 05 Learning의 산출(검증된 판단·새 스킬)은 다시 02 Semantic·03 Agent로 반영되어 다음 실행 품질을 높입니다</div>
+    </div>
+
+    <!-- Band 3: Foundation -->
+    <div class="band band-foundation">
+      <div class="band-head">
+        <div class="band-label">Foundation</div>
+        <div>
+          <div class="band-title">Trust · Security · Governance</div>
+          <div class="band-sub">기업 환경에서 안전하게 운영하기 위한 공통 기반 — 모든 층에 적용됩니다.</div>
+        </div>
+      </div>
+      <div class="foundation-pills">
+        <span>IAM / SSO</span>
+        <span>Audit / Lineage</span>
+        <span>Guardrails</span>
+        <span>Explainability</span>
+        <span>Data Security</span>
+        <span>Monitoring</span>
+        <span class="closed">Closed / Private Deployment</span>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,488 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1240" font-family="'Pretendard Variable','Pretendard','Apple SD Gothic Neo','Noto Sans KR',Arial,sans-serif">
+  <defs>
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
+    </linearGradient>
+    <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
+    </linearGradient>
+    <linearGradient id="assetGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#92400E"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="flowGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5B21B6"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="ctrlGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9A3412"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="foundGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="infraGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="bronzeGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#92400E"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="silverGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#64748B"/>
+      <stop offset="100%" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#CA8A04"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </linearGradient>
+    <marker id="arrData" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arrAsset" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#EA580C"/>
+    </marker>
+    <marker id="arrCtrl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16A34A"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="1" dy="2"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.2"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="1240" fill="#FFFFFF"/>
+
+  <!-- ============ Title ============ -->
+  <rect x="0" y="0" width="1600" height="80" fill="url(#titleGrad)"/>
+  <text x="800" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#FFFFFF">AI Foundry — 기업 의사결정 Agentic AI 플랫폼 아키텍처 (v2.1)</text>
+  <text x="800" y="62" text-anchor="middle" font-size="13" fill="#CBD5E1">의사결정 흐름(Flow) · 자산화 시스템(Asset) · 자기진화 제어(Control) 3축 + Medallion Lakehouse + 인프라 토대</text>
+
+  <!-- ============ Experience Layer ============ -->
+  <rect x="20" y="95" width="1560" height="70" rx="10" fill="url(#expGrad)" filter="url(#shadow)"/>
+  <rect x="20" y="95" width="200" height="70" rx="10" fill="#0F172A"/>
+  <text x="120" y="128" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">EXPERIENCE LAYER</text>
+  <text x="120" y="148" text-anchor="middle" font-size="11" fill="#CBD5E1">모든 사용자 접점</text>
+
+  <g font-size="11" fill="#FFFFFF" filter="url(#shadow)">
+    <rect x="240" y="110" width="240" height="40" rx="6" fill="#1E40AF" stroke="#3B82F6"/>
+    <text x="260" y="128" font-size="13" font-weight="700">🖥️ Portal &amp; Workspace</text>
+    <text x="260" y="142" font-size="10" fill="#BFDBFE">사용자 협업 공간</text>
+
+    <rect x="500" y="110" width="240" height="40" rx="6" fill="#1E40AF" stroke="#3B82F6"/>
+    <text x="520" y="128" font-size="13" font-weight="700">🔍 Asset Search · Showcase</text>
+    <text x="520" y="142" font-size="10" fill="#BFDBFE">자산 검색·전시</text>
+
+    <rect x="760" y="110" width="240" height="40" rx="6" fill="#1E40AF" stroke="#3B82F6"/>
+    <text x="780" y="128" font-size="13" font-weight="700">⟨ / ⟩ API / SDK</text>
+    <text x="780" y="142" font-size="10" fill="#BFDBFE">시스템 연동 인터페이스</text>
+
+    <rect x="1020" y="110" width="240" height="40" rx="6" fill="#1E40AF" stroke="#3B82F6"/>
+    <text x="1040" y="128" font-size="13" font-weight="700">⚙️ Admin · Dashboard</text>
+    <text x="1040" y="142" font-size="10" fill="#BFDBFE">운영·관리 콘솔</text>
+
+    <rect x="1280" y="110" width="280" height="40" rx="6" fill="#1E40AF" stroke="#3B82F6"/>
+    <text x="1300" y="128" font-size="13" font-weight="700">🌐 Web Portal</text>
+    <text x="1300" y="142" font-size="10" fill="#BFDBFE">외부 사용자 진입</text>
+  </g>
+
+  <!-- ============ ASSET SYSTEM (좌측) — 5-Asset + Asset Ops ============ -->
+  <rect x="20" y="180" width="340" height="660" rx="12" fill="#FEF3C7" stroke="#B45309" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="20" y="180" width="340" height="42" rx="12" fill="url(#assetGrad)"/>
+  <text x="190" y="206" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">ASSET SYSTEM (State)</text>
+  <text x="190" y="220" text-anchor="middle" font-size="10" fill="#FED7AA">의사결정 자산화 시스템</text>
+
+  <!-- 5-Asset Model -->
+  <text x="35" y="246" font-size="12" font-weight="700" fill="#7C2D12">📦 5-Asset Model — 자산 종류</text>
+
+  <g filter="url(#shadow)">
+    <rect x="35" y="254" width="310" height="46" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="272" font-size="12" font-weight="700" fill="#7C2D12">📋 Policy Pack · 정책 자산</text>
+    <text x="48" y="288" font-size="10" fill="#92400E">정책·규칙·절차·체크리스트</text>
+
+    <rect x="35" y="304" width="310" height="46" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="322" font-size="12" font-weight="700" fill="#7C2D12">🕸️ Ontology · 지식 자산 (Knowledge Map)</text>
+    <text x="48" y="338" font-size="10" fill="#92400E">9-타입 노드 · 개념·관계·도메인 모델</text>
+
+    <rect x="35" y="354" width="310" height="46" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="372" font-size="12" font-weight="700" fill="#7C2D12">🧰 Skill Package · 스킬 자산</text>
+    <text x="48" y="388" font-size="10" fill="#92400E">재사용 가능한 스킬·도구·에이전트 패키지</text>
+
+    <rect x="35" y="404" width="310" height="46" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="422" font-size="12" font-weight="700" fill="#7C2D12">📜 Decision Log · 의사결정 자산</text>
+    <text x="48" y="438" font-size="10" fill="#92400E">의사결정 근거·결과·피드백 (Audit Trail)</text>
+
+    <rect x="35" y="454" width="310" height="46" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="472" font-size="12" font-weight="700" fill="#7C2D12">📚 System Knowledge · 암묵지 자산</text>
+    <text x="48" y="488" font-size="10" fill="#92400E">벡터·문서·메타 지식 · 검색·재사용 기반</text>
+  </g>
+
+  <!-- Asset Operations 영역 -->
+  <line x1="35" y1="520" x2="345" y2="520" stroke="#FDBA74" stroke-width="2" stroke-dasharray="4 2"/>
+  <text x="35" y="540" font-size="12" font-weight="700" fill="#7C2D12">⚙️ Asset Operations — 자산 운영</text>
+  <text x="35" y="554" font-size="9" fill="#92400E" font-style="italic">자산 라이프사이클 · 검색 · 재사용 · 거버넌스</text>
+
+  <g filter="url(#shadow)">
+    <rect x="35" y="562" width="310" height="60" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="582" font-size="12" font-weight="700" fill="#7C2D12">📚 Catalog · 자산 카탈로그</text>
+    <text x="48" y="598" font-size="10" fill="#92400E">메타데이터 · 태깅 · 검색</text>
+    <text x="48" y="614" font-size="9" fill="#475569">전사 자산 가시화 + Discoverability</text>
+
+    <rect x="35" y="630" width="310" height="60" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="650" font-size="12" font-weight="700" fill="#7C2D12">🔁 Lifecycle · 라이프사이클</text>
+    <text x="48" y="666" font-size="10" fill="#92400E">생성 → 검증 → 승인 → 아카이브</text>
+    <text x="48" y="682" font-size="9" fill="#475569">버전 · 변경관리 · Promotion 게이트</text>
+
+    <rect x="35" y="698" width="310" height="60" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="718" font-size="12" font-weight="700" fill="#7C2D12">🏪 Marketplace · 마켓플레이스</text>
+    <text x="48" y="734" font-size="10" fill="#92400E">자산 공유 · 재사용 · 외부 배포</text>
+    <text x="48" y="750" font-size="9" fill="#475569">Phase 4 · 다도메인 라이선싱</text>
+
+    <rect x="35" y="766" width="310" height="60" rx="6" fill="#FFFFFF" stroke="#B45309"/>
+    <text x="48" y="786" font-size="12" font-weight="700" fill="#7C2D12">🛡️ Governance · 거버넌스</text>
+    <text x="48" y="802" font-size="10" fill="#92400E">소유권 · 권한 · 보존정책 · PII 마스킹</text>
+    <text x="48" y="818" font-size="9" fill="#475569">조직별 + Cross-Org 4그룹 정책</text>
+  </g>
+
+  <!-- ============ DECISION FLOW (중앙) — 역순: Execution 위, Input 아래 ============ -->
+  <rect x="380" y="180" width="820" height="660" rx="12" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="380" y="180" width="820" height="42" rx="12" fill="url(#flowGrad)"/>
+  <text x="790" y="206" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">DECISION FLOW (Runtime)</text>
+  <text x="790" y="220" text-anchor="middle" font-size="10" fill="#DDD6FE">의사결정 처리 흐름 · 데이터는 ↑ 위로 (Input → Reasoning → Execution)</text>
+
+  <!-- Layer 3 · EXECUTION LAYER (맨 위) -->
+  <rect x="395" y="238" width="790" height="140" rx="10" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
+  <rect x="395" y="238" width="50" height="140" rx="10" fill="#16A34A"/>
+  <text x="420" y="313" text-anchor="middle" font-size="22" font-weight="700" fill="#FFFFFF" transform="rotate(-90 420 313)">3</text>
+  <text x="460" y="262" font-size="14" font-weight="700" fill="#14532D">EXECUTION LAYER</text>
+  <text x="460" y="278" font-size="11" fill="#15803D">검증 · 실행 · 전달</text>
+
+  <g filter="url(#shadow)" font-size="10" fill="#1E293B">
+    <rect x="460" y="288" width="230" height="82" rx="6" fill="#FFFFFF" stroke="#22C55E" stroke-width="1.5"/>
+    <text x="470" y="307" font-size="12" font-weight="700" fill="#14532D">🛡️ Guard (Governance Gate)</text>
+    <text x="470" y="324" fill="#475569">정책 검증 · 위험 점검 · 승인</text>
+    <text x="470" y="340" fill="#64748B" font-size="9">Policy Check · Risk · Compliance</text>
+    <text x="470" y="358" fill="#15803D" font-size="9" font-style="italic">⟵ Human Oversight 연결</text>
+
+    <rect x="700" y="288" width="230" height="82" rx="6" fill="#FFFFFF" stroke="#22C55E" stroke-width="1.5"/>
+    <text x="710" y="307" font-size="12" font-weight="700" fill="#14532D">🚀 Action Engine</text>
+    <text x="710" y="324" fill="#475569">액션 수행 · 패키징 · 배포</text>
+    <text x="710" y="340" fill="#64748B" font-size="9">Runbook · Packaging · Deploy</text>
+    <text x="710" y="358" fill="#15803D" font-size="9" font-style="italic">⟶ Skill Package 자산 생성</text>
+
+    <rect x="940" y="288" width="230" height="82" rx="6" fill="#FFFFFF" stroke="#22C55E" stroke-width="1.5"/>
+    <text x="950" y="307" font-size="12" font-weight="700" fill="#14532D">🔌 Integration &amp; Delivery</text>
+    <text x="950" y="324" fill="#475569">시스템 연계 · 배포 · 운영전환</text>
+    <text x="950" y="340" fill="#64748B" font-size="9">API · System · Runtime · To-Do</text>
+    <text x="950" y="358" fill="#15803D" font-size="9" font-style="italic">⟶ Decision Log 자동 기록</text>
+  </g>
+
+  <!-- Flow Arrow Layer 2 → Layer 3 (↑ 위로) -->
+  <g stroke="#7C3AED" stroke-width="3" fill="none" marker-end="url(#arrData)">
+    <line x1="790" y1="408" x2="790" y2="382"/>
+  </g>
+
+  <!-- Layer 2 · REASONING LAYER (중간) -->
+  <rect x="395" y="412" width="790" height="160" rx="10" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5"/>
+  <rect x="395" y="412" width="50" height="160" rx="10" fill="#7C3AED"/>
+  <text x="420" y="497" text-anchor="middle" font-size="22" font-weight="700" fill="#FFFFFF" transform="rotate(-90 420 497)">2</text>
+  <text x="460" y="436" font-size="14" font-weight="700" fill="#5B21B6">REASONING LAYER</text>
+  <text x="460" y="452" font-size="11" fill="#7C3AED">판단 · 추론 · 계획</text>
+
+  <g filter="url(#shadow)" font-size="10" fill="#1E293B">
+    <rect x="460" y="462" width="230" height="102" rx="6" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="1.5"/>
+    <text x="470" y="482" font-size="12" font-weight="700" fill="#5B21B6">🧠 Orchestrator (Agent Brain)</text>
+    <text x="470" y="498" fill="#475569">프로세스 오케스트레이션</text>
+    <text x="470" y="514" fill="#475569">계획 · 도구 호출 · 분기/병합</text>
+    <text x="470" y="532" fill="#64748B" font-size="9">Multi-Agent · Tool Use · Workflow</text>
+    <text x="470" y="552" fill="#7C3AED" font-size="9" font-style="italic">Plan → Act → Reflect 반복</text>
+
+    <rect x="700" y="462" width="230" height="102" rx="6" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="1.5"/>
+    <text x="710" y="482" font-size="12" font-weight="700" fill="#5B21B6">🤖 LLM Engine (Tiered)</text>
+    <text x="710" y="498" fill="#475569">모델 선택 · 호출 · 응답 생성</text>
+    <text x="710" y="516" fill="#475569" font-size="9.5">▸ Tier 1 · Critical (SOTA LLM)</text>
+    <text x="710" y="530" fill="#475569" font-size="9.5">▸ Tier 2 · Enterprise (Default)</text>
+    <text x="710" y="544" fill="#475569" font-size="9.5">▸ Tier 3 · Local / Small (Bulk)</text>
+
+    <rect x="940" y="462" width="230" height="102" rx="6" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="1.5"/>
+    <text x="950" y="482" font-size="12" font-weight="700" fill="#5B21B6">📋 Policy Engine</text>
+    <text x="950" y="498" fill="#475569">정책 · 규칙 · 제약 적용</text>
+    <text x="950" y="514" fill="#475569">비즈니스 로직 적용</text>
+    <text x="950" y="532" fill="#64748B" font-size="9">Rule · Policy Pack · Constraint</text>
+    <text x="950" y="552" fill="#7C3AED" font-size="9" font-style="italic">⟵ Asset System 참조</text>
+  </g>
+
+  <!-- Flow Arrow Layer 1 → Layer 2 (↑ 위로) -->
+  <g stroke="#2563EB" stroke-width="3" fill="none" marker-end="url(#arrData)">
+    <line x1="790" y1="600" x2="790" y2="576"/>
+  </g>
+
+  <!-- Layer 1 · INPUT LAYER (맨 아래) + Lakehouse Medallion -->
+  <rect x="395" y="606" width="790" height="220" rx="10" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+  <rect x="395" y="606" width="50" height="220" rx="10" fill="#2563EB"/>
+  <text x="420" y="721" text-anchor="middle" font-size="22" font-weight="700" fill="#FFFFFF" transform="rotate(-90 420 721)">1</text>
+  <text x="460" y="630" font-size="14" font-weight="700" fill="#1E3A8A">INPUT LAYER</text>
+  <text x="460" y="646" font-size="11" fill="#1E40AF">정보 수집 · 이해 · 맥락화 · Lakehouse 적재</text>
+
+  <!-- Input 4 modules -->
+  <g filter="url(#shadow)" font-size="10" fill="#1E293B">
+    <rect x="460" y="656" width="170" height="58" rx="6" fill="#FFFFFF" stroke="#3B82F6"/>
+    <text x="470" y="675" font-size="12" font-weight="700" fill="#1E3A8A">📄 Ingestion</text>
+    <text x="470" y="691" fill="#475569">문서 · 데이터 · 이벤트 수집</text>
+    <text x="470" y="706" fill="#64748B" font-size="9">내부시스템 · 외부 · API · 스트림</text>
+
+    <rect x="640" y="656" width="170" height="58" rx="6" fill="#FFFFFF" stroke="#3B82F6"/>
+    <text x="650" y="675" font-size="12" font-weight="700" fill="#1E3A8A">📊 Structuring</text>
+    <text x="650" y="691" fill="#475569">구조화 · 정규화 · 분류</text>
+    <text x="650" y="706" fill="#64748B" font-size="9">메타데이터 · 태깅 · 엔티티</text>
+
+    <rect x="820" y="656" width="170" height="58" rx="6" fill="#FFFFFF" stroke="#3B82F6"/>
+    <text x="830" y="675" font-size="12" font-weight="700" fill="#1E3A8A">🗂️ RAG &amp; Retrieval</text>
+    <text x="830" y="691" fill="#475569">검색·검색증강·맥락 구성</text>
+    <text x="830" y="706" fill="#64748B" font-size="9">Vector DB · 키워드 · 하이브리드</text>
+
+    <rect x="1000" y="656" width="170" height="58" rx="6" fill="#FFFFFF" stroke="#3B82F6"/>
+    <text x="1010" y="675" font-size="12" font-weight="700" fill="#1E3A8A">🔗 Source Connectors</text>
+    <text x="1010" y="691" fill="#475569">내외부 시스템 · API</text>
+    <text x="1010" y="706" fill="#64748B" font-size="9">RDB · 도메인 · 외부 API</text>
+  </g>
+
+  <!-- Lakehouse Medallion (Input Layer 내부) -->
+  <text x="460" y="734" font-size="12" font-weight="700" fill="#1E3A8A">🏞️ Lakehouse Medallion — 데이터 적재 zone</text>
+  <text x="940" y="734" font-size="9" fill="#475569" font-style="italic" text-anchor="end">S3 호환 Object Store + Iceberg / Parquet (ACID · 시간여행 · 스키마 진화)</text>
+
+  <g filter="url(#shadow)">
+    <rect x="460" y="742" width="230" height="78" rx="6" fill="url(#bronzeGrad)"/>
+    <text x="472" y="762" font-size="12" font-weight="700" fill="#FFFFFF">🟫 Bronze · Raw Zone</text>
+    <text x="472" y="778" font-size="9" fill="#FED7AA">원천 그대로 보존 · 객체 잠금</text>
+    <text x="472" y="792" font-size="9" fill="#FED7AA">CAD · MP4 · CSV · JSON · PDF</text>
+    <text x="472" y="808" font-size="8.5" fill="#FFEDD5" font-style="italic">raw-domain · raw-doc · raw-event</text>
+
+    <rect x="700" y="742" width="230" height="78" rx="6" fill="url(#silverGrad)"/>
+    <text x="712" y="762" font-size="12" font-weight="700" fill="#FFFFFF">🟨 Silver · Curated Zone</text>
+    <text x="712" y="778" font-size="9" fill="#E2E8F0">정제 · 표준화 · 조인 가능</text>
+    <text x="712" y="792" font-size="9" fill="#E2E8F0">Iceberg · 9-타입 노드 매핑</text>
+    <text x="712" y="808" font-size="8.5" fill="#F1F5F9" font-style="italic">ACID · 시간여행 · 스키마 진화</text>
+
+    <rect x="940" y="742" width="230" height="78" rx="6" fill="url(#goldGrad)"/>
+    <text x="952" y="762" font-size="12" font-weight="700" fill="#FFFFFF">🟩 Gold · Mart / Feature Zone</text>
+    <text x="952" y="778" font-size="9" fill="#FEF9C3">분석·AI 데이터셋 · 집계</text>
+    <text x="952" y="792" font-size="9" fill="#FEF9C3">Feature Store · ML 학습/추론</text>
+    <text x="952" y="808" font-size="8.5" fill="#FEFCE8" font-style="italic">소비자: BI · ML · LLM · Agent</text>
+  </g>
+
+  <!-- ============ CONTROL SYSTEM (우측) — 명칭 일반화 ============ -->
+  <rect x="1220" y="180" width="360" height="660" rx="12" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="1220" y="180" width="360" height="42" rx="12" fill="url(#ctrlGrad)"/>
+  <text x="1400" y="206" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">CONTROL SYSTEM (Self-Improving)</text>
+  <text x="1400" y="220" text-anchor="middle" font-size="10" fill="#FED7AA">자기진화 제어 시스템</text>
+
+  <g filter="url(#shadow)">
+    <rect x="1235" y="238" width="330" height="120" rx="6" fill="#FFFFFF" stroke="#EA580C"/>
+    <text x="1248" y="258" font-size="13" font-weight="700" fill="#9A3412">🔍 Quality Diagnostics</text>
+    <text x="1248" y="276" font-size="10" fill="#7C2D12">자산·정책 품질 진단 (4대 영역)</text>
+    <text x="1248" y="296" font-size="10" fill="#475569">• Missing — 누락 탐지</text>
+    <text x="1248" y="310" font-size="10" fill="#475569">• Duplicate — 중복 탐지</text>
+    <text x="1248" y="324" font-size="10" fill="#475569">• Overspec — 과잉 명세 탐지</text>
+    <text x="1248" y="338" font-size="10" fill="#475569">• Inconsistency — 불일치 탐지</text>
+    <text x="1248" y="354" font-size="9" fill="#64748B" font-style="italic">정량 메트릭 + 정책 정합성 검사</text>
+
+    <rect x="1235" y="366" width="330" height="100" rx="6" fill="#FFFFFF" stroke="#EA580C"/>
+    <text x="1248" y="386" font-size="13" font-weight="700" fill="#9A3412">⭐ Quality Evaluation</text>
+    <text x="1248" y="404" font-size="10" fill="#7C2D12">다축 품질 평가 (5축 기준)</text>
+    <text x="1248" y="422" font-size="10" fill="#475569">활용도 · 품질 · 생산성</text>
+    <text x="1248" y="436" font-size="10" fill="#475569">매출 · 안전성</text>
+    <text x="1248" y="452" font-size="9" fill="#64748B" font-style="italic">정량 메트릭 + 정성 평가 결합</text>
+
+    <rect x="1235" y="474" width="330" height="100" rx="6" fill="#FFFFFF" stroke="#EA580C"/>
+    <text x="1248" y="494" font-size="13" font-weight="700" fill="#9A3412">👥 Human Oversight (HITL)</text>
+    <text x="1248" y="512" font-size="10" fill="#7C2D12">Human-in-the-Loop 검토</text>
+    <text x="1248" y="530" font-size="10" fill="#475569">검토 · 승인 · 책임 분담</text>
+    <text x="1248" y="544" font-size="10" fill="#475569">자동화-검토 균형 (80-20-80 룰)</text>
+    <text x="1248" y="560" font-size="9" fill="#64748B" font-style="italic">Guard Gate · Action 게이트 연결</text>
+
+    <rect x="1235" y="582" width="330" height="92" rx="6" fill="#FFFFFF" stroke="#EA580C"/>
+    <text x="1248" y="602" font-size="13" font-weight="700" fill="#9A3412">🔄 Continuous Learning Loop</text>
+    <text x="1248" y="620" font-size="10" fill="#7C2D12">학습 · 피드백 · 개선</text>
+    <text x="1248" y="638" font-size="10" fill="#475569">스킬 · 프롬프트 · 온톨로지</text>
+    <text x="1248" y="652" font-size="10" fill="#475569">정책 자가 진화</text>
+    <text x="1248" y="668" font-size="9" fill="#64748B" font-style="italic">Decision Log 기반 학습 신호</text>
+
+    <rect x="1235" y="682" width="330" height="92" rx="6" fill="#FFFFFF" stroke="#EA580C"/>
+    <text x="1248" y="702" font-size="13" font-weight="700" fill="#9A3412">🧪 Experiment &amp; Versioning</text>
+    <text x="1248" y="720" font-size="10" fill="#7C2D12">실험 · 버전 · 변경관리</text>
+    <text x="1248" y="738" font-size="10" fill="#475569">모델 · 정책 · 프롬프트 · 데이터</text>
+    <text x="1248" y="752" font-size="10" fill="#475569">A/B 테스트 · 회귀 추적</text>
+    <text x="1248" y="768" font-size="9" fill="#64748B" font-style="italic">EvalOps · MLOps 통합</text>
+  </g>
+
+  <text x="1400" y="800" text-anchor="middle" font-size="11" font-weight="700" fill="#9A3412">🔁 자기진화 폐쇄 루프</text>
+  <text x="1400" y="816" text-anchor="middle" font-size="10" fill="#7C2D12">결과(Eval) → 학습 신호 → 자산 누적 → 다음 입력에 재사용</text>
+  <text x="1400" y="831" text-anchor="middle" font-size="10" fill="#7C2D12">시간이 지날수록 점점 더 정확해지는 시스템</text>
+
+  <!-- ============ Cross-Cutting Arrows (피드백 루프) ============ -->
+  <!-- Asset System → Decision Flow (자산/지식 흐름, 주황 점선) -->
+  <g stroke="#EA580C" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrAsset)">
+    <line x1="360" y1="510" x2="395" y2="510"/>
+    <line x1="360" y1="720" x2="395" y2="720"/>
+  </g>
+  <text x="368" y="504" font-size="9" fill="#EA580C" font-style="italic">정책</text>
+  <text x="368" y="714" font-size="9" fill="#EA580C" font-style="italic">자산</text>
+
+  <!-- Decision Flow → Asset System (결과 자산 회수, 주황 점선) -->
+  <g stroke="#EA580C" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrAsset)">
+    <path d="M460 340 Q 400 340 380 410 Q 360 480 360 410"/>
+  </g>
+  <text x="200" y="370" font-size="10" fill="#EA580C" font-style="italic">Execution 결과 → Decision Log · Skill 자산화 → Asset Operations</text>
+
+  <!-- Control System → Decision Flow (제어/피드백, 녹색 점선) -->
+  <g stroke="#16A34A" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrCtrl)">
+    <line x1="1220" y1="330" x2="1185" y2="330"/>
+    <line x1="1220" y1="520" x2="1185" y2="520"/>
+    <line x1="1220" y1="730" x2="1185" y2="730"/>
+  </g>
+  <text x="1188" y="324" font-size="9" fill="#16A34A" font-style="italic">진단</text>
+  <text x="1188" y="514" font-size="9" fill="#16A34A" font-style="italic">평가</text>
+  <text x="1188" y="724" font-size="9" fill="#16A34A" font-style="italic">학습</text>
+
+  <!-- ============ FOUNDATION LAYER — 2줄 (플랫폼 서비스 + 물리 인프라) ============ -->
+  <!-- 줄 1: 플랫폼 서비스 -->
+  <rect x="20" y="855" width="1560" height="120" rx="10" fill="url(#foundGrad)" filter="url(#shadow)"/>
+  <text x="40" y="880" font-size="14" font-weight="700" fill="#FFFFFF">FOUNDATION LAYER — 플랫폼 기반 서비스</text>
+
+  <g font-size="10" fill="#FFFFFF">
+    <rect x="40" y="890" width="180" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="55" y="908" font-size="11" font-weight="700">☁️ Runtime</text>
+    <text x="55" y="924" fill="#CBD5E1">Container · K8s</text>
+    <text x="55" y="938" fill="#CBD5E1">Serverless · 엣지</text>
+    <text x="55" y="954" fill="#94A3B8" font-size="9">멀티 리전 · 분산 처리</text>
+
+    <rect x="230" y="890" width="180" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="245" y="908" font-size="11" font-weight="700">💾 Data &amp; Storage</text>
+    <text x="245" y="924" fill="#CBD5E1">DB · Object · Vector DB</text>
+    <text x="245" y="938" fill="#CBD5E1">Lakehouse (Iceberg)</text>
+    <text x="245" y="954" fill="#94A3B8" font-size="9">Parquet · ACID · 시간여행</text>
+
+    <rect x="420" y="890" width="180" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="435" y="908" font-size="11" font-weight="700">🔐 Identity &amp; Access</text>
+    <text x="435" y="924" fill="#CBD5E1">SSO · RBAC · ABAC</text>
+    <text x="435" y="938" fill="#CBD5E1">조직 · 역할 · 권한</text>
+    <text x="435" y="954" fill="#94A3B8" font-size="9">Cross-Org 4그룹 정책</text>
+
+    <rect x="610" y="890" width="180" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="625" y="908" font-size="11" font-weight="700">📊 Observability</text>
+    <text x="625" y="924" fill="#CBD5E1">Metrics · Logs · Traces</text>
+    <text x="625" y="938" fill="#CBD5E1">Monitoring · Alerting</text>
+    <text x="625" y="954" fill="#94A3B8" font-size="9">단일 통합 관제</text>
+
+    <rect x="800" y="890" width="180" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="815" y="908" font-size="11" font-weight="700">♾️ DevOps · CI/CD</text>
+    <text x="815" y="924" fill="#CBD5E1">Git · Pipeline · IaC</text>
+    <text x="815" y="938" fill="#CBD5E1">Build · Deploy · Test</text>
+    <text x="815" y="954" fill="#94A3B8" font-size="9">GitOps · 자동화 표준</text>
+
+    <rect x="990" y="890" width="180" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="1005" y="908" font-size="11" font-weight="700">🛡️ Security · Governance</text>
+    <text x="1005" y="924" fill="#CBD5E1">Security · Privacy</text>
+    <text x="1005" y="938" fill="#CBD5E1">Compliance · Audit</text>
+    <text x="1005" y="954" fill="#94A3B8" font-size="9">PII Mask · KMS · 망분리</text>
+
+    <rect x="1180" y="890" width="180" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="1195" y="908" font-size="11" font-weight="700">⚗️ MLOps · LLMOps</text>
+    <text x="1195" y="924" fill="#CBD5E1">Model · Prompt · Data</text>
+    <text x="1195" y="938" fill="#CBD5E1">LLMOps Pipeline</text>
+    <text x="1195" y="954" fill="#94A3B8" font-size="9">EvalOps 통합</text>
+
+    <rect x="1370" y="890" width="190" height="74" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="1385" y="908" font-size="11" font-weight="700">🧩 Plugin · Extensibility</text>
+    <text x="1385" y="924" fill="#CBD5E1">Skill Plugin · MCP</text>
+    <text x="1385" y="938" fill="#CBD5E1">External Integration</text>
+    <text x="1385" y="954" fill="#94A3B8" font-size="9">25 표준 + 확장 API</text>
+  </g>
+
+  <!-- 줄 2: 물리 인프라 (Infra) -->
+  <rect x="20" y="985" width="1560" height="100" rx="10" fill="url(#infraGrad)" stroke="#FACC15" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="40" y="1010" font-size="14" font-weight="700" fill="#FACC15">🏗️ INFRA — 물리 인프라 (On-Premise / Hybrid Cloud)</text>
+
+  <g font-size="10" fill="#FFFFFF">
+    <rect x="40" y="1020" width="295" height="56" rx="6" fill="#0F172A" stroke="#475569"/>
+    <text x="55" y="1038" font-size="11" font-weight="700">🖥️ Compute</text>
+    <text x="55" y="1054" fill="#CBD5E1">Kubernetes (OpenShift / Rancher / vanilla)</text>
+    <text x="55" y="1068" fill="#94A3B8" font-size="9">베어메탈 · VM · Container · Serverless</text>
+
+    <rect x="345" y="1020" width="295" height="56" rx="6" fill="#0F172A" stroke="#475569"/>
+    <text x="360" y="1038" font-size="11" font-weight="700">🌐 Network</text>
+    <text x="360" y="1054" fill="#CBD5E1">25/100 GbE · LB · WAF · 망분리</text>
+    <text x="360" y="1068" fill="#94A3B8" font-size="9">VPC · Subnet · Cross-Region 라우팅</text>
+
+    <rect x="650" y="1020" width="295" height="56" rx="6" fill="#0F172A" stroke="#475569"/>
+    <text x="665" y="1038" font-size="11" font-weight="700">💽 Storage</text>
+    <text x="665" y="1054" fill="#CBD5E1">NVMe SSD · Object Store · 페타급</text>
+    <text x="665" y="1068" fill="#94A3B8" font-size="9">Tiered (Hot / Warm / Cold)</text>
+
+    <rect x="955" y="1020" width="295" height="56" rx="6" fill="#0F172A" stroke="#475569"/>
+    <text x="970" y="1038" font-size="11" font-weight="700" fill="#FFFFFF">💾 Backup &amp; DR</text>
+    <text x="970" y="1054" fill="#CBD5E1" font-size="10">다중 사이트 백업 · BCDR</text>
+    <text x="970" y="1068" fill="#94A3B8" font-size="9">RPO/RTO 기반 복구 · Snapshot</text>
+
+    <rect x="1260" y="1020" width="300" height="56" rx="6" fill="#0F172A" stroke="#475569"/>
+    <text x="1275" y="1038" font-size="11" font-weight="700" fill="#FFFFFF">🏢 Deployment Model</text>
+    <text x="1275" y="1054" fill="#CBD5E1" font-size="10">On-Prem · Public · Hybrid · Multi-Cloud</text>
+    <text x="1275" y="1068" fill="#94A3B8" font-size="9">AWS · Azure · GCP · KT Cloud · NCP</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="20" y="1100" width="640" height="76" rx="8" fill="#F8FAFC" stroke="#CBD5E1"/>
+    <text x="35" y="1120" font-size="12" font-weight="700" fill="#0F172A">👥 사용자 &amp; 이해관계자</text>
+    <g font-size="10" fill="#475569">
+      <text x="35" y="1140">▸ 업무 담당자 — 사용 · 요청 · 확인</text>
+      <text x="35" y="1154">▸ 의사결정자 — 검토 · 승인 · 의사결정</text>
+      <text x="35" y="1168">▸ 전문가 / 도메인 지식 — 정책 · 규칙 · 지식 제공</text>
+      <text x="350" y="1140">▸ 운영자 · 관리자 — 운영 · 배포 · 모니터링</text>
+      <text x="350" y="1154">▸ 감사 · 컴플라이언스 — 감사 · 리스크 · 보고</text>
+      <text x="350" y="1168" fill="#7C2D12" font-style="italic">→ Decision Log 통한 완전한 추적성 제공</text>
+    </g>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="675" y="1100" width="430" height="76" rx="8" fill="#FEF3C7" stroke="#B45309"/>
+    <text x="690" y="1120" font-size="12" font-weight="700" fill="#7C2D12">📦 AI Foundry 결과 가치 — 5가지 자산</text>
+    <g font-size="10" fill="#92400E">
+      <text x="690" y="1140">▸ 📋 Policy Pack (정책)</text>
+      <text x="850" y="1140">▸ 🕸️ Ontology (지식)</text>
+      <text x="990" y="1140">▸ 🧰 Skill (스킬)</text>
+      <text x="690" y="1156">▸ 📜 Decision Log (의사결정)</text>
+      <text x="870" y="1156">▸ 📚 System Knowledge (암묵지)</text>
+    </g>
+    <text x="690" y="1173" font-size="11" font-weight="700" fill="#7C2D12" font-style="italic">"AI Foundry는 기업의 의사결정을 자산으로 만드는 Agentic AI 플랫폼"</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1120" y="1100" width="460" height="76" rx="8" fill="#FFF7ED" stroke="#EA580C"/>
+    <text x="1135" y="1120" font-size="12" font-weight="700" fill="#9A3412">📈 비즈니스 임팩트</text>
+    <g font-size="10" fill="#7C2D12">
+      <text x="1135" y="1140">▸ 감독 대응 시간 단축</text>
+      <text x="1335" y="1140">▸ 정책 일관성 · 실행력 강화</text>
+      <text x="1135" y="1156">▸ 반복 업무 자동화</text>
+      <text x="1335" y="1156">▸ 조직 지식 자산화 · 재사용</text>
+      <text x="1135" y="1172" font-style="italic" fill="#9A3412">▸ 자기진화 — 시간이 지날수록 정확해지는 시스템</text>
+    </g>
+  </g>
+
+  <g>
+    <text x="40" y="1210" font-size="11" font-weight="700" fill="#0F172A">범례 (흐름):</text>
+    <line x1="120" y1="1206" x2="160" y2="1206" stroke="#2563EB" stroke-width="3" marker-end="url(#arrData)"/>
+    <text x="168" y="1210" font-size="10" fill="#475569">데이터 흐름 (Input ↑ Reasoning ↑ Execution · 역순 표시)</text>
+    <line x1="510" y1="1206" x2="550" y2="1206" stroke="#EA580C" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#arrAsset)"/>
+    <text x="558" y="1210" font-size="10" fill="#475569">자산 / 지식 흐름 (Asset ↔ Decision Flow)</text>
+    <line x1="850" y1="1206" x2="890" y2="1206" stroke="#16A34A" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#arrCtrl)"/>
+    <text x="898" y="1210" font-size="10" fill="#475569">제어 / 피드백 흐름 (Control → Flow)</text>
+    <text x="1230" y="1210" font-size="10" fill="#64748B" font-style="italic">3축 = State (Asset) + Runtime (Flow) + Self-Improving (Control)</text>
+  </g>
+</svg>

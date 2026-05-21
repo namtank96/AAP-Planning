@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP Architecture — Option A · 현 구조 + Agent 행동 강화</title>
+<style>
+:root{
+  --ink:#111318; --sub:#4b5563; --muted:#6b7280; --line:#e5e7eb;
+  --blue:#2557d6; --blue2:#eef3ff; --violet:#6f3ff5; --violet2:#f5f0ff;
+  --green:#188a57; --green2:#eefaf5; --amber:#c47a12; --amber2:#fff7e8;
+  --teal:#0b7e8c; --teal2:#edfafa; --shadow:0 16px 42px rgba(17,19,24,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1220px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e8e8e8;padding:36px 50px 50px}
+.option-banner{margin:0 0 24px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,#eef3ff,#fff);border:1px solid #c8d4e8;color:#1f3a8a;font-size:13px;font-weight:700}
+.option-banner b{font-size:15px;display:block;margin-bottom:4px;color:#111}
+.option-banner .delta{display:block;margin-top:6px;font-weight:600;color:#374151}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:900px}
+.lead strong{color:#111}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;letter-spacing:.02em;margin-bottom:10px}
+.b-blue{background:var(--blue2);color:var(--blue)}.b-violet{background:var(--violet2);color:var(--violet)}
+.b-green{background:var(--green2);color:var(--green)}.b-amber{background:var(--amber2);color:var(--amber)}
+.b-teal{background:var(--teal2);color:var(--teal)}
+.offering{border:1px solid #d8dce5;border-radius:24px;padding:22px;background:linear-gradient(180deg,#fbfcff,#fff);box-shadow:var(--shadow)}
+.service{border:1px solid #cbd5e1;border-radius:18px;padding:18px;background:#111;color:#fff;margin-bottom:18px}
+.service-title{font-size:17px;font-weight:900}
+.service-sub{font-size:12px;color:rgba(255,255,255,.72);margin-top:2px}
+.service-items{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.service-items span{display:flex;flex-direction:column;gap:3px;align-items:flex-start;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;color:#fff}
+.service-items span em{font-style:normal;font-size:10.5px;color:rgba(255,255,255,.62);font-weight:500}
+
+.learning-band{border:1px dashed #d99b37;background:linear-gradient(180deg,#fffaf0,#fffdfa);border-radius:14px;padding:11px 14px;margin:12px 0;display:flex;flex-direction:column;gap:8px;position:relative}
+.learning-band:before,.learning-band:after{content:"↺";position:absolute;bottom:-10px;font-size:13px;color:#c47a12;background:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px dashed #d99b37;font-weight:900;line-height:1}
+.learning-band:before{left:35%}.learning-band:after{left:55%}
+.lb-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lb-tag{background:#c47a12;color:#fff;font-size:11px;font-weight:900;border-radius:6px;padding:4px 9px}
+.lb-desc{font-size:12px;color:#8a5a0a;font-weight:600}
+.lb-items{display:flex;gap:7px;flex-wrap:wrap}
+.lb-items span{font-size:11px;border:1px solid #e9c17f;background:#fff;color:#8a5a0a;border-radius:6px;padding:5px 9px;font-weight:600}
+
+.flow{display:grid;grid-template-columns:0.85fr repeat(3,1fr) 1.35fr;gap:14px;align-items:stretch}
+.flow-box{border:1px solid var(--line);border-radius:16px;background:#fff;padding:15px;position:relative;min-height:200px;display:flex;flex-direction:column}
+.flow-box:not(:last-child):after{content:"→";position:absolute;right:-15px;top:50%;transform:translateY(-50%);font-size:24px;color:#9ca3af;font-weight:900;z-index:2}
+.flow-box h3{font-size:15px;margin:0 0 7px;line-height:1.25}
+.flow-box p{font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.45}
+.flow-box .chips{display:flex;flex-direction:column;gap:6px}
+.chip{border:1px solid var(--line);background:#fbfbfc;border-radius:8px;padding:6px 8px;font-size:11px;color:#374151}
+.flow-box.semantic{border:2px solid #7663ff;background:#fbf9ff}
+.flow-box .sub-box{border:1px solid var(--line);background:#fbfbfc;border-radius:7px;padding:6px 8px;margin-top:6px;display:flex;flex-direction:column;gap:4px}
+.flow-box .sub-box strong{font-size:11px;font-weight:800;color:#111;display:block}
+.flow-box .sub-box .sub-chips{display:flex;flex-wrap:wrap;gap:3px}
+.flow-box .sub-box .sub-chips span{font-size:10px;padding:2px 6px;background:#fff;border:1px solid var(--line);border-radius:5px;color:var(--muted)}
+.flow-box.semantic .sub-box{border-color:#c9bcff;background:#fff}
+.flow-box.semantic .sub-box strong{color:#4f3ad9}
+.flow-box.semantic .sub-box .sub-chips span{border-color:#c9bcff;color:#5b4ad4}
+
+/* === Option A 핵심: 03 박스 강화 === */
+.flow-box.agent-enhanced{border:2px solid #2557d6;background:linear-gradient(180deg,#f7faff,#fff);min-height:240px}
+.flow-box.agent-enhanced > .badge{background:#2557d6;color:#fff}
+.agent-behavior{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:6px 0}
+.agent-behavior .ab-item{border:1px solid #c8d4e8;background:#fff;border-radius:7px;padding:5px 7px;font-size:10.5px;color:#1f3a8a;font-weight:700;display:flex;align-items:center;gap:4px}
+.agent-behavior .ab-item .ab-icon{font-size:11px}
+.agent-loop-note{font-size:10px;color:var(--muted);font-style:italic;text-align:center;margin-top:4px}
+
+.flow-env{border:1px solid var(--line);background:#f7f8fb;border-radius:16px;padding:15px;display:flex;flex-direction:column;min-height:200px;position:relative}
+.flow-env:after{content:"→";position:absolute;right:-15px;top:50%;transform:translateY(-50%);font-size:24px;color:#9ca3af;font-weight:900;z-index:2}
+.env-badge{background:#e5e7eb;color:#4b5563;align-self:flex-start;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;margin-bottom:10px}
+.flow-env h3{font-size:14px;margin:0 0 8px;line-height:1.25}
+.env-chips{display:flex;flex-direction:column;gap:5px;margin-top:auto}
+.env-chips span{font-size:11px;border:1px solid var(--line);background:#fff;color:#374151;border-radius:7px;padding:6px 8px}
+
+.foundation{border:1px solid #222;border-radius:18px;margin-top:18px;background:#15171d;color:#fff;padding:16px;display:flex;justify-content:space-between;gap:14px;align-items:center}
+.foundation b{font-size:15px}.foundation .desc{font-size:12px;color:rgba(255,255,255,.65);margin-top:4px}
+.foundation .pills span{display:inline-flex;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);border-radius:999px;padding:6px 10px;font-size:11px;margin:3px}
+.foundation .closed{background:#ffecc5!important;color:#5d3300!important;border-color:#f2c97b!important;font-weight:900}
+.note{border-left:4px solid var(--blue);background:var(--blue2);padding:15px 18px;border-radius:12px;color:#26344f;font-size:14px;margin-top:16px}
+.note strong{color:#101827}
+
+@media(max-width:1100px){.flow{grid-template-columns:1fr 1fr}.flow-box:after,.flow-env:after{display:none}.service-items{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="option-banner">
+  <b>📐 Option A · 현 구조 유지 + 03 Reasoning 강화</b>
+  현재 AAP 아키텍처의 큰 골격(Service / Customer Env→01→02→03→04 / 05 환류 / Foundation)을 그대로 유지하면서, 03 Reasoning 박스 안에 <strong>Agent 행동(Planning · Reflection · Tool use · Memory)</strong>을 명시적으로 시각화.
+  <span class="delta">변화량 · 작음 · 메시지·구조 보존, Agent 동작 가시성만 강화</span>
+</div>
+
+<div class="section-head">
+  <div class="num">04</div>
+  <div>
+    <h2>AAP 아키텍처 <span style="font-size:14px;color:var(--blue);font-weight:700">(Option A)</span></h2>
+    <p class="lead">Overview에서 <strong>Agent가 실제로 어떻게 일하는지</strong>(Planning · Reflection · Tool use · Memory)가 한눈에 보이도록 03 Reasoning을 확장. 나머지는 현재와 동일.</p>
+  </div>
+</div>
+
+<div class="offering">
+  <div class="service">
+    <div class="service-title">Service Experience</div>
+    <div class="service-sub">현업 사용자가 실제로 접하는 AI 업무 서비스</div>
+    <div class="service-items">
+      <span><strong>AI Agent Portal</strong><em>현업 진입점</em></span>
+      <span><strong>Horizontal Agents</strong><em>공통 업무</em></span>
+      <span><strong>Vertical Agents</strong><em>산업·직무 특화</em></span>
+      <span><strong>Human Review / Approval</strong><em>검토·승인·감사</em></span>
+    </div>
+  </div>
+
+  <div class="learning-band">
+    <div class="lb-header">
+      <span class="lb-tag">05 ↺ Operational Learning</span>
+      <span class="lb-desc">실행 결과·피드백을 지식·스킬로 축적 → 02 Semantic · 03 Agent로 환류</span>
+    </div>
+    <div class="lb-items"><span>Decision Log</span><span>Skill Library</span><span>Feedback Store</span><span>Evaluation</span></div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-env">
+      <span class="env-badge">Customer Env</span>
+      <h3>Enterprise<br/>Environment</h3>
+      <p style="font-size:11px;color:var(--muted);margin:0 0 8px">AAP가 연결되는 고객 자산</p>
+      <div class="env-chips">
+        <span>Data Platform</span>
+        <span>ERP / CRM / SCM</span>
+        <span>Groupware / KMS</span>
+        <span>Document Repository</span>
+      </div>
+    </div>
+    <div class="flow-box">
+      <span class="badge b-blue">01</span>
+      <h3>Enterprise Data<br/>& Inputs</h3>
+      <p>고객 데이터·문서·시스템 연결</p>
+      <div class="chips"><span class="chip">Connectors</span><span class="chip">Documents</span><span class="chip">Metadata</span></div>
+      <div class="sub-box"><strong>System Connectors</strong><div class="sub-chips"><span>API</span><span>DB</span><span>File</span><span>Legacy</span></div></div>
+    </div>
+    <div class="flow-box semantic">
+      <span class="badge b-violet">02 · Core</span>
+      <h3>Business Semantic<br/>Modeling</h3>
+      <p>업무 의미·정책·판단 기준 구조화</p>
+      <div class="chips"><span class="chip">Process Map</span><span class="chip">Decision Rule</span><span class="chip">Authority Matrix</span></div>
+      <div class="sub-box"><strong>Knowledge Graph</strong><div class="sub-chips"><span>OWL</span><span>RDF</span><span>Property Graph</span></div></div>
+    </div>
+    <!-- ★ 03 강화 박스 -->
+    <div class="flow-box agent-enhanced">
+      <span class="badge">03 · Agent</span>
+      <h3>Agentic Reasoning<br/>& Execution</h3>
+      <p>업무 맥락 기반 판단·계획·도구 호출·자기 반성</p>
+      <div class="agent-behavior">
+        <div class="ab-item"><span class="ab-icon">🧭</span>Planning</div>
+        <div class="ab-item"><span class="ab-icon">🔁</span>Reflection</div>
+        <div class="ab-item"><span class="ab-icon">🔧</span>Tool Use</div>
+        <div class="ab-item"><span class="ab-icon">🧠</span>Memory</div>
+      </div>
+      <div class="agent-loop-note">↻ Plan → Act → Reflect → Re-plan</div>
+      <div class="sub-box"><strong>Tool Calling Runtime</strong><div class="sub-chips"><span>MCP</span><span>OpenAPI</span><span>Function Calling</span></div></div>
+    </div>
+    <div class="flow-box">
+      <span class="badge b-teal">04</span>
+      <h3>Enterprise Integration<br/>& Action</h3>
+      <p>업무 실행·시스템 반영</p>
+      <div class="chips"><span class="chip">Workflow</span><span class="chip">API / RPA</span><span class="chip">Writeback</span></div>
+      <div class="sub-box"><strong>Writeback Targets</strong><div class="sub-chips"><span>ERP</span><span>CRM</span><span>Groupware</span><span>결재</span></div></div>
+    </div>
+  </div>
+
+  <div class="foundation">
+    <div>
+      <b>Foundation · Trust · Security · Governance</b>
+      <div class="desc">기업 환경에서 안전하게 운영하기 위한 공통 기반 — 모든 층에 적용</div>
+    </div>
+    <div class="pills">
+      <span>IAM</span><span>Audit</span><span>Guardrails</span><span>Explainability</span>
+      <span class="closed">Closed / Private Deployment</span>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>읽는 법</strong> · 좌측 <strong>Customer Env</strong> → 가운데 <strong>01~04</strong> 4단계 흐름, 그중 <strong>03 Agent</strong>는 내부에 Planning/Reflection/Tool use/Memory 4축 동작이 보임. 상단 <strong>05 Learning ↺</strong>이 환류로 다음 실행 품질을 높임. <strong>AAP는 Data Platform 위에서 동작하는 Agentic Execution Layer입니다.</strong>
+</div>
+
+</div>
+</body>
+</html>

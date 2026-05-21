@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP Proactive Offering · v1.00</title>
+<style>
+:root{
+  --ink:#111318; --sub:#4b5563; --muted:#6b7280; --line:#e5e7eb; --soft:#f7f8fb;
+  --dark:#101216; --blue:#2557d6; --blue2:#eef3ff; --violet:#6f3ff5; --violet2:#f5f0ff;
+  --green:#188a57; --green2:#eefaf5; --amber:#c47a12; --amber2:#fff7e8; --red:#c2413a; --red2:#fff2f1;
+  --teal:#0b7e8c; --teal2:#edfafa; --shadow:0 16px 42px rgba(17,19,24,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#f3f4f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+a{color:inherit;text-decoration:none}
+.page{max-width:1320px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e8e8e8}
+.hero{padding:54px 56px 42px;background:linear-gradient(135deg,#0c0d11 0%,#151924 46%,#202846 100%);color:#fff;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-160px;top:-160px;width:430px;height:430px;border-radius:50%;background:radial-gradient(circle,rgba(84,132,255,.28),rgba(84,132,255,0) 68%)}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.72);font-weight:800;margin-bottom:14px}
+h1{font-size:44px;line-height:1.08;margin:0 0 18px;letter-spacing:-.035em;max-width:980px}
+.hero p{font-size:18px;line-height:1.65;color:rgba(255,255,255,.78);max-width:880px;margin:0}
+.hero-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:26px;margin-top:34px;position:relative;z-index:1}
+.hero-card{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);border-radius:18px;padding:22px;backdrop-filter:blur(8px)}
+.hero-card strong{display:block;color:#fff;font-size:15px;margin-bottom:8px}.hero-card span{color:rgba(255,255,255,.72);font-size:13px}
+.toc{padding:24px 56px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.toc-title{font-size:12px;font-weight:900;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}
+.toc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.toc a{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:#fbfbfc;border-radius:10px;padding:9px 10px;font-size:12px;color:#374151}
+.toc b{display:inline-flex;min-width:28px;height:22px;align-items:center;justify-content:center;border-radius:6px;background:#111;color:#fff;font-size:11px}
+section{padding:42px 56px;border-bottom:1px solid var(--line)}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}.num{height:48px;width:58px;border-radius:13px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:.03em}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:900px}.lead strong{color:#111}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:20px;box-shadow:0 8px 24px rgba(17,19,24,.04)}
+.card h3{margin:0 0 10px;font-size:17px;letter-spacing:-.02em}.card p{margin:0;color:var(--sub);font-size:13px}.card ul{margin:10px 0 0;padding-left:18px;color:var(--sub);font-size:13px}.card li{margin:4px 0}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;letter-spacing:.02em;margin-bottom:10px}.b-blue{background:var(--blue2);color:var(--blue)}.b-violet{background:var(--violet2);color:var(--violet)}.b-green{background:var(--green2);color:var(--green)}.b-amber{background:var(--amber2);color:var(--amber)}.b-red{background:var(--red2);color:var(--red)}.b-teal{background:var(--teal2);color:var(--teal)}
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;font-size:13px}th{background:#111;color:#fff;text-align:left;padding:12px 14px;font-weight:800}td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:top;color:#374151}td strong{color:#111}tr:nth-child(even) td{background:#fbfbfc}
+.note{border-left:4px solid var(--blue);background:var(--blue2);padding:15px 18px;border-radius:12px;color:#26344f;font-size:14px;margin-top:16px}.note strong{color:#101827}
+.compare{grid-template-columns:repeat(3,1fr)}.compare .card{min-height:220px}.compare .card:nth-child(3){border-color:#9ab0ff;background:linear-gradient(180deg,#fff,#f6f8ff)}
+.offering{border:1px solid #d8dce5;border-radius:24px;padding:22px;background:linear-gradient(180deg,#fbfcff,#fff);box-shadow:var(--shadow)}
+.service{border:1px solid #cbd5e1;border-radius:18px;padding:18px;background:#111;color:#fff;margin-bottom:18px}.service-title{font-size:17px;font-weight:900;letter-spacing:-.01em}.service-sub{font-size:12px;color:rgba(255,255,255,.72);margin-top:2px}.service-items{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.service-items span{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-align:center}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch}.flow-box{border:1px solid var(--line);border-radius:16px;background:#fff;padding:15px;position:relative;min-height:174px}.flow-box:not(:last-child):after{content:"→";position:absolute;right:-15px;top:50%;transform:translateY(-50%);font-size:24px;color:#9ca3af;font-weight:900;z-index:2}.flow-box h3{font-size:15px;margin:0 0 7px;line-height:1.25}.flow-box p{font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.45}.flow-box .chips{display:flex;flex-direction:column;gap:6px}.chip{border:1px solid var(--line);background:#fbfbfc;border-radius:8px;padding:6px 8px;font-size:11px;color:#374151}.semantic{border:2px solid #7663ff;background:#fbf9ff}.learning{border:2px solid #d99b37;background:#fffaf0}.foundation{border:1px solid #222;border-radius:18px;margin-top:18px;background:#15171d;color:#fff;padding:16px}.foundation .row{display:flex;justify-content:space-between;gap:14px;align-items:center}.foundation b{font-size:15px}.foundation span{display:inline-flex;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);border-radius:999px;padding:6px 10px;font-size:11px;margin:3px}.closed{background:#ffecc5!important;color:#5d3300!important;border-color:#f2c97b!important;font-weight:900}
+.detail-map{display:grid;grid-template-columns:1fr;gap:16px}.detail-row{display:grid;grid-template-columns:200px 1fr;gap:14px;border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px}.detail-title{border-radius:12px;background:#111;color:#fff;padding:14px}.detail-title h3{margin:0;font-size:16px}.detail-title p{margin:6px 0 0;font-size:11px;color:rgba(255,255,255,.7)}.detail-items{display:flex;flex-wrap:nowrap;gap:6px;align-items:stretch}.detail-items > span{flex:1 1 0;min-width:0;border:1px solid var(--line);background:#fbfbfc;border-radius:9px;padding:9px 7px;font-size:11.5px;color:#374151;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.35;word-break:keep-all}.detail-row.semantic-row{border-color:#b6a8ff}.detail-row.semantic-row .detail-title{background:#4f3ad9}.detail-row.learning-row{border-color:#e9c17f}.detail-row.learning-row .detail-title{background:#8a5a0a}.detail-item-box{flex:1 1 0;min-width:0;border:1px solid var(--line);background:#fbfbfc;border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:6px;justify-content:center}.detail-item-box strong{display:block;font-size:12px;color:#111;font-weight:800}.sub-items{display:flex;flex-wrap:wrap;gap:4px}.sub-items span{font-size:10.5px;padding:3px 7px;background:#fff;border:1px solid #e0e3eb;border-radius:6px;color:#6b7280}.detail-row.semantic-row .detail-item-box{border-color:#d6cdff;background:#f6f3ff}.detail-row.semantic-row .detail-item-box strong{color:#4f3ad9}.detail-row.semantic-row .sub-items span{border-color:#c9bcff;color:#5b4ad4;background:#fff}
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.timeline .card{position:relative}.timeline .card:after{content:"";position:absolute;right:-22px;top:50%;width:28px;height:2px;background:#cfd5df}.timeline .card:last-child:after{display:none}.big{font-size:34px;font-weight:900;letter-spacing:-.04em;line-height:1.1}.muted{color:var(--muted)}
+.footer{padding:26px 56px;background:#111;color:#fff;display:flex;justify-content:space-between;gap:20px;font-size:12px;color:rgba(255,255,255,.68)}
+@media(max-width:1000px){.toc-grid,.grid-4,.service-items,.flow,.detail-items{grid-template-columns:1fr 1fr}.hero-grid,.grid-2,.grid-3,.compare,.timeline{grid-template-columns:1fr}.flow-box:after,.timeline .card:after{display:none}.detail-row{grid-template-columns:1fr}section,.hero,.toc{padding-left:24px;padding-right:24px}.section-head{grid-template-columns:1fr}.footer{padding:22px 24px;flex-direction:column}}
+@media print{body{background:#fff}.page{box-shadow:none;max-width:none}.toc{position:static}.card,.offering{box-shadow:none}section{break-inside:avoid}.hero{break-after:avoid}.toc-progress{display:none}}
+/* === Overview v3 — Learning 분리 + Customer Env === */
+.learning-band{border:1px dashed #d99b37;background:linear-gradient(180deg,#fffaf0,#fffdfa);border-radius:14px;padding:11px 14px;margin:12px 0;display:flex;flex-direction:column;gap:8px;position:relative}
+.learning-band:before,.learning-band:after{content:"↺";position:absolute;bottom:-10px;font-size:13px;color:#c47a12;background:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px dashed #d99b37;font-weight:900;line-height:1}
+.learning-band:before{left:35%}
+.learning-band:after{left:55%}
+.lb-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lb-tag{display:inline-flex;background:#c47a12;color:#fff;font-size:11px;font-weight:900;border-radius:6px;padding:4px 9px;letter-spacing:.04em}
+.lb-desc{font-size:12px;color:#8a5a0a;font-weight:600;line-height:1.5}
+.lb-items{display:flex;gap:7px;flex-wrap:wrap}
+.lb-items span{font-size:11px;border:1px solid #e9c17f;background:#fff;color:#8a5a0a;border-radius:6px;padding:5px 9px;font-weight:600}
+.flow.flow-with-env{grid-template-columns:0.85fr repeat(4,1fr)}
+.flow-env{border:1px solid var(--line);background:#f7f8fb;border-radius:16px;padding:15px;display:flex;flex-direction:column;min-height:174px;position:relative}
+.flow-env:after{content:"→";position:absolute;right:-15px;top:50%;transform:translateY(-50%);font-size:24px;color:#9ca3af;font-weight:900;z-index:2}
+.env-badge{background:#e5e7eb!important;color:#4b5563!important;align-self:flex-start}
+.flow-env h3{font-size:14px;margin:0 0 8px;line-height:1.25;color:#111;letter-spacing:-.01em}
+.env-chips{display:flex;flex-direction:column;gap:5px;margin-top:auto}
+.env-chips span{font-size:11px;border:1px solid var(--line);background:#fff;color:#374151;border-radius:7px;padding:6px 8px}
+.service-items-detailed span{display:flex!important;flex-direction:column;gap:3px;text-align:left!important;align-items:flex-start!important;padding:10px 12px!important}
+.service-items-detailed span strong{font-size:12.5px;font-weight:800;color:#fff;line-height:1.2}
+.service-items-detailed span em{font-style:normal;font-size:10.5px;color:rgba(255,255,255,.62);font-weight:500;line-height:1.3}
+.flow-box .sub-box{border:1px solid var(--line);background:#fbfbfc;border-radius:7px;padding:6px 8px;margin-top:6px;display:flex;flex-direction:column;gap:4px}
+.flow-box .sub-box strong{font-size:11px;font-weight:800;color:#111;display:block}
+.flow-box .sub-box .sub-chips{display:flex;flex-wrap:wrap;gap:3px}
+.flow-box .sub-box .sub-chips span{font-size:10px;padding:2px 6px;background:#fff;border:1px solid var(--line);border-radius:5px;color:var(--muted)}
+.flow-box.semantic .sub-box{border-color:#c9bcff;background:#fff}
+.flow-box.semantic .sub-box strong{color:#4f3ad9}
+.flow-box.semantic .sub-box .sub-chips span{border-color:#c9bcff;color:#5b4ad4}
+@media(max-width:1000px){.flow.flow-with-env{grid-template-columns:1fr 1fr}.flow-env:after{display:none}.learning-band:before,.learning-band:after{display:none}}
+/* Architecture Overview → Detail transition */
+.arch-sep{margin:32px 0 18px;padding-top:24px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:6px}
+.arch-sep-tag{display:inline-flex;background:#111;color:#fff;font-size:10px;font-weight:900;letter-spacing:.14em;padding:4px 10px;border-radius:6px;align-self:flex-start;text-transform:uppercase}
+.arch-sep h3{margin:4px 0 0;font-size:18px;letter-spacing:-.02em;color:#111;line-height:1.25}
+.arch-sep p{margin:0;font-size:13px;color:var(--sub);max-width:900px;line-height:1.55}
+.arch-sep p strong{color:#111}
+/* === TOC dynamic motion === */
+.toc-progress{height:3px;background:#eef0f3;border-radius:999px;overflow:hidden;margin:-4px 0 12px}
+.toc-progress-bar{height:100%;width:0;background:linear-gradient(90deg,#2557d6,#6f3ff5);border-radius:999px;transition:width .12s linear}
+.toc a{transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,color .18s ease}
+.toc a b{transition:background .18s ease,box-shadow .18s ease,transform .18s ease}
+.toc a:hover{border-color:#c8d1e0;background:#fff;transform:translateY(-1px);box-shadow:0 6px 14px rgba(17,19,24,.07);color:#111}
+.toc a:hover b{background:#2557d6;transform:scale(1.04)}
+.toc a.active{border-color:#2557d6;background:linear-gradient(180deg,#eef3ff,#fff);color:#111;font-weight:800;box-shadow:0 6px 14px rgba(37,87,214,.14)}
+.toc a.active b{background:#2557d6;box-shadow:0 0 0 3px rgba(37,87,214,.18)}
+/* === Detail unification — 모든 layer를 동일 box format으로 === */
+.detail-row .detail-item-box{grid-column:span 1}
+.detail-row.learning-row .detail-item-box{border-color:#e9c17f;background:#fffaf0}
+.detail-row.learning-row .detail-item-box strong{color:#8a5a0a}
+.detail-row.learning-row .sub-items span{border-color:#e9c17f;color:#8a5a0a;background:#fff}
+.detail-title h3 .layer-mark{font-size:11px;font-weight:700;opacity:.85;margin-left:6px}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero" id="top">
+  <div class="eyebrow">Agentic AI Platform 기획(안)_v0.2</div>
+  <h1>기업의 실제 업무를 E2E로 수행하는 <br> Enterprise Agentic AI Platform</h1>
+  <p>AAP는 고객의 데이터·문서·시스템을 업무 의미로 구조화하고, Agent가 판단·실행·검토하며, <BR>운영 결과를 지식과 스킬로 축적하는 구축형 Agentic AI Platform입니다.</p>
+  <div class="hero-grid">
+    <div class="hero-card"><strong>목적</strong><span>공통 고객 대상으로 Data Platform 이후의 다음 과제로 AAP를 인식시키고 후속 논의를 만드는 자료입니다.</span></div>
+</header>
+<nav class="toc">
+  <div class="toc-progress"><div class="toc-progress-bar"></div></div>
+  <div class="toc-title">Table of Contents</div>
+  <div class="toc-grid">
+    <a href="#s1"><b>01</b>기업 AI 활용의 현재 위치</a><a href="#s2"><b>02</b>운영 전환을 막는 4가지 공백</a><a href="#s3"><b>03</b>왜 지금 AAP가 필요한가</a><a href="#s4"><b>04</b>AAP Offering Map</a>
+    <a href="#s5"><b>05</b>적용 레퍼런스</a><a href="#s6"><b>06</b>산업별 적용 예시</a>
+  </div>
+</nav>
+<section id="s1">
+  <div class="section-head">
+    <div class="num">01</div>
+    <div>
+      <h2>기업 AI 활용의 현재 위치</h2>
+      <p class="lead">
+        많은 기업이 생성형 AI PoC, 챗봇, 문서 요약, 검색 자동화까지는 경험했습니다. <br> 이제 다음 과제는 <strong>AI를 실제 업무 흐름 안에서 실행 가능한 운영 체계로 전환하는 것</strong>입니다.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <span class="badge b-blue"></span>
+      <h3>가능성은 확인했지만, 운영 전환은 제한적</h3>
+      <p>
+        지금까지의 생성형 AI PoC는 데모와 파일럿 단계에서 충분한 가능성을 보여주었습니다.
+        그러나 실제 업무 프로세스에 연결되어 지속적으로 사용되는 운영형 사례는 아직 제한적입니다.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="0badge b-violet">② 단일 업무 자동화</span>
+      <h3>챗봇·요약·검색 등 점 단위 활용에 머무름</h3>
+      <p>
+        FAQ 챗봇, 문서 요약, 사내 검색, RPA 보조 등은 개별 업무의 생산성을 높이고 있습니다.
+        다만 업무 흐름 전체를 이해하고 다음 단계까지 이어서 처리하는 구조로는 확장되지 못하고 있습니다.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="badge b-green">③ 인적 개입의 지속</span>
+      <h3>판단·승인·실행은 여전히 사람이 담당</h3>
+      <p>
+        AI가 답변과 초안을 만들더라도 정책 판단, 예외 처리, 승인, 시스템 입력은 여전히 현업과 IT가 수행합니다.
+        결국 AI와 업무 시스템 사이의 마지막 공백을 사람이 메우는 구조가 남아 있습니다.
+      </p>
+    </div>
+  </div>
+</section>
+<section id="s2">
+  <div class="section-head">
+    <div class="num">02</div>
+    <div>
+      <h2>AI의 운영 전환을 막는 4가지 공백</h2>
+      <p class="lead">
+        AI PoC가 운영으로 확장되지 못한 이유는 기술 가능성이 부족해서만은 아닙니다.
+        실제 업무에 적용되기 위해 필요한 <strong>맥락·실행·통제·학습 구조</strong>가 함께 갖춰지지 않았기 때문입니다.
+      </p>
+    </div>
+  </div>
+  <div class="grid-4">
+    <div class="card">
+      <span class="badge b-violet">① 맥락</span>
+      <h3>업무 맥락 부족</h3>
+      <p>문서 검색과 답변은 가능하지만, 고객사의 정책, 프로세스, 권한, 예외 기준까지 이해하지는 못합니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge b-green">② 실행</span>
+      <h3>시스템 실행 연계 부족</h3>
+      <p>AI의 답변이나 추천이 ERP, CRM, SCM, 그룹웨어, 결재 시스템의 실제 업무 처리로 이어지지 못합니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge b-red">③ 통제</span>
+      <h3>신뢰·통제 체계 부족</h3>
+      <p>어떤 근거로 판단했는지, 언제 사람이 검토해야 하는지, 어떤 실행을 제한해야 하는지에 대한 기준이 약합니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge b-amber">④ 학습</span>
+      <h3>운영 학습 구조 부족</h3>
+      <p>질문, 답변, 실패, 예외 처리 이력이 다시 업무 지식과 Agent 스킬로 축적되는 구조가 부족합니다.</p>
+    </div>
+  </div>
+</section>
+<section id="s3">
+  <style>
+    .aap-def{margin-top:22px;border:1px solid #d6cdff;border-radius:18px;padding:24px;background:linear-gradient(180deg,#fbfaff 0%,#fff 60%);box-shadow:0 12px 32px rgba(111,63,245,.08)}
+    .aap-def-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+    .aap-def-tag{font-size:10px;font-weight:900;letter-spacing:.18em;color:#fff;background:var(--violet);border-radius:6px;padding:6px 11px;flex-shrink:0;margin-top:2px}
+    .aap-def-title{font-size:18px;font-weight:900;letter-spacing:-.02em;color:#111;margin:0 0 4px}
+    .aap-def-sub{font-size:12px;color:var(--muted);line-height:1.5}
+    .aap-def-body{color:#1f2937;font-size:14px;line-height:1.7;margin:0 0 18px}
+    .aap-def-body strong{color:#111;font-weight:800}
+    .aap-def-body em{color:var(--violet);font-style:normal;font-weight:700;background:#f0e9ff;padding:1px 6px;border-radius:5px;margin:0 1px}
+    .aap-def-future{border-top:1px dashed #d6cdff;padding-top:16px}
+    .aap-def-future-title{font-size:11px;font-weight:900;letter-spacing:.1em;color:var(--violet);margin-bottom:12px;text-transform:uppercase}
+    .aap-def-future-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .aap-def-future-item{border:1px solid #e3d9ff;background:#fff;border-radius:10px;padding:12px 13px;display:flex;flex-direction:column;gap:4px}
+    .aap-def-future-item strong{font-size:12.5px;font-weight:900;color:#4f3ad9;letter-spacing:-.01em}
+    .aap-def-future-item span{font-size:11.5px;color:var(--sub);line-height:1.5}
+    /* "단순 RAG vs AAP" 시나리오 */
+    .rag-vs-aap{margin:18px 0;border-radius:12px;background:#fff;border:1px solid #e3d9ff;padding:16px 18px}
+    .rag-vs-aap-title{font-size:11px;font-weight:900;letter-spacing:.1em;color:var(--violet);margin-bottom:14px;text-transform:uppercase}
+    .rag-vs-aap-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:16px;align-items:stretch}
+    .rag-vs-aap .side{border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .rag-vs-aap .side.rag{background:#f6f7fa;border:1px solid var(--line)}
+    .rag-vs-aap .side.aap{background:linear-gradient(180deg,#f9f7ff,#fff);border:1px solid #d6cdff}
+    .rag-vs-aap .side-label{font-size:10px;font-weight:900;letter-spacing:.06em}
+    .rag-vs-aap .side.rag .side-label{color:var(--muted)}
+    .rag-vs-aap .side.aap .side-label{color:var(--violet)}
+    .rag-vs-aap .side-quote{font-size:13px;line-height:1.55;margin:0}
+    .rag-vs-aap .side.rag .side-quote{color:#6b7280;font-style:italic}
+    .rag-vs-aap-steps{display:flex;flex-direction:column;gap:8px}
+    .rag-vs-aap-step{display:flex;gap:9px;align-items:flex-start}
+    .rag-vs-aap-step-num{font-size:10px;font-weight:900;color:#fff;background:var(--violet);border-radius:5px;padding:3px 7px;flex-shrink:0;margin-top:1px;letter-spacing:.04em}
+    .rag-vs-aap-step-text{font-size:12.5px;color:#1f2937;line-height:1.55}
+    .rag-vs-aap-step-text strong{color:#111;font-weight:800}
+    .rag-vs-aap-caption{font-size:11.5px;color:var(--muted);margin:12px 0 0;padding-top:10px;border-top:1px dashed #d6cdff;line-height:1.55}
+    .rag-vs-aap-caption strong{color:var(--violet);font-weight:800}
+    /* AAP 닫힌 루프 도식 */
+    .aap-loop{margin:0 0 18px;border-radius:14px;background:#fff;border:1px solid var(--line);overflow:hidden}
+    .aap-loop .loop-band{font-size:11px;font-weight:800;letter-spacing:.06em;padding:9px 16px;text-align:center}
+    .aap-loop .loop-band.loop-top{background:#f3f4f6;color:#4b5563;border-bottom:1px solid var(--line)}
+    .aap-loop .loop-band.loop-bottom{background:#15171d;color:#fff;border-top:1px solid #2a2d36}
+    .aap-loop .loop-stages{display:flex;align-items:stretch;gap:6px;padding:18px 14px 12px}
+    .aap-loop .loop-stage{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:3px;padding:14px 10px;border-radius:10px;text-align:center;border:1px solid var(--line);background:#fbfbfc}
+    .aap-loop .loop-stage strong{font-size:15px;font-weight:900;letter-spacing:-.01em}
+    .aap-loop .loop-stage .loop-sub{font-size:11.5px;color:var(--muted)}
+    .aap-loop .loop-stage .loop-num{font-size:9.5px;font-weight:900;letter-spacing:.08em;margin-bottom:2px;color:#9ca3af}
+    .aap-loop .loop-arrow{display:flex;align-items:center;justify-content:center;width:18px;color:#9ca3af;font-size:18px;font-weight:900;flex-shrink:0}
+    .aap-loop .st-semantic{border-color:#d6cdff;background:#f6f3ff}.aap-loop .st-semantic strong,.aap-loop .st-semantic .loop-num{color:var(--violet)}
+    .aap-loop .st-agentic{border-color:#c4b9f5;background:#efebff}.aap-loop .st-agentic strong,.aap-loop .st-agentic .loop-num{color:var(--violet)}
+    .aap-loop .st-action{border-color:#a8d4cf;background:#ebf8f7}.aap-loop .st-action strong,.aap-loop .st-action .loop-num{color:var(--teal)}
+    .aap-loop .st-learning{border-color:#e9c17f;background:#fff7e8}.aap-loop .st-learning strong,.aap-loop .st-learning .loop-num{color:var(--amber)}
+    .aap-loop .loop-recycle{margin:0 14px 16px;padding:10px 14px;background:#fff7e8;border:1px dashed #e9c17f;border-radius:10px;font-size:12px;color:#8a5a0a;text-align:center;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px}
+    .aap-loop .loop-recycle:before{content:"\21ba";font-size:18px;font-weight:900}
+    /* AAP 미래 3카드 */
+    .aap-future-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .aap-future-3 .future-card{border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;border:1px solid}
+    .aap-future-3 .future-card strong{font-size:13.5px;font-weight:900;letter-spacing:-.01em}
+    .aap-future-3 .future-card p{font-size:11.5px;line-height:1.55;color:var(--sub);margin:0}
+    .aap-future-3 .f-violet{background:#f6f3ff;border-color:#d6cdff}.aap-future-3 .f-violet strong{color:var(--violet)}
+    .aap-future-3 .f-amber{background:#fff7e8;border-color:#e9c17f}.aap-future-3 .f-amber strong{color:var(--amber)}
+    .aap-future-3 .f-teal{background:#ebf8f7;border-color:#a8d4cf}.aap-future-3 .f-teal strong{color:var(--teal)}
+    @media(max-width:1000px){.aap-def-future-grid,.rag-vs-aap-grid,.aap-future-3{grid-template-columns:1fr}.aap-loop .loop-stages{flex-direction:column}.aap-loop .loop-arrow{transform:rotate(90deg);width:auto;height:18px}}
+  </style>
+  <div class="section-head">
+    <div class="num">03</div>
+    <div>
+      <h2>왜 지금 AAP가 필요한가</h2>
+      <p class="lead">
+        AAP는 기존 데이터 플랫폼이나 AI PoC를 대체하는 개념이 아닙니다.
+        이미 구축된 데이터·AI 자산 위에 <strong>업무 맥락, 실행, 통제, 학습을 연결하는 Agentic Layer</strong>를 더하는 접근입니다.
+      </p>
+    </div>
+  </div>
+  <div class="grid-3">
+    <div class="card">
+      <span class="badge b-blue">Data Platform 이후</span>
+      <h3>데이터 기반은 마련됐지만, 업무 실행 계층은 비어 있음</h3>
+      <p>데이터 플랫폼은 수집, 분석, 시각화 기반을 만들었습니다. 그러나 정책 판단, 승인, 예외 처리, 시스템 반영은 여전히 별도의 업무 절차와 사람의 개입에 의존하고 있습니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge b-violet">PoC 이후</span>
+      <h3>AI 실험을 운영 가능한 구조로 전환해야 함</h3>
+      <p>생성형 AI PoC를 통해 가능성은 확인되었습니다. 이제는 단일 기능 검증을 넘어, 업무 맥락과 시스템 실행, 검토 체계, 운영 학습이 결합된 플랫폼 구조가 필요합니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge b-green">Agentic AI 흐름</span>
+      <h3>답변형 AI에서 업무 수행형 AI로 이동</h3>
+      <p>프론티어 모델과 Agent 프레임워크의 성숙으로 AI의 역할은 답변 생성에서 계획, 도구 호출, 실행 보조로 확장되고 있습니다. 기업 환경에서는 이를 안전하게 운영할 수 있는 AAP 구조가 필요합니다.</p>
+    </div>
+  </div>
+
+  <table style="margin-top:18px">
+    <thead><tr><th>구분</th><th>Data Platform</th><th>개인 AI Tool(GPT, Claude, Copilot 등)</th><th>AAP</th></tr></thead>
+    <tbody>
+      <tr><td><strong>목적</strong></td><td>데이터 수집·저장·분석</td><td>질의응답·요약·초안 생성</td><td><strong>업무 이해·판단·실행·검토</strong></td></tr>
+      <tr><td><strong>핵심 단위</strong></td><td>데이터셋, 파이프라인, 대시보드</td><td>프롬프트, 대화, 문서</td><td><strong>업무 프로세스, 정책, 도구, 결정, 실행 로그</strong></td></tr>
+      <tr><td><strong>결과물</strong></td><td>BI, 리포트, 데이터 서비스</td><td>답변, 문서 초안, 요약</td><td><strong>Copilot, Workflow, API/RPA 실행, 시스템 반영</strong></td></tr>
+      <tr><td><strong>02의 4가지 공백을<br/>어떻게 메우나</strong></td><td>맥락·실행·통제·학습 모두 사람이 수행</td><td>맥락·실행·통제·학습 연계 약함</td><td><strong>① 업무 온톨로지로 <u>맥락</u> 확보<br/>② Tool·Workflow로 <u>실행</u> 연결<br/>③ 감사·승인·HITL로 <u>통제</u><br/>④ 실행 로그·피드백으로 <u>학습</u></strong></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ===== Agentic AI Platform 정의 + Future Capabilities ===== -->
+  <div class="aap-def">
+    <div class="aap-def-head">
+      <span class="aap-def-tag">AGENTIC AI PLATFORM · 정의</span>
+      <div>
+        <h3 class="aap-def-title">AAP는 무엇이며, 어디로 향하는가</h3>
+        <div class="aap-def-sub">개별 AI 기술의 묶음이 아닌, 기업 업무를 처음부터 끝까지 수행하는 닫힌 루프 구조</div>
+      </div>
+    </div>
+
+    <p class="aap-def-body">
+      업무 의미를 이해해 판단·실행하고, 그 결과를 학습 자산으로 축적하는 <strong>기업용 Agentic AI Platform</strong>.
+      Data Platform·PoC 자산 위에 얹혀 <strong>운영 가능한 업무 실행 계층</strong>을 더합니다.
+    </p>
+
+    <!-- ===== AAP 닫힌 루프 도식 ===== -->
+    <div class="aap-loop">
+      <div class="loop-band loop-top">Service Experience · 고객이 사용하는 AI 업무 면</div>
+      <div class="loop-stages">
+        <div class="loop-stage st-semantic">
+          <span class="loop-num">01</span>
+          <strong>Semantic</strong>
+          <span class="loop-sub">의미 이해</span>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-stage st-agentic">
+          <span class="loop-num">02</span>
+          <strong>Agentic</strong>
+          <span class="loop-sub">판단·계획</span>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-stage st-action">
+          <span class="loop-num">03</span>
+          <strong>Action</strong>
+          <span class="loop-sub">시스템 실행</span>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-stage st-learning">
+          <span class="loop-num">04</span>
+          <strong>Learning</strong>
+          <span class="loop-sub">운영 학습</span>
+        </div>
+      </div>
+      <div class="loop-recycle">운영 학습이 다음 의미·판단에 반영 — 시간이 갈수록 더 정확해지는 닫힌 루프</div>
+      <div class="loop-band loop-bottom">Trust · Foundation · 보안·감사·HITL·폐쇄망</div>
+    </div>
+
+    <!-- ===== 단순 RAG vs AAP 시나리오 (진흥회 회원사 통보 사례) ===== -->
+    <div class="rag-vs-aap">
+      <div class="rag-vs-aap-title">왜 단순 RAG가 아닌가 · 진흥회 회원사 통보 시나리오</div>
+      <div class="rag-vs-aap-grid">
+        <div class="side rag">
+          <div class="side-label">단순 RAG</div>
+          <p class="side-quote">"미국이 X 품목에 25% 관세를 부과합니다." — 문서를 검색해 요약만 합니다.</p>
+        </div>
+        <div class="side aap">
+          <div class="side-label">AAP</div>
+          <div class="rag-vs-aap-steps">
+            <div class="rag-vs-aap-step">
+              <span class="rag-vs-aap-step-num">01</span>
+              <div class="rag-vs-aap-step-text"><strong>회원사 매핑</strong> · Knowledge Graph로 이 회원사가 X 품목을 어느 시장에 수출 중인지 확인</div>
+            </div>
+            <div class="rag-vs-aap-step">
+              <span class="rag-vs-aap-step-num">02</span>
+              <div class="rag-vs-aap-step-text"><strong>영향도 판단</strong> · 관세·환율·규제 룰로 회원사별 매출 영향을 계산</div>
+            </div>
+            <div class="rag-vs-aap-step">
+              <span class="rag-vs-aap-step-num">03</span>
+              <div class="rag-vs-aap-step-text"><strong>차등 통보</strong> · 회원사 등급·노출도에 따라 통보 양식·우선순위·대응 가이드를 다르게 적용</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="rag-vs-aap-caption">RAG는 <em>문서 검색의 기법</em>이고, AAP는 <strong>업무 의미·정책·권한을 Agent가 사용할 수 있는 구조로 전환</strong>합니다. 이 구조는 06장 진흥회 케이스에서 이미 검증된 영역입니다.</p>
+    </div>
+
+    <div class="aap-def-future">
+      <div class="aap-def-future-title">어디로 향하는가 · 운영 고도화 3대 축</div>
+      <div class="aap-future-3">
+        <div class="future-card f-violet">
+          <strong>학습 누적</strong>
+          <p>실행 이력과 검증된 스킬이 다음 업무에 재사용 — 시간이 갈수록 정확도·재사용도 증가</p>
+        </div>
+        <div class="future-card f-amber">
+          <strong>자동 분기 · 예외 운영</strong>
+          <p>위험도·권한 기준의 자동/검토 분기, 실패 건은 사람 검토와 재실행으로 회수</p>
+        </div>
+        <div class="future-card f-teal">
+          <strong>품질 · 비용 통제</strong>
+          <p>품질 회귀 테스트 정착 + 업무 중요도에 맞춘 모델 사용량·쿼터 관리</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="s4">
+  <style>
+    .cap-shell{border:1px solid #d8dce5;border-radius:20px;background:#fff;box-shadow:var(--shadow);overflow:hidden}
+    .cap-head{padding:20px 22px;background:#111;color:#fff;display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:end}
+    .cap-head h3{margin:0;font-size:18px;letter-spacing:-.02em}
+    .cap-head p{margin:7px 0 0;font-size:12.5px;color:rgba(255,255,255,.72);line-height:1.55}
+    .cap-legend{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,.76)}
+    .cap-legend span{display:inline-flex;align-items:center;gap:6px}
+    .cap-legend i{width:18px;height:12px;border-radius:4px;background:#fff;border:1px solid rgba(255,255,255,.7);display:inline-block}
+    .cap-legend .dashed i{background:transparent;border:1px dashed rgba(255,255,255,.72)}
+    .cap-context{display:grid;grid-template-columns:190px 1fr;gap:14px;padding:16px 18px;background:#f8fafc;border-bottom:1px solid var(--line)}
+    .cap-context strong{font-size:13px;color:#111}
+    .cap-context p{margin:3px 0 0;font-size:11.5px;color:var(--muted);line-height:1.45}
+    .cap-context .cap-chips{justify-content:flex-start}
+    .cap-map{display:grid;gap:0}
+    .cap-row{display:grid;grid-template-columns:190px 1fr;border-bottom:1px solid var(--line);background:#fff}
+    .cap-row:last-child{border-bottom:0}
+    .cap-title{padding:16px 18px;background:#fbfbfc;border-right:1px solid var(--line)}
+    .cap-title b{display:block;font-size:14px;color:#111;line-height:1.25;letter-spacing:-.01em}
+    .cap-title small{display:block;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45}
+    .cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;padding:12px}
+    .cap-card{min-width:0;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 11px;display:flex;flex-direction:column;gap:7px;min-height:104px}
+    .cap-card h4{margin:0;font-size:12.5px;color:#111;line-height:1.25;letter-spacing:-.01em}
+    .cap-card p{margin:0;font-size:11px;color:var(--muted);line-height:1.45}
+    .cap-card.optional{border:1px dashed #9ca3af;background:#fcfcfd}
+    .cap-card.optional h4{color:#374151}
+    .cap-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto}
+    .cap-chips span{font-size:10.5px;border:1px solid #e0e3eb;background:#f8fafc;color:#4b5563;border-radius:6px;padding:3px 6px;line-height:1.25}
+    .cap-card.optional .cap-chips span{border-color:#d1d5db;background:#fff;color:#6b7280}
+    .cap-row.core .cap-title{background:#f6f3ff}
+    .cap-row.core .cap-title b{color:#4f3ad9}
+    .cap-row.core .cap-card{border-color:#ded7ff}
+    .cap-row.learning .cap-title{background:#fffaf0}
+    .cap-row.learning .cap-title b{color:#8a5a0a}
+    .cap-row.learning .cap-card{border-color:#ead3a6}
+    @media(max-width:1100px){.cap-head,.cap-context,.cap-row{grid-template-columns:1fr}.cap-legend{justify-content:flex-start}.cap-title{border-right:0;border-bottom:1px solid var(--line)}.cap-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:640px){.cap-grid{grid-template-columns:1fr}}
+  </style>
+  <div class="section-head">
+    <div class="num">04</div>
+    <div>
+      <h2>AAP Offering Map & Capability Detail</h2>
+      <p class="lead">7개 영역 구분은 유지하되, 기존 Overview와 Detail을 하나의 맵으로 합쳤습니다. 각 영역에서 <strong>무엇을 제안할 수 있는지</strong>와 <strong>어떤 구현 옵션을 검토할 수 있는지</strong>를 한 화면에서 봅니다.</p>
+    </div>
+  </div>
+
+  <div class="cap-shell">
+    <div class="cap-head">
+      <div>
+        <h3>7개 영역 기반 AAP 오퍼링 맵</h3>
+        <p>외부 제언의 자산화·통제·학습 관점은 어려운 아키텍처 용어 대신, 업무 실행 이력·품질 점검·스킬 재사용·운영 리포트로 풀어 넣었습니다.</p>
+      </div>
+      <div class="cap-legend">
+        <span><i></i>기본 구성 / 즉시 오퍼링</span>
+        <span class="dashed"><i></i>확장·고도화 후보</span>
+      </div>
+    </div>
+
+    <div class="cap-context">
+      <div>
+        <strong>Customer Environment</strong>
+        <p>AAP가 새로 대체하지 않고 연결하는 고객 기존 자산</p>
+      </div>
+      <div class="cap-chips">
+        <span>Data Platform</span><span>ERP / CRM / SCM</span><span>Groupware / KMS</span><span>Document Repository</span><span>External API</span><span>Security Zone</span>
+      </div>
+    </div>
+
+    <div class="cap-map">
+      <div class="cap-row">
+        <div class="cap-title"><b>Service Experience</b><small>현업 사용자가 접하는 업무 서비스</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>AI Agent Portal</h4><p>Agent 검색, 실행, 이력 확인을 제공하는 업무 진입점</p><div class="cap-chips"><span>Agent Search</span><span>Execution</span><span>History</span><span>Permissions</span></div></div>
+          <div class="cap-card"><h4>Horizontal Agents</h4><p>부서 공통 업무를 빠르게 적용하는 표준 Agent</p><div class="cap-chips"><span>HR</span><span>Document</span><span>CS</span><span>Approval</span></div></div>
+          <div class="cap-card"><h4>Vertical Agents</h4><p>산업·직무별 판단 기준을 반영한 전문 Agent</p><div class="cap-chips"><span>제조</span><span>금융</span><span>공공</span><span>의료</span></div></div>
+          <div class="cap-card"><h4>Review / Approval UI</h4><p>사람 검토가 필요한 단계에서 승인과 근거 확인을 지원</p><div class="cap-chips"><span>Approval UI</span><span>HITL Console</span><span>Audit View</span></div></div>
+          <div class="cap-card optional"><h4>업무 스킬 카탈로그</h4><p>검증된 Agent 스킬을 조직 안에서 찾아 재사용하는 구조</p><div class="cap-chips"><span>Internal Catalog</span><span>Skill Pack</span><span>Versioning</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Enterprise Data & Inputs</b><small>고객 데이터·문서·시스템 연결</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>System Connectors</h4><p>기간계·업무 시스템을 Agent 실행 흐름에 연결</p><div class="cap-chips"><span>API</span><span>DB</span><span>File</span><span>Legacy</span></div></div>
+          <div class="cap-card"><h4>Data Platform Integration</h4><p>기존 데이터 플랫폼과 분석 자산을 AAP 입력으로 활용</p><div class="cap-chips"><span>Lakehouse</span><span>Warehouse</span><span>Catalog</span><span>Iceberg</span></div></div>
+          <div class="cap-card"><h4>Document / Knowledge Integration</h4><p>문서·규정·FAQ를 검색 가능한 업무 지식으로 전환</p><div class="cap-chips"><span>RAG</span><span>OCR</span><span>Parser</span><span>Hybrid Search</span></div></div>
+          <div class="cap-card"><h4>Metadata & Lineage</h4><p>데이터 출처, 스키마, 변경 이력을 관리해 신뢰성을 확보</p><div class="cap-chips"><span>Schema Registry</span><span>Lineage</span><span>Tagging</span></div></div>
+          <div class="cap-card optional"><h4>Event / External Interface</h4><p>외부 데이터와 이벤트를 업무 판단 흐름에 반영</p><div class="cap-chips"><span>Public API</span><span>Subscription</span><span>Stream</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row core">
+        <div class="cap-title"><b>Business Semantic Modeling</b><small>업무 의미·정책·판단 기준 구조화</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>Domain Ontology</h4><p>업무 개념과 관계를 표준화해 Agent가 같은 의미로 이해</p><div class="cap-chips"><span>OWL</span><span>RDF</span><span>SKOS</span><span>Taxonomy</span></div></div>
+          <div class="cap-card"><h4>Knowledge Graph</h4><p>업무 지식, 규정, 시스템 관계를 그래프로 연결</p><div class="cap-chips"><span>Property Graph</span><span>SPARQL</span><span>Cypher</span><span>Neo4j</span></div></div>
+          <div class="cap-card"><h4>Process / Decision Map</h4><p>업무 절차와 판단 규칙을 실행 가능한 기준으로 정리</p><div class="cap-chips"><span>BPMN</span><span>DMN</span><span>Rule Repository</span></div></div>
+          <div class="cap-card"><h4>Authority Matrix</h4><p>업무 권한, 승인 기준, 예외 처리 조건을 구조화</p><div class="cap-chips"><span>RBAC</span><span>ABAC</span><span>Approval Rule</span></div></div>
+          <div class="cap-card optional"><h4>Semantic Quality Check</h4><p>누락·중복·불일치 지식을 찾아 정비 후보를 제시</p><div class="cap-chips"><span>Missing</span><span>Duplicate</span><span>Inconsistency</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Agentic Reasoning & Execution</b><small>Agent 판단·계획·도구 호출</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>Planning & Orchestration</h4><p>복잡한 업무를 단계로 나누고 Agent 실행 흐름을 제어</p><div class="cap-chips"><span>LangGraph</span><span>AutoGen</span><span>Semantic Kernel</span></div></div>
+          <div class="cap-card"><h4>Work Context Memory</h4><p>업무 대화, 중간 결과, 참조 정보를 작업 맥락으로 유지</p><div class="cap-chips"><span>Session</span><span>Vector Store</span><span>Long-term Memory</span></div></div>
+          <div class="cap-card"><h4>Tool Registry / Runtime</h4><p>Agent가 호출 가능한 도구와 API를 등록·통제</p><div class="cap-chips"><span>MCP</span><span>OpenAPI</span><span>Function Calling</span></div></div>
+          <div class="cap-card"><h4>HITL & Action Policy</h4><p>위험도와 확신도에 따라 자동 실행과 사람 검토를 분기</p><div class="cap-chips"><span>Confidence</span><span>Escalation</span><span>OPA</span><span>Guardrails</span></div></div>
+          <div class="cap-card optional"><h4>Agent Interop</h4><p>조직·시스템별 Agent가 업무를 넘겨받아 협업하는 구조</p><div class="cap-chips"><span>A2A</span><span>Handoff</span><span>Multi-agent</span></div></div>
+          <div class="cap-card optional"><h4>Cost-Aware Routing</h4><p>업무 중요도, 응답속도, 비용에 따라 모델과 실행 경로를 선택</p><div class="cap-chips"><span>Model Router</span><span>Priority</span><span>Cost Policy</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Enterprise Integration & Action</b><small>업무 실행·시스템 반영</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>Workflow Engine</h4><p>승인, 예외, 재처리 흐름을 업무 프로세스로 실행</p><div class="cap-chips"><span>Camunda</span><span>Temporal</span><span>n8n</span></div></div>
+          <div class="cap-card"><h4>API / RPA Connector</h4><p>API가 없는 시스템까지 실행 자동화 범위를 확장</p><div class="cap-chips"><span>Kong</span><span>Apigee</span><span>UiPath</span><span>Power Automate</span></div></div>
+          <div class="cap-card"><h4>Writeback Connector</h4><p>Agent 결과를 실제 업무 시스템에 반영</p><div class="cap-chips"><span>ERP</span><span>CRM</span><span>Groupware</span><span>Approval</span></div></div>
+          <div class="cap-card"><h4>Report / Delivery</h4><p>결과를 보고서, 대시보드, To-Do 형태로 전달</p><div class="cap-chips"><span>Dashboard</span><span>Email</span><span>To-Do</span></div></div>
+          <div class="cap-card optional"><h4>Exception Queue</h4><p>실패·예외·저신뢰 실행 건을 사람 검토 대기열로 전환</p><div class="cap-chips"><span>Retry</span><span>Manual Review</span><span>SLA</span></div></div>
+          <div class="cap-card optional"><h4>Transaction Guard</h4><p>실행 전 확인, 재시도, 취소 조건을 업무 정책으로 관리</p><div class="cap-chips"><span>Pre-check</span><span>Rollback Rule</span><span>Confirm</span></div></div>
+          <div class="cap-card optional"><h4>Runbook Packaging</h4><p>반복 실행 가능한 업무 절차를 운영 패키지로 정리</p><div class="cap-chips"><span>Runbook</span><span>Deploy</span><span>Operations</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row learning">
+        <div class="cap-title"><b>Operational Learning</b><small>실행 결과의 축적과 개선</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>Decision / Action Log</h4><p>판단 근거, 도구 호출, 실행 결과를 추적 가능한 이력으로 남김</p><div class="cap-chips"><span>Reasoning Trace</span><span>Tool Trace</span><span>I/O Capture</span></div></div>
+          <div class="cap-card"><h4>Feedback Store</h4><p>사용자 피드백과 업무 결과를 개선 데이터로 축적</p><div class="cap-chips"><span>User Feedback</span><span>Outcome Data</span><span>Survey</span></div></div>
+          <div class="cap-card"><h4>Evaluation Pipeline</h4><p>답변·실행 품질을 정기적으로 검증하고 회귀를 확인</p><div class="cap-chips"><span>Eval Set</span><span>Regression</span><span>A/B Test</span><span>MLflow</span></div></div>
+          <div class="cap-card"><h4>Skill Library</h4><p>검증된 프롬프트, 도구 사용법, 업무 절차를 재사용 자산으로 관리</p><div class="cap-chips"><span>Validated Skill</span><span>Versioning</span><span>Reuse</span></div></div>
+          <div class="cap-card optional"><h4>Skill Approval Workflow</h4><p>새 업무 스킬을 검증·승인한 뒤 운영 환경에 배포</p><div class="cap-chips"><span>Review</span><span>Approve</span><span>Publish</span></div></div>
+          <div class="cap-card optional"><h4>Improvement Candidate</h4><p>운영 이력에서 정책·스킬·지식 개선 후보를 제안</p><div class="cap-chips"><span>Policy</span><span>Skill</span><span>Knowledge</span></div></div>
+          <div class="cap-card optional"><h4>Experiment & Versioning</h4><p>모델, 프롬프트, 데이터 변경을 비교하고 안전하게 배포</p><div class="cap-chips"><span>Prompt</span><span>Model</span><span>Data Version</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Trust · Security · Governance</b><small>보안·감사·운영 통제</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>IAM / SSO</h4><p>사용자, 조직, 역할별 접근 권한을 통합 관리</p><div class="cap-chips"><span>OIDC</span><span>SAML</span><span>MFA</span><span>RBAC</span></div></div>
+          <div class="cap-card"><h4>Data Security</h4><p>민감정보와 업무 데이터를 보호하고 사용 범위를 제한</p><div class="cap-chips"><span>Encryption</span><span>Masking</span><span>Tokenization</span></div></div>
+          <div class="cap-card"><h4>Audit / Explainability</h4><p>근거, 출처, 실행 이력을 감사 가능한 형태로 제공</p><div class="cap-chips"><span>Evidence</span><span>Citation</span><span>Action Lineage</span></div></div>
+          <div class="cap-card"><h4>Guardrails / Policy</h4><p>금지 작업, 민감정보, 위험 실행을 정책으로 통제</p><div class="cap-chips"><span>Input Filter</span><span>Output Filter</span><span>Tool Policy</span><span>OPA</span></div></div>
+          <div class="cap-card"><h4>Closed / Private Deployment</h4><p>공공·금융·국방 환경에 맞춘 폐쇄형 배포 옵션</p><div class="cap-chips"><span>On-premise</span><span>VPC</span><span>Air-gapped</span></div></div>
+          <div class="cap-card optional"><h4>Usage & Cost Control</h4><p>조직·업무별 모델 사용량, 비용, 쿼터를 운영 정책으로 관리</p><div class="cap-chips"><span>Quota</span><span>Budget</span><span>Rate Limit</span></div></div>
+          <div class="cap-card optional"><h4>Agent Observability</h4><p>Agent 실행 단계, 지연, 오류, 도구 호출을 운영 관점에서 관측</p><div class="cap-chips"><span>OpenTelemetry</span><span>Trace</span><span>Metrics</span></div></div>
+          <div class="cap-card optional"><h4>Quality Review</h4><p>품질 점수와 리스크를 운영 리포트로 관리</p><div class="cap-chips"><span>Quality Score</span><span>Risk Check</span><span>Ops Report</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="s5">
+  <style>
+    .ref-card{border:1px solid var(--line);border-radius:18px;background:#fff;padding:22px;margin-bottom:18px;box-shadow:0 8px 24px rgba(17,19,24,.04)}
+    .ref-row{display:grid;grid-template-columns:minmax(280px,1fr) 2fr;gap:22px;align-items:stretch;margin-bottom:18px}
+    .ref-id{display:flex;flex-direction:column}
+    .ref-id h3{margin:0 0 6px;font-size:19px;letter-spacing:-.02em}
+    .ref-meta{color:var(--muted);font-size:12px;margin:0 0 12px}
+    .ref-meta strong{color:#111}
+    .ref-brief{color:var(--sub);font-size:13px;margin:0;line-height:1.6}
+    .ref-split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .ref-pane{border-radius:12px;padding:14px}
+    .ref-pane.good{border:1px solid #c9e0d3;background:#f3fbf7}
+    .ref-pane.gap{border:1px solid #f1d49c;background:#fffaf0}
+    .ref-pane-title{font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:10px}
+    .ref-pane.good .ref-pane-title{color:var(--green)}
+    .ref-pane.gap .ref-pane-title{color:var(--amber)}
+    .ref-list{margin:0;padding-left:16px;color:#1f2937;font-size:12.5px;line-height:1.7}
+    .ref-list li{margin-bottom:3px}.ref-list li:last-child{margin-bottom:0}
+    .ref-list li strong{color:#111;font-weight:800}
+
+    .ref-strategy{padding:18px;border-radius:14px;background:linear-gradient(180deg,#fbfbfd,#fff);border:1px solid var(--line)}
+    .ref-strategy-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+    .ref-strategy-tag{font-size:10px;font-weight:900;letter-spacing:.16em;color:#fff;background:#111;border-radius:6px;padding:5px 9px;flex-shrink:0;margin-top:2px}
+    .ref-strategy-title{font-size:15px;font-weight:900;color:#111;letter-spacing:-.01em}
+    .ref-strategy-sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+
+    .ref-timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+    .ref-tl-step{position:relative;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 13px}
+    .ref-tl-step:not(:last-child):after{content:"→";position:absolute;right:-9px;top:50%;transform:translateY(-50%);font-size:16px;color:#9ca3af;font-weight:900;z-index:2;background:#fff;width:14px;text-align:center;line-height:1}
+    .ref-tl-when{font-size:10px;font-weight:900;letter-spacing:.06em;margin-bottom:5px}
+    .ref-tl-what{font-size:12px;color:#1f2937;line-height:1.5}
+    .ref-tl-what strong{font-weight:800;color:#111}
+
+    .ref-plays{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .ref-play{display:flex;gap:11px;border-radius:10px;padding:12px 13px}
+    .ref-play-tag{font-size:10px;font-weight:900;letter-spacing:.06em;color:#fff;border-radius:6px;padding:4px 7px;flex-shrink:0;align-self:flex-start}
+    .ref-play-body{flex:1}
+    .ref-play-title{font-size:12.5px;font-weight:900;color:#111;margin-bottom:3px;letter-spacing:-.01em}
+    .ref-play-desc{font-size:11.5px;color:var(--sub);line-height:1.55}
+    .ref-play-desc strong{color:#111}
+
+    /* 컬러 변형 — violet (투자) */
+    .ref-strategy.violet .ref-strategy-tag{background:var(--violet)}
+    .ref-strategy.violet .ref-tl-when{color:var(--violet)}
+    .ref-strategy.violet .ref-play{border:1px solid #d6cdff;background:linear-gradient(180deg,#f9f7ff,#fff)}
+    .ref-strategy.violet .ref-play-tag{background:var(--violet)}
+
+    /* 컬러 변형 — teal (진흥회) */
+    .ref-strategy.teal .ref-strategy-tag{background:var(--teal)}
+    .ref-strategy.teal .ref-tl-when{color:var(--teal)}
+    .ref-strategy.teal .ref-play{border:1px solid #bfe5e7;background:linear-gradient(180deg,#f4fbfb,#fff)}
+    .ref-strategy.teal .ref-play-tag{background:var(--teal)}
+
+    @media(max-width:1000px){
+      .ref-row,.ref-split,.ref-timeline,.ref-plays{grid-template-columns:1fr}
+      .ref-tl-step:not(:last-child):after{display:none}
+    }
+  </style>
+  <div class="section-head"><div class="num">05</div><div><h2>적용 레퍼런스 — 검증된 것과 사업 확장 방향</h2><p class="lead">검증된 두 케이스를 봅니다. 각각이 Offering Map의 <strong>어떤 부분을 입증</strong>했고, KT DS가 <strong>어떻게 사업화·확장</strong>해 갈 것인지 로드맵과 전략 액션으로 풀어봅니다.</p></div></div>
+
+  <!-- ===== Case 1: AI 투자 메이트 ===== -->
+  <div class="ref-card">
+    <div class="ref-row">
+      <div class="ref-id">
+        <span class="badge b-violet">Reference · 내부 프로젝트</span>
+        <h3>AI 투자 메이트</h3>
+        <p class="ref-meta"><strong>도메인</strong> · 자산운용 · 투자 의사결정</p>
+        <p class="ref-brief">매크로·뉴스·블룸버그 데이터를 통합해 투자 자문을 생성하는 LangGraph 기반 멀티에이전트. 데이터 수집 → 멀티에이전트 분석 → 자문 생성까지 E2E 검증 완료.</p>
+      </div>
+      <div class="ref-split">
+        <div class="ref-pane good">
+          <div class="ref-pane-title">✓ 검증된 영역</div>
+          <ul class="ref-list">
+            <li><strong>Inputs</strong> · 외부 데이터(블룸버그·뉴스·매크로) 통합</li>
+            <li><strong>Agentic</strong> · LangGraph 멀티에이전트 분석·자문 생성</li>
+            <li><strong>Service</strong> · Vertical Agent 형태의 자문 서비스화</li>
+          </ul>
+        </div>
+        <div class="ref-pane gap">
+          <div class="ref-pane-title">+ AAP로 보완</div>
+          <ul class="ref-list">
+            <li><strong>Semantic</strong> · 투자 정책·룰·권한 구조화</li>
+            <li><strong>Action</strong> · 주문·기록 시스템 Writeback / Workflow</li>
+            <li><strong>Learning · Trust</strong> · Decision Log · HITL · 감사·설명성</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-strategy violet">
+      <div class="ref-strategy-head">
+        <span class="ref-strategy-tag">STRATEGY</span>
+        <div>
+          <div class="ref-strategy-title">사업 확장 로드맵 · 단일 자문 Agent에서 Vertical Decision Pack으로</div>
+          <div class="ref-strategy-sub">자산운용 1차 진입 → 자문형 의사결정 영역(법무·세무·M&amp;A) 패턴 복제 → Vertical Decision Pack 자산화.</div>
+        </div>
+      </div>
+
+      <div class="ref-timeline">
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">현재 · FY26 1H</div>
+          <div class="ref-tl-what">내부 E2E 검증 완료, <strong>외부 영업 자료화</strong> 진행</div>
+        </div>
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">단기 · FY26 2H</div>
+          <div class="ref-tl-what">KT그룹 금융 채널 1차 PoC, <strong>외부 자산운용사 1-2곳 영업 진입</strong></div>
+        </div>
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">중기 · FY27</div>
+          <div class="ref-tl-what">자문형 의사결정(법무·세무·M&amp;A)으로 <strong>패턴 복제</strong></div>
+        </div>
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">장기</div>
+          <div class="ref-tl-what">Vertical Decision Agent <strong>표준 Pack</strong> 자산화 · 산업별 복제</div>
+        </div>
+      </div>
+
+      <div class="ref-plays">
+        <div class="ref-play">
+          <span class="ref-play-tag">PLAY 1</span>
+          <div class="ref-play-body">
+            <div class="ref-play-title">금융 컴플라이언스 패키징</div>
+            <div class="ref-play-desc">운용 한도·감사 추적·HITL 통제를 AAP의 <strong>Semantic·Foundation</strong>에 매핑한 "금융 자문 AAP" 패키지 제작 → 금융권 영업 시 즉시 제시 가능</div>
+          </div>
+        </div>
+        <div class="ref-play">
+          <span class="ref-play-tag">PLAY 2</span>
+          <div class="ref-play-body">
+            <div class="ref-play-title">파트너 결합형 통합 SI 카드</div>
+            <div class="ref-play-desc">비투엔(RAG) · 인핸스(온톨로지) 결합 통합 SI 제안서로 <strong>자체 모델 한계를 파트너 자산으로 보완</strong> → 수주 경쟁력 확보</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Case 2: 한국기계산업진흥회 ===== -->
+  <div class="ref-card">
+    <div class="ref-row">
+      <div class="ref-id">
+        <span class="badge b-teal">POC 선제안 · 1차 완료</span>
+        <h3>한국기계산업진흥회 온톨로지</h3>
+        <p class="ref-meta"><strong>도메인</strong> · 공공·협회 · 기계산업</p>
+        <p class="ref-brief">국제 정세·통상규제·환율 변화를 기계산업 도메인 온톨로지로 구조화해 회원사별 영향도를 분석·통보하는 의사결정 자동화. 1차 사업 완료, 기술 세미나 진행 중.</p>
+      </div>
+      <div class="ref-split">
+        <div class="ref-pane good">
+          <div class="ref-pane-title">✓ 검증된 영역</div>
+          <ul class="ref-list">
+            <li><strong>Semantic</strong> · 기계산업 도메인 온톨로지 · Knowledge Graph</li>
+            <li><strong>Semantic</strong> · 회원사 영향도 분석 룰 설계</li>
+            <li><strong>방법론</strong> · 도메인 SME 협업 · 규제·정책 모델링</li>
+          </ul>
+        </div>
+        <div class="ref-pane gap">
+          <div class="ref-pane-title">+ AAP로 보완</div>
+          <ul class="ref-list">
+            <li><strong>Inputs</strong> · 정세·환율·규제 외부 데이터 자동 수집</li>
+            <li><strong>Agentic</strong> · 자율 추론·도구 호출 자동화</li>
+            <li><strong>Action</strong> · 회원사 통보·리포팅 Workflow</li>
+            <li><strong>Trust</strong> · 폐쇄망·감사 (공공 요건)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-strategy teal">
+      <div class="ref-strategy-head">
+        <span class="ref-strategy-tag">STRATEGY</span>
+        <div>
+          <div class="ref-strategy-title">사업 확장 로드맵 · 1개 단체 PoC에서 Public Decision Pack으로</div>
+          <div class="ref-strategy-sub">진흥회 본 사업 → 유사 산업단체로 수평 복제 → 진흥기관·공공 정책분석 카테고리화.</div>
+        </div>
+      </div>
+
+      <div class="ref-timeline">
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">현재 · FY26 1H</div>
+          <div class="ref-tl-what">1차 사업 완료, <strong>기술 세미나 → 본 사업 RFP 대응</strong></div>
+        </div>
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">단기 · FY26 2H</div>
+          <div class="ref-tl-what">본 사업 수주, <strong>회원사 통보 자동화 본 구축</strong></div>
+        </div>
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">중기 · FY27</div>
+          <div class="ref-tl-what">자동차·반도체·무역·섬유 협회로 <strong>수평 복제</strong></div>
+        </div>
+        <div class="ref-tl-step">
+          <div class="ref-tl-when">장기</div>
+          <div class="ref-tl-what">공공 진흥기관 정책분석 <strong>Public Decision Pack</strong> 자산화</div>
+        </div>
+      </div>
+
+      <div class="ref-plays">
+        <div class="ref-play">
+          <span class="ref-play-tag">PLAY 1</span>
+          <div class="ref-play-body">
+            <div class="ref-play-title">산업단체 온톨로지 표준 템플릿화</div>
+            <div class="ref-play-desc">1차 사업의 기계산업 온톨로지를 재사용 가능한 <strong>"산업단체 도메인 템플릿"</strong>으로 자산화 → 신규 단체 진입 리드타임 단축</div>
+          </div>
+        </div>
+        <div class="ref-play">
+          <span class="ref-play-tag">PLAY 2</span>
+          <div class="ref-play-body">
+            <div class="ref-play-title">공공 폐쇄망 결합 카드</div>
+            <div class="ref-play-desc">KT그룹 보안·망분리·감사 자산 + 보안 파트너(디피니트 등) 결합으로 <strong>공공 통제형 AAP 패키지</strong> 제작 → 공공 시장 진입 카드</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><strong>두 케이스는 서로 다른 축을 입증·요구합니다.</strong> AI 투자 메이트는 <em>Inputs · Agentic · Service</em>를, 진흥회 온톨로지는 <em>Semantic</em>을 검증했고, 각자가 비워둔 영역은 거꾸로 상대 케이스의 검증 영역과 맞물립니다. AAP는 이 둘을 통합·일반화해 산업·고객에 재적용 가능한 형태로 결합합니다.</div>
+</section>
+<section id="s6">
+  <div class="section-head"><div class="num">06</div><div><h2>산업별 적용 예시</h2><p class="lead">AAP는 특정 산업 전용 솔루션이 아니라, 문서·정책·시스템·검토 흐름이 많은 업무에 우선 적용할 수 있습니다.</p></div></div>
+  <table>
+    <thead><tr><th>산업</th><th>시작 Use Case</th><th>AAP 적합 이유</th></tr></thead>
+    <tbody>
+      <tr><td><strong>제조</strong></td><td>작업표준·품질·설비 매뉴얼 Agent</td><td>문서·설비·품질 이력이 많고 현장 대응 니즈가 큼</td></tr>
+      <tr><td><strong>유통</strong></td><td>매장 운영·프로모션 정책 Agent</td><td>정책 변경과 CS 대응이 잦음</td></tr>
+      <tr><td><strong>물류</strong></td><td>배송 예외·클레임 처리 Agent</td><td>예외 처리와 시스템 연계가 중요</td></tr>
+      <tr><td><strong>공공</strong></td><td>민원·행정 지식 AI KMS</td><td>법령·지침·근거 제시 필요</td></tr>
+      <tr><td><strong>국방</strong></td><td>폐쇄망 정비·운영 매뉴얼 Agent</td><td>보안·망분리·정비 지식 활용 필요</td></tr>
+      <tr><td><strong>교육</strong></td><td>학사·교무·상담 AI KMS</td><td>규정·FAQ·상담 지식 활용성이 높음</td></tr>
+    </tbody>
+  </table>
+</section>
+<footer class="footer"><div>AAP Proactive Offering · v1.00 · Draft</div><div>고객 선제안용</div></footer>
+<script>
+(function(){
+  const links = Array.from(document.querySelectorAll('.toc a[href^="#s"]'));
+  const sectionToLink = new Map();
+  links.forEach(a => {
+    const sec = document.getElementById(a.getAttribute('href').slice(1));
+    if(sec) sectionToLink.set(sec, a);
+  });
+  const setActive = (link) => {
+    links.forEach(a => a.classList.toggle('active', a === link));
+  };
+  let lastTop = null;
+  const io = new IntersectionObserver((entries) => {
+    const visible = entries.filter(e => e.isIntersecting);
+    if(visible.length === 0) return;
+    visible.sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top);
+    const top = visible[0].target;
+    if(top === lastTop) return;
+    lastTop = top;
+    setActive(sectionToLink.get(top));
+  }, {rootMargin: '-25% 0px -65% 0px', threshold: 0});
+  sectionToLink.forEach((_, sec) => io.observe(sec));
+
+  const bar = document.querySelector('.toc-progress-bar');
+  const doc = document.documentElement;
+  const update = () => {
+    const max = (doc.scrollHeight - doc.clientHeight) || 1;
+    const pct = Math.max(0, Math.min(1, (window.scrollY || doc.scrollTop) / max));
+    if(bar) bar.style.width = (pct * 100) + '%';
+  };
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update);
+  update();
+})();
+</script>
+</div>
+</body>
+</html>

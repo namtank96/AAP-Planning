@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>리뷰 · AAP Offering Map — Detail</title>
+<style>
+:root{
+  --ink:#111318; --sub:#4b5563; --muted:#6b7280; --line:#e5e7eb; --soft:#f7f8fb;
+  --blue:#2557d6; --blue2:#eef3ff; --violet:#6f3ff5; --violet2:#f5f0ff;
+  --green:#188a57; --green2:#eefaf5; --amber:#c47a12; --amber2:#fff7e8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#f3f4f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1220px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e8e8e8}
+
+/* Review-mode banner */
+.review-bar{padding:14px 56px;background:#15171d;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.review-bar .tag{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7);font-weight:800}
+.review-bar .title{font-size:14px;font-weight:800}
+.review-bar .src{font-size:11px;color:rgba(255,255,255,.55)}
+
+section{padding:42px 56px}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:.03em}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:900px}
+.lead strong{color:#111}
+
+.detail-map{display:grid;grid-template-columns:1fr;gap:16px}
+.detail-row{display:grid;grid-template-columns:230px 1fr;gap:14px;border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px}
+.detail-title{border-radius:12px;background:#111;color:#fff;padding:14px}
+.detail-title h3{margin:0;font-size:16px}
+.detail-title p{margin:6px 0 0;font-size:11px;color:rgba(255,255,255,.7)}
+.detail-items{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.detail-items span{border:1px solid var(--line);background:#fbfbfc;border-radius:9px;padding:9px;font-size:12px;color:#374151}
+.detail-row.semantic-row{border-color:#b6a8ff}
+.detail-row.semantic-row .detail-title{background:#4f3ad9}
+.detail-row.learning-row{border-color:#e9c17f}
+.detail-row.learning-row .detail-title{background:#8a5a0a}
+.detail-item-box{grid-column:span 2;border:1px solid var(--line);background:#fbfbfc;border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:6px}
+.detail-item-box strong{display:block;font-size:12px;color:#111;font-weight:800}
+.sub-items{display:flex;flex-wrap:wrap;gap:4px}
+.sub-items span{font-size:10.5px;padding:3px 7px;background:#fff;border:1px solid #e0e3eb;border-radius:6px;color:#6b7280}
+.detail-row.semantic-row .detail-item-box{border-color:#d6cdff;background:#f6f3ff}
+.detail-row.semantic-row .detail-item-box strong{color:#4f3ad9}
+.detail-row.semantic-row .sub-items span{border-color:#c9bcff;color:#5b4ad4;background:#fff}
+
+@media(max-width:1000px){
+  .detail-items{grid-template-columns:1fr 1fr}
+  .detail-row{grid-template-columns:1fr}
+  section{padding:24px}
+  .review-bar{padding:14px 24px;flex-direction:column;align-items:flex-start;gap:6px}
+  .section-head{grid-template-columns:1fr}
+}
+@media print{body{background:#fff}.page{box-shadow:none;max-width:none}.review-bar{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="review-bar">
+  <div>
+    <div class="tag">Review Extract</div>
+    <div class="title">AAP Offering Map — Detail</div>
+  </div>
+  <div class="src">원본: aap_proactive_offering_v100 (1).html · section #s5</div>
+</div>
+
+<section id="s5">
+  <div class="section-head">
+    <div class="num">05</div>
+    <div>
+      <h2>AAP Offering Map — Detail</h2>
+      <p class="lead">Overview가 "무엇인가"라면, Detail은 "무엇으로 구성되는가"입니다. 아래 7개 영역은 나중에 아키텍처 문서와 공식 제안서에서도 동일한 축으로 재사용할 수 있습니다.</p>
+    </div>
+  </div>
+  <div class="detail-map">
+    <div class="detail-row">
+      <div class="detail-title"><h3>Service Experience</h3></div>
+      <div class="detail-items">
+        <span>AI Agent Portal</span>
+        <span>Horizontal Agents</span>
+        <span>Vertical Agents</span>
+        <span>Human Review / Approval</span>
+        <span>Agent Marketplace</span>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-title"><h3>Enterprise Data &amp; Inputs</h3></div>
+      <div class="detail-items">
+        <span>System Connectors</span>
+        <span>Data Platform Integration</span>
+        <span>Document / Knowledge Integration</span>
+        <span>Operational Log Integration</span>
+        <span>External Data Interface</span>
+        <span>Metadata Catalog</span>
+      </div>
+    </div>
+    <div class="detail-row semantic-row">
+      <div class="detail-title"><h3>Business Semantic Modeling</h3></div>
+      <div class="detail-items">
+        <div class="detail-item-box"><strong>Domain Ontology</strong><div class="sub-items"><span>OWL</span><span>RDF</span><span>SKOS</span></div></div>
+        <div class="detail-item-box"><strong>KMS / Domain Dictionary</strong><div class="sub-items"><span>Taxonomy</span><span>Controlled Vocabulary</span><span>Glossary Mgmt</span></div></div>
+        <div class="detail-item-box"><strong>Knowledge Graph</strong><div class="sub-items"><span>Property Graph</span><span>RDF Triplestore</span><span>SPARQL / Cypher</span></div></div>
+        <div class="detail-item-box"><strong>Process Map</strong><div class="sub-items"><span>BPMN 2.0</span><span>CMMN</span><span>Process Mining</span></div></div>
+        <div class="detail-item-box"><strong>Decision Rule Repository</strong><div class="sub-items"><span>DMN</span><span>Drools / OPA</span><span>Business Rule Engine</span></div></div>
+        <div class="detail-item-box"><strong>System Map</strong><div class="sub-items"><span>ArchiMate</span><span>API Inventory</span><span>System Capability Model</span></div></div>
+        <div class="detail-item-box"><strong>Authority Matrix</strong><div class="sub-items"><span>RBAC</span><span>ABAC</span><span>ReBAC</span></div></div>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-title"><h3>Agentic Reasoning &amp; Execution</h3></div>
+      <div class="detail-items">
+        <div class="detail-item-box"><strong>Planning Engine</strong><div class="sub-items"><span>ReAct</span><span>Plan-and-Execute</span><span>Reflexion</span></div></div>
+        <div class="detail-item-box"><strong>Work Context Memory</strong><div class="sub-items"><span>Short / Long-term Memory</span><span>Vector Store</span><span>Episodic Memory</span></div></div>
+        <div class="detail-item-box"><strong>Agent Routing</strong><div class="sub-items"><span>Supervisor Pattern</span><span>Multi-agent Orchestration</span><span>Task Decomposition</span></div></div>
+        <div class="detail-item-box"><strong>Tool Registry</strong><div class="sub-items"><span>OpenAPI Spec</span><span>MCP Registry</span><span>Tool Schema</span></div></div>
+        <div class="detail-item-box"><strong>Tool Calling Runtime</strong><div class="sub-items"><span>MCP</span><span>OpenAPI</span><span>Function Calling</span></div></div>
+        <div class="detail-item-box"><strong>HITL Routing</strong><div class="sub-items"><span>Approval Workflow</span><span>Confidence Threshold</span><span>Escalation Rule</span></div></div>
+        <div class="detail-item-box"><strong>Action Policy</strong><div class="sub-items"><span>Policy as Code</span><span>OPA</span><span>Guardrails</span></div></div>
+        <div class="detail-item-box"><strong>Prompt / Skill Template</strong><div class="sub-items"><span>Prompt Library</span><span>Skill Pack</span><span>Few-shot Template</span></div></div>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-title"><h3>Enterprise Integration &amp; Action</h3></div>
+      <div class="detail-items">
+        <span>Copilot UI</span>
+        <span>Review / Approval UI</span>
+        <span>Workflow Engine</span>
+        <span>API Gateway</span>
+        <span>RPA Connector</span>
+        <span>Writeback Connector</span>
+        <span>Report / Dashboard</span>
+        <span>Monitoring</span>
+      </div>
+    </div>
+    <div class="detail-row learning-row">
+      <div class="detail-title"><h3>Operational Learning</h3></div>
+      <div class="detail-items">
+        <span>Decision Log</span>
+        <span>System Knowledge</span>
+        <span>Skill Library</span>
+        <span>Feedback Store</span>
+        <span>Evaluation Pipeline</span>
+        <span>Versioning</span>
+        <span>Knowledge Update Workflow</span>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-title"><h3>Trust · Security · Governance</h3></div>
+      <div class="detail-items">
+        <span>IAM / SSO</span>
+        <span>Data Security</span>
+        <span>Audit / Lineage</span>
+        <span>Explainability</span>
+        <span>Guardrails</span>
+        <span>Closed / Private Deployment</span>
+        <span>Tenant Governance</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
