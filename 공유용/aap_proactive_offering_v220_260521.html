@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP 내부용 사업전략 및 직책자 설득안 · v0.1</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c; --gray-black:#000;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2; --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+  --shadow:0 16px 42px rgba(23,25,28,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--gray-75);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+a{color:inherit;text-decoration:none}
+.page{max-width:1320px;margin:0 auto;background:var(--gray-white);min-height:100vh;box-shadow:0 0 0 1px var(--gray-150)}
+
+/* Hero */
+.hero{padding:54px 56px 42px;background:var(--gray-900);color:var(--gray-white);position:relative;overflow:hidden}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.72);font-weight:800;margin-bottom:14px}
+.hero h1{font-size:40px;line-height:1.1;margin:0 0 18px;letter-spacing:-.035em;max-width:1020px;color:#fff}
+.hero p{font-size:17px;line-height:1.65;color:rgba(255,255,255,.78);max-width:920px;margin:0}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px;position:relative;z-index:1}
+.hero-card{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);border-radius:14px;padding:18px;backdrop-filter:blur(8px)}
+.hero-card strong{display:block;color:#fff;font-size:14px;margin-bottom:8px}
+.hero-card span{color:rgba(255,255,255,.72);font-size:12.5px;line-height:1.55}
+
+/* TOC */
+.toc{padding:22px 56px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.toc-progress{height:3px;background:var(--gray-100);border-radius:999px;overflow:hidden;margin:-4px 0 12px}
+.toc-progress-bar{height:100%;width:0;background:var(--red);border-radius:999px;transition:width .12s linear}
+.toc-title{font-size:12px;font-weight:900;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}
+.toc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.toc a{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--gray-50);border-radius:9px;padding:8px 9px;font-size:11.5px;color:var(--gray-600);transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,color .18s ease;line-height:1.3}
+.toc b{display:inline-flex;min-width:26px;height:22px;align-items:center;justify-content:center;border-radius:6px;background:var(--gray-900);color:#fff;font-size:10.5px;font-weight:900;transition:background .18s ease,box-shadow .18s ease,transform .18s ease;flex-shrink:0}
+.toc a:hover{border-color:var(--gray-300);background:#fff;transform:translateY(-1px);box-shadow:0 6px 14px rgba(23,25,28,.07);color:var(--ink)}
+.toc a:hover b{background:var(--gray-900);transform:scale(1.04)}
+.toc a.active{border-color:var(--red);background:#fff;color:var(--ink);font-weight:800;box-shadow:0 6px 14px rgba(224,40,47,.10)}
+.toc a.active b{background:var(--red);box-shadow:0 0 0 3px rgba(224,40,47,.14)}
+
+/* Section */
+section{padding:42px 56px;border-bottom:1px solid var(--line);background:#fff}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:var(--gray-900);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:.03em}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:920px}
+.lead strong{color:var(--ink)}
+.sub-h3{margin:24px 0 12px;font-size:16px;letter-spacing:-.01em;color:#111}
+.sub-note{font-size:13px;color:var(--sub);margin:0 0 12px;line-height:1.6}
+.sub-note strong{color:var(--ink)}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* Card */
+.card{border:1px solid var(--line);border-radius:14px;background:#fff;padding:18px;box-shadow:0 6px 18px rgba(23,25,28,.03)}
+.card h3{margin:0 0 8px;font-size:15px;letter-spacing:-.01em;color:var(--ink);line-height:1.3}
+.card p{margin:0;color:var(--gray-600);font-size:12.5px;line-height:1.6}
+.card p strong{color:var(--ink);font-weight:800}
+.card ul{margin:10px 0 0;padding-left:18px;color:var(--gray-600);font-size:12.5px;line-height:1.6}
+.card li{margin:3px 0}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 9px;font-size:10.5px;font-weight:900;letter-spacing:.02em;margin-bottom:8px;background:var(--gray-75);color:var(--gray-600)}
+
+/* Table */
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;font-size:13px;margin:0}
+th{background:var(--gray-900);color:#fff;text-align:left;padding:12px 14px;font-weight:800;font-size:12px;letter-spacing:.02em}
+td{padding:11px 14px;border-top:1px solid var(--line);vertical-align:top;color:var(--gray-600);line-height:1.55}
+td strong{color:var(--ink);font-weight:800}
+tr:nth-child(even) td{background:var(--gray-50)}
+
+/* Note */
+.note{border-left:4px solid var(--red);background:var(--gray-50);padding:14px 16px;border-radius:10px;color:var(--gray-600);font-size:13.5px;margin-top:16px;line-height:1.65}
+.note strong{color:var(--ink);font-weight:800}
+
+/* AAP definition one-liner */
+.aap-one-line{padding:18px 20px;border-radius:12px;background:#111;color:#fff;font-size:16.5px;line-height:1.6;font-weight:600;letter-spacing:-.005em}
+.aap-one-line span{display:block;font-size:10px;font-weight:900;letter-spacing:.16em;color:rgba(255,255,255,.62);margin-bottom:6px;text-transform:uppercase}
+.aap-one-line strong{font-weight:900;color:#fff}
+
+/* Footer */
+.footer{padding:24px 56px;background:#111;color:#fff;display:flex;justify-content:space-between;gap:20px;font-size:12px}
+.footer div{color:rgba(255,255,255,.68)}
+
+/* === Architecture stack (Section 4.1) === */
+.arch-stack{display:flex;flex-direction:column;gap:6px;margin:8px 0 0}
+.arch-band{display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:13px 18px;background:#fff}
+.arch-band .arch-label{font-size:13.5px;font-weight:900;color:#111;letter-spacing:-.01em}
+.arch-band .arch-content{font-size:12.5px;color:var(--gray-600);line-height:1.5}
+.arch-arrow{text-align:center;font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.08em;padding:1px 0}
+.arch-band.band-service{background:var(--gray-900);border-color:var(--gray-900)}
+.arch-band.band-service .arch-label{color:#fff}
+.arch-band.band-service .arch-content{color:rgba(255,255,255,.78)}
+.arch-band.band-loop{border:1.5px solid var(--gray-900);background:#fbfbfc}
+.arch-band.band-control{border:1.5px solid var(--teal);background:var(--teal2)}
+.arch-band.band-control .arch-label{color:var(--teal-strong)}
+.arch-band.band-env{background:#f5f6f8;border:1.5px dashed #8d95a1}
+.arch-band.band-trust{background:#15171d;border-color:#15171d;margin-top:14px;position:relative}
+.arch-band.band-trust .arch-label{color:#fff}
+.arch-band.band-trust .arch-content{color:rgba(255,255,255,.72)}
+.arch-band.band-trust:before{content:"공통 기반 · 전 영역 적용";position:absolute;top:-9px;left:18px;background:#fff;border:1px solid var(--gray-300);border-radius:999px;font-size:9.5px;font-weight:900;color:var(--gray-600);letter-spacing:.08em;padding:2px 8px;text-transform:uppercase}
+
+/* === Capability Map (Section 4.3) === */
+.cap-shell{border:1px solid #d8dce5;border-radius:18px;background:#fff;box-shadow:0 10px 28px rgba(17,19,24,.04);overflow:hidden;margin-top:8px}
+.cap-head{padding:18px 22px;background:#111;color:#fff;display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:end}
+.cap-head h3{margin:0;font-size:17px;letter-spacing:-.02em;color:#fff}
+.cap-head p{margin:6px 0 0;font-size:12px;color:rgba(255,255,255,.72);line-height:1.55}
+.cap-legend{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,.76)}
+.cap-legend span{display:inline-flex;align-items:center;gap:6px}
+.cap-legend i{width:18px;height:12px;border-radius:4px;background:#fff;border:1px solid rgba(255,255,255,.7);display:inline-block}
+.cap-legend .dashed i{background:transparent;border:1px dashed rgba(255,255,255,.72)}
+.cap-legend span.cap-legend-note{display:block;width:100%;font-size:10.5px;color:rgba(255,255,255,.62);margin-top:8px;letter-spacing:.02em;line-height:1.5;align-items:initial}
+.cap-legend span.cap-legend-note b{color:var(--teal);font-weight:900}
+.cap-map{display:grid;gap:0}
+.cap-row{display:grid;grid-template-columns:200px 1fr;border-bottom:1px solid var(--line);background:#fff}
+.cap-row:last-child{border-bottom:0}
+.cap-row.env-row{border-bottom:1.5px solid var(--gray-300)}
+.cap-title{padding:16px 18px;background:#fbfbfc;border-right:1px solid var(--line)}
+.cap-title b{display:block;font-size:13.5px;color:#111;line-height:1.25;letter-spacing:-.01em}
+.cap-title small{display:block;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.5}
+.cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));grid-auto-rows:1fr;gap:8px;padding:12px}
+.cap-card{min-width:0;border:1.2px solid #cfd4dc;border-radius:10px;background:#fff;padding:10px 11px;display:flex;flex-direction:column;gap:7px;min-height:108px;height:100%}
+.cap-card h4{margin:0;font-size:12.5px;color:#111;line-height:1.25;letter-spacing:-.01em}
+.cap-card p{margin:0;font-size:11px;color:var(--muted);line-height:1.45}
+.cap-card.optional{border:1.5px dashed #8d95a1;background:#f5f6f8}
+.cap-card.optional h4{color:#374151}
+.cap-card.differ h4::before{content:"★ ";color:var(--teal-strong);font-weight:900;letter-spacing:.02em}
+.cap-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto}
+.cap-chips span{font-size:10.5px;border:1px solid #e0e3eb;background:#f8fafc;color:#4b5563;border-radius:6px;padding:3px 6px;line-height:1.25}
+.cap-card.optional .cap-chips span{border-color:#d1d5db;background:#fff;color:#6b7280}
+
+/* === Reference cards (Section 07) === */
+.ref-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:20px;margin-bottom:18px;box-shadow:0 8px 20px rgba(17,19,24,.03)}
+.ref-row{display:grid;grid-template-columns:minmax(280px,1fr) 1.6fr;gap:20px;align-items:stretch;margin-bottom:16px}
+.ref-id{display:flex;flex-direction:column}
+.ref-id h3{margin:0 0 6px;font-size:18px;letter-spacing:-.02em;color:var(--ink)}
+.ref-meta{color:var(--muted);font-size:12px;margin:0 0 10px}
+.ref-meta strong{color:#111}
+.ref-brief{color:var(--gray-600);font-size:12.5px;margin:0;line-height:1.6}
+.ref-brief strong{color:var(--ink)}
+.ref-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ref-pane{border-radius:11px;padding:13px 14px}
+.ref-pane.good{border:1px solid var(--line);background:#fff}
+.ref-pane.gap{border:1px dashed #9ca3af;background:#fcfcfd}
+.ref-pane-title{font-size:10.5px;font-weight:900;letter-spacing:.06em;color:#374151;margin-bottom:9px;text-transform:uppercase}
+.ref-list{margin:0;padding-left:16px;color:#1f2937;font-size:12px;line-height:1.65}
+.ref-list li{margin-bottom:3px}
+.ref-list li strong{color:#111;font-weight:800}
+.ref-strategy{padding:14px 16px;border-radius:11px;background:#fbfbfc;border:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+.ref-strategy-tag{font-size:10px;font-weight:900;letter-spacing:.14em;color:#fff;background:#111;border-radius:5px;padding:4px 8px;flex-shrink:0;margin-top:2px}
+.ref-strategy-title{font-size:13.5px;font-weight:900;color:#111;letter-spacing:-.01em;margin-bottom:3px}
+.ref-strategy-sub{font-size:11.5px;color:var(--gray-600);line-height:1.55}
+
+@media(max-width:1100px){
+  .toc-grid{grid-template-columns:repeat(3,1fr)}
+  .hero-grid,.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .arch-band{grid-template-columns:1fr}
+  .arch-band:before{display:none}
+  .cap-head,.cap-row{grid-template-columns:1fr}
+  .cap-title{border-right:0;border-bottom:1px solid var(--line)}
+  .cap-grid{grid-template-columns:1fr}
+  .ref-row,.ref-split{grid-template-columns:1fr}
+  section,.hero,.toc,.footer{padding-left:24px;padding-right:24px}
+  .section-head{grid-template-columns:1fr}
+  .footer{flex-direction:column}
+}
+@media print{body{background:#fff}.page{box-shadow:none;max-width:none}.toc{position:static}.card,.cap-shell,.ref-card{box-shadow:none}section{break-inside:avoid}.toc-progress{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero" id="top">
+  <div class="eyebrow">INTERNAL · AAP 사업전략 및 직책자 설득안 · v0.1</div>
+  <h1>AAP는 단일 AI PoC가 아니라,<br>kt ds가 주도하는 통합 SI 오퍼링입니다</h1>
+  <p>Data Platform 이후 고객의 다음 예산 주제는 "AI가 실제 업무를 어디까지 수행할 수 있는가"입니다. AAP는 이 질문에 대한 kt ds의 답입니다. 모델 경쟁이 아니라 <strong>업무 의미화 · 기간계 연계 · 통제 · 운영 학습</strong>을 묶어 제공하는 Prime SI 오퍼링.</p>
+  <div class="hero-grid">
+    <div class="hero-card">
+      <strong>문서 성격</strong>
+      <span>내부 전략 · 사업화 방향 · 직책자 설득용. AAP를 단일 AI PoC가 아니라 kt ds가 주도하는 통합 SI 오퍼링으로 사업화하기 위한 방향, 책임 경계, 패키지, 실행 로드맵을 정리합니다.</span>
+    </div>
+    <div class="hero-card">
+      <strong>대상 독자 · 고객용 문서와의 관계</strong>
+      <span>사업부장, BD·영업 리더, 수행 총괄, 기술 리더, 파트너·보안·운영 책임자. 고객용 선제안서와 동일한 AAP 코어(정의·아키텍처)를 사용하되, 본 문서는 사업성·수행성·차별화·리스크를 전면화합니다.</span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-progress"><div class="toc-progress-bar"></div></div>
+  <div class="toc-title">Table of Contents</div>
+  <div class="toc-grid">
+    <a href="#es"><b>ES</b>Executive Summary</a>
+    <a href="#s1"><b>01</b>왜 이 사업을 해야 하는가</a>
+    <a href="#s2"><b>02</b>사업 기회와 1차 타겟</a>
+    <a href="#s3"><b>03</b>AAP 정의와 MECE 원칙</a>
+    <a href="#s4"><b>04</b>통합 아키텍처와 수행 모델</a>
+    <a href="#s5"><b>05</b>오퍼링 패키지화 전략</a>
+    <a href="#s6"><b>06</b>Build · Bring · Borrow</a>
+    <a href="#s7"><b>07</b>레퍼런스 자산화 전략</a>
+    <a href="#s8"><b>08</b>경쟁 구도와 포지셔닝</a>
+    <a href="#s9"><b>09</b>조직 운영 모델</a>
+    <a href="#s10"><b>10</b>리스크와 대응책</a>
+    <a href="#s11"><b>11</b>6개월 실행 로드맵</a>
+    <a href="#s12"><b>12</b>의사결정 요청사항</a>
+    <a href="#sapp"><b>A</b>Appendix · 추가 과제</a>
+  </div>
+</nav>
+
+<!-- ========= Executive Summary ========= -->
+<section id="es">
+  <div class="section-head">
+    <div class="num">ES</div>
+    <div>
+      <h2>Executive Summary</h2>
+      <p class="lead">AAP는 Data Platform 이후의 <strong>차세대 실행 계층</strong>입니다. 고객은 데이터 플랫폼과 생성형 AI PoC를 이미 경험했지만, AI가 실제 업무에 들어가 <strong>판단·승인·예외 처리·시스템 반영</strong>까지 잇는 운영형 사례는 아직 제한적입니다.</p>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>사업 기회의 정체</h3>
+      <p>AAP는 단일 솔루션 판매가 아닙니다. <strong>고객 업무 의미화, 기간계·레거시 연계, Agent 실행, HITL·감사·보안 통제, 운영 학습 체계</strong>를 하나로 묶어 제공하는 통합 SI 오퍼링입니다. kt ds가 이미 쥐고 있는 SI·통제·운영 강점이 그대로 작동하는 영역입니다.</p>
+    </div>
+    <div class="card">
+      <h3>왜 지금인가</h3>
+      <p>고객의 다음 예산 라인이 "데이터 플랫폼"에서 "Agentic AI 실행"으로 이동 중입니다. <strong>표준 아키텍처와 레퍼런스 Pack</strong>을 먼저 세팅한 사업자가 Prime SI 포지션을 가져갑니다. FY26 진입이 결정적입니다.</p>
+    </div>
+  </div>
+  <div class="note"><strong>내부 전략 명제</strong> · AAP는 AI 기술 트렌드 대응이 아니라, kt ds가 보유한 SI·기간계 연계·보안·운영 경험을 <strong>Agentic AI 시대의 실행형 오퍼링으로 재포장하는 사업 전략</strong>입니다.</div>
+</section>
+
+<!-- ========= 01. 왜 이 사업을 ========= -->
+<section id="s1">
+  <div class="section-head">
+    <div class="num">01</div>
+    <div>
+      <h2>왜 이 사업을 해야 하는가</h2>
+      <p class="lead">기술 트렌드 대응이 아니라, <strong>kt ds의 사업 구조와 정면으로 맞물리는 영역</strong>이기 때문입니다.</p>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <span class="badge">① 다음 예산 주제</span>
+      <h3>Data Platform 이후, 고객의 다음 질문</h3>
+      <p>고객은 데이터 수집·분석·시각화 기반을 이미 구축했지만 실제 업무 실행은 여전히 사람이 담당합니다. Data Platform 이후의 다음 질문은 <strong>"AI가 실제 업무를 어디까지 수행할 수 있는가"</strong>이며, 이 답을 만드는 사업자가 다음 라운드의 예산을 잡습니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge">② PoC 운영 전환 병목</span>
+      <h3>생성형 AI PoC는 많지만, 운영 전환은 어렵다</h3>
+      <p>고객 대다수는 이미 챗봇·문서 요약·검색 PoC를 거쳤습니다. 운영으로 가지 못한 이유는 LLM 성능이 아니라 <strong>업무 맥락, 시스템 실행, 승인·감사, 운영 학습 구조</strong>가 비어 있기 때문이며, 이 빈 자리를 누가 메우느냐가 사업 경쟁의 본질입니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge">③ kt ds 강점 정면 영역</span>
+      <h3>모델 경쟁이 아닌, 통합 책임의 경쟁</h3>
+      <p>AAP는 모델 자체 경쟁이 아닙니다. 고객 업무를 해석하고, 기간계와 연결하고, <strong>보안·감사·운영 체계 안에서 실행되게 만드는 통합 역량</strong>이 핵심입니다. 이는 kt ds의 SI 경험·통제·운영 경험과 정면으로 맞닿습니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge">④ Prime SI 포지션</span>
+      <h3>외부 자산을 조합하는 Prime 사업자</h3>
+      <p>LLM, RAG, Ontology, Workflow, RPA, EvalOps, 보안 솔루션은 외부 자산을 적극 조합할 수 있습니다. kt ds는 <strong>고객 업무·시스템 통합과 보안·운영 책임</strong>을 쥐는 Prime SI 포지션을 가져갈 수 있습니다. 솔루션 경쟁이 아니라 통합 책임 경쟁.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========= 02. 사업 기회와 1차 타겟 ========= -->
+<section id="s2">
+  <div class="section-head">
+    <div class="num">02</div>
+    <div>
+      <h2>사업 기회와 1차 타겟</h2>
+      <p class="lead">전사 플랫폼 구축으로 시작하지 않습니다. <strong>판단·시스템 반영·감사 이력</strong>이 모두 중요한 업무를 우선 골라, 8~12주 통제형 Pilot으로 시작합니다.</p>
+    </div>
+  </div>
+
+  <h3 class="sub-h3" style="margin-top:0">2.1 우선 타겟 산업</h3>
+  <table>
+    <thead>
+      <tr><th style="width:90px">우선순위</th><th style="width:200px">산업·고객군</th><th>이유</th><th style="width:320px">1차 제안 업무</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>1</strong></td><td><strong>금융·보험·자산운용</strong></td><td>규정·승인·감사·폐쇄망·판단 업무가 많음</td><td>내부통제, 손해사정, 투자 자문, 규정 검토</td></tr>
+      <tr><td><strong>2</strong></td><td><strong>공공·협회·산업단체</strong></td><td>정책·규제·회원사·민원 대응 등 도메인 지식 기반 판단 필요</td><td>정책 영향도 분석, 회원사 차등 통보, 민원·질의 대응</td></tr>
+      <tr><td><strong>3</strong></td><td><strong>그룹 내부·대기업</strong></td><td>기존 데이터·업무 시스템과 AI 조직 보유</td><td>업무 Agent Portal, 지식 검색, 승인형 업무 자동화</td></tr>
+      <tr><td><strong>4</strong></td><td><strong>제조·유통</strong></td><td>공급망·품질·계약·클레임 등 반복 판단·실행 업무 존재</td><td>품질 클레임, 구매·계약 검토, 공급 리스크 대응</td></tr>
+      <tr><td><strong>5</strong></td><td><strong>국방·보안</strong></td><td>폐쇄망·권한·감사 요구가 강함</td><td>폐쇄망 지식 검색, 절차 검토, 승인형 업무 지원</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">2.2 초기 진입 원칙</h3>
+  <div class="grid-2">
+    <div class="card"><h3>전사 플랫폼으로 시작하지 않는다</h3><p>"AAP 전사 도입"은 도입 비용·검증 부담·정치적 합의 비용을 한꺼번에 키웁니다. 1차 진입은 <strong>제한된 업무 범위</strong>에서 시작합니다.</p></div>
+    <div class="card"><h3>판단·시스템·감사가 모두 있는 업무</h3><p>고객의 반복 판단 업무 중 <strong>정책 기준이 있고, 시스템 반영이 필요하며, 감사·승인 이력이 중요한 업무</strong>를 1순위로 찾습니다.</p></div>
+    <div class="card"><h3>8~12주 통제형 Pilot</h3><p>범위·권한·실행 대상을 미리 정한 <strong>운영형 Pilot</strong>을 8~12주 단위로 구성합니다. 단순 기능 검증 PoC가 아니라 통제형 Pilot이라는 점이 핵심입니다.</p></div>
+    <div class="card"><h3>Pilot 후 운영 확장 논리</h3><p>Pilot 이후 <strong>Decision Log, Skill Registry, Evaluation Loop</strong>를 붙여 운영 확장 논리로 전환합니다. 단발성 사업이 아니라 운영·고도화 매출로 잇기 위한 설계입니다.</p></div>
+  </div>
+</section>
+
+<!-- ========= 03. AAP 정의와 MECE 원칙 ========= -->
+<section id="s3">
+  <div class="section-head">
+    <div class="num">03</div>
+    <div>
+      <h2>AAP 정의와 MECE 원칙</h2>
+      <p class="lead">고객용·내부용 문서가 동일하게 사용할 <strong>AAP 코어 정의와 5-구성요소</strong>입니다. 이 정의 위에서 사업·수행·기술이 합의합니다.</p>
+    </div>
+  </div>
+
+  <h3 class="sub-h3" style="margin-top:0">3.1 AAP 정의</h3>
+  <div class="aap-one-line">
+    <span>정의</span>
+    AAP는 고객의 <strong>데이터·문서·시스템을 업무 맥락으로 연결</strong>하고, Agent가 <strong>판단 후보 생성 · 도구 호출 · 실행 보조 · 사람 검토 연계</strong>를 안전하게 수행하도록 만드는 <strong>기업용 Agentic AI 운영 체계</strong>입니다.
+  </div>
+
+  <h3 class="sub-h3">3.2 AAP를 설명하는 5가지 구성 원칙</h3>
+  <p class="sub-note">AAP는 다음 다섯 구성요소로 설명할 때 가장 MECE에 가깝습니다.</p>
+  <table>
+    <thead><tr><th style="width:220px">구성요소</th><th style="width:200px">질문</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Customer Environment</strong></td><td>무엇을 연결하는가?</td><td>고객의 데이터 플랫폼, 업무 시스템, 문서·KMS, 내부 API를 연결</td></tr>
+      <tr><td><strong>Service Experience</strong></td><td>누가 어떻게 사용하는가?</td><td>현업 사용자·검토자·승인자·운영자가 Agent와 상호작용</td></tr>
+      <tr><td><strong>Execution Loop</strong></td><td>업무가 어떻게 처리되는가?</td><td>입력 연결 → 의미화 → 판단·계획 → 실행 → 운영 학습</td></tr>
+      <tr><td><strong>Control Plane</strong></td><td>무엇을 허용·차단하는가?</td><td>권한·위험도·HITL·감사·설명성·비용·품질 통제</td></tr>
+      <tr><td><strong>Trust Foundation</strong></td><td>어떤 기반에서 운영되는가?</td><td>IAM·보안·폐쇄망·관측·거버넌스·데이터 경계</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">3.3 내부 관점의 핵심 차별화</h3>
+  <table>
+    <thead><tr><th style="width:230px">차별화</th><th>의미</th><th style="width:340px">kt ds 관점의 사업 가치</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Business Semantic Modeling</strong></td><td>업무 의미·정책·권한·예외 기준을 구조화</td><td>고객 업무 컨설팅과 SI 설계 역량이 직접 작동</td></tr>
+      <tr><td><strong>Enterprise System Writeback</strong></td><td>결과를 실제 업무 시스템에 반영</td><td>기간계·레거시 연계 역량이 곧 차별화 포인트</td></tr>
+      <tr><td><strong>Control Plane</strong></td><td>HITL·감사·권한·위험도·보안 통제</td><td>공공·금융·국방 고객 진입의 필수 조건</td></tr>
+      <tr><td><strong>Operational Learning</strong></td><td>운영 이력·피드백을 개선 후보·스킬로 축적</td><td>일회성 PoC가 아닌 장기 운영·고도화 매출로 연결</td></tr>
+      <tr><td><strong>Partner-Orchestrated SI</strong></td><td>외부 솔루션을 조합하고 kt ds가 책임</td><td>자체 솔루션 한계를 보완하면서 Prime 포지션 확보</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========= 04. 통합 아키텍처와 수행 모델 ========= -->
+<section id="s4">
+  <div class="section-head">
+    <div class="num">04</div>
+    <div>
+      <h2>통합 아키텍처와 수행 모델</h2>
+      <p class="lead">고객용·내부용 문서가 동일하게 사용하는 코어 구조입니다. 고객에게는 운영 가능성·안전성을, 내부에는 <strong>사업화·수행·파트너 전략의 기준점</strong>으로 활용합니다.</p>
+    </div>
+  </div>
+
+  <h3 class="sub-h3" style="margin-top:0">4.1 Architecture Overview</h3>
+  <p class="sub-note">AAP는 고객 자산을 대체하지 않고, 기존 자산을 실행 구조에 연결합니다. 그 위에 업무 의미화, Agent 판단, 시스템 실행, 운영 학습, 보안·통제를 결합해 실제 운영 가능한 Enterprise Agentic AI 운영 모델로 전환합니다.</p>
+  <div class="arch-stack">
+    <div class="arch-band band-service">
+      <div class="arch-label">Service Experience</div>
+      <div class="arch-content">AI Agent Portal · Business Agents · Review·Approval · Ops Report</div>
+    </div>
+    <div class="arch-arrow">▲ 업무 요청 · 검토 · 승인 · 결과 확인 ▼</div>
+    <div class="arch-band band-loop">
+      <div class="arch-label">AAP Execution Loop</div>
+      <div class="arch-content">Enterprise Data &amp; Inputs → Business Semantic → Agentic Reasoning → Enterprise Integration &amp; Action → Operational Learning</div>
+    </div>
+    <div class="arch-arrow">▲ 정책 · 권한 · 위험도 · 품질 · 감사 기준 ▼</div>
+    <div class="arch-band band-control">
+      <div class="arch-label">AAP Control Plane</div>
+      <div class="arch-content">HITL &amp; Action Policy · Evaluation · Audit · Guardrails · Cost Control</div>
+    </div>
+    <div class="arch-arrow">▲ 연결 · 호출 · 반영 · 이력 수집 ▼</div>
+    <div class="arch-band band-env">
+      <div class="arch-label">Customer Environment</div>
+      <div class="arch-content">Data Platform · ERP·CRM·SCM · Groupware·Approval · Document·KMS</div>
+    </div>
+    <div class="arch-band band-trust">
+      <div class="arch-label">Trust Foundation</div>
+      <div class="arch-content">IAM·SSO · RBAC·ABAC · Security · Observability · Private·Closed</div>
+    </div>
+  </div>
+
+  <h3 class="sub-h3">4.2 MECE Layer Map</h3>
+  <table>
+    <thead><tr><th style="width:240px">Layer</th><th style="width:180px">MECE 역할</th><th>핵심 질문</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Customer Environment</strong></td><td>고객 기존 자산 영역</td><td>어떤 데이터·문서·시스템을 연결할 것인가?</td></tr>
+      <tr><td><strong>Service Experience</strong></td><td>사용자 접점 영역</td><td>누가 Agent를 실행하고 결과를 검토할 것인가?</td></tr>
+      <tr><td><strong>Enterprise Data &amp; Inputs</strong></td><td>입력 연결·정제 영역</td><td>어떤 정보를 업무 판단에 쓸 수 있게 만들 것인가?</td></tr>
+      <tr><td><strong>Business Semantic Modeling</strong></td><td>업무 의미화 영역</td><td>정책·절차·권한·예외를 Agent가 이해 가능한 구조로 만들었는가?</td></tr>
+      <tr><td><strong>Agentic Reasoning</strong></td><td>판단·계획 영역</td><td>어떤 업무 단계를 계획하고 어떤 도구를 호출할 것인가?</td></tr>
+      <tr><td><strong>Enterprise Integration &amp; Action</strong></td><td>실행·반영 영역</td><td>승인된 결과를 어떤 시스템에 어떻게 반영할 것인가?</td></tr>
+      <tr><td><strong>Operational Learning</strong></td><td>운영 개선 영역</td><td>실행 이력·피드백을 어떻게 재사용 자산으로 만들 것인가?</td></tr>
+      <tr><td><strong>Control Plane · Trust Foundation</strong></td><td>통제·보안 공통 영역</td><td>무엇을 허용·차단·감사·검토할 것인가?</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">4.3 Capability Map · 대표 Capability와 확장 컴포넌트</h3>
+  <p class="sub-note">아래 layer별 3개 박스는 각 레이어의 전체 구성요소가 아니라, <strong>고객 논의를 시작하기 위한 대표 Capability</strong>입니다. 실제 구축 시 각 Capability는 Connector·Runtime·Policy·Log·Monitoring·Security 등 세부 컴포넌트로 확장됩니다. <strong>★</strong>는 kt ds 차별화가 모이는 영역입니다.</p>
+
+  <div class="cap-shell">
+    <div class="cap-head">
+      <div>
+        <h3>Layer × 대표 Capability × 확장 컴포넌트</h3>
+        <p>각 박스: 대표 Capability(역량) · 한 줄 설명 · 확장 컴포넌트 chip. 솔루션·기술명은 4.4 Bridge에서 다룹니다.</p>
+      </div>
+      <div class="cap-legend">
+        <span><i></i>kt ds 직접 책임</span>
+        <span class="dashed"><i></i>외부 자산·파트너 조합</span>
+        <span class="cap-legend-note"><b>★</b> = kt ds 차별화 영역 (Business Semantic · Operational Learning에 집중)</span>
+      </div>
+    </div>
+    <div class="cap-map">
+
+      <div class="cap-row env-row">
+        <div class="cap-title"><b>Customer Environment</b><small>고객 기보유 자산 · AAP는 연결만 합니다</small></div>
+        <div class="cap-grid">
+          <div class="cap-card optional"><h4>Data Platform / Analytics Assets</h4><p>기존 분석 자산을 업무 판단 입력으로 활용</p><div class="cap-chips"><span>Lakehouse</span><span>Warehouse</span><span>BI</span><span>Catalog</span><span>Feature/Metric Store</span></div></div>
+          <div class="cap-card optional"><h4>Business Systems</h4><p>ERP·CRM·SCM·결재·그룹웨어 등 업무 시스템 연결</p><div class="cap-chips"><span>Internal API</span><span>EAI</span><span>Approval</span><span>Legacy</span><span>Transaction System</span></div></div>
+          <div class="cap-card optional"><h4>Document / Knowledge Assets</h4><p>규정·매뉴얼·FAQ·KMS 등 문서 지식 활용</p><div class="cap-chips"><span>KMS</span><span>ECM</span><span>File Storage</span><span>FAQ</span><span>Policy Docs</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Service Experience</b><small>현업 사용자가 Agent를 실행·검토·승인하는 접점</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>AI Agent Portal</h4><p>업무별 Agent 실행과 이력 확인</p><div class="cap-chips"><span>Agent Search</span><span>Launch</span><span>Session</span><span>History</span></div></div>
+          <div class="cap-card"><h4>Business Agents</h4><p>공통 업무 + 산업·직무 특화 Agent 제공</p><div class="cap-chips"><span>Horizontal Agent</span><span>Vertical Agent</span><span>Role Agent</span></div></div>
+          <div class="cap-card"><h4>Review / Approval Workspace</h4><p>검토·승인·반려·예외 처리</p><div class="cap-chips"><span>HITL Console</span><span>Evidence View</span><span>Approval Queue</span><span>Audit View</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Enterprise Data &amp; Inputs</b><small>고객 자산 → AAP가 사용 가능한 입력으로 변환</small></div>
+        <div class="cap-grid">
+          <div class="cap-card"><h4>System &amp; Data Connectors</h4><p>기간계·DB·API·파일 연결</p><div class="cap-chips"><span>REST/SOAP</span><span>DB Connector</span><span>File/SFTP</span><span>Event Bus</span></div></div>
+          <div class="cap-card optional"><h4>Document / Knowledge Ingestion</h4><p>문서·규정을 검색 가능한 지식으로 변환</p><div class="cap-chips"><span>OCR</span><span>Parser</span><span>Chunking</span><span>Embedding</span><span>Vector Index</span><span>Metadata</span></div></div>
+          <div class="cap-card"><h4>Operational Data Integration</h4><p>운영 로그·이벤트·외부 데이터 연결</p><div class="cap-chips"><span>Log Pipeline</span><span>Stream</span><span>External API</span><span>Data Quality</span><span>Lineage</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Business Semantic Modeling</b><small>업무 의미·정책·권한·예외를 Agent가 이해할 구조로 정리 · kt ds 차별화 자리</small></div>
+        <div class="cap-grid">
+          <div class="cap-card differ"><h4>Business Concept Model</h4><p>업무 용어·개념·관계 표준화</p><div class="cap-chips"><span>Domain Ontology</span><span>Taxonomy</span><span>Knowledge Graph</span><span>Dictionary</span></div></div>
+          <div class="cap-card differ"><h4>Process &amp; Decision Rule Model</h4><p>절차·판단 규칙·예외 조건 구조화</p><div class="cap-chips"><span>BPMN</span><span>DMN</span><span>Rule Repository</span><span>Exception Taxonomy</span></div></div>
+          <div class="cap-card differ"><h4>Authority &amp; Policy Model</h4><p>권한·승인 기준·자동/수동 경계 정의</p><div class="cap-chips"><span>RBAC</span><span>ABAC</span><span>Approval Matrix</span><span>Policy Pack</span><span>Delegation Rule</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Agentic Reasoning</b><small>판단·계획·도구 호출 · 검증된 외부 프레임워크 조합</small></div>
+        <div class="cap-grid">
+          <div class="cap-card optional"><h4>Planning &amp; Orchestration</h4><p>업무를 단계로 나누고 실행 흐름 조율</p><div class="cap-chips"><span>Planner</span><span>Supervisor</span><span>Multi-Agent</span><span>State Machine</span></div></div>
+          <div class="cap-card optional"><h4>Tool Calling Runtime</h4><p>Agent가 호출할 도구·API 관리</p><div class="cap-chips"><span>Tool Registry</span><span>MCP</span><span>OpenAPI</span><span>Function Calling</span><span>Credential Scope</span></div></div>
+          <div class="cap-card"><h4>HITL &amp; Action Policy</h4><p>위험도·확신도에 따라 자동/검토/보류 분기</p><div class="cap-chips"><span>Risk Scoring</span><span>Confidence Threshold</span><span>Escalation</span><span>Guardrail Hook</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Enterprise Integration &amp; Action</b><small>판단 결과를 업무 시스템에 안전하게 반영 · kt ds 강점 영역</small></div>
+        <div class="cap-grid">
+          <div class="cap-card optional"><h4>Workflow &amp; Approval Execution</h4><p>승인·예외·재처리 흐름 실행</p><div class="cap-chips"><span>Workflow Engine</span><span>Approval Queue</span><span>RPA</span><span>Case Management</span></div></div>
+          <div class="cap-card"><h4>System Writeback</h4><p>처리 결과를 업무 시스템에 반영</p><div class="cap-chips"><span>API Gateway</span><span>EAI</span><span>ERP/CRM Update</span><span>Groupware Writeback</span></div></div>
+          <div class="cap-card"><h4>Exception &amp; Transaction Control</h4><p>실패·재시도·취소·롤백·수동 전환</p><div class="cap-chips"><span>Retry</span><span>Rollback</span><span>Compensation</span><span>Manual Override</span><span>Failure Queue</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Operational Learning</b><small>운영 이력·평가·피드백을 자산으로 축적 · kt ds 차별화 자리</small></div>
+        <div class="cap-grid">
+          <div class="cap-card differ"><h4>Decision / Action Logging</h4><p>판단 근거·도구 호출·실행 결과 저장</p><div class="cap-chips"><span>Trace</span><span>Prompt/Response Log</span><span>Tool Log</span><span>Evidence Link</span></div></div>
+          <div class="cap-card differ"><h4>Evaluation &amp; Feedback Loop</h4><p>품질·정책 위반·사용자 피드백 평가</p><div class="cap-chips"><span>Feedback Store</span><span>Eval Dataset</span><span>Regression Test</span><span>Drift Monitoring</span></div></div>
+          <div class="cap-card differ"><h4>Reusable Skill &amp; Improvement</h4><p>검증된 업무 패턴을 스킬로 재사용</p><div class="cap-chips"><span>Skill Registry</span><span>Versioning</span><span>Improvement Backlog</span><span>Release Gate</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-title"><b>Control Plane · Trust Foundation</b><small>전 영역에 작용하는 권한·감사·보안·폐쇄망 공통 기반</small></div>
+        <div class="cap-grid">
+          <div class="cap-card optional"><h4>Identity &amp; Access Control</h4><p>사용자·조직·역할·권한 관리</p><div class="cap-chips"><span>IAM</span><span>SSO</span><span>RBAC</span><span>ABAC</span><span>Tenant Boundary</span></div></div>
+          <div class="cap-card"><h4>Audit &amp; Explainability</h4><p>근거·출처·실행 이력을 감사 가능하게 저장</p><div class="cap-chips"><span>Audit Trail</span><span>Lineage</span><span>Evidence</span><span>Decision Reason</span></div></div>
+          <div class="cap-card"><h4>Security Guardrails &amp; Private Deployment</h4><p>민감정보·위험 실행·폐쇄망 요건 관리</p><div class="cap-chips"><span>PII Protection</span><span>Data Boundary</span><span>Model Policy</span><span>Closed/Private</span><span>Monitoring</span></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <h3 class="sub-h3">4.4 Capability-to-Technology Bridge</h3>
+  <p class="sub-note">Layer별 <strong>고객에게 보이는 가치 → 대표 구현 후보</strong>를 연결합니다. 본 표는 표준 후보이며, 고객 환경과 RFP 요건에 따라 선택·조합됩니다.</p>
+  <table>
+    <thead><tr><th style="width:240px">Layer</th><th>고객에게 보이는 가치</th><th style="width:340px">대표 구현 후보</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Enterprise Data &amp; Inputs</strong></td><td>고객 자산을 업무 판단에 쓸 수 있게 연결</td><td>API/DB/File Connector, OCR/Parser, RAG Pipeline, Vector Store, Event Bus</td></tr>
+      <tr><td><strong>Business Semantic Modeling</strong></td><td>업무 의미·정책·권한을 Agent가 이해 가능한 구조로 전환</td><td>Knowledge Graph, Ontology, Taxonomy, BPMN, DMN, Rule Repository</td></tr>
+      <tr><td><strong>Agentic Reasoning</strong></td><td>판단·계획·도구 호출을 통제된 흐름으로 수행</td><td>LangGraph, Semantic Kernel, AutoGen, MCP, OpenAPI, Tool Registry</td></tr>
+      <tr><td><strong>Enterprise Integration &amp; Action</strong></td><td>승인된 결과를 실제 업무 시스템에 안전하게 반영</td><td>Workflow Engine, API Gateway, RPA, EAI, Retry/Rollback</td></tr>
+      <tr><td><strong>Operational Learning</strong></td><td>실행 이력·피드백을 개선 후보·재사용 스킬로 축적</td><td>Decision Log, EvalOps, Feedback Store, Skill Registry, Version Control</td></tr>
+      <tr><td><strong>Control Plane · Trust Foundation</strong></td><td>보안·감사·HITL·폐쇄망 요건 충족</td><td>IAM/SSO, RBAC/ABAC, Audit Trail, Guardrails, Observability, Private Deployment</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">4.5 Delivery Model · Define → Compose → Connect → Operate</h3>
+  <table>
+    <thead><tr><th style="width:160px">단계</th><th style="width:220px">목적</th><th>주요 활동</th><th style="width:220px">연계 아키텍처</th></tr></thead>
+    <tbody>
+      <tr><td><strong>01 · Define</strong></td><td>맡길 업무와 사람 검토 경계 정의</td><td>대상 업무, 판단 기준, 예외 조건, 권한, KPI 합의</td><td>Business Semantic · Control Plane</td></tr>
+      <tr><td><strong>02 · Compose</strong></td><td>AI·자동화·보안 자산 조합</td><td>모델, 검색, Agent Framework, Workflow, RPA, 보안 도구 조합</td><td>Agentic Reasoning · Integration · Trust</td></tr>
+      <tr><td><strong>03 · Connect</strong></td><td>고객 환경 연계</td><td>Data Platform, ERP·CRM·SCM, KMS, 내부 API, IAM 연결</td><td>Customer Environment · Data &amp; Inputs</td></tr>
+      <tr><td><strong>04 · Operate</strong></td><td>운영·학습 체계화</td><td>HITL, Decision Log, Evaluation, Feedback, Skill 개선, 운영 리포트</td><td>Operational Learning · Control Plane</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========= 05. 오퍼링 패키지화 전략 ========= -->
+<section id="s5">
+  <div class="section-head">
+    <div class="num">05</div>
+    <div>
+      <h2>오퍼링 패키지화 전략</h2>
+      <p class="lead">AAP는 처음부터 전사 플랫폼 구축으로 판매하지 않습니다. 고객 부담을 낮추고 내부 수행 리스크를 관리하기 위해 <strong>4단계 패키지로 사업화</strong>합니다.</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th style="width:230px">패키지</th><th style="width:80px">기간</th><th style="width:240px">목적</th><th>산출물</th><th style="width:140px">매출 성격</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1. AAP Opportunity Assessment</strong></td><td>2~4주</td><td>적용 업무 후보와 도입 가능성 진단</td><td>후보 업무 목록, Pain-Gap 분석, 시스템·데이터 연결성 진단, Pilot 제안서</td><td>유상 진단·컨설팅</td></tr>
+      <tr><td><strong>2. Controlled Pilot</strong></td><td>8~12주</td><td>제한된 업무 범위에서 통제형 Agentic AI 검증</td><td>업무 Semantic 초안, Agent Flow, HITL 기준, 최소 Writeback/Workflow, 평가 리포트</td><td>Pilot 구축</td></tr>
+      <tr><td><strong>3. AAP Build</strong></td><td>3~6개월</td><td>운영 가능한 업무 실행 체계 구축</td><td>운영 Agent, 시스템 연계, 권한·감사, Decision Log, 운영 대시보드</td><td>본 구축 SI</td></tr>
+      <tr><td><strong>4. Operate &amp; Improve</strong></td><td>연간</td><td>운영 학습·평가·스킬 고도화</td><td>Evaluation, Skill Update, Policy 개선, 운영 리포트</td><td>운영·고도화</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>패키지 설계 원칙</strong> · 단계별로 책임·산출물·과금 단위가 명확합니다. Assessment에서 Pilot 진입 여부를 결정하고, Pilot 결과로 Build 범위를 합의합니다. 운영 단계는 매년 갱신되는 구조로 설계해, 일회성 PoC가 아닌 <strong>장기 운영·고도화 매출 라인</strong>을 만듭니다.</div>
+</section>
+
+<!-- ========= 06. Build · Bring · Borrow ========= -->
+<section id="s6">
+  <div class="section-head">
+    <div class="num">06</div>
+    <div>
+      <h2>Build · Bring · Borrow 책임 경계</h2>
+      <p class="lead">kt ds는 <strong>고객 업무 이해, 시스템 연계, 통제·운영 설계, 통합 책임</strong>을 직접 가져갑니다. LLM·KG·RPA·EvalOps 등 개별 기술은 검증된 솔루션·파트너를 적극 조합합니다.</p>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:200px">영역</th>
+        <th>Build · kt ds 직접 책임</th>
+        <th>Bring · 솔루션·그룹 자산</th>
+        <th>Borrow · 파트너·전문성</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Service Experience</strong></td><td>Agent Portal, Review UI, 업무 화면 설계</td><td>기존 사내·그룹 AI 서비스 자산</td><td>UX, 산업별 SME</td></tr>
+      <tr><td><strong>Enterprise Data &amp; Inputs</strong></td><td>고객 시스템·API·DB 연계, 데이터 흐름 설계</td><td>Connector, Parser, Vector DB</td><td>문서 처리·데이터 전문 파트너</td></tr>
+      <tr><td><strong>Business Semantic</strong></td><td>업무 모델링, 정책·권한·예외 구조화</td><td>KMS, Taxonomy·KG 도구</td><td>Ontology·KG 전문기업, 도메인 SME</td></tr>
+      <tr><td><strong>Agentic Reasoning</strong></td><td>Agent Flow, Action Policy, HITL 기준</td><td>LLM, Agent Framework, MCP Runtime</td><td>Agent Framework 전문 파트너</td></tr>
+      <tr><td><strong>Enterprise Action</strong></td><td>Writeback, Workflow·API·RPA 연계 책임</td><td>RPA, Workflow Engine, API Gateway</td><td>특수 레거시, UI·UX 파트너</td></tr>
+      <tr><td><strong>Operational Learning</strong></td><td>Decision Log, 평가·피드백 운영 구조</td><td>EvalOps·MLOps, Monitoring</td><td>AI 품질평가 전문성</td></tr>
+      <tr><td><strong>Trust Foundation</strong></td><td>보안·감사 요구사항 설계, 폐쇄망 구축 대응</td><td>IAM, Audit, Guardrail 도구</td><td>보안·망분리·규제 파트너</td></tr>
+    </tbody>
+  </table>
+  <div class="grid-3" style="margin-top:18px">
+    <div class="card"><h3>① 통합 책임</h3><p>kt ds는 솔루션 단품 판매가 아니라 <strong>"업무 운영 모델 구축"</strong>을 책임집니다. 통합 책임이 곧 Prime 포지션입니다.</p></div>
+    <div class="card"><h3>② 조합 자유도</h3><p>LLM·KG·RPA·EvalOps 등은 고객 환경과 RFP 요건에 따라 <strong>대체 가능한 파트너 풀</strong>을 유지합니다. 단일 벤더 종속 회피.</p></div>
+    <div class="card"><h3>③ 차별화 영역 보호</h3><p>Business Semantic과 Operational Learning은 <strong>kt ds 직접 책임 영역</strong>으로 둡니다. 이 자리에서 kt ds의 깊이가 만들어집니다.</p></div>
+  </div>
+</section>
+
+<!-- ========= 07. 레퍼런스 자산화 전략 ========= -->
+<section id="s7">
+  <div class="section-head">
+    <div class="num">07</div>
+    <div>
+      <h2>레퍼런스 자산화 전략</h2>
+      <p class="lead">두 내부 레퍼런스를 일회성 PoC로 두지 않고, <strong>산업별 AAP Pack</strong>으로 자산화합니다.</p>
+    </div>
+  </div>
+
+  <!-- Case 1 -->
+  <div class="ref-card">
+    <div class="ref-row">
+      <div class="ref-id">
+        <span class="badge">Case 1 · 내부 레퍼런스</span>
+        <h3>AI 투자 메이트 → 금융 자문형 AAP Pack</h3>
+        <p class="ref-meta"><strong>도메인</strong> · 금융 · 자산운용 · 투자 의사결정</p>
+        <p class="ref-brief">매크로·뉴스·블룸버그 데이터를 한곳에 모아 투자 자문을 만들어 주는 LangGraph 기반 멀티에이전트입니다. <strong>금융 자문·리서치·컴플라이언스 Agent Pack</strong>으로 자산화 진행 중.</p>
+      </div>
+      <div class="ref-split">
+        <div class="ref-pane good">
+          <div class="ref-pane-title">현재 검증·진행 · 2026-05</div>
+          <ul class="ref-list">
+            <li><strong>모델·운영 환경</strong> · Qwen 기반 모델 변경 테스트 완료. Langfuse AWS 환경 구성, AWS PostgreSQL·OpenSearch 환경 구성 진행</li>
+            <li><strong>Data RAG</strong> · Data RAG 기반 구성. VectorDB 구축·운영 안정화 진행</li>
+            <li><strong>관측·품질</strong> · Langfuse 기반 AI FinWave 테스트 진행</li>
+            <li><strong>확장 시도</strong> · 뉴스 기반 Graph RAG 구축 지속. 로보어드바이저 기반 AI 적용 검토</li>
+            <li><strong>사업화</strong> · 내부 검증 완료, LangGraph 멀티에이전트 자문 생성 검증, 외부 영업 자료 정리 중</li>
+          </ul>
+        </div>
+        <div class="ref-pane gap">
+          <div class="ref-pane-title">부족한 영역 · AAP 보완 필요</div>
+          <ul class="ref-list">
+            <li>투자 정책·룰·권한 체계 미정리 <strong>→ Business Semantic Modeling</strong></li>
+            <li>주문·기록 시스템 반영 경로 미구축 <strong>→ Enterprise Integration &amp; Action</strong></li>
+            <li>Decision Log·HITL·감사 등 운영 통제 부재 <strong>→ Operational Learning · Control Plane</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="ref-strategy">
+      <span class="ref-strategy-tag">PACK</span>
+      <div>
+        <div class="ref-strategy-title">금융 자문형 AAP Pack 자산화 방향</div>
+        <div class="ref-strategy-sub">현재 검증된 데이터 수집·멀티에이전트 분석·자문 생성에 <strong>정책·HITL·감사·Writeback</strong>을 더해 패키지화합니다. 금융권 영업 자리에서 즉시 꺼낼 수 있는 형태로.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case 2 -->
+  <div class="ref-card">
+    <div class="ref-row">
+      <div class="ref-id">
+        <span class="badge">Case 2 · POC 선제안 1차 완료</span>
+        <h3>산업단체 온톨로지 PoC → 공공·협회형 AAP Pack</h3>
+        <p class="ref-meta"><strong>도메인</strong> · 공공·협회 · 기계산업</p>
+        <p class="ref-brief">국제 정세·통상 규제·환율 변화를 기계산업 도메인 온톨로지로 정리해 회원사별 영향을 분석·통보하는 의사결정 자동화. <strong>정책 영향도 분석·회원사 차등 대응 Pack</strong>으로 자산화 진행 중.</p>
+      </div>
+      <div class="ref-split">
+        <div class="ref-pane good">
+          <div class="ref-pane-title">현재 검증</div>
+          <ul class="ref-list">
+            <li>기계산업 도메인 온톨로지·KG 1차 설계 완료</li>
+            <li>회원사 영향도 분석 룰 설계 검증</li>
+            <li>도메인 SME 협업 기반 규제·정책 모델링 방법론 확보</li>
+          </ul>
+        </div>
+        <div class="ref-pane gap">
+          <div class="ref-pane-title">부족한 영역 · AAP 보완 필요</div>
+          <ul class="ref-list">
+            <li>정세·환율·규제 외부 데이터 자동 수집 미구축 <strong>→ Enterprise Data &amp; Inputs</strong></li>
+            <li>자율 추론·도구 호출 자동화 부재 <strong>→ Agentic Reasoning</strong></li>
+            <li>회원사 통보·리포팅 Workflow 미구현 <strong>→ Enterprise Integration &amp; Action</strong></li>
+            <li>폐쇄망·감사 등 공공 요건 대응 필요 <strong>→ Trust · Security · Governance</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="ref-strategy">
+      <span class="ref-strategy-tag">PACK</span>
+      <div>
+        <div class="ref-strategy-title">공공·협회형 AAP Pack 자산화 방향</div>
+        <div class="ref-strategy-sub">진흥회 본 사업에서 확보한 산업단체 도메인 템플릿을 표준화해, <strong>다른 협회·산업단체로 1년 안에 확장</strong> 가능한 패키지로 정리합니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-h3">공통 자산화 방향</h3>
+  <div class="grid-4">
+    <div class="card"><h3>업무 Semantic 템플릿</h3><p>산업별 용어·개념·관계 모델</p></div>
+    <div class="card"><h3>권한·승인 Matrix 템플릿</h3><p>RBAC·ABAC·승인 정책 표준</p></div>
+    <div class="card"><h3>Agent Flow 템플릿</h3><p>판단·도구 호출·HITL 분기</p></div>
+    <div class="card"><h3>Decision Log 스키마</h3><p>판단 근거·이력 표준 스키마</p></div>
+    <div class="card"><h3>HITL·Action Policy 기준</h3><p>위험도별 자동/검토/보류 분기</p></div>
+    <div class="card"><h3>Evaluation Checklist</h3><p>품질 회귀·정책 위반·전환율</p></div>
+    <div class="card"><h3>고객 제안서·데모 시나리오</h3><p>금융·공공 2종 표준</p></div>
+    <div class="card"><h3>Pilot 견적·SOW 템플릿</h3><p>8~12주 표준 견적 단위</p></div>
+  </div>
+</section>
+
+<!-- ========= 08. 경쟁 구도와 포지셔닝 ========= -->
+<section id="s8">
+  <div class="section-head">
+    <div class="num">08</div>
+    <div>
+      <h2>경쟁 구도와 포지셔닝</h2>
+      <p class="lead">AAP의 경쟁 상대는 단일 AI 솔루션이 아닙니다. 고객의 다음 예산을 가져가는 <strong>5개 경쟁 접근</strong>에 대해 kt ds의 차별 포지션을 정리합니다.</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th style="width:200px">경쟁·대체 접근</th><th>강점</th><th>약점</th><th style="width:280px">AAP 포지셔닝</th></tr></thead>
+    <tbody>
+      <tr><td><strong>AI Studio · Agent Builder</strong></td><td>Agent 개발 편의성</td><td>고객 업무 의미화·기간계 연계 책임 약함</td><td>업무 운영 모델과 통합 SI 책임</td></tr>
+      <tr><td><strong>RAG 솔루션</strong></td><td>문서 검색·근거 제시</td><td>실행·승인·학습 구조 약함</td><td>사건·정책·권한·실행 로그 중심</td></tr>
+      <tr><td><strong>RPA 업체</strong></td><td>시스템 실행 자동화</td><td>의미 이해·판단·HITL 설계 약함</td><td>Agent 판단 + RPA·API 실행 결합</td></tr>
+      <tr><td><strong>CSP·글로벌 플랫폼</strong></td><td>기술 생태계 풍부</td><td>국내 폐쇄망·레거시·업무 책임 약함</td><td>고객 환경 맞춤형 구축·운영 책임</td></tr>
+      <tr><td><strong>일반 SI 경쟁사</strong></td><td>구축 역량</td><td>Agentic AI 패키지·레퍼런스 부족</td><td>AAP 표준 아키텍처 + 레퍼런스 Pack 선점</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>차별화의 한 줄</strong> · "AI 도구"를 파는 시장이 아니라, <strong>"업무 운영 모델을 책임지는" 시장</strong>으로 옮겨가야 kt ds의 SI·통제·운영 강점이 그대로 작동합니다.</div>
+</section>
+
+<!-- ========= 09. 조직 운영 모델 ========= -->
+<section id="s9">
+  <div class="section-head">
+    <div class="num">09</div>
+    <div>
+      <h2>조직 운영 모델</h2>
+      <p class="lead">AAP 사업은 사업개발·영업·수행·기술·보안·파트너 6개 축이 동시에 움직여야 합니다. 각 축의 책임과 산출물을 명확히 합니다.</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th style="width:180px">역할</th><th>책임</th><th style="width:280px">주요 산출물</th></tr></thead>
+    <tbody>
+      <tr><td><strong>사업개발</strong></td><td>오퍼링 구조, 타겟 산업, 패키지·가격, 파트너 전략</td><td>사업계획, 패키지 정의, 파트너맵</td></tr>
+      <tr><td><strong>영업</strong></td><td>고객 발굴, Pain 진단, 선제안, Pipeline 관리</td><td>고객별 제안서, Opportunity List</td></tr>
+      <tr><td><strong>수행 총괄</strong></td><td>Delivery Model, 범위·일정·리스크 관리</td><td>SOW, WBS, 인력 계획, 리스크 관리표</td></tr>
+      <tr><td><strong>기술 조직</strong></td><td>표준 아키텍처, 레퍼런스 구현, 기술 검증</td><td>Architecture Blueprint, PoC Kit, 기술 가이드</td></tr>
+      <tr><td><strong>보안·컴플라이언스</strong></td><td>폐쇄망, 권한, 감사, 데이터 경계 기준</td><td>Security Checklist, Compliance Guide</td></tr>
+      <tr><td><strong>파트너</strong></td><td>KG·RAG·RPA·EvalOps·보안 솔루션 제공</td><td>기술 제안, 통합 인터페이스, 공동 데모</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========= 10. 리스크와 대응책 ========= -->
+<section id="s10">
+  <div class="section-head">
+    <div class="num">10</div>
+    <div>
+      <h2>리스크와 대응책</h2>
+      <p class="lead">AAP는 새로운 카테고리입니다. <strong>범위·기술·연계·보안·파트너·운영</strong>의 6개 리스크에 대한 사전 대응을 준비합니다.</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th style="width:200px">리스크</th><th>설명</th><th style="width:340px">대응책</th></tr></thead>
+    <tbody>
+      <tr><td><strong>범위 과대화</strong></td><td>AAP가 전사 플랫폼처럼 인식되어 시작이 어려움</td><td>Assessment → Controlled Pilot → Build 단계화</td></tr>
+      <tr><td><strong>기술 과신</strong></td><td>Agent가 모든 판단을 자동 수행한다고 오해</td><td>판단 후보 생성, HITL, Action Policy 중심으로 표현</td></tr>
+      <tr><td><strong>데이터·시스템 연계 난이도</strong></td><td>고객 기간계·문서·권한 구조가 복잡</td><td>Connect 진단을 별도 패키지화, 범위 제한</td></tr>
+      <tr><td><strong>보안·감사 우려</strong></td><td>민감정보·폐쇄망·감사 요건 미충족 우려</td><td>Control Plane과 Trust Foundation을 전면화</td></tr>
+      <tr><td><strong>파트너 종속</strong></td><td>외부 솔루션 의존도가 높아질 수 있음</td><td>kt ds 책임 영역과 대체 가능한 파트너 풀 정의</td></tr>
+      <tr><td><strong>운영 학습 과장</strong></td><td>자동으로 성능이 좋아진다는 오해</td><td>반자동 개선 루프, 승인 기반 Skill·Policy 업데이트로 표현</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========= 11. 6개월 실행 로드맵 ========= -->
+<section id="s11">
+  <div class="section-head">
+    <div class="num">11</div>
+    <div>
+      <h2>6개월 실행 로드맵</h2>
+      <p class="lead">FY26 1H에 오퍼링·레퍼런스·파트너 번들을 정리하고, 후반부에 1차 고객 제안과 Pilot 착수까지 진행합니다.</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th style="width:120px">시기</th><th style="width:200px">목표</th><th>주요 액션</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1개월차</strong></td><td>오퍼링 정리</td><td>고객용·내부용 문서 확정, 아키텍처 표준화, 데모 시나리오 2개 선정</td></tr>
+      <tr><td><strong>2개월차</strong></td><td>레퍼런스 패키징</td><td>AI 투자 메이트·산업단체 PoC를 Pack 후보로 정리, 제안서·데모화</td></tr>
+      <tr><td><strong>3개월차</strong></td><td>파트너 번들 구성</td><td>KG·RAG·RPA·EvalOps·보안 파트너 후보와 공동 제안 구조 정리</td></tr>
+      <tr><td><strong>4개월차</strong></td><td>1차 고객 제안</td><td>금융·공공·그룹 내부 타겟 3~5개 고객 선제안</td></tr>
+      <tr><td><strong>5개월차</strong></td><td>Controlled Pilot 착수</td><td>1~2개 고객 Pilot 범위·SOW 확정</td></tr>
+      <tr><td><strong>6개월차</strong></td><td>표준화·확장</td><td>Pilot 결과 기반 표준 SOW, 견적 템플릿, Architecture Kit 고도화</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========= 12. 내부 의사결정 요청사항 ========= -->
+<section id="s12">
+  <div class="section-head">
+    <div class="num">12</div>
+    <div>
+      <h2>내부 의사결정 요청사항</h2>
+      <p class="lead">본 사업전략을 실행 단계로 옮기기 위해 다음 6개 사항에 대한 <strong>경영진·직책자 의사결정</strong>이 필요합니다.</p>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><span class="badge">① 오퍼링 지정</span><h3>AAP를 FY26 AI·AX 핵심 오퍼링 후보로 지정</h3><p>본 문서의 정의·아키텍처·패키지를 <strong>사내 표준 오퍼링</strong>으로 등록.</p></div>
+    <div class="card"><span class="badge">② 문서 관리</span><h3>고객용·내부용 문서의 공식 관리 체계 지정</h3><p>제안 자료 표준본을 <strong>누가 관리·업데이트</strong>하는지 결정.</p></div>
+    <div class="card"><span class="badge">③ 타겟 확정</span><h3>1차 타겟 산업·고객군 확정</h3><p>금융·공공·그룹 내부 중 우선 <strong>3~5개 고객을 명확히 지명</strong>.</p></div>
+    <div class="card"><span class="badge">④ Pilot 표준</span><h3>Controlled Pilot 패키지의 표준 범위·가격 정책 수립</h3><p>8~12주 Pilot 표준 SOW와 <strong>견적 단위 합의</strong>.</p></div>
+    <div class="card"><span class="badge">⑤ 기술 표준</span><h3>기술 표준 아키텍처와 파트너 조합 원칙 승인</h3><p>본 문서 04장의 아키텍처와 06장의 책임 경계를 <strong>사내 표준화</strong>.</p></div>
+    <div class="card"><span class="badge">⑥ 자산화 리소스</span><h3>레퍼런스 자산화·공동 데모 전담 리소스 배정</h3><p>최소 인력 단위로 시작해 <strong>분기 단위 산출물 추적</strong>.</p></div>
+  </div>
+</section>
+
+<!-- ========= Appendix ========= -->
+<section id="sapp">
+  <div class="section-head">
+    <div class="num">A</div>
+    <div>
+      <h2>Appendix · 내부 검토용 추가 과제</h2>
+      <p class="lead">본 사업전략을 실행으로 옮기기 위해 별도 검토·작성이 필요한 <strong>후속 산출물 목록</strong>입니다.</p>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><h3>고객별 우선순위 Scoring Model</h3><p>업무 적합도·시스템 연계 가능성·정책 우선순위·예상 효과를 점수화하는 평가 모델.</p></div>
+    <div class="card"><h3>Pilot 견적 템플릿</h3><p>8~12주 Pilot 단위 견적 구조(범위·인력·인프라·라이선스·운영비).</p></div>
+    <div class="card"><h3>표준 SOW · R&amp;R · 책임 경계 문서</h3><p>고객·kt ds·파트너 간 책임 경계와 산출물 정의 표준.</p></div>
+    <div class="card"><h3>파트너 평가표</h3><p>KG·RAG·RPA·EvalOps·보안 영역의 파트너 후보 선별·평가 기준.</p></div>
+    <div class="card"><h3>Security &amp; Compliance Checklist</h3><p>폐쇄망·개인정보·금융·공공 컴플라이언스 요건 점검 리스트.</p></div>
+    <div class="card"><h3>Architecture Decision Record 템플릿</h3><p>주요 기술 의사결정을 추적·기록할 수 있는 ADR 템플릿.</p></div>
+    <div class="card"><h3>데모 시나리오 · 금융 심사형</h3><p>손해사정·내부통제·자문 시나리오 기반 데모 스크립트.</p></div>
+    <div class="card"><h3>데모 시나리오 · 공공·협회 영향도 분석형</h3><p>정책·규제 이벤트 → 회원사 영향도 분석·통보 데모 스크립트.</p></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div>AAP 내부용 사업전략 및 직책자 설득안 · v0.1 · Internal Draft</div>
+  <div>2026-05-21 · kt ds</div>
+</footer>
+
+</div>
+<script>
+(function(){
+  const links = Array.from(document.querySelectorAll('.toc a[href^="#"]'));
+  const sectionToLink = new Map();
+  links.forEach(a => {
+    const sec = document.getElementById(a.getAttribute('href').slice(1));
+    if(sec) sectionToLink.set(sec, a);
+  });
+  const setActive = (link) => {
+    links.forEach(a => a.classList.toggle('active', a === link));
+  };
+  let lastTop = null;
+  const io = new IntersectionObserver((entries) => {
+    const visible = entries.filter(e => e.isIntersecting);
+    if(visible.length === 0) return;
+    visible.sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top);
+    const top = visible[0].target;
+    if(top === lastTop) return;
+    lastTop = top;
+    setActive(sectionToLink.get(top));
+  }, {rootMargin: '-25% 0px -65% 0px', threshold: 0});
+  sectionToLink.forEach((_, sec) => io.observe(sec));
+
+  const bar = document.querySelector('.toc-progress-bar');
+  const doc = document.documentElement;
+  const update = () => {
+    const max = (doc.scrollHeight - doc.clientHeight) || 1;
+    const pct = Math.max(0, Math.min(1, (window.scrollY || doc.scrollTop) / max));
+    if(bar) bar.style.width = (pct * 100) + '%';
+  };
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update);
+  update();
+})();
+</script>
+</body>
+</html>

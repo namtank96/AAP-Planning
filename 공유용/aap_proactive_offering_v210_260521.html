@@ -505,10 +505,11 @@ tr:nth-child(even) td,.aap-compare td:last-child,.cap-context,.cap-title,.delive
     .cap-title b{display:block;font-size:14px;color:#111;line-height:1.25;letter-spacing:-.01em}
     .cap-title small{display:block;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45}
     .cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));grid-auto-rows:1fr;gap:8px;padding:12px}
-    .cap-card{min-width:0;border:1.2px solid #d8dce5;border-radius:10px;background:#fff;padding:10px 11px;display:flex;flex-direction:column;gap:7px;min-height:104px;height:100%}
+    .cap-card{min-width:0;border:1.2px solid #cfd4dc;border-radius:10px;background:#fff;padding:10px 11px;display:flex;flex-direction:column;gap:7px;min-height:104px;height:100%}
     .cap-card h4{margin:0;font-size:12.5px;color:#111;line-height:1.25;letter-spacing:-.01em}
     .cap-card p{margin:0;font-size:11px;color:var(--muted);line-height:1.45}
-    .cap-card.optional{border:1.5px dashed #6b7280;background:#fcfcfd}
+    /* 외부 자산/파트너 영역: 점선 + 옅은 회색 배경으로 대비 강화 */
+    .cap-card.optional{border:1.5px dashed #8d95a1;background:#f5f6f8}
     .cap-card.optional h4{color:#374151}
     .cap-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto}
     .cap-chips span{font-size:10.5px;border:1px solid #e0e3eb;background:#f8fafc;color:#4b5563;border-radius:6px;padding:3px 6px;line-height:1.25}
@@ -521,9 +522,34 @@ tr:nth-child(even) td,.aap-compare td:last-child,.cap-context,.cap-title,.delive
     .cap-row.learning .cap-title b{color:#111}
     .cap-row.learning .cap-card{border-color:#cfd4dc}
     /* === Card-level zone accent (DS / 외부 조합 / 차별화) === */
-    .cap-card.differ{border:1.5px solid #9bdedb;background:var(--teal2)}
-    .cap-card.differ h4{color:var(--teal-strong)}
-    .cap-card.differ .cap-chips span{border-color:#9bdedb;color:var(--teal-strong);background:var(--gray-white)}
+    /* 차별화 요소: 별도 색/배경 없이 ★ 마커만, 본문 책임영역 표기를 흐리지 않음 */
+    .cap-card.differ h4::before{content:"★ ";color:var(--teal-strong);font-weight:900;letter-spacing:.02em}
+    /* Customer Environment row(=외부 자산 영역) subtle separator. 배경은 그대로, 구분선만 살짝 진하게 */
+    .cap-row.env-row{border-bottom:1.5px solid var(--gray-300)}
+    /* Legend ★ footnote */
+    .cap-legend span.cap-legend-note{display:block;width:100%;font-size:10.5px;color:rgba(255,255,255,.62);margin-top:8px;letter-spacing:.02em;line-height:1.5;align-items:initial}
+    .cap-legend span.cap-legend-note b{color:var(--teal);font-weight:900}
+    /* === Appendix · capability ↔ 구현 기술 후보 === */
+    .cap-appx{margin-top:22px;border:1px solid var(--line);border-radius:18px;background:#fff;padding:22px;box-shadow:0 10px 28px rgba(17,19,24,.04)}
+    .cap-appx-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--line)}
+    .cap-appx-tag{font-size:10px;font-weight:900;letter-spacing:.16em;color:#fff;background:#111;border-radius:6px;padding:5px 9px;flex-shrink:0;margin-top:2px}
+    .cap-appx-title{font-size:16px;font-weight:900;letter-spacing:-.01em;color:#111}
+    .cap-appx-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.55;max-width:920px}
+    .cap-appx-sub strong{color:#111;font-weight:800}
+    .cap-appx-grid{display:grid;grid-template-columns:1fr;gap:14px}
+    .cap-appx-block{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .cap-appx-block-head{display:flex;align-items:baseline;gap:8px;padding:10px 14px;background:var(--gray-50);border-bottom:1px solid var(--line)}
+    .cap-appx-block-head b{font-size:13px;color:#111;letter-spacing:-.01em}
+    .cap-appx-block-head em{font-style:normal;font-size:11px;color:var(--muted);font-weight:600}
+    .cap-appx-table{display:grid;grid-template-columns:230px 1fr;gap:0;font-size:12px}
+    .cap-appx-row{display:contents}
+    .cap-appx-row > div{padding:10px 14px;border-top:1px solid var(--line);background:#fff;line-height:1.5}
+    .cap-appx-row:first-child > div{border-top:0}
+    .cap-appx-row .cap-appx-cap{font-weight:800;color:#111;background:#fbfbfc;border-right:1px solid var(--line)}
+    .cap-appx-row .cap-appx-cap .star{color:var(--teal-strong);margin-right:3px;font-weight:900}
+    .cap-appx-row .cap-appx-tech{color:var(--gray-600)}
+    .cap-appx-row .cap-appx-tech span{display:inline-block;font-size:11px;border:1px solid var(--gray-200);background:#f8fafc;color:var(--gray-600);border-radius:6px;padding:2px 7px;margin:2px 3px 2px 0;line-height:1.4}
+    @media(max-width:1000px){.cap-appx-table{grid-template-columns:1fr}.cap-appx-row .cap-appx-cap{border-right:0;border-bottom:1px dashed var(--line)}}
     /* Delivery model */
     .delivery-model{margin-top:22px;border:1px solid var(--line);border-radius:18px;background:#fff;padding:22px;box-shadow:0 10px 28px rgba(17,19,24,.04)}
     .delivery-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;padding-bottom:14px;border-bottom:1px dashed var(--line)}
@@ -610,105 +636,178 @@ tr:nth-child(even) td,.aap-compare td:last-child,.cap-context,.cap-title,.delive
         <p>고객의 자산, AAP가 동작하는 방식, 외부 솔루션을 조합하는 영역을 한 화면에서 봅니다. Semantic과 Learning은 업무 이해와 운영 노하우가 꾸준히 쌓이는 핵심 영역입니다.</p>
       </div>
       <div class="cap-legend">
-        <span><i></i>DS 설계·통합</span>
-        <span class="dashed"><i></i>외부 자산 조합</span>
-        <span class="accent"><i></i>차별화 축적</span>
+        <span><i></i>kt ds 영역</span>
+        <span class="dashed"><i></i>외부 자산/파트너 영역</span>
+        <span class="cap-legend-note"><b>★</b> 표시 = kt ds 차별화 영역 (책임 영역과는 별개로, 우리가 강조하는 capability)</span>
       </div>
     </div>
 
     <div class="cap-map">
-      <!-- Customer Environment -->
-      <div class="cap-row">
-        <div class="cap-title"><b>Customer Environment</b><small>AAP가 대체하지 않고 그대로 이어 쓰는, 고객이 이미 보유한 자산</small></div>
+      <!-- Customer Environment · 외부 자산 영역 -->
+      <div class="cap-row env-row">
+        <div class="cap-title"><b>Customer Environment</b><small>고객이 이미 보유한 데이터·업무·지식 자산. AAP는 대체하지 않고 연결해 활용합니다.</small></div>
         <div class="cap-grid">
-          <div class="cap-card optional"><h4>Data Platform</h4><p>기존 분석·데이터 자산을 AAP의 업무 판단 입력으로 연결합니다.</p><div class="cap-chips"><span>Lakehouse</span><span>Warehouse</span><span>Catalog</span></div></div>
-          <div class="cap-card optional"><h4>ERP / CRM / SCM</h4><p>업무 기준 데이터와 실행 결과가 오가는 기간계 시스템과 연결합니다.</p><div class="cap-chips"><span>ERP</span><span>CRM</span><span>SCM</span></div></div>
-          <div class="cap-card optional"><h4>Document / KMS</h4><p>사내 규정·매뉴얼·FAQ 등 비정형 지식을 업무 판단에 활용할 수 있도록 연결합니다.</p><div class="cap-chips"><span>Document</span><span>KMS</span><span>FAQ</span></div></div>
-          <div class="cap-card optional"><h4>Legacy / API</h4><p>기존 사내 시스템의 API·EAI·RPA 채널을 연결합니다.</p><div class="cap-chips"><span>Internal API</span><span>EAI</span><span>RPA</span></div></div>
+          <div class="cap-card optional"><h4>Data Platform / Analytics Assets</h4><p>기존 데이터 플랫폼·분석 자산을 AAP 업무 판단의 입력으로 활용합니다.</p><div class="cap-chips"><span>분석 자산</span><span>카탈로그</span><span>리포트</span></div></div>
+          <div class="cap-card optional"><h4>Business Systems</h4><p>ERP·CRM·SCM·결재·그룹웨어 등 실제 업무 시스템과 연결됩니다.</p><div class="cap-chips"><span>기간계</span><span>결재·그룹웨어</span><span>내부 API</span></div></div>
+          <div class="cap-card optional"><h4>Document / Knowledge Assets</h4><p>사내 규정·매뉴얼·FAQ·KMS 등 문서 지식 자산을 검색 가능한 형태로 활용합니다.</p><div class="cap-chips"><span>규정·매뉴얼</span><span>FAQ</span><span>KMS</span></div></div>
         </div>
       </div>
 
       <!-- Service Experience -->
       <div class="cap-row">
-        <div class="cap-title"><b>Service Experience</b><small>현업 사용자가 마주하는 AI 업무 서비스</small></div>
+        <div class="cap-title"><b>Service Experience</b><small>현업 사용자가 AAP로 업무를 요청·실행하고, 결과를 검토하는 사용자 접점</small></div>
         <div class="cap-grid">
-          <div class="cap-card"><h4>AI Agent Portal</h4><p>업무별 Agent를 찾아 실행하고, 실행 이력과 결과를 한곳에서 확인합니다.</p><div class="cap-chips"><span>Agent Search</span><span>Execution</span><span>History</span></div></div>
-          <div class="cap-card"><h4>Horizontal Agents</h4><p>여러 부서가 공통으로 쓰는 문서 검색·보고서·VOC·사내 질의응답 Agent를 제공합니다.</p><div class="cap-chips"><span>HR</span><span>Document</span><span>CS</span></div></div>
-          <div class="cap-card differ"><h4>Vertical Agents</h4><p>금융·공공·제조 등 산업별 업무 의미와 판단 기준을 반영한 전문 Agent를 제공합니다.</p><div class="cap-chips"><span>제조</span><span>금융</span><span>공공</span></div></div>
-          <div class="cap-card"><h4>Review / Approval UI</h4><p>사람이 검토해야 하는 단계에서 근거 확인·승인·반려·예외 처리를 지원합니다.</p><div class="cap-chips"><span>Approval</span><span>HITL Console</span><span>Audit View</span></div></div>
+          <div class="cap-card"><h4>AI Agent Portal</h4><p>업무별 Agent를 찾아 실행하고, 실행 이력과 결과를 한곳에서 확인합니다.</p><div class="cap-chips"><span>Agent 검색</span><span>실행</span><span>이력</span></div></div>
+          <div class="cap-card differ"><h4>Business Agents</h4><p>여러 부서가 공통으로 쓰는 업무 Agent와 산업·직무 특화 Agent를 함께 제공합니다.</p><div class="cap-chips"><span>공통 업무</span><span>산업 특화</span><span>직무 특화</span></div></div>
+          <div class="cap-card"><h4>Review / Approval Workspace</h4><p>사람이 검토해야 하는 단계에서 근거 확인·승인·반려·예외 처리를 지원합니다.</p><div class="cap-chips"><span>승인 UI</span><span>HITL 콘솔</span><span>감사 뷰</span></div></div>
         </div>
       </div>
 
       <!-- Enterprise Data & Inputs -->
       <div class="cap-row">
-        <div class="cap-title"><b>Enterprise Data &amp; Inputs</b><small>고객의 데이터·문서·시스템을 AAP 실행 흐름에 이어 줌</small></div>
+        <div class="cap-title"><b>Enterprise Data &amp; Inputs</b><small>고객 자산을 AAP가 사용 가능한 입력으로 연결·정제·검색 가능하게 만드는 계층</small></div>
         <div class="cap-grid">
-          <div class="cap-card"><h4>System Connectors</h4><p>기간계와 업무 시스템을 Agent 실행 흐름에 이어 줍니다.</p><div class="cap-chips"><span>API</span><span>DB</span><span>File</span></div></div>
-          <div class="cap-card optional"><h4>Data Platform Integration</h4><p>기존 데이터 플랫폼과 분석 자산을 AAP의 입력으로 가져다 씁니다.</p><div class="cap-chips"><span>Lakehouse</span><span>Warehouse</span><span>Catalog</span></div></div>
-          <div class="cap-card optional"><h4>Document / Knowledge Integration</h4><p>문서·규정·FAQ를 검색할 수 있는 업무 지식으로 바꿔 줍니다.</p><div class="cap-chips"><span>RAG</span><span>OCR</span><span>Parser</span></div></div>
-          <div class="cap-card"><h4>Operational Log Integration</h4><p>고객의 운영 로그와 이벤트를 업무 판단·학습 흐름에 연결합니다.</p><div class="cap-chips"><span>Event Log</span><span>Audit Trail</span><span>Stream</span></div></div>
-          <div class="cap-card optional"><h4>External Data Interface</h4><p>외부 데이터와 이벤트를 업무 판단 흐름에 끌어 옵니다.</p><div class="cap-chips"><span>Public API</span><span>Subscription</span><span>Stream</span></div></div>
+          <div class="cap-card"><h4>System &amp; Data Connectors</h4><p>기간계·DB·API·파일·분석 자산을 Agent 실행 흐름에 이어 줍니다.</p><div class="cap-chips"><span>API</span><span>DB</span><span>파일·분석 자산</span></div></div>
+          <div class="cap-card optional"><h4>Document / Knowledge Ingestion</h4><p>문서·규정·FAQ를 검색 가능한 업무 지식으로 변환합니다.</p><div class="cap-chips"><span>문서 지식화</span><span>OCR/파싱</span><span>검색 인덱스</span></div></div>
+          <div class="cap-card"><h4>Operational Data Integration</h4><p>운영 로그·이벤트·외부 데이터를 업무 판단·학습 흐름에 연결합니다.</p><div class="cap-chips"><span>운영 로그</span><span>이벤트</span><span>외부 데이터</span></div></div>
         </div>
       </div>
 
       <!-- Business Semantic Modeling -->
       <div class="cap-row">
-        <div class="cap-title"><b>Business Semantic Modeling</b><small>업무의 의미·정책·권한·판단 기준을 체계로 정리</small></div>
+        <div class="cap-title"><b>Business Semantic Modeling</b><small>업무 의미·정책·권한·판단 기준을 Agent가 이해·실행할 수 있는 구조로 정리</small></div>
         <div class="cap-grid">
-          <div class="cap-card differ"><h4>Domain Ontology</h4><p>업무 개념과 관계를 표준화해, Agent가 고객 업무를 일관된 의미로 해석할 수 있게 합니다.</p><div class="cap-chips"><span>OWL</span><span>RDF</span><span>SKOS</span></div></div>
-          <div class="cap-card optional"><h4>Knowledge Graph</h4><p>업무 지식·규정·시스템 사이의 관계를 그래프로 이어 줍니다.</p><div class="cap-chips"><span>Property Graph</span><span>SPARQL</span><span>Cypher</span></div></div>
-          <div class="cap-card differ"><h4>Process / Decision Map</h4><p>업무 절차와 판단 규칙을 실제 실행에 쓸 수 있는 기준으로 정리합니다.</p><div class="cap-chips"><span>BPMN</span><span>DMN</span><span>Rule Repository</span></div></div>
-          <div class="cap-card differ"><h4>Authority Matrix</h4><p>업무 권한·승인 기준·예외 처리 조건을 정리해 자동 실행과 사람 검토의 경계를 정의합니다.</p><div class="cap-chips"><span>RBAC</span><span>ABAC</span><span>Approval Rule</span></div></div>
-          <div class="cap-card differ"><h4>Decision Rule Design</h4><p>정책·룰·예외 기준을 실행 가능한 판단 기준으로 정리하고, 운영 저장소와 버전 관리 체계에 연결합니다.</p><div class="cap-chips"><span>Rule Storage</span><span>Versioning</span><span>Approval</span></div></div>
+          <div class="cap-card differ"><h4>Business Concept Model</h4><p>업무 용어·개념·관계를 표준화해, Agent가 같은 의미로 업무를 해석하도록 합니다.</p><div class="cap-chips"><span>업무 용어집</span><span>도메인 모델</span><span>지식 그래프</span></div></div>
+          <div class="cap-card differ"><h4>Process &amp; Decision Rule Model</h4><p>업무 절차·판단 규칙·예외 조건을 실제 실행에 쓸 수 있는 기준으로 구조화합니다.</p><div class="cap-chips"><span>업무 절차</span><span>판단 룰</span><span>예외 조건</span></div></div>
+          <div class="cap-card differ"><h4>Authority &amp; Policy Model</h4><p>권한·승인 기준·예외 처리 조건을 정리해 자동 실행과 사람 검토의 경계를 정의합니다.</p><div class="cap-chips"><span>권한 매트릭스</span><span>승인 규칙</span><span>자동/수동 경계</span></div></div>
         </div>
       </div>
 
-      <!-- Agentic Reasoning & Execution -->
+      <!-- Agentic Reasoning -->
       <div class="cap-row">
-        <div class="cap-title"><b>Agentic Reasoning &amp; Execution</b><small>Agent의 판단·계획·도구 호출</small></div>
+        <div class="cap-title"><b>Agentic Reasoning</b><small>업무 요청을 단계로 나누고, 지식·도구를 선택해 판단·실행을 분기하는 Agent 판단 계층</small></div>
         <div class="cap-grid">
-          <div class="cap-card optional"><h4>Planning &amp; Orchestration</h4><p>복잡한 업무를 여러 단계로 쪼개고, Agent의 실행 흐름을 조율합니다.</p><div class="cap-chips"><span>LangGraph</span><span>AutoGen</span><span>Semantic Kernel</span></div></div>
-          <div class="cap-card optional"><h4>Tool Registry / Runtime</h4><p>Agent가 호출할 수 있는 도구와 API를 등록하고, 권한·승인·위험도 기준에 따라 사용 범위를 제한합니다.</p><div class="cap-chips"><span>MCP</span><span>OpenAPI</span><span>Function Calling</span></div></div>
-          <div class="cap-card"><h4>HITL &amp; Action Policy</h4><p>업무 위험도와 확신도에 따라 자동 처리·검토 요청·실행 보류 경로를 나눕니다.</p><div class="cap-chips"><span>Confidence</span><span>Escalation</span><span>Guardrails</span></div></div>
-          <div class="cap-card optional"><h4>Work Context Memory</h4><p>업무 대화, 중간 결과, 승인 대기, 외부 응답 대기, 재시도 상태를 작업 맥락으로 유지합니다.</p><div class="cap-chips"><span>Session</span><span>Vector Store</span><span>Long-term Memory</span></div></div>
+          <div class="cap-card optional"><h4>Planning &amp; Orchestration</h4><p>업무를 여러 단계로 쪼개고 Agent 실행 흐름을 조율합니다.</p><div class="cap-chips"><span>단계 계획</span><span>실행 조율</span><span>분기</span></div></div>
+          <div class="cap-card optional"><h4>Tool Calling Runtime</h4><p>Agent가 호출할 도구·API를 등록·관리하고, 권한·위험도 기준으로 사용 범위를 통제합니다.</p><div class="cap-chips"><span>도구 등록</span><span>호출 관리</span><span>권한 제어</span></div></div>
+          <div class="cap-card"><h4>HITL &amp; Action Policy</h4><p>위험도·확신도에 따라 자동 처리·검토 요청·실행 보류 경로를 나눕니다.</p><div class="cap-chips"><span>확신도</span><span>위험도</span><span>에스컬레이션</span></div></div>
         </div>
       </div>
 
       <!-- Enterprise Integration & Action -->
       <div class="cap-row">
-        <div class="cap-title"><b>Enterprise Integration &amp; Action</b><small>업무 실행과 시스템 반영</small></div>
+        <div class="cap-title"><b>Enterprise Integration &amp; Action</b><small>판단 결과를 승인·예외 흐름에 태우고, 실제 업무 시스템에 안전하게 반영하는 실행 계층</small></div>
         <div class="cap-grid">
-          <div class="cap-card optional"><h4>Workflow Engine</h4><p>승인·예외·재처리 흐름을 업무 프로세스로 돌립니다.</p><div class="cap-chips"><span>Camunda</span><span>Temporal</span><span>n8n</span></div></div>
-          <div class="cap-card optional"><h4>API / RPA Connector</h4><p>API가 없는 시스템까지 자동 실행이 닿을 수 있게 합니다.</p><div class="cap-chips"><span>Kong</span><span>UiPath</span><span>Power Automate</span></div></div>
-          <div class="cap-card"><h4>Writeback Integration</h4><p>Agent의 처리 결과가 ERP·CRM·그룹웨어·결재 등 실제 업무 시스템에 반영되도록 실행 경로를 설계하고 연계합니다.</p><div class="cap-chips"><span>ERP</span><span>CRM</span><span>Groupware</span></div></div>
-          <div class="cap-card"><h4>Exception Queue</h4><p>실패·예외·확신도가 낮은 실행 건을 검토·재처리 대기열로 전환합니다.</p><div class="cap-chips"><span>Retry</span><span>Manual Review</span><span>SLA</span></div></div>
-          <div class="cap-card"><h4>Transaction Guard</h4><p>실행 전 확인, 재시도, 취소, 중단 후 재개 조건을 업무 정책으로 관리합니다.</p><div class="cap-chips"><span>Pre-check</span><span>Rollback Rule</span><span>Confirm</span></div></div>
+          <div class="cap-card optional"><h4>Workflow &amp; Approval Execution</h4><p>승인·예외·재처리 흐름을 업무 프로세스 엔진과 RPA·API 채널로 실행합니다.</p><div class="cap-chips"><span>승인 흐름</span><span>재처리</span><span>RPA·API</span></div></div>
+          <div class="cap-card"><h4>System Writeback</h4><p>처리 결과를 ERP·CRM·그룹웨어·결재 등 실제 업무 시스템에 반영합니다.</p><div class="cap-chips"><span>ERP·CRM</span><span>그룹웨어·결재</span><span>실행 경로</span></div></div>
+          <div class="cap-card"><h4>Exception &amp; Transaction Control</h4><p>실패·재시도·취소·롤백·수동 검토 전환 등 실행 안전장치를 정책으로 관리합니다.</p><div class="cap-chips"><span>실패 큐</span><span>재시도·롤백</span><span>수동 검토</span></div></div>
         </div>
       </div>
 
       <!-- Operational Learning -->
       <div class="cap-row">
-        <div class="cap-title"><b>Operational Learning</b><small>실행 결과를 모으고 다듬어 가는 영역</small></div>
+        <div class="cap-title"><b>Operational Learning</b><small>실행 이력·피드백·평가 결과를 재사용 가능한 스킬과 개선 후보로 축적</small></div>
         <div class="cap-grid">
-          <div class="cap-card differ"><h4>Decision / Action Log</h4><p>판단 근거·도구 호출·실행 결과를 나중에 추적할 수 있는 이력으로 남깁니다.</p><div class="cap-chips"><span>Decision Basis</span><span>Tool Trace</span><span>I/O Capture</span></div></div>
-          <div class="cap-card differ"><h4>Feedback Capture</h4><p>사용자 피드백과 업무 결과를 개선에 활용할 수 있도록 수집·분류합니다.</p><div class="cap-chips"><span>User Feedback</span><span>Outcome Data</span><span>Survey</span></div></div>
-          <div class="cap-card differ"><h4>Reusable Skill Catalog</h4><p>검증된 프롬프트, 도구 사용 패턴, 업무 절차를 재사용 가능한 카탈로그로 정리합니다.</p><div class="cap-chips"><span>Validated Skill</span><span>Versioning</span><span>Reuse</span></div></div>
-          <div class="cap-card optional"><h4>Evaluation Pipeline</h4><p>답변 품질뿐 아니라 도구 호출·실행 성공률·사람 검토 전환·정책 위반 여부를 주기적으로 점검합니다.</p><div class="cap-chips"><span>Eval Set</span><span>Regression</span><span>A/B Test</span></div></div>
-          <div class="cap-card optional"><h4>Improvement Candidate</h4><p>운영 이력과 품질 리포트를 바탕으로 정책·스킬·지식 개선 후보를 도출합니다.</p><div class="cap-chips"><span>Policy</span><span>Skill</span><span>Knowledge</span></div></div>
+          <div class="cap-card differ"><h4>Decision / Action Logging</h4><p>판단 근거·도구 호출·실행 결과를 추적 가능한 이력으로 남깁니다.</p><div class="cap-chips"><span>판단 근거</span><span>도구 추적</span><span>입출력 기록</span></div></div>
+          <div class="cap-card differ"><h4>Evaluation &amp; Feedback Loop</h4><p>실행 품질·사용자 피드백·정책 위반 여부를 주기적으로 평가합니다.</p><div class="cap-chips"><span>사용자 피드백</span><span>회귀 평가</span><span>A/B</span></div></div>
+          <div class="cap-card differ"><h4>Reusable Skill &amp; Improvement</h4><p>검증된 업무 패턴을 스킬로 재사용하고, 정책·지식 개선 후보를 관리합니다.</p><div class="cap-chips"><span>스킬 카탈로그</span><span>버전 관리</span><span>개선 후보</span></div></div>
         </div>
       </div>
 
       <!-- Trust · Security · Governance -->
       <div class="cap-row">
-        <div class="cap-title"><b>Trust · Security · Governance</b><small>보안·감사·운영 통제</small></div>
+        <div class="cap-title"><b>Trust · Security · Governance</b><small>접근 권한·데이터 보호·감사 추적·정책 통제·폐쇄망 배포를 관리하는 공통 기반 계층</small></div>
         <div class="cap-grid">
-          <div class="cap-card optional"><h4>IAM / SSO</h4><p>사용자·조직·역할별 접근 권한을 한곳에서 관리합니다.</p><div class="cap-chips"><span>OIDC</span><span>SAML</span><span>MFA</span></div></div>
-          <div class="cap-card optional"><h4>Data Security</h4><p>민감정보와 업무 데이터를 보호하고, 어디까지 쓸 수 있는지 범위를 정해 둡니다.</p><div class="cap-chips"><span>Encryption</span><span>Masking</span><span>Tokenization</span></div></div>
-          <div class="cap-card"><h4>Audit / Explainability</h4><p>판단 근거·참조 출처·실행 이력을 감사 가능한 형태로 남기고 조회할 수 있게 합니다.</p><div class="cap-chips"><span>Evidence</span><span>Citation</span><span>Action Lineage</span></div></div>
-          <div class="cap-card optional"><h4>Guardrails / Policy</h4><p>금지된 작업·민감정보·위험한 실행을 정책으로 막아 줍니다.</p><div class="cap-chips"><span>Input Filter</span><span>Output Filter</span><span>OPA</span></div></div>
-          <div class="cap-card"><h4>Closed / Private Deployment</h4><p>공공·금융·국방 환경에 맞춰 폐쇄망 또는 Private 환경에서 운영할 수 있도록 배포 구조를 설계합니다.</p><div class="cap-chips"><span>On-premise</span><span>VPC</span><span>Air-gapped</span></div></div>
+          <div class="cap-card optional"><h4>Identity &amp; Access Control</h4><p>사용자·조직·역할·권한을 한곳에서 관리합니다.</p><div class="cap-chips"><span>사용자·조직</span><span>역할</span><span>SSO</span></div></div>
+          <div class="cap-card"><h4>Audit &amp; Explainability</h4><p>판단 근거·참조 출처·실행 이력을 감사 가능한 형태로 남기고 조회할 수 있게 합니다.</p><div class="cap-chips"><span>근거</span><span>출처</span><span>실행 이력</span></div></div>
+          <div class="cap-card"><h4>Security Guardrails &amp; Private Deployment</h4><p>민감정보 보호·위험 실행 차단·폐쇄망/Private 환경 배포 요건을 함께 다룹니다.</p><div class="cap-chips"><span>민감정보 보호</span><span>위험 차단</span><span>폐쇄망·Private</span></div></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== 별첨 · capability ↔ 구현 기술 후보 매핑 ===== -->
+  <div class="cap-appx">
+    <div class="cap-appx-head">
+      <span class="cap-appx-tag">APPENDIX</span>
+      <div>
+        <div class="cap-appx-title">별첨 · Capability별 구현 기술·자산 후보</div>
+        <div class="cap-appx-sub">위 Capability Map은 의미 중심의 슬림 버전입니다. 본 부록은 실제 구축 시 검토되는 <strong>구현 기술·자산 후보</strong>를 capability 단위로 펼친 참고용입니다. <strong>특정 제품/스택 채택을 의미하지 않으며</strong>, 고객 환경과 RFP 요건에 따라 선택·조합됩니다. <span style="color:var(--teal-strong);font-weight:800;">★</span> 표시는 kt ds 차별화 영역입니다.</div>
+      </div>
+    </div>
+    <div class="cap-appx-grid">
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Customer Environment</b><em>고객 보유 자산 · 외부 영역</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap">Data Platform / Analytics Assets</div><div class="cap-appx-tech"><span>Lakehouse</span><span>Warehouse</span><span>Catalog</span><span>BI / 분석 자산</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Business Systems</div><div class="cap-appx-tech"><span>ERP</span><span>CRM</span><span>SCM</span><span>그룹웨어</span><span>전자결재</span><span>Internal API</span><span>EAI</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Document / Knowledge Assets</div><div class="cap-appx-tech"><span>KMS</span><span>Document Repository</span><span>규정·매뉴얼</span><span>FAQ</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Service Experience</b><em>사용자 접점</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap">AI Agent Portal</div><div class="cap-appx-tech"><span>Agent Catalog</span><span>Execution UI</span><span>Run History</span><span>User Workspace</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap"><span class="star">★</span>Business Agents</div><div class="cap-appx-tech"><span>공통 업무 Agent (검색·요약·VOC·보고서)</span><span>산업 특화 (금융·공공·제조 등)</span><span>직무 특화 (HR·재무·CS 등)</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Review / Approval Workspace</div><div class="cap-appx-tech"><span>Approval UI</span><span>HITL Console</span><span>Audit View</span><span>Evidence Panel</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Enterprise Data &amp; Inputs</b><em>고객 자산 → AAP 입력</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap">System &amp; Data Connectors</div><div class="cap-appx-tech"><span>REST/SOAP API</span><span>DB Connector</span><span>File / SFTP</span><span>Lakehouse / Warehouse 연계</span><span>Message Bus</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Document / Knowledge Ingestion</div><div class="cap-appx-tech"><span>RAG Pipeline</span><span>OCR</span><span>Document Parser</span><span>Embedding</span><span>Vector Store</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Operational Data Integration</div><div class="cap-appx-tech"><span>Event Log</span><span>Audit Trail</span><span>Stream (Kafka 등)</span><span>Public API / Subscription</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Business Semantic Modeling</b><em>kt ds 차별화 핵심</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap"><span class="star">★</span>Business Concept Model</div><div class="cap-appx-tech"><span>업무 용어집</span><span>도메인 모델</span><span>Knowledge Graph</span><span>Property Graph</span><span>OWL / RDF / SKOS (선택)</span><span>SPARQL / Cypher (선택)</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap"><span class="star">★</span>Process &amp; Decision Rule Model</div><div class="cap-appx-tech"><span>업무 절차 정의</span><span>판단 룰</span><span>예외 조건</span><span>BPMN / DMN (선택)</span><span>Rule Repository</span><span>Versioning</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap"><span class="star">★</span>Authority &amp; Policy Model</div><div class="cap-appx-tech"><span>권한 매트릭스</span><span>승인 규칙</span><span>RBAC / ABAC</span><span>자동/수동 처리 경계 정의</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Agentic Reasoning</b><em>Agent 판단 계층</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap">Planning &amp; Orchestration</div><div class="cap-appx-tech"><span>Agent Framework (LangGraph · AutoGen · Semantic Kernel 등)</span><span>Multi-step Plan</span><span>Branching</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Tool Calling Runtime</div><div class="cap-appx-tech"><span>MCP</span><span>OpenAPI</span><span>Function Calling</span><span>Tool Registry</span><span>Work Context / State Store</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">HITL &amp; Action Policy</div><div class="cap-appx-tech"><span>Confidence Threshold</span><span>Risk Score</span><span>Escalation Policy</span><span>Guardrail Hook</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Enterprise Integration &amp; Action</b><em>실행·시스템 반영</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap">Workflow &amp; Approval Execution</div><div class="cap-appx-tech"><span>Workflow Engine (Camunda · Temporal · n8n 등)</span><span>API Gateway (Kong 등)</span><span>RPA (UiPath · Power Automate 등)</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">System Writeback</div><div class="cap-appx-tech"><span>ERP / CRM / SCM Writeback</span><span>그룹웨어·결재 연계</span><span>Internal API 호출</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Exception &amp; Transaction Control</div><div class="cap-appx-tech"><span>Retry / Rollback Rule</span><span>Pre-check</span><span>Manual Review Queue</span><span>SLA 관리</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Operational Learning</b><em>운영 학습 · 자산화</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap"><span class="star">★</span>Decision / Action Logging</div><div class="cap-appx-tech"><span>Decision Basis</span><span>Tool Call Trace</span><span>I/O Capture</span><span>Action Lineage</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap"><span class="star">★</span>Evaluation &amp; Feedback Loop</div><div class="cap-appx-tech"><span>User Feedback</span><span>Outcome Data</span><span>Eval Set</span><span>Regression Test</span><span>A/B Test</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap"><span class="star">★</span>Reusable Skill &amp; Improvement</div><div class="cap-appx-tech"><span>Validated Skill Catalog</span><span>Versioning</span><span>정책·스킬·지식 개선 후보</span></div></div>
+        </div>
+      </div>
+
+      <div class="cap-appx-block">
+        <div class="cap-appx-block-head"><b>Trust · Security · Governance</b><em>공통 기반</em></div>
+        <div class="cap-appx-table">
+          <div class="cap-appx-row"><div class="cap-appx-cap">Identity &amp; Access Control</div><div class="cap-appx-tech"><span>IAM</span><span>SSO</span><span>OIDC / SAML</span><span>MFA</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Audit &amp; Explainability</div><div class="cap-appx-tech"><span>Evidence Store</span><span>Citation</span><span>Action Lineage</span><span>Audit Trail</span></div></div>
+          <div class="cap-appx-row"><div class="cap-appx-cap">Security Guardrails &amp; Private Deployment</div><div class="cap-appx-tech"><span>Encryption / Masking / Tokenization</span><span>Input/Output Filter</span><span>Policy Engine (OPA 등)</span><span>On-premise · VPC · 폐쇄망</span></div></div>
+        </div>
+      </div>
+
     </div>
   </div>
 

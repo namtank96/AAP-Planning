@@ -1,0 +1,24 @@
+# Claude Code 로컬 설정
+.claude/
+.claude/settings.local.json
+
+# OS 메타 파일
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# MS Office 임시 파일
+~$*.docx
+~$*.xlsx
+~$*.pptx
+~$*.html
+
+# 에디터 임시·백업
+*.bak
+*.tmp
+*~
+.vscode/
+.idea/
+
+# 로그
+*.log
