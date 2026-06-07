@@ -1,0 +1,1682 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP 프로토타입 데모 · 지급결의 통제 운영평가</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2; --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+  --amber:#d97706; --amber2:#fffbeb;
+  --shadow:0 16px 42px rgba(23,25,28,.08);
+
+  --c-control:#e0282f;
+  --c-risk:#d97706;
+  --c-account:#6f7782;
+  --c-evidence:#00a39b;
+  --c-approval:#0369a1;
+  --c-policy:#7c3aed;
+  --c-exception:#ca8a04;
+  --c-history:#be185d;
+  --c-action:#16a34a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--gray-75);color:var(--ink);
+  font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  line-height:1.5;font-size:13.5px;
+}
+button{font-family:inherit}
+
+/* ========= Hero ========= */
+.hero{padding:22px 30px 18px;background:var(--gray-900);color:#fff}
+.hero-inner{max-width:1760px;margin:0 auto;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:end}
+.hero-titleblock .eyebrow{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.7);font-weight:900;margin-bottom:6px}
+.hero-titleblock h1{margin:0 0 5px;font-size:24px;letter-spacing:-.025em;line-height:1.15;color:#fff;font-weight:900}
+.hero-titleblock p{margin:0;font-size:12.5px;color:rgba(255,255,255,.72);line-height:1.5;max-width:780px}
+
+.hero-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{
+  border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);color:#fff;
+  border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;
+  transition:transform .15s ease,background .15s ease,border-color .15s ease,opacity .15s ease;
+  letter-spacing:-.005em;
+}
+.btn:hover:not(:disabled){background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.35);transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--red);border-color:var(--red)}
+.btn.primary:hover:not(:disabled){background:#c52129;border-color:#c52129}
+.btn.ghost{background:transparent}
+.step-progress{display:flex;flex-direction:column;gap:5px;margin-left:8px;min-width:180px}
+.step-label{font-size:10.5px;color:rgba(255,255,255,.7);font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.step-label b{color:#fff;font-size:13px;font-weight:900}
+.step-bar{height:5px;background:rgba(255,255,255,.14);border-radius:999px;overflow:hidden}
+.step-bar-fill{height:100%;width:0%;background:var(--red);border-radius:999px;transition:width .35s ease}
+
+/* ========= Step Tabs ========= */
+.step-tabs{
+  display:grid;grid-template-columns:repeat(8,1fr);gap:0;
+  background:#fff;border-bottom:1px solid var(--line);padding:0 30px;
+  position:sticky;top:0;z-index:30
+}
+.step-tab{
+  display:flex;align-items:center;gap:7px;padding:11px 12px;
+  font-size:11.5px;color:var(--gray-500);font-weight:700;
+  border-bottom:3px solid transparent;cursor:default;
+  letter-spacing:-.005em;line-height:1.25;
+  transition:all .2s ease;
+}
+.step-tab b{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:6px;background:var(--gray-100);color:var(--gray-500);
+  font-size:11px;font-weight:900;flex-shrink:0;
+}
+.step-tab.done b{background:var(--gray-700);color:#fff}
+.step-tab.active{color:var(--ink);border-bottom-color:var(--red);background:var(--red2)}
+.step-tab.active b{background:var(--red);color:#fff;box-shadow:0 0 0 3px rgba(224,40,47,.18)}
+
+/* ========= Workspace 3-pane ========= */
+.workspace{
+  display:grid;grid-template-columns:1.05fr 1.1fr 1.05fr;
+  gap:14px;padding:14px 30px;background:var(--gray-75);
+  height:calc(100vh - 175px); min-height:660px;
+}
+.pane{
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 6px 18px rgba(23,25,28,.04);
+}
+.pane-head{
+  padding:11px 14px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#fff,#fafbfc);
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+}
+.pane-head h2{margin:0;font-size:13px;font-weight:900;letter-spacing:-.005em;color:var(--ink)}
+.pane-head .pane-sub{font-size:11px;color:var(--muted);font-weight:600}
+.pane-foot{
+  padding:9px 12px;border-top:1px solid var(--line);background:#fbfbfc;
+  font-size:11px;color:var(--muted);min-height:38px;
+}
+
+/* === Left pane: Ontology graph === */
+#cy{flex:1;background:#fbfbfc;background-image:
+  radial-gradient(circle at 1px 1px, rgba(23,25,28,.05) 1px, transparent 0);
+  background-size:18px 18px;
+}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.lg{
+  display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--gray-700);font-weight:700;
+  padding:2px 7px;border-radius:999px;border:1px solid var(--line);background:#fff;
+}
+.lg::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+.lg-control{color:var(--c-control)}
+.lg-risk{color:var(--c-risk)}
+.lg-account{color:var(--c-account)}
+.lg-evidence{color:var(--c-evidence)}
+.lg-approval{color:var(--c-approval)}
+.lg-policy{color:var(--c-policy)}
+.lg-exception{color:var(--c-exception)}
+.lg-history{color:var(--c-history)}
+.lg-action{color:var(--c-action)}
+
+/* === Center pane: Log === */
+.log{
+  flex:1;overflow-y:auto;padding:10px 12px;
+  background:#0e0f12;color:#d7dbe1;font-family:'Consolas','Monaco','Menlo',monospace;
+  font-size:12px;line-height:1.55;
+}
+.log-line{padding:3px 0;display:grid;grid-template-columns:78px 88px 1fr;gap:9px;align-items:start}
+.log-line .ts{color:#6f7782}
+.log-line .src{font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8bec8;text-align:center}
+.log-line .src.system{color:#fff;background:rgba(255,255,255,.1)}
+.log-line .src.orchestrator{color:#fff;background:rgba(224,40,47,.25);border-color:rgba(224,40,47,.45)}
+.log-line .src.semantic{color:#fff;background:rgba(0,163,155,.25);border-color:rgba(0,163,155,.5)}
+.log-line .src.agent{color:#fff;background:rgba(217,119,6,.22);border-color:rgba(217,119,6,.45)}
+.log-line .src.tool{color:#fff;background:rgba(3,105,161,.25);border-color:rgba(3,105,161,.5)}
+.log-line .src.llm{color:#fff;background:rgba(124,58,237,.25);border-color:rgba(124,58,237,.5)}
+.log-line .src.hitl{color:#fff;background:rgba(190,24,93,.25);border-color:rgba(190,24,93,.5)}
+.log-line .src.action{color:#fff;background:rgba(22,163,74,.25);border-color:rgba(22,163,74,.5)}
+.log-line .src.learning{color:#fff;background:rgba(202,138,4,.25);border-color:rgba(202,138,4,.5)}
+.log-line .msg{color:#e6e9ef}
+.log-line .msg b{color:#fff;font-weight:700}
+.log-line .msg code{font-family:inherit;background:rgba(255,255,255,.07);padding:0 5px;border-radius:3px;font-size:11px}
+.log-line.dim .msg{color:#8d95a1}
+.log-line.head{margin-top:8px}
+.log-line.head .msg{color:#fff;font-weight:700}
+.log-line.head .msg::before{content:"▸ ";color:var(--red)}
+.log-divider{margin:8px 0;padding:4px 8px;font-size:10.5px;color:#6f7782;letter-spacing:.08em;text-transform:uppercase;border-top:1px dashed rgba(255,255,255,.1);border-bottom:1px dashed rgba(255,255,255,.1)}
+
+.center-summary{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px}
+.center-summary .summary-tags{display:flex;gap:5px;flex-wrap:wrap}
+.center-summary .summary-tag{padding:2px 8px;border-radius:5px;background:#fff;border:1px solid var(--line);font-size:10.5px;font-weight:700;color:var(--gray-700)}
+.center-summary .summary-tag.diff{border-color:var(--teal);color:var(--teal-strong);background:var(--teal2)}
+.center-summary .compare-btn{
+  padding:5px 11px;border-radius:6px;border:1px solid var(--teal);background:var(--teal2);color:var(--teal-strong);
+  font-size:11px;font-weight:800;cursor:pointer;
+}
+.center-summary .compare-btn:hover{background:var(--teal);color:#fff}
+
+/* === Right pane: HITL Workspace === */
+.right-body{
+  flex:1;overflow-y:auto;padding:14px;
+}
+.placeholder{
+  height:100%;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--muted);font-size:12px;padding:30px;line-height:1.7;
+}
+
+/* Card variants */
+.info-card{
+  border:1px solid var(--line);border-radius:10px;background:#fff;padding:13px 14px;margin-bottom:10px;
+}
+.info-card h3{margin:0 0 7px;font-size:13px;font-weight:900;letter-spacing:-.005em;color:var(--ink)}
+.info-card .icard-sub{font-size:11px;color:var(--muted);margin:0 0 8px}
+.info-card .icard-list{margin:0;padding:0;list-style:none;font-size:11.5px;line-height:1.55}
+.info-card .icard-list li{padding:3px 0;border-bottom:1px dashed var(--gray-100)}
+.info-card .icard-list li:last-child{border-bottom:0}
+.info-card .icard-list b{color:var(--ink);font-weight:700;display:inline-block;min-width:88px;color:var(--gray-700)}
+.info-card .icard-list span.muted{color:var(--muted);font-size:10.5px;margin-left:6px}
+.info-card.accent{border:1.5px solid var(--teal);background:var(--teal2)}
+.info-card.accent h3{color:var(--teal-strong)}
+
+/* Plan box */
+.plan-box{border:1px solid var(--line);background:#fbfbfc;border-radius:10px;padding:0;overflow:hidden;margin-bottom:10px}
+.plan-box-head{padding:9px 12px;background:var(--gray-900);color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.02em;display:flex;justify-content:space-between;align-items:center}
+.plan-box-head .pbh-tag{font-size:9.5px;letter-spacing:.14em;color:rgba(255,255,255,.65);text-transform:uppercase;font-weight:900}
+.plan-list{margin:0;padding:8px 0;list-style:none;counter-reset:plan}
+.plan-list li{padding:7px 14px 7px 36px;font-size:11.5px;line-height:1.5;position:relative;counter-increment:plan;color:var(--gray-700)}
+.plan-list li::before{content:counter(plan);position:absolute;left:13px;top:7px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.plan-list li b{color:var(--ink);font-weight:700}
+
+/* Tool call trace */
+.tool-trace{font-size:11px;border:1px solid var(--line);border-radius:10px;background:#fbfbfc;overflow:hidden;margin-bottom:10px}
+.tool-trace-head{padding:9px 12px;background:var(--gray-900);color:#fff;font-weight:800;letter-spacing:.02em;font-size:11.5px}
+.tool-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 12px;border-top:1px solid var(--gray-100);align-items:center}
+.tool-row .tname{font-family:'Consolas',monospace;font-size:11px;color:var(--gray-800);font-weight:700}
+.tool-row .targs{font-size:10.5px;color:var(--muted);margin-top:2px;font-family:'Consolas',monospace}
+.tool-row .tres{font-size:11px;color:var(--teal-strong);font-weight:800;text-align:right}
+.tool-row .tres .ttime{font-size:10.5px;color:var(--muted);font-weight:500;margin-left:5px}
+.tool-row.pending .tres{color:var(--muted)}
+.tool-row.pending::after{content:"";display:inline-block;width:7px;height:7px;border:2px solid var(--gray-300);border-top-color:var(--gray-700);border-radius:50%;animation:spin 0.7s linear infinite;margin-left:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Finding cards (미비 후보) */
+.findings-stack{display:flex;flex-direction:column;gap:9px}
+.finding-card{
+  border:1px solid var(--line);border-radius:10px;background:#fff;
+  overflow:hidden;transition:all .2s ease;
+}
+.finding-card.confirmed{border-color:var(--red);background:#fffafa}
+.finding-card.rejected{border-color:var(--gray-400);background:#f7f8fa;opacity:.7}
+.finding-card.requested{border-color:var(--amber);background:var(--amber2)}
+.fc-head{padding:9px 13px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);background:linear-gradient(180deg,#fff,#fcfcfd)}
+.finding-card.confirmed .fc-head{background:#fff3f3}
+.finding-card.requested .fc-head{background:#fef3c7}
+.fc-head .fc-id{font-size:11.5px;font-weight:900;color:var(--ink);letter-spacing:-.005em}
+.fc-head .fc-id::before{content:"#";color:var(--muted);font-weight:700;margin-right:1px}
+.fc-status{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--gray-700);color:#fff;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.finding-card.confirmed .fc-status{background:var(--red)}
+.finding-card.rejected .fc-status{background:var(--gray-500)}
+.finding-card.requested .fc-status{background:var(--amber)}
+.fc-body{padding:11px 13px;font-size:11.5px;line-height:1.55;color:var(--gray-700)}
+.fc-tx{font-family:'Consolas',monospace;font-size:11px;color:var(--gray-900);background:var(--gray-50);padding:5px 8px;border-radius:5px;margin-bottom:8px;border:1px solid var(--gray-100)}
+.fc-tx b{color:var(--ink)}
+.fc-reason{margin:0 0 9px;padding:0}
+.fc-reason .fcr-flag{display:inline-block;font-size:10px;font-weight:900;color:#fff;background:var(--red);padding:2px 7px;border-radius:4px;letter-spacing:.02em;margin-right:6px;text-transform:uppercase}
+.fc-reason .fcr-text{color:var(--ink);font-weight:600}
+.fc-evidence{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 9px}
+.fc-evidence span{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--gray-50);border:1px solid var(--line);color:var(--gray-600);font-weight:700}
+.fc-evidence span.policy{color:var(--c-policy);border-color:#ddd6fe;background:#f5f3ff}
+.fc-evidence span.history{color:var(--c-history);border-color:#fbcfe8;background:#fdf2f8}
+.fc-conf{display:flex;align-items:center;gap:7px;margin-bottom:9px;font-size:10.5px}
+.fc-conf .conf-bar{flex:1;height:4px;background:var(--gray-100);border-radius:999px;overflow:hidden}
+.fc-conf .conf-fill{height:100%;background:var(--red);border-radius:999px}
+.fc-conf .conf-label{font-weight:800;color:var(--ink);min-width:42px;text-align:right}
+.fc-actions{display:flex;gap:5px;margin-top:7px;padding-top:9px;border-top:1px dashed var(--gray-100)}
+.fc-actions button{
+  flex:1;padding:6px 7px;font-size:11px;border:1px solid var(--line);
+  background:#fff;color:var(--gray-700);border-radius:6px;cursor:pointer;font-weight:700;
+  transition:all .15s ease;
+}
+.fc-actions button:hover{border-color:var(--gray-400);background:var(--gray-50)}
+.fc-actions button.confirm:hover{border-color:var(--red);color:var(--red);background:var(--red2)}
+.fc-actions button.request:hover{border-color:var(--amber);color:var(--amber);background:var(--amber2)}
+.fc-actions button.reject:hover{border-color:var(--gray-500);color:var(--gray-500)}
+.finding-card.confirmed .fc-actions,
+.finding-card.rejected .fc-actions,
+.finding-card.requested .fc-actions{display:none}
+.fc-resolution{margin-top:9px;padding:7px 10px;background:#fff;border:1px dashed var(--gray-300);border-radius:6px;font-size:11px;color:var(--gray-700);line-height:1.5}
+.fc-resolution b{color:var(--ink)}
+
+.hitl-progress{
+  display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--gray-900);color:#fff;
+  border-radius:8px;margin-bottom:10px;font-size:11.5px;font-weight:700;
+}
+.hitl-progress .hp-bar{flex:1;height:5px;background:rgba(255,255,255,.18);border-radius:999px;overflow:hidden}
+.hitl-progress .hp-fill{height:100%;background:var(--teal);border-radius:999px;transition:width .3s ease}
+.hitl-progress .hp-counts{font-size:10.5px;color:rgba(255,255,255,.7);font-weight:600}
+
+/* Action result */
+.action-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.action-row{
+  display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;
+  padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;
+}
+.action-row .ar-icon{
+  width:26px;height:26px;border-radius:6px;background:var(--c-action);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;
+}
+.action-row .ar-body{font-size:11.5px}
+.action-row .ar-body b{color:var(--ink);font-weight:800}
+.action-row .ar-body .ar-sub{font-size:10.5px;color:var(--muted);margin-top:1px;font-family:'Consolas',monospace}
+.action-row .ar-status{font-size:10px;font-weight:900;color:var(--c-action);letter-spacing:.04em;text-transform:uppercase}
+
+/* Learning */
+.learn-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.learn-card{
+  padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fff;
+}
+.learn-card-head{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.learn-card-head .lc-badge{
+  padding:2px 7px;border-radius:5px;font-size:9.5px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;
+  background:var(--teal-strong);color:#fff;
+}
+.learn-card-head .lc-title{font-size:12px;font-weight:900;color:var(--ink)}
+.learn-card-body{font-size:11.5px;color:var(--gray-700);line-height:1.6}
+.learn-card-body b{color:var(--ink)}
+.learn-card-body code{font-family:'Consolas',monospace;background:var(--gray-50);padding:1px 6px;border-radius:4px;font-size:10.5px;color:var(--gray-800)}
+.learn-change{display:inline-block;font-weight:900;color:var(--teal-strong);padding:0 6px}
+.learn-change::before{content:"→ ";color:var(--muted)}
+
+/* ========= Decision Log ========= */
+.decision-log{background:#fff;border-top:1px solid var(--line);margin-top:0}
+.dl-head{
+  padding:10px 30px;cursor:pointer;display:flex;align-items:center;gap:10px;
+  background:#fff;color:var(--gray-700);font-size:11.5px;
+}
+.dl-head:hover{background:var(--gray-50)}
+.dl-head strong{color:var(--ink);font-weight:900;font-size:12px}
+.dl-head span{color:var(--muted);font-size:11px}
+.dl-toggle{margin-left:auto;font-size:13px;color:var(--gray-500);transition:transform .2s ease;font-family:inherit}
+.dl-toggle.open{transform:rotate(180deg)}
+.dl-body{padding:0 30px 16px;max-height:280px;overflow:auto;background:#fbfbfc;border-top:1px solid var(--line)}
+.dl-body table{width:100%;border-collapse:collapse;font-size:11px;margin-top:10px}
+.dl-body th{background:var(--gray-900);color:#fff;padding:7px 9px;text-align:left;font-weight:800;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;position:sticky;top:0}
+.dl-body td{padding:6px 9px;border-bottom:1px solid var(--gray-100);vertical-align:top;color:var(--gray-700);font-family:'Consolas',monospace}
+.dl-body td.actor{font-weight:700;color:var(--gray-900)}
+
+/* ========= Compare Panel (modal) ========= */
+.compare-panel{
+  position:fixed;top:0;right:0;bottom:0;width:520px;background:#fff;
+  box-shadow:-16px 0 42px rgba(23,25,28,.12);z-index:100;
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .25s ease;
+}
+.compare-panel.open{transform:translateX(0)}
+.cp-head{padding:14px 18px;background:var(--gray-900);color:#fff;display:flex;align-items:center;justify-content:space-between}
+.cp-head strong{font-size:13.5px;font-weight:900}
+.cp-close{background:none;border:0;color:#fff;font-size:24px;cursor:pointer;line-height:1;padding:0 4px}
+.cp-body{flex:1;overflow:auto;padding:18px}
+.cp-row{
+  border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;
+}
+.cp-row.aap{border-color:var(--red);background:var(--red2)}
+.cp-row .cp-label{font-size:10.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.cp-row.aap .cp-label{color:var(--red)}
+.cp-row .cp-text{font-size:12px;color:var(--gray-700);line-height:1.6}
+.cp-row .cp-text b{color:var(--ink)}
+.cp-overlay{position:fixed;inset:0;background:rgba(23,25,28,.35);z-index:99;display:none}
+.cp-overlay.open{display:block}
+
+/* ========= Footer ========= */
+.footer{
+  padding:13px 30px;background:var(--gray-900);color:rgba(255,255,255,.7);
+  display:flex;justify-content:space-between;font-size:11px;
+}
+
+/* Cytoscape node styles applied via JS (style array) */
+/* Responsiveness */
+@media(max-width:1280px){
+  .workspace{grid-template-columns:1fr 1fr;height:auto}
+  .pane-left{grid-column:1/-1;height:380px}
+  .step-tabs{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:820px){
+  .workspace{grid-template-columns:1fr}
+  .pane-left{height:340px}
+  .step-tabs{grid-template-columns:repeat(2,1fr)}
+  .hero-inner{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ Hero ============ -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-titleblock">
+      <div class="eyebrow">AAP Prototype Demo · v0.1 · 2026-05-28</div>
+      <h1>지급결의 통제 운영평가 — Agentic Operation Loop</h1>
+      <p>K-SOX 통제 1건(C-FIN-007 지급결의 분리원칙)을 끝까지 자동 실행합니다.
+        ① 트리거 → ⑧ 학습까지 8단계가 단일 화면에서 흐르고, 각 단계마다 RAG·RPA·KSOX AI와 어떻게 다른지 확인할 수 있습니다.</p>
+    </div>
+    <div class="hero-controls">
+      <button id="btn-start" class="btn primary">▶ 평가 시작</button>
+      <button id="btn-next" class="btn" disabled>다음 단계 →</button>
+      <button id="btn-auto" class="btn" disabled>▶▶ 자동 진행</button>
+      <button id="btn-reset" class="btn ghost">↻ 리셋</button>
+      <div class="step-progress">
+        <span class="step-label">Step <b id="step-current">0</b> / 8 · <span id="step-name">대기 중</span></span>
+        <div class="step-bar"><div class="step-bar-fill" id="step-bar-fill"></div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ Step Tabs ============ -->
+<nav class="step-tabs" id="step-tabs">
+  <div class="step-tab" data-step="1"><b>①</b><span>트리거</span></div>
+  <div class="step-tab" data-step="2"><b>②</b><span>Semantic 조회</span></div>
+  <div class="step-tab" data-step="3"><b>③</b><span>Reasoning 계획</span></div>
+  <div class="step-tab" data-step="4"><b>④</b><span>Tool 호출</span></div>
+  <div class="step-tab" data-step="5"><b>⑤</b><span>근거 카드</span></div>
+  <div class="step-tab" data-step="6"><b>⑥</b><span>HITL 검토</span></div>
+  <div class="step-tab" data-step="7"><b>⑦</b><span>Action</span></div>
+  <div class="step-tab" data-step="8"><b>⑧</b><span>Learning</span></div>
+</nav>
+
+<!-- ============ Workspace ============ -->
+<main class="workspace">
+
+  <!-- LEFT: Ontology -->
+  <section class="pane pane-left">
+    <header class="pane-head">
+      <h2>Business Semantic · 통제 온톨로지</h2>
+      <span class="pane-sub">통제·리스크·증빙·권한·정책·과거이력의 의미 그래프</span>
+    </header>
+    <div id="cy"></div>
+    <footer class="pane-foot">
+      <div class="legend">
+        <span class="lg lg-control">통제</span>
+        <span class="lg lg-risk">리스크</span>
+        <span class="lg lg-account">계정</span>
+        <span class="lg lg-evidence">증빙</span>
+        <span class="lg lg-approval">권한</span>
+        <span class="lg lg-policy">정책</span>
+        <span class="lg lg-exception">예외</span>
+        <span class="lg lg-history">과거이력</span>
+        <span class="lg lg-action">조치</span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- CENTER: Log -->
+  <section class="pane pane-center">
+    <header class="pane-head">
+      <h2>Agentic Reasoning · 실행 로그</h2>
+      <span class="pane-sub">Agent가 무엇을 어떤 순서로 판단·실행했는지의 추적</span>
+    </header>
+    <div class="log" id="log">
+      <div class="log-line dim"><span class="ts"></span><span class="src">SYSTEM</span><span class="msg">대기 중 · 좌측 [▶ 평가 시작] 버튼을 눌러주세요.</span></div>
+    </div>
+    <footer class="pane-foot center-summary" id="center-summary">
+      <div class="summary-tags" id="summary-tags"></div>
+      <button class="compare-btn" id="compare-btn" disabled>vs. RAG · RPA · KSOX AI</button>
+    </footer>
+  </section>
+
+  <!-- RIGHT: HITL / Result / Learning -->
+  <section class="pane pane-right">
+    <header class="pane-head">
+      <h2 id="right-title">HITL Workspace</h2>
+      <span class="pane-sub" id="right-sub">평가 결과 · 근거 카드 · 감사인 검토</span>
+    </header>
+    <div class="right-body" id="right-body">
+      <div class="placeholder">
+        평가를 시작하면 단계별 산출물이 여기 표시됩니다.<br>
+        ⑤ 근거 카드 · ⑥ HITL 검토 · ⑦ Action 결과 · ⑧ Learning 환류
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ Decision Log ============ -->
+<section class="decision-log">
+  <div class="dl-head" id="dl-head">
+    <strong>Decision Log</strong>
+    <span>모든 판단·도구호출·HITL 결정·시스템 반영이 불변 로그로 기록됩니다 (감사 가능)</span>
+    <span class="dl-toggle" id="dl-toggle">▾</span>
+  </div>
+  <div class="dl-body" id="dl-body" hidden>
+    <table>
+      <thead><tr><th style="width:90px">시각</th><th style="width:110px">주체</th><th style="width:140px">액션</th><th>대상</th><th style="width:170px">결과</th></tr></thead>
+      <tbody id="dl-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ Compare Panel ============ -->
+<div class="cp-overlay" id="cp-overlay" onclick="hideCompare()"></div>
+<aside class="compare-panel" id="compare-panel">
+  <header class="cp-head">
+    <strong id="cp-step-title">단계 비교</strong>
+    <button class="cp-close" onclick="hideCompare()">×</button>
+  </header>
+  <div class="cp-body" id="cp-body"></div>
+</aside>
+
+<footer class="footer">
+  <span><b>AAP Prototype Demo</b> · v0.1 · 2026-05-28</span>
+  <span>vs. KSOX AI · 지급결의 통제 운영평가 (C-FIN-007)</span>
+</footer>
+
+<!-- ============ DATA + LOGIC ============ -->
+<script>
+'use strict';
+
+/* =========================================================
+   1. ONTOLOGY DATA
+   ========================================================= */
+const ONTOLOGY = {
+  nodes: [
+    // 통제 (1)
+    { id: 'C-FIN-007', label: '지급결의\n분리원칙 통제', type: 'control', size: 70 },
+
+    // 리스크 (3)
+    { id: 'R-AUTH', label: '권한 남용', type: 'risk' },
+    { id: 'R-SOD',  label: '분리원칙\n위배', type: 'risk' },
+    { id: 'R-EVID', label: '증빙 위조', type: 'risk' },
+
+    // 계정 (4)
+    { id: 'ACC-11800', label: '11800\n일반관리비', type: 'account' },
+    { id: 'ACC-11801', label: '11801\n자회사 K\n출자금', type: 'account' },
+    { id: 'ACC-11802', label: '11802\n단기지급금', type: 'account' },
+    { id: 'ACC-11803', label: '11803\n외상지급금', type: 'account' },
+
+    // 증빙 (3)
+    { id: 'E-RECEIPT',  label: '영수증', type: 'evidence' },
+    { id: 'E-INVOICE',  label: '인보이스', type: 'evidence' },
+    { id: 'E-APPROVAL', label: '결재 이력', type: 'evidence' },
+
+    // 권한 (3)
+    { id: 'AM-LV1', label: 'LV1 결재\n<5천만', type: 'approval' },
+    { id: 'AM-LV2', label: 'LV2 결재\n5천만~3억', type: 'approval' },
+    { id: 'AM-LV3', label: 'LV3 임원\n>3억', type: 'approval' },
+
+    // 정책 (4)
+    { id: 'P-S12',   label: '회계규정\n§12', type: 'policy' },
+    { id: 'P-S12-3', label: '회계규정\n§12-3\n분리원칙', type: 'policy' },
+    { id: 'P-S12-5', label: '회계규정\n§12-5\n긴급예외', type: 'policy' },
+    { id: 'P-KSOX',  label: 'K-SOX\n4.3', type: 'policy' },
+
+    // 예외 (2)
+    { id: 'EX-EMERG',    label: '긴급지급\n24h 보완', type: 'exception' },
+    { id: 'EX-OFFICIAL', label: '공무 출장\n사후 영수증', type: 'exception' },
+
+    // 과거이력 (3)
+    { id: 'H-25Q3', label: "'25 Q3\nK·11801\n권한위반", type: 'history' },
+    { id: 'H-25Q4', label: "'25 Q4\nK·11801\n권한위반", type: 'history' },
+    { id: 'H-26Q1', label: "'26 Q1\nK·11801\n권한위반", type: 'history' },
+
+    // 조치 (3)
+    { id: 'A-GRC',    label: 'GRC\n개선과제', type: 'action' },
+    { id: 'A-MAIL',   label: '책임자\n메일 통보', type: 'action' },
+    { id: 'A-RETURN', label: '결재 회신', type: 'action' },
+  ],
+  edges: [
+    // Control → Risk (mitigates)
+    { s: 'C-FIN-007', t: 'R-AUTH', label: 'mitigates' },
+    { s: 'C-FIN-007', t: 'R-SOD',  label: 'mitigates' },
+    { s: 'C-FIN-007', t: 'R-EVID', label: 'mitigates' },
+    // Control → Account (appliesTo)
+    { s: 'C-FIN-007', t: 'ACC-11800', label: 'appliesTo' },
+    { s: 'C-FIN-007', t: 'ACC-11801', label: 'appliesTo' },
+    { s: 'C-FIN-007', t: 'ACC-11802', label: 'appliesTo' },
+    { s: 'C-FIN-007', t: 'ACC-11803', label: 'appliesTo' },
+    // Control → Evidence (requiresEvidence)
+    { s: 'C-FIN-007', t: 'E-RECEIPT',  label: 'requiresEvidence' },
+    { s: 'C-FIN-007', t: 'E-INVOICE',  label: 'requiresEvidence' },
+    { s: 'C-FIN-007', t: 'E-APPROVAL', label: 'requiresEvidence' },
+    // Control → Approval (requiresApproval)
+    { s: 'C-FIN-007', t: 'AM-LV1', label: 'requiresApproval' },
+    { s: 'C-FIN-007', t: 'AM-LV2', label: 'requiresApproval' },
+    { s: 'C-FIN-007', t: 'AM-LV3', label: 'requiresApproval' },
+    // Control → Policy (citesPolicy)
+    { s: 'C-FIN-007', t: 'P-S12',   label: 'citesPolicy' },
+    { s: 'C-FIN-007', t: 'P-S12-3', label: 'citesPolicy' },
+    { s: 'C-FIN-007', t: 'P-S12-5', label: 'citesPolicy' },
+    { s: 'C-FIN-007', t: 'P-KSOX',  label: 'citesPolicy' },
+    // Control → Exception (exceptionAllowedBy)
+    { s: 'C-FIN-007', t: 'EX-EMERG',    label: 'exceptionAllowedBy' },
+    { s: 'C-FIN-007', t: 'EX-OFFICIAL', label: 'exceptionAllowedBy' },
+    // History → Account (historicalGapIn)
+    { s: 'H-25Q3', t: 'ACC-11801', label: 'gapIn' },
+    { s: 'H-25Q4', t: 'ACC-11801', label: 'gapIn' },
+    { s: 'H-26Q1', t: 'ACC-11801', label: 'gapIn' },
+    // Control → Action (triggersAction)
+    { s: 'C-FIN-007', t: 'A-GRC',    label: 'triggersAction' },
+    { s: 'C-FIN-007', t: 'A-MAIL',   label: 'triggersAction' },
+    { s: 'C-FIN-007', t: 'A-RETURN', label: 'triggersAction' },
+  ]
+};
+
+/* =========================================================
+   2. MOCK FINDINGS (미비 후보 5건)
+   ========================================================= */
+const FINDINGS = [
+  {
+    id: 'F1', tx: 'TX-20260117-001',
+    date: '2026-01-17', amount: 72_500_000, account: '11801', accountName: '자회사 K 출자금',
+    requester: '김OO 차장 (자회사 K · 재무팀)',
+    approver: '김OO 차장 (자회사 K · 재무팀)',
+    riskType: '분리원칙 위배',
+    summary: '요청자와 1차 결재자가 동일 인물 (사내 회계 규정 §12-3 위반)',
+    detail: '거래 일시 2026-01-17 14:23 · 출자금 송금 건. ERP 워크플로 로그상 요청·1차 결재 모두 동일 사번 K10472 (김OO 차장). 회계규정 §12-3 분리원칙 위반 의심.',
+    confidence: 0.87,
+    evidence: ['영수증', '인보이스', '결재이력'],
+    policies: ['회계규정 §12-3'],
+    histories: ["'25 Q3·Q4 동일 계정 미비 ×2건"],
+    recommendation: 'HITL',
+    suggestedActions: ['GRC 개선과제', '책임자 메일', '결재 회신'],
+  },
+  {
+    id: 'F2', tx: 'TX-20260203-014',
+    date: '2026-02-03', amount: 158_200_000, account: '11802', accountName: '단기지급금',
+    requester: '이OO 과장 (본사 · 구매팀)',
+    approver: '박OO 팀장 (본사 · 구매팀)',
+    riskType: '결재권한 초과',
+    summary: 'LV1 결재자가 LV2 권한 구간(5천만~3억)의 거래를 단독 승인',
+    detail: '거래 1.58억원, 권한 매트릭스상 LV2 결재자(이사급) 필요. 그러나 1차·2차 결재 모두 LV1 권한(팀장)이 수행. 권한 매트릭스 위반.',
+    confidence: 0.81,
+    evidence: ['인보이스', '결재이력'],
+    policies: ['회계규정 §12', 'K-SOX 4.3'],
+    histories: [],
+    recommendation: 'HITL',
+    suggestedActions: ['GRC 개선과제', '책임자 메일', '결재 회신'],
+  },
+  {
+    id: 'F3', tx: 'TX-20260219-027',
+    date: '2026-02-19', amount: 64_800_000, account: '11801', accountName: '자회사 K 출자금',
+    requester: '정OO 대리 (자회사 K · 재무팀)',
+    approver: '윤OO 부장 (자회사 K · 재무팀)',
+    riskType: '증빙 미비 + 금액 불일치',
+    summary: '영수증 누락, 인보이스 기재 금액과 ERP 입력 금액 1.2백만원 차이',
+    detail: 'KMS에 영수증 첨부 없음. 인보이스 금액 63.6백만, ERP 64.8백만. OCR 결과와 ERP 데이터 불일치 1.2백만. 분리원칙은 통과(요청자≠결재자).',
+    confidence: 0.78,
+    evidence: ['인보이스', '결재이력'],
+    policies: ['K-SOX 4.3'],
+    histories: ["'25 Q3·Q4 동일 계정 미비 ×2건"],
+    recommendation: 'HITL',
+    suggestedActions: ['추가 증빙 요청'],
+  },
+  {
+    id: 'F4', tx: 'TX-20260308-041',
+    date: '2026-03-08', amount: 91_300_000, account: '11800', accountName: '일반관리비',
+    requester: '최OO 대리 (본사 · 총무팀)',
+    approver: '최OO 대리 (본사 · 총무팀)',
+    riskType: '분리원칙 위배 + 증빙 일자 불일치',
+    summary: '요청자=결재자 동일, 영수증 발행일이 거래일보다 23일 뒤',
+    detail: '회계규정 §12-3 위반. 추가로 영수증 발행일 2026-03-31이 ERP 거래 등록일 2026-03-08보다 23일 늦음 → 사후 증빙 의심.',
+    confidence: 0.83,
+    evidence: ['영수증', '인보이스', '결재이력'],
+    policies: ['회계규정 §12-3'],
+    histories: [],
+    recommendation: 'HITL',
+    suggestedActions: ['GRC 개선과제', '책임자 메일', '결재 회신'],
+  },
+  {
+    id: 'F5', tx: 'TX-20260322-048',
+    date: '2026-03-22', amount: 53_700_000, account: '11803', accountName: '외상지급금',
+    requester: '신OO 차장 (본사 · 자금팀)',
+    approver: '한OO 부장 (본사 · 자금팀)',
+    riskType: '긴급지급 24h 보완 미비 (의심)',
+    summary: '긴급지급 처리 후 보완 증빙 등록이 28시간 후에 이루어짐 (4h 초과)',
+    detail: '긴급지급 사후 보완 증빙 규정(§12-5) 24h 이내. 실제 등록 28h 후. 다만 시스템 점검 시간(2시간) + 주말 포함 — 예외 조항 적용 가능성 검토 필요.',
+    confidence: 0.71,
+    evidence: ['영수증', '결재이력'],
+    policies: ['회계규정 §12-5'],
+    histories: [],
+    recommendation: 'HITL',
+    suggestedActions: ['감사인 검토 필요'],
+  },
+];
+
+/* =========================================================
+   3. STEP DEFINITIONS
+   ========================================================= */
+const STEP_NAMES = [
+  '대기 중', '트리거', 'Semantic 조회', 'Reasoning 계획',
+  'Tool 호출', '근거 카드 생성', 'HITL 검토', 'Action 실행', 'Operational Learning'
+];
+
+const STEP_COMPARISONS = {
+  1: {
+    title: '① 트리거 — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: '통제 정의를 검색해 보여주지만, "평가 시작"이라는 <b>행위 자체가 없음</b>. 정보 제공 단계에서 멈춤.' },
+      { label: 'RPA', text: '미리 정의된 룰대로 모집단을 뽑긴 함. 다만 통제 정의 변경 시마다 <b>RPA 시나리오를 다시 짜야 함</b>.' },
+      { label: 'KSOX AI', text: '트리거 가능. 다만 그 뒤가 "평가 보고서 출력"으로 직선 — 사후 처리 분기는 외부 GRC에 위임.' },
+      { label: 'AAP', text: '한 번의 클릭이 <b>Orchestrator에 목표를 전달</b>. Orchestrator는 다음 단계에서 온톨로지를 읽고 <b>스스로 평가 계획을 생성</b>하는 주체.', aap: true },
+    ],
+  },
+  2: {
+    title: '② Semantic 조회 — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: '통제 정의 문서를 검색해 텍스트로 표시. "이 통제 → 어느 계정 → 어느 증빙"의 <b>의미 연결은 불가</b>.' },
+      { label: 'RPA', text: '통제 정의가 코드에 박혀 있음. 새 통제를 추가하려면 <b>룰을 새로 작성</b>.' },
+      { label: 'KSOX AI', text: '유사한 형태의 온톨로지 보유. 그래서 RAG/RPA보다 앞섬. 다만 평가 시점에만 쓰이고 <b>사후 학습으로 진화하지 않음</b>.' },
+      { label: 'AAP', text: '온톨로지가 <b>읽기 메타데이터가 아닌 Reasoning의 입력</b>. 통제·리스크·증빙·권한·과거이력이 단일 그래프로 연결되어 Agent가 traversal로 평가 계획을 생성.', aap: true },
+    ],
+  },
+  3: {
+    title: '③ Reasoning 계획 — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: '검색만 수행. <b>다단계 계획 생성 불가</b>.' },
+      { label: 'RPA', text: '사람이 짜둔 시나리오를 그대로 실행. <b>온톨로지를 보고 그때그때 계획을 생성하지 못함</b>.' },
+      { label: 'KSOX AI', text: '미리 정의된 평가 파이프라인 실행. 새 통제 추가 시 <b>파이프라인을 다시 정의</b>.' },
+      { label: 'AAP', text: 'Agent가 매 평가마다 <b>plan을 새로 생성</b>. 새 통제 추가 = <b>온톨로지 노드 추가만</b>. 코드 변경 0. 이것이 v300의 "Skill 재사용·판단 자동화 흐름 설계"가 의미하는 바.', aap: true },
+    ],
+  },
+  4: {
+    title: '④ Tool 호출 — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: '도구 호출 개념 없음.' },
+      { label: 'RPA', text: '사전 정의된 시나리오대로만 호출, <b>분기 불가</b>. 한 건 OCR 실패 시 전체 중단되는 경우 많음.' },
+      { label: 'KSOX AI', text: '호출은 가능. 다만 분기 처리 제한적, <b>외부 시스템 확장은 별도 통합 필요</b>.' },
+      { label: 'AAP', text: 'Agent가 호출 결과를 보고 <b>plan을 동적으로 조정</b>. OCR 실패 → 원본 PDF 재호출, 권한 이상 → 권한 매트릭스 재조회. 50건 중 5건 실패해도 나머지 진행.', aap: true },
+    ],
+  },
+  5: {
+    title: '⑤ 근거 카드 — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: '증빙 검색은 가능. 다만 "왜 위반인지 자연어 + 정책 정확한 인용 + 과거 사례 + 권장 조치"를 <b>한 카드로 모으지 못함</b>.' },
+      { label: 'RPA', text: '룰 위반은 잡지만 근거를 자연어로 설명하지 못함 ("PASS / FAIL"만).' },
+      { label: 'KSOX AI', text: '평가 보고서에 유사 내용 포함. 다만 PDF의 한 행이지 <b>클릭 가능한 검토 워크스페이스 카드가 아님</b>.' },
+      { label: 'AAP', text: 'LLM의 자연어 + 온톨로지 의미 연결 + Tool use 증빙 첨부가 <b>한 화면에서 합쳐진 카드</b>. v300 4-2 HITL Workspace의 본질.', aap: true },
+    ],
+  },
+  6: {
+    title: '⑥ HITL 검토 — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: 'HITL 개념 없음.' },
+      { label: 'RPA', text: '사람 검토 단계 있음. 다만 "왜 그렇게 판정했는지"의 근거를 사람이 다시 ERP를 열어 찾아야 함.' },
+      { label: 'KSOX AI', text: '평가 보고서를 사람이 검토 가능. 다만 "이 항목 반려·사유 입력 → 다음 평가 모델에 반영"까지는 별도 GRC 도구 필요.' },
+      { label: 'AAP', text: '<b>HITL 결정이 시스템 안에서 캡처되고 다음 단계로 흐름</b>. 반려 사유는 단계 ⑧ 학습으로 직접 환류. v300 Review/Approval Workspace.', aap: true },
+    ],
+  },
+  7: {
+    title: '⑦ Action — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: '외부 시스템 쓰기 권한 없음.' },
+      { label: 'RPA', text: 'RPA의 강점. 다만 "어느 건은 GRC, 어느 건은 결재 회신, 어느 건은 메일"의 분기를 <b>매번 사람이 시나리오에 박아야 함</b>.' },
+      { label: 'KSOX AI', text: '평가 보고서 → GRC export 가능. 다만 <b>분기 룰이 온톨로지에 있고 Agent가 자동 분기</b>하는 구조는 아님.' },
+      { label: 'AAP', text: '미비 유형별 후속 조치가 <b>온톨로지의 한 속성</b>. Agent가 읽고 자동 분기. 새 조치 유형 추가 = 온톨로지에 노드 추가.', aap: true },
+    ],
+  },
+  8: {
+    title: '⑧ Operational Learning — 다른 방식이라면',
+    rows: [
+      { label: 'RAG', text: '학습 환류 없음.' },
+      { label: 'RPA', text: '학습 환류 없음. 다음 평가가 더 똑똑해지는 메커니즘이 없음.' },
+      { label: 'KSOX AI', text: '학습 환류 거의 없음. 평가는 끝나지만 <b>가중치·예외 패턴이 다음 평가에 반영되지 않음</b>. v300 1장 "운영 학습 자산화 부재" 그 자체.' },
+      { label: 'AAP', text: '<b>이 단계가 빠지면 AAP가 아님</b>. 위험 가중치 자동 갱신 · 새 Skill 등록 · 자동화 후보 발견 · Decision Log 적재. PoC → 운영자산화 → 사업화로 이어지는 트랙.', aap: true },
+    ],
+  },
+};
+
+/* =========================================================
+   4. STATE
+   ========================================================= */
+const state = {
+  step: 0,
+  autoMode: false,
+  hitl: {}, // F1~F5 결정 상태: 'confirmed' | 'rejected' | 'requested' | undefined
+  decisionLog: [],
+};
+
+/* =========================================================
+   5. CYTOSCAPE INIT
+   ========================================================= */
+const NODE_COLORS = {
+  control:'#e0282f', risk:'#d97706', account:'#6f7782',
+  evidence:'#00a39b', approval:'#0369a1', policy:'#7c3aed',
+  exception:'#ca8a04', history:'#be185d', action:'#16a34a',
+};
+
+const cyElements = (function() {
+  const els = [];
+  ONTOLOGY.nodes.forEach(n => {
+    els.push({
+      data: { id: n.id, label: n.label, type: n.type, size: n.size || 50 }
+    });
+  });
+  ONTOLOGY.edges.forEach((e, i) => {
+    els.push({
+      data: { id: 'e' + i, source: e.s, target: e.t, label: e.label }
+    });
+  });
+  return els;
+})();
+
+let cy = null;
+
+function initCytoscape() {
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: cyElements,
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'background-color': (ele) => NODE_COLORS[ele.data('type')] || '#999',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'color': '#fff',
+          'font-size': 9,
+          'font-weight': 700,
+          'font-family': 'Noto Sans KR, Arial, sans-serif',
+          'text-wrap': 'wrap',
+          'text-max-width': '52px',
+          'width': (ele) => ele.data('size'),
+          'height': (ele) => ele.data('size'),
+          'border-width': 1.5,
+          'border-color': '#fff',
+          'border-opacity': 0.4,
+          'overlay-opacity': 0,
+          'transition-property': 'opacity, border-color, border-width, background-color',
+          'transition-duration': '0.3s',
+        }
+      },
+      {
+        selector: 'node[type="control"]',
+        style: {
+          'border-width': 3,
+          'border-color': '#fff',
+        }
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': 1.4,
+          'line-color': '#b8bec8',
+          'curve-style': 'bezier',
+          'target-arrow-color': '#b8bec8',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 0.8,
+          'opacity': 0.55,
+          'transition-property': 'opacity, line-color, width',
+          'transition-duration': '0.3s',
+        }
+      },
+      {
+        selector: '.faded',
+        style: { 'opacity': 0.12 }
+      },
+      {
+        selector: '.faded-edge',
+        style: { 'opacity': 0.06 }
+      },
+      {
+        selector: '.hl',
+        style: {
+          'border-width': 3,
+          'border-color': '#e0282f',
+          'border-opacity': 1,
+          'opacity': 1,
+        }
+      },
+      {
+        selector: '.hl-center',
+        style: {
+          'border-width': 5,
+          'border-color': '#e0282f',
+          'border-opacity': 1,
+          'opacity': 1,
+        }
+      },
+      {
+        selector: '.hl-edge',
+        style: {
+          'line-color': '#e0282f',
+          'target-arrow-color': '#e0282f',
+          'width': 2.5,
+          'opacity': 0.85,
+        }
+      },
+      {
+        selector: '.pulse',
+        style: { 'border-color': '#00a39b', 'border-width': 5 }
+      },
+    ],
+    layout: {
+      name: 'cose',
+      animate: false,
+      idealEdgeLength: 95,
+      nodeRepulsion: 14000,
+      gravity: 0.25,
+      padding: 24,
+      nodeOverlap: 16,
+      fit: true,
+    },
+    minZoom: 0.4,
+    maxZoom: 2.5,
+    wheelSensitivity: 0.25,
+  });
+
+  // 노드 클릭 시 살짝 강조
+  cy.on('tap', 'node', (evt) => {
+    const node = evt.target;
+    node.flashClass('pulse', 600);
+  });
+}
+
+/* =========================================================
+   6. LOGGING + DECISION LOG
+   ========================================================= */
+function now() {
+  const t = state._simTime || (state._simTime = new Date(2026, 4, 28, 10, 21, 0));
+  state._simTime = new Date(t.getTime() + 1000 * (1 + Math.floor(Math.random() * 3)));
+  const hh = String(state._simTime.getHours()).padStart(2, '0');
+  const mm = String(state._simTime.getMinutes()).padStart(2, '0');
+  const ss = String(state._simTime.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+function log(src, msg, opts) {
+  opts = opts || {};
+  const logEl = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (opts.head ? ' head' : '') + (opts.dim ? ' dim' : '');
+  const ts = now();
+  line.innerHTML = `
+    <span class="ts">[${ts}]</span>
+    <span class="src ${src}">${src}</span>
+    <span class="msg">${msg}</span>
+  `;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+  return ts;
+}
+
+function logDivider(text) {
+  const logEl = document.getElementById('log');
+  const div = document.createElement('div');
+  div.className = 'log-divider';
+  div.textContent = text;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function dl(actor, action, target, result) {
+  const ts = state._simTime ? state._simTime.toTimeString().slice(0, 8) : '';
+  state.decisionLog.push({ ts, actor, action, target, result });
+  renderDL();
+}
+function renderDL() {
+  const tb = document.getElementById('dl-tbody');
+  tb.innerHTML = state.decisionLog.map(r => `
+    <tr>
+      <td>${r.ts}</td>
+      <td class="actor">${r.actor}</td>
+      <td>${r.action}</td>
+      <td>${r.target}</td>
+      <td>${r.result}</td>
+    </tr>
+  `).join('');
+}
+
+/* =========================================================
+   7. RIGHT PANE RENDERERS
+   ========================================================= */
+function setRight(title, sub, html) {
+  document.getElementById('right-title').textContent = title;
+  document.getElementById('right-sub').textContent = sub;
+  document.getElementById('right-body').innerHTML = html;
+}
+
+function setSummary(tags, enableCompare) {
+  const el = document.getElementById('summary-tags');
+  el.innerHTML = tags.map(t => `<span class="summary-tag ${t.diff?'diff':''}">${t.text}</span>`).join('');
+  const btn = document.getElementById('compare-btn');
+  btn.disabled = !enableCompare;
+}
+
+/* =========================================================
+   8. STEPS (8단계)
+   ========================================================= */
+function step1_trigger() {
+  setActiveTab(1);
+  log('system', '감사 팀장이 <b>Q1 지급결의 평가</b>를 트리거했습니다.');
+  log('orchestrator', '평가 목표 수신: <code>control_id=C-FIN-007 · period=2026Q1</code>', { head: true });
+  log('orchestrator', '평가 대상 통제는 <b>지급결의 분리원칙</b>이며 사내 회계 규정 §12 군과 K-SOX 4.3에 근거.');
+  dl('Auditor', 'TriggerEvaluation', 'C-FIN-007 · 2026Q1', 'queued');
+
+  setSummary([
+    { text: '평가 대상: C-FIN-007' },
+    { text: '기간: 2026 Q1' },
+    { text: '주체: 감사 팀장' },
+  ], true);
+
+  setRight('Trigger 수신', '평가 요청이 Orchestrator에게 전달되었습니다', `
+    <div class="info-card accent">
+      <h3>평가 요청</h3>
+      <p class="icard-sub">감사인 워크스페이스에서 한 번의 클릭으로 시작</p>
+      <ul class="icard-list">
+        <li><b>통제 ID</b> C-FIN-007</li>
+        <li><b>이름</b> 지급결의 분리원칙 통제</li>
+        <li><b>대상 기간</b> 2026-01-01 ~ 2026-03-31</li>
+        <li><b>요청자</b> 감사 팀장 (사번 A0117)</li>
+        <li><b>실행 모드</b> 자동 → HITL 게이트 → 시스템 반영</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>다음 단계 안내</h3>
+      <p class="icard-sub" style="margin-top:0">
+        Orchestrator는 다음 단계에서 <b>온톨로지를 traversal</b>하여 이 통제의 의미·증빙·권한·과거이력을 모두 가져옵니다.
+        그 결과로 <b>평가 계획을 스스로 작성</b>합니다.
+      </p>
+    </div>
+  `);
+}
+
+function step2_semantic() {
+  setActiveTab(2);
+  log('orchestrator', '<b>Business Semantic 조회</b> 시작 — 통제 온톨로지 traversal', { head: true });
+
+  // 노드 강조
+  cy.elements().removeClass('hl hl-center hl-edge');
+  cy.elements().addClass('faded');
+  cy.edges().addClass('faded-edge');
+
+  const center = cy.$('#C-FIN-007');
+  center.removeClass('faded').addClass('hl-center');
+  const neigh = center.neighborhood();
+  neigh.removeClass('faded faded-edge').addClass('hl hl-edge');
+
+  log('semantic', '통제 정의 조회 → C-FIN-007 노드 검색 완료');
+  log('semantic', '적용 계정 <code>4개</code> · 11800·11801·11802·11803');
+  log('semantic', '평가 증빙 타입 <code>3개</code> · 영수증·인보이스·결재이력');
+  log('semantic', '권한 매트릭스 <code>3단계</code> · LV1·LV2·LV3 결재');
+  log('semantic', '인용 정책 <code>4건</code> · 회계규정 §12·§12-3·§12-5·K-SOX 4.3');
+  log('semantic', '예외 조항 <code>2건</code> · 긴급지급 24h·공무출장 사후증빙');
+  log('semantic', '<b>과거 미비 패턴 발견</b> → 자회사 K · 11801 계정에서 3분기 연속 권한 위반');
+  log('semantic', '→ 위험 가중치 <code>×1.5</code> 적용 (Operational Learning 환류 결과)');
+
+  dl('SemanticEngine', 'OntologyTraversal', 'C-FIN-007', 'nodes:24 edges:23');
+
+  setSummary([
+    { text: '노드 24개 조회' },
+    { text: '엣지 23개' },
+    { text: '과거이력 3건 ★', diff: true },
+    { text: '위험가중치 ×1.5', diff: true },
+  ], true);
+
+  setRight('통제 정의 (온톨로지 조회 결과)', 'Agent가 지금 보고 있는 통제 의미', `
+    <div class="info-card accent">
+      <h3>C-FIN-007 · 지급결의 분리원칙 통제</h3>
+      <p class="icard-sub">사내 회계 규정 §12 · K-SOX 4.3 근거</p>
+      <ul class="icard-list">
+        <li><b>적용 계정</b> 11800(일반관리비) · 11801(자회사K 출자금) · 11802(단기지급금) · 11803(외상지급금)</li>
+        <li><b>완화 리스크</b> 권한 남용 · 분리원칙 위배 · 증빙 위조</li>
+        <li><b>증빙 타입</b> 영수증 · 인보이스 · 결재 이력</li>
+        <li><b>승인 권한</b> LV1(&lt;5천만) · LV2(5천만~3억) · LV3(임원, &gt;3억)</li>
+        <li><b>예외</b> 긴급지급(24h 사후보완) · 공무출장(사후영수증)</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>과거 미비 패턴 · 위험 가중치</h3>
+      <ul class="icard-list">
+        <li><b>'25 Q3</b> 자회사 K · 11801 · 권한위반 <span class="muted">3건</span></li>
+        <li><b>'25 Q4</b> 자회사 K · 11801 · 권한위반 <span class="muted">2건</span></li>
+        <li><b>'26 Q1</b> 자회사 K · 11801 · 권한위반 <span class="muted">2건</span></li>
+        <li><b>적용 가중치</b> ACC-11801 ×1.5 (샘플링 시 반영)</li>
+      </ul>
+    </div>
+  `);
+}
+
+function step3_reasoning() {
+  setActiveTab(3);
+  log('orchestrator', '온톨로지 + 평가 목표를 LLM 컨텍스트로 전달', { head: true });
+  log('llm', '<code>claude-sonnet-4-6</code> 호출 · prompt cache hit · 평가 계획 생성 시작');
+  log('agent', 'Plan 생성 완료 · 6단계 · 예상 소요 2분 30초');
+  log('agent', '1) ERP 모집단 추출 — Q1 · 11x계정 · 5천만 초과');
+  log('agent', '2) 위험 가중치 적용 — 자회사K·11801 ×1.5');
+  log('agent', '3) 위험기반 샘플링 — 50건');
+  log('agent', '4) 병렬 증빙 수집 — 결재이력·영수증·인보이스·OCR');
+  log('agent', '5) LLM 평가 — 권한·분리원칙·증빙 일치·예외 적용');
+  log('agent', '6) 미비 후보 HITL 워크스페이스 라우팅');
+
+  dl('Agent', 'GeneratePlan', 'C-FIN-007', 'plan_v1 (6 steps)');
+
+  setSummary([
+    { text: 'LLM 호출 1회' },
+    { text: '계획 6단계' },
+    { text: 'plan은 매 평가마다 새로 생성 ★', diff: true },
+  ], true);
+
+  setRight('Agent가 작성한 평가 계획', 'plan은 매 평가마다 LLM이 새로 생성합니다', `
+    <div class="plan-box">
+      <div class="plan-box-head">
+        <span>Agent's Plan · v1</span>
+        <span class="pbh-tag">claude-sonnet-4-6 · 자동 생성</span>
+      </div>
+      <ol class="plan-list">
+        <li><b>모집단 추출</b> · SAP ERP에서 Q1 동안 11x 계정, 5천만 초과 거래</li>
+        <li><b>위험 가중치 적용</b> · 자회사 K · 11801 ×1.5 (과거 3분기 미비 환류)</li>
+        <li><b>위험기반 샘플링 50건 선정</b></li>
+        <li><b>병렬 증빙 수집</b> · 결재 이력 · KMS 영수증/인보이스 · OCR · 권한 매트릭스 조회</li>
+        <li><b>LLM 평가</b> · 분리원칙 · 결재권한 · 증빙 일치 · 예외 조항 적용 여부</li>
+        <li><b>미비 후보 도출 + HITL 라우팅</b> · 신뢰도 0.7 이상 자동 카드 생성</li>
+      </ol>
+    </div>
+    <div class="info-card">
+      <h3>왜 이게 차별점인가</h3>
+      <p class="icard-sub" style="margin-top:0">
+        새로운 통제(예: C-FIN-008 여신한도)를 추가하려면 <b>온톨로지에 노드 추가만</b> 하면 됩니다.
+        Agent가 동일한 방식으로 plan을 생성하므로 <b>코드 변경 0</b>. 이것이 v300의 핵심 차별점인 "흐름 설계 / 판단 자동화"입니다.
+      </p>
+    </div>
+  `);
+}
+
+function step4_tools() {
+  setActiveTab(4);
+  log('agent', 'Plan 실행 시작 · Tool Use Loop', { head: true });
+
+  const tools = [
+    { name: 'sap_erp.get_transactions', args: 'account=11x, period=2026Q1, amount>50000000', result: '1,247건 수신', time: '1.2초', delay: 600 },
+    { name: 'agent.apply_risk_weight',  args: 'ACC-11801 ×1.5', result: '가중치 적용 완료', time: '0.1초', delay: 300, src: 'agent' },
+    { name: 'agent.sample_risk_based',  args: 'n=50, strategy=risk-weighted', result: '50건 선정', time: '0.3초', delay: 400, src: 'agent' },
+    { name: 'approval.get_workflow', args: '×50 병렬', result: '결재이력 50건', time: '4.8초', delay: 800 },
+    { name: 'kms.get_attachments',   args: '×50 병렬', result: '증빙 127개 (영수증 53, 인보이스 50, 결재 24)', time: '6.2초', delay: 800 },
+    { name: 'azure_doc_intel.ocr',   args: '×127 병렬', result: 'OCR 완료 122/127 · 실패 5건', time: '18.4초', delay: 1000 },
+    { name: 'agent.retry_failed_ocr',args: '5건 원본 PDF 재호출', result: '복구 5/5', time: '4.1초', delay: 600, src: 'agent' },
+    { name: 'llm.evaluate_sample',   args: '×50 · claude-sonnet-4-6', result: '평가 50건 완료 · 미비 후보 5건', time: '32.1초', delay: 1200, src: 'llm' },
+  ];
+
+  let rows = '';
+  tools.forEach((t, i) => {
+    rows += `
+      <div class="tool-row pending" id="tool-row-${i}">
+        <div>
+          <div class="tname">${t.name}</div>
+          <div class="targs">${t.args}</div>
+        </div>
+        <div class="tres">처리 중...</div>
+      </div>
+    `;
+  });
+
+  setRight('Tool Call Trace', '실제 도구 호출 추적 · 각 호출의 입력·출력·소요시간', `
+    <div class="tool-trace">
+      <div class="tool-trace-head">실행 중인 도구 호출 (총 ${tools.length}개)</div>
+      ${rows}
+    </div>
+    <div class="info-card" id="tool-summary" style="display:none">
+      <h3>실행 요약</h3>
+      <ul class="icard-list">
+        <li><b>총 도구 호출</b> 8회 (외부 5 · Agent 내부 3)</li>
+        <li><b>총 소요</b> 약 1분 7초</li>
+        <li><b>OCR 실패 5건</b> · Agent가 자동 재시도로 복구 ★</li>
+        <li><b>LLM 평가</b> · 50건 중 미비 후보 5건 도출</li>
+      </ul>
+    </div>
+  `);
+
+  // 진행 시뮬레이션
+  let delay = 0;
+  tools.forEach((t, i) => {
+    setTimeout(() => {
+      const row = document.getElementById('tool-row-' + i);
+      if (!row) return;
+      row.classList.remove('pending');
+      row.querySelector('.tres').innerHTML = `${t.result}<span class="ttime">· ${t.time}</span>`;
+      log(t.src || 'tool', `<code>${t.name}</code> → ${t.result} <span style="color:#6f7782">(${t.time})</span>`);
+      dl(t.src === 'agent' ? 'Agent' : (t.src === 'llm' ? 'LLM' : 'ToolRouter'),
+         t.name.split('.')[1] || t.name, t.args, t.result);
+      if (i === tools.length - 1) {
+        setTimeout(() => {
+          log('agent', '<b>평가 종료</b> · 미비 후보 5건 · HITL 워크스페이스로 라우팅');
+          const sum = document.getElementById('tool-summary');
+          if (sum) sum.style.display = '';
+        }, 250);
+      }
+    }, delay);
+    delay += t.delay;
+  });
+
+  setSummary([
+    { text: '도구 호출 8회' },
+    { text: '병렬 처리 ★', diff: true },
+    { text: 'OCR 실패 자동 복구 ★', diff: true },
+    { text: '미비 후보 5건' },
+  ], true);
+}
+
+function step5_findings() {
+  setActiveTab(5);
+  log('orchestrator', '<b>근거 카드 생성</b> · 미비 후보 5건', { head: true });
+  FINDINGS.forEach(f => {
+    log('llm', `근거 카드 #${f.id} 생성 · 분류=<code>${f.riskType}</code> · 신뢰도 ${f.confidence.toFixed(2)}`);
+  });
+  dl('LLM', 'GenerateRationaleCards', '×5 findings', '5/5 generated');
+
+  setRight('미비 후보 5건 · 근거 카드', '각 카드에 거래·증빙·정책·과거이력·LLM 판단·권장조치가 한 화면에 모임', renderFindingsHTML());
+
+  setSummary([
+    { text: '미비 후보 5건' },
+    { text: '근거 카드 자동 생성' },
+    { text: '한 화면에 증빙+정책+이력+판단 ★', diff: true },
+  ], true);
+}
+
+function renderFindingsHTML() {
+  return `
+    <div class="findings-stack">
+      ${FINDINGS.map(f => renderFindingCard(f)).join('')}
+    </div>
+  `;
+}
+
+function renderFindingCard(f) {
+  const decision = state.hitl[f.id];
+  let statusLabel = '신뢰도 ' + f.confidence.toFixed(2) + ' · HITL 검토 필요';
+  let cardClass = '';
+  if (decision === 'confirmed') { statusLabel = '확정됨'; cardClass = 'confirmed'; }
+  else if (decision === 'rejected') { statusLabel = '반려됨'; cardClass = 'rejected'; }
+  else if (decision === 'requested') { statusLabel = '추가 증빙 요청'; cardClass = 'requested'; }
+
+  return `
+    <div class="finding-card ${cardClass}" id="card-${f.id}">
+      <div class="fc-head">
+        <span class="fc-id">${f.id}</span>
+        <span class="fc-status">${statusLabel}</span>
+      </div>
+      <div class="fc-body">
+        <div class="fc-tx">
+          <b>${f.tx}</b> · ${f.date} · <b>${f.amount.toLocaleString()}원</b><br>
+          ${f.account} ${f.accountName} · 요청 ${f.requester}<br>
+          1차 결재 ${f.approver}
+        </div>
+        <div class="fc-reason">
+          <span class="fcr-flag">${f.riskType}</span>
+          <span class="fcr-text">${f.summary}</span>
+        </div>
+        <p style="margin:0 0 9px;color:#4f5660;font-size:11.5px;line-height:1.55">${f.detail}</p>
+        <div class="fc-evidence">
+          ${f.evidence.map(e => `<span>증빙: ${e}</span>`).join('')}
+          ${f.policies.map(p => `<span class="policy">📜 ${p}</span>`).join('')}
+          ${f.histories.map(h => `<span class="history">⏱ ${h}</span>`).join('')}
+        </div>
+        <div class="fc-conf">
+          <span style="color:#6f7782">위반 의심 신뢰도</span>
+          <div class="conf-bar"><div class="conf-fill" style="width:${f.confidence*100}%"></div></div>
+          <span class="conf-label">${f.confidence.toFixed(2)}</span>
+        </div>
+        ${decision ? renderResolution(f, decision) : `
+          <div class="fc-actions">
+            <button class="confirm" onclick="hitlDecide('${f.id}','confirmed')">확정</button>
+            <button class="request" onclick="hitlDecide('${f.id}','requested')">추가 증빙</button>
+            <button class="reject" onclick="hitlDecide('${f.id}','rejected')">반려</button>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function renderResolution(f, dec) {
+  let msg = '';
+  if (dec === 'confirmed') msg = `<b>확정</b> · 단계 ⑦에서 GRC 개선과제 발급·책임자 메일 통보·결재 회신이 자동 실행됩니다.`;
+  else if (dec === 'rejected') msg = `<b>반려 사유</b>: 긴급지급 24h 보완 증빙 있음 (시스템 점검 2h + 주말 포함) · 회계규정 §12-5 예외 조항 적용 — 이 결정은 단계 ⑧ 학습으로 환류됩니다.`;
+  else if (dec === 'requested') msg = `<b>추가 증빙 요청</b> · Agent가 백그라운드로 KMS 재조회 및 부서 담당자에게 보완 요청 메일 발송.`;
+  return `<div class="fc-resolution">${msg}</div>`;
+}
+
+window.hitlDecide = function(fId, decision) {
+  state.hitl[fId] = decision;
+  const finding = FINDINGS.find(f => f.id === fId);
+  log('hitl', `감사인 결정: <code>${fId}</code> → <b>${decisionLabel(decision)}</b>`);
+  dl('Auditor', 'HITLDecision', fId, decision);
+
+  // 카드 갱신
+  const card = document.getElementById('card-' + fId);
+  if (card) card.outerHTML = renderFindingCard(finding);
+
+  updateHitlProgress();
+};
+
+function decisionLabel(d) {
+  return d === 'confirmed' ? '확정' : (d === 'rejected' ? '반려' : '추가 증빙 요청');
+}
+
+function updateHitlProgress() {
+  // 단계 6에서 사용
+  const total = FINDINGS.length;
+  const decided = Object.keys(state.hitl).length;
+  const confirmed = Object.values(state.hitl).filter(v => v === 'confirmed').length;
+  const rejected = Object.values(state.hitl).filter(v => v === 'rejected').length;
+  const requested = Object.values(state.hitl).filter(v => v === 'requested').length;
+
+  const hp = document.getElementById('hitl-progress');
+  if (hp) {
+    hp.querySelector('.hp-fill').style.width = (decided / total * 100) + '%';
+    hp.querySelector('.hp-counts').innerHTML =
+      `확정 <b>${confirmed}</b> · 반려 <b>${rejected}</b> · 보완요청 <b>${requested}</b> · 미결 <b>${total - decided}</b>`;
+  }
+}
+
+function step6_hitl() {
+  setActiveTab(6);
+  log('hitl', '<b>HITL Workspace</b> · 감사인 검토 시작', { head: true });
+  log('system', '5건의 근거 카드가 워크스페이스에 노출됨 · 감사인이 카드별로 확정/반려/보완요청을 결정합니다.');
+
+  // 우측 패널에 HITL 진행 바 + 카드 (사전 결정값 일부 제안하지 않고, 사용자가 직접 클릭)
+  const html = `
+    <div class="hitl-progress" id="hitl-progress">
+      <span>HITL 진행</span>
+      <div class="hp-bar"><div class="hp-fill" style="width:0%"></div></div>
+      <span class="hp-counts">확정 <b>0</b> · 반려 <b>0</b> · 보완요청 <b>0</b> · 미결 <b>5</b></span>
+    </div>
+    <p style="font-size:11.5px;color:#4f5660;margin:0 0 12px;line-height:1.55">
+      각 카드의 <b>확정 · 추가 증빙 · 반려</b> 버튼을 눌러보세요. 결정은 ⑦ Action으로 흐르고,
+      ⑧ Operational Learning에서 학습 환류로 이어집니다.
+    </p>
+    <div class="findings-stack" id="findings-stack-2">
+      ${FINDINGS.map(f => renderFindingCard(f)).join('')}
+    </div>
+    <div class="info-card" style="margin-top:14px">
+      <h3>참고 · 권장 결정 (자동 시연용)</h3>
+      <p class="icard-sub" style="margin-top:0">
+        시연 시간이 짧다면 우측 <button class="btn primary" style="padding:4px 10px;font-size:11px;display:inline" onclick="autoHitl()">▶ 권장 결정 자동 적용</button> 으로
+        F1·F2·F4 확정 / F3 보완요청 / F5 반려를 한 번에 적용할 수 있습니다.
+      </p>
+    </div>
+  `;
+  setRight('HITL Workspace', '미비 후보 5건 · 카드별 확정·반려·보완요청', html);
+
+  setSummary([
+    { text: '5건 검토 대기' },
+    { text: '반려 사유가 ⑧로 환류 ★', diff: true },
+  ], true);
+}
+
+window.autoHitl = function() {
+  const recommended = { F1:'confirmed', F2:'confirmed', F3:'requested', F4:'confirmed', F5:'rejected' };
+  Object.entries(recommended).forEach(([id, dec]) => {
+    if (!state.hitl[id]) hitlDecide(id, dec);
+  });
+};
+
+function step7_action() {
+  setActiveTab(7);
+  log('orchestrator', '<b>Action 실행</b> · HITL 확정 항목을 시스템에 반영', { head: true });
+
+  // HITL 결정이 비어있으면 자동 적용
+  if (Object.keys(state.hitl).length === 0) {
+    autoHitl();
+  }
+
+  const confirmed = FINDINGS.filter(f => state.hitl[f.id] === 'confirmed');
+  const requested = FINDINGS.filter(f => state.hitl[f.id] === 'requested');
+
+  log('action', `확정 ${confirmed.length}건 · 보완요청 ${requested.length}건 · 시스템 반영 분기 시작`);
+
+  confirmed.forEach(f => {
+    log('action', `<code>grc.create_action_item</code> · ${f.id} → GRC 개선과제 발급`);
+    log('action', `<code>mail.send</code> · ${f.id} → 책임자 통보 (${f.approver})`);
+    log('action', `<code>approval.return_for_revision</code> · ${f.tx} → 재결재 회신`);
+    dl('Agent', 'GRC.create_action_item', f.id, 'GRC-2026Q1-FIN-' + f.id);
+    dl('Agent', 'Mail.send', 'approver of ' + f.id, 'sent');
+    dl('Agent', 'Approval.return', f.tx, 'returned for revision');
+  });
+  requested.forEach(f => {
+    log('action', `<code>kms.request_supplement</code> · ${f.id} → 보완 증빙 요청 발송`);
+    dl('Agent', 'KMS.request_supplement', f.id, 'sent');
+  });
+  log('action', '<b>감사 보고서 초안 자동 생성</b> · PDF 저장');
+  dl('Agent', 'Report.generate', 'Q1 evaluation', 'audit_2026Q1_C-FIN-007.pdf');
+
+  const html = `
+    <div class="info-card accent">
+      <h3>Action 실행 완료</h3>
+      <p class="icard-sub">HITL 확정 항목이 GRC·메일·결재 시스템에 자동 반영되었습니다.</p>
+    </div>
+    <div class="action-list">
+      ${confirmed.map((f, i) => `
+        <div class="action-row">
+          <div class="ar-icon">✓</div>
+          <div class="ar-body">
+            <b>GRC 개선과제 발급</b>
+            <div class="ar-sub">${f.id} → GRC-2026Q1-FIN-${f.id}</div>
+          </div>
+          <div class="ar-status">발급 완료</div>
+        </div>
+        <div class="action-row">
+          <div class="ar-icon" style="background:#0369a1">✉</div>
+          <div class="ar-body">
+            <b>책임자 메일 통보</b>
+            <div class="ar-sub">${f.approver}</div>
+          </div>
+          <div class="ar-status" style="color:#0369a1">발송 완료</div>
+        </div>
+        <div class="action-row">
+          <div class="ar-icon" style="background:#7c3aed">↩</div>
+          <div class="ar-body">
+            <b>결재 시스템 회신</b>
+            <div class="ar-sub">${f.tx} · 사후 보완 결재 요청</div>
+          </div>
+          <div class="ar-status" style="color:#7c3aed">회신 완료</div>
+        </div>
+      `).join('')}
+      ${requested.map(f => `
+        <div class="action-row">
+          <div class="ar-icon" style="background:#d97706">?</div>
+          <div class="ar-body">
+            <b>보완 증빙 요청</b>
+            <div class="ar-sub">${f.id} · ${f.approver}</div>
+          </div>
+          <div class="ar-status" style="color:#d97706">요청 발송</div>
+        </div>
+      `).join('')}
+      <div class="action-row">
+        <div class="ar-icon" style="background:#17191c">📄</div>
+        <div class="ar-body">
+          <b>감사 보고서 초안 PDF</b>
+          <div class="ar-sub">audit_2026Q1_C-FIN-007.pdf · 워크스페이스 첨부</div>
+        </div>
+        <div class="ar-status" style="color:#17191c">생성</div>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>왜 이게 차별점인가</h3>
+      <p class="icard-sub" style="margin-top:0">
+        미비 유형별 후속 조치가 <b>온톨로지의 한 속성</b>이라, Agent가 자동 분기합니다.
+        새 조치 유형을 추가하려면 온톨로지에 노드 하나 추가하면 됩니다 — 코드 변경 0.
+      </p>
+    </div>
+  `;
+  setRight('Action 실행 결과', '확정된 미비 → GRC·메일·결재로 자동 분기 반영', html);
+
+  setSummary([
+    { text: `GRC 발급 ${confirmed.length}건` },
+    { text: '메일·결재 자동 반영' },
+    { text: '분기 룰이 온톨로지 안에 ★', diff: true },
+  ], true);
+}
+
+function step8_learning() {
+  setActiveTab(8);
+  log('orchestrator', '<b>Operational Learning · 환류</b>', { head: true });
+  log('learning', '이번 평가 이력을 분석 · 다음 평가에 반영할 변경사항 도출');
+  log('learning', '<b>위험 가중치 갱신</b> · 자회사 K · 11801 · 1.50 → 1.75 (4분기 연속 미비)');
+  log('learning', '<b>새 Skill 등록</b> · "긴급지급 24h 보완 + 시스템 점검 시간 차감" 예외 처리 패턴');
+  log('learning', '<b>자동화 후보 발견</b> · "1차결재자 = 요청자" 룰은 LLM 없이 처리 가능 · 비용 ×1/10');
+  log('learning', '<b>Decision Log 적재 완료</b> · 이번 평가 총 ' + state.decisionLog.length + ' rows');
+
+  dl('LearningEngine', 'UpdateRiskWeight', 'ACC-11801', '1.5 → 1.75');
+  dl('LearningEngine', 'RegisterSkill', 'EmergencyPaySupplement_v2', 'created');
+  dl('LearningEngine', 'MarkAutoCandidate', 'SOD_rule_simple', 'cost_reduction:10x');
+
+  // 환류: 그래프에 11801 노드 강조 + 새 노드 추가
+  cy.elements().removeClass('hl hl-center hl-edge faded faded-edge');
+  const updated = cy.$('#ACC-11801');
+  updated.flashClass('pulse', 2000);
+  setTimeout(() => {
+    // 새 노드 추가 (학습 결과)
+    if (!cy.$('#H-26Q1-new').length) {
+      cy.add({
+        group: 'nodes',
+        data: { id: 'H-26Q1-new', label: "'26 Q1\n3건 추가\n(이번 평가)", type: 'history', size: 56 }
+      });
+      cy.add({
+        group: 'edges',
+        data: { id: 'e-new-1', source: 'H-26Q1-new', target: 'ACC-11801', label: 'gapIn' }
+      });
+      cy.layout({ name: 'cose', animate: true, animationDuration: 700, idealEdgeLength: 95, nodeRepulsion: 14000, gravity: 0.25, padding: 24, fit: true }).run();
+      setTimeout(() => cy.$('#H-26Q1-new').flashClass('pulse', 1800), 700);
+    }
+  }, 600);
+
+  const html = `
+    <div class="info-card accent">
+      <h3>Operational Learning · 환류</h3>
+      <p class="icard-sub">이번 평가의 결정·결과가 다음 평가의 입력으로 흐릅니다.</p>
+    </div>
+    <div class="learn-grid">
+      <div class="learn-card">
+        <div class="learn-card-head">
+          <span class="lc-badge">위험 가중치</span>
+          <span class="lc-title">자회사 K · 11801</span>
+        </div>
+        <div class="learn-card-body">
+          ×1.50 <span class="learn-change">×1.75</span>
+          <br>
+          <span style="font-size:10.5px;color:#6f7782">4분기 연속 미비 발생 → 다음 분기 샘플링에서 더 많이 추출</span>
+        </div>
+      </div>
+      <div class="learn-card">
+        <div class="learn-card-head">
+          <span class="lc-badge" style="background:#7c3aed">새 Skill</span>
+          <span class="lc-title">긴급지급 예외 처리 v2</span>
+        </div>
+        <div class="learn-card-body">
+          F5 반려 사유에서 학습 · <code>EmergencyPaySupplement_v2</code><br>
+          "24h + 시스템 점검 시간 차감 + 주말 포함" 룰을 <b>재사용 가능한 평가 패턴</b>으로 등록
+        </div>
+      </div>
+      <div class="learn-card">
+        <div class="learn-card-head">
+          <span class="lc-badge" style="background:#16a34a">자동화 후보</span>
+          <span class="lc-title">분리원칙 단순 룰</span>
+        </div>
+        <div class="learn-card-body">
+          5건 중 3건이 <code>요청자 = 1차결재자</code> 패턴 → <b>LLM 없이 룰로 처리 가능</b>
+          <br>
+          <span style="font-size:10.5px;color:#6f7782">평가 비용 ×1/10 · 다음 분기부터 적용</span>
+        </div>
+      </div>
+      <div class="learn-card">
+        <div class="learn-card-head">
+          <span class="lc-badge" style="background:#0369a1">Decision Log</span>
+          <span class="lc-title">${state.decisionLog.length} rows 적재</span>
+        </div>
+        <div class="learn-card-body">
+          모든 판단·도구호출·HITL·시스템 반영이 <b>불변 로그</b>로 저장.
+          <br>
+          <span style="font-size:10.5px;color:#6f7782">감사인 · 외부 감사 요청 시 1초 안에 재현 가능</span>
+        </div>
+      </div>
+    </div>
+    <div class="info-card" style="margin-top:10px;border-left:3px solid #00a39b">
+      <h3 style="color:#007f7f">→ 다음 평가는 이번 결정을 학습합니다</h3>
+      <p class="icard-sub" style="margin-top:0">
+        가중치·Skill·자동화 후보는 다음 분기 평가의 <b>Plan 생성 단계(③)와 Semantic 조회(②)</b>에 자동 반영됩니다.
+        좌측 그래프에 이번 분기 미비 이력 노드가 추가된 것을 확인하세요.
+      </p>
+    </div>
+  `;
+  setRight('Operational Learning · 환류', '다음 평가가 더 똑똑해지는 메커니즘', html);
+
+  setSummary([
+    { text: '위험가중치 자동 갱신 ★', diff: true },
+    { text: '새 Skill 등록 ★', diff: true },
+    { text: '자동화 후보 발견 ★', diff: true },
+    { text: `Decision Log ${state.decisionLog.length} rows` },
+  ], true);
+
+  // 데모 종료
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-auto').disabled = true;
+  log('system', '<b>데모 종료</b> · 8단계 모두 실행 완료. 좌하단 Decision Log를 펼쳐 전체 이력을 확인할 수 있습니다.');
+}
+
+const STEPS = [
+  null, step1_trigger, step2_semantic, step3_reasoning,
+  step4_tools, step5_findings, step6_hitl, step7_action, step8_learning
+];
+
+/* =========================================================
+   9. CONTROLS / NAVIGATION
+   ========================================================= */
+function setActiveTab(n) {
+  document.querySelectorAll('.step-tab').forEach(t => {
+    const s = parseInt(t.dataset.step, 10);
+    t.classList.toggle('active', s === n);
+    t.classList.toggle('done', s < n);
+  });
+  document.getElementById('step-current').textContent = n;
+  document.getElementById('step-name').textContent = STEP_NAMES[n] || '대기 중';
+  document.getElementById('step-bar-fill').style.width = (n / 8 * 100) + '%';
+}
+
+function doStart() {
+  state.step = 1;
+  STEPS[1]();
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-next').disabled = false;
+  document.getElementById('btn-auto').disabled = false;
+}
+
+function doNext() {
+  if (state.step >= 8) return;
+  state.step++;
+  STEPS[state.step]();
+  if (state.step >= 8) {
+    document.getElementById('btn-next').disabled = true;
+    document.getElementById('btn-auto').disabled = true;
+  }
+}
+
+function doAuto() {
+  if (state.autoMode) return;
+  state.autoMode = true;
+  document.getElementById('btn-auto').textContent = '자동 진행 중...';
+  document.getElementById('btn-auto').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+
+  const tick = () => {
+    if (state.step >= 8) {
+      state.autoMode = false;
+      return;
+    }
+    doNext();
+    const wait = state.step === 4 ? 8500 : (state.step === 6 ? 3500 : 2800);
+    setTimeout(tick, wait);
+  };
+  setTimeout(tick, 1500);
+}
+
+function doReset() {
+  state.step = 0;
+  state.autoMode = false;
+  state.hitl = {};
+  state.decisionLog = [];
+  state._simTime = null;
+
+  document.getElementById('log').innerHTML =
+    `<div class="log-line dim"><span class="ts"></span><span class="src">SYSTEM</span><span class="msg">대기 중 · 좌측 [▶ 평가 시작] 버튼을 눌러주세요.</span></div>`;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-auto').disabled = true;
+  document.getElementById('btn-auto').textContent = '▶▶ 자동 진행';
+
+  setActiveTab(0);
+  document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('done', 'active'));
+  document.getElementById('step-current').textContent = '0';
+  document.getElementById('step-name').textContent = '대기 중';
+  document.getElementById('step-bar-fill').style.width = '0%';
+
+  setRight('HITL Workspace', '평가 결과 · 근거 카드 · 감사인 검토',
+    `<div class="placeholder">평가를 시작하면 단계별 산출물이 여기 표시됩니다.<br>
+      ⑤ 근거 카드 · ⑥ HITL 검토 · ⑦ Action 결과 · ⑧ Learning 환류</div>`);
+
+  document.getElementById('summary-tags').innerHTML = '';
+  document.getElementById('compare-btn').disabled = true;
+  renderDL();
+
+  // 그래프 리셋
+  if (cy) {
+    cy.elements().removeClass('hl hl-center hl-edge faded faded-edge pulse');
+    if (cy.$('#H-26Q1-new').length) {
+      cy.$('#H-26Q1-new').remove();
+    }
+    cy.fit();
+  }
+}
+
+function toggleDL() {
+  const body = document.getElementById('dl-body');
+  const toggle = document.getElementById('dl-toggle');
+  const open = !body.hidden;
+  body.hidden = open;
+  toggle.textContent = open ? '▾' : '▴';
+  toggle.classList.toggle('open', !open);
+}
+window.toggleDL = toggleDL;
+
+/* === Compare panel === */
+function showCompare() {
+  const s = state.step;
+  const data = STEP_COMPARISONS[s];
+  if (!data) return;
+  document.getElementById('cp-step-title').textContent = data.title;
+  document.getElementById('cp-body').innerHTML = data.rows.map(r => `
+    <div class="cp-row ${r.aap ? 'aap' : ''}">
+      <div class="cp-label">${r.label}</div>
+      <div class="cp-text">${r.text}</div>
+    </div>
+  `).join('');
+  document.getElementById('compare-panel').classList.add('open');
+  document.getElementById('cp-overlay').classList.add('open');
+}
+function hideCompare() {
+  document.getElementById('compare-panel').classList.remove('open');
+  document.getElementById('cp-overlay').classList.remove('open');
+}
+window.hideCompare = hideCompare;
+
+/* =========================================================
+   10. INIT
+   ========================================================= */
+window.addEventListener('DOMContentLoaded', () => {
+  initCytoscape();
+  document.getElementById('btn-start').addEventListener('click', doStart);
+  document.getElementById('btn-next').addEventListener('click', doNext);
+  document.getElementById('btn-auto').addEventListener('click', doAuto);
+  document.getElementById('btn-reset').addEventListener('click', doReset);
+  document.getElementById('dl-head').addEventListener('click', toggleDL);
+  document.getElementById('compare-btn').addEventListener('click', showCompare);
+
+  document.querySelectorAll('.step-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      const s = parseInt(t.dataset.step, 10);
+      if (s <= state.step) {
+        // 이미 지난 단계는 비교 패널 열기
+        state.step = s;
+        showCompare();
+      }
+    });
+  });
+
+  // 시작 안내
+  log('system', '<b>AAP 프로토타입 데모 v0.1</b> · 지급결의 통제 운영평가');
+  log('system', 'K-SOX 통제 1건(C-FIN-007)을 ① 트리거 → ⑧ 학습까지 8단계로 시연합니다.');
+  log('system', '<b>[▶ 평가 시작]</b> 버튼을 눌러 시작하거나, <b>[▶▶ 자동 진행]</b>으로 전체 흐름을 한 번에 볼 수 있습니다.', { dim: true });
+});
+</script>
+
+</body>
+</html>

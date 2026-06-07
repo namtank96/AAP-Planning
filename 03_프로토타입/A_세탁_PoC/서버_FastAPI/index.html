@@ -1,0 +1,1284 @@
+<!doctype html>
+<!--
+  AAP PoC Frontend · v0.7 (server-backed)
+  v0.6와 시각 동일, 차이는: JSON 인라인 ✕ → /api 호출 ○
+  실제 LLM 호출 결과로 Stage 2/3/4가 렌더링됨
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP PoC · 세탁 프랜차이즈 클레임 처리 · v0.7 (server)</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2;
+  --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+  --amber:#b78313; --amber2:#fff8e1; --amber-strong:#8a6210;
+  --green:#1f8a4c; --green2:#e8f6ee;
+  --blue:#2563c4; --blue2:#eaf1fb; --blue-strong:#1d4f9c;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#f4f5f7;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55;font-size:14px}
+.page{max-width:1320px;margin:0 auto;background:#fff;min-height:100vh}
+
+/* Server indicator */
+.server-bar{background:#0e1014;color:rgba(255,255,255,.88);padding:7px 40px;font-size:11px;display:flex;justify-content:space-between;align-items:center;font-family:ui-monospace,Menlo,Consolas,monospace}
+.server-bar .live{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.server-bar .live .dot{width:7px;height:7px;border-radius:50%;background:#33d17a;animation:pulse 1.6s infinite}
+.server-bar .live.off .dot{background:#888;animation:none}
+.server-bar .live.err .dot{background:var(--red)}
+.server-bar small{color:rgba(255,255,255,.55)}
+@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+
+/* Hero */
+.hero-business{padding:36px 40px 30px;background:linear-gradient(180deg,#fbfbfd 0%,#fff 100%);border-bottom:1px solid var(--line)}
+.hb-tag{display:inline-block;font-size:11px;color:var(--red);font-weight:900;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+.hb-title{margin:0 0 8px;font-size:24px;letter-spacing:-.025em;line-height:1.25;color:var(--ink);max-width:920px}
+.hb-sub{margin:0;font-size:13.5px;color:var(--sub);line-height:1.65;max-width:920px}
+.hb-sub b{color:var(--ink);font-weight:700}
+.hb-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;margin-top:22px}
+.hb-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.hb-card h4{margin:0 0 10px;font-size:12px;color:var(--muted);font-weight:900;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.hb-card h4 .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.hb-card.context h4 .dot{background:var(--gray-700)}
+.hb-card.context dl{display:grid;grid-template-columns:90px 1fr;gap:6px 14px;margin:0;font-size:13px;line-height:1.55}
+.hb-card.context dt{color:var(--muted);font-weight:700}
+.hb-card.context dd{margin:0;color:var(--gray-700)}
+.hb-card.context dd b{color:var(--ink);font-weight:800}
+.hb-pains{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.hb-pain{display:grid;grid-template-columns:24px 1fr;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--gray-700);line-height:1.55}
+.hb-pain::before{content:"!";display:flex;width:18px;height:18px;border-radius:50%;background:var(--red2);color:var(--red);align-items:center;justify-content:center;font-weight:900;font-size:11px;flex-shrink:0;margin-top:1px}
+.hb-pain b{color:var(--ink);font-weight:800}
+.hb-demo-line{margin-top:18px;padding:14px 18px;background:#0e1014;color:rgba(255,255,255,.92);border-radius:10px;font-size:13px;line-height:1.6;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.hb-demo-line .label{font-size:10px;font-weight:900;color:#ffb4b8;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;background:rgba(224,40,47,.18);border-radius:5px;white-space:nowrap}
+.hb-demo-line b{color:#fff;font-weight:700}
+
+/* Workflow architecture */
+.workflow-arch{padding:30px 40px;background:#f4f5f7;border-bottom:1px solid var(--line)}
+.wa-head{margin-bottom:18px}
+.wa-head .wa-tag{display:inline-block;font-size:10.5px;color:var(--muted);font-weight:900;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
+.wa-head h2{margin:0;font-size:18px;letter-spacing:-.015em;color:var(--ink)}
+.wa-head p{margin:6px 0 0;font-size:12.5px;color:var(--sub);line-height:1.6;max-width:880px}
+.wa-head p b{color:var(--ink);font-weight:700}
+.wa-frame{background:linear-gradient(180deg,#fafbfd 0%,#eef1f7 100%);border-radius:14px;padding:24px;border:1px solid var(--line);position:relative}
+.wa-stage-label{position:absolute;top:14px;right:14px;font-size:10px;font-weight:900;color:#fff;background:var(--red);padding:3px 9px;border-radius:5px;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:5px}
+.wa-stage-label .pulse{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.6s infinite}
+.wa-user-row{display:flex;justify-content:center;margin-bottom:8px}
+.wa-user{background:#fff;border:1.5px solid var(--ink);border-radius:10px;padding:11px 18px;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;color:var(--ink);box-shadow:0 4px 12px rgba(0,0,0,.06);min-width:200px;justify-content:center}
+.wa-user .ic{width:24px;height:24px;border-radius:50%;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:13px}
+.wa-user small{display:block;font-size:10.5px;color:var(--muted);font-weight:600;margin-top:1px}
+.wa-flow-row{display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;margin:4px 0 14px;padding:0 80px}
+.wa-flow-row .wa-flow-l{text-align:right;font-size:11px;font-weight:800;color:var(--muted);padding-right:12px}
+.wa-flow-row .wa-flow-l span{display:inline-block;padding:4px 9px;background:#fff;border:1px solid var(--line);border-radius:5px}
+.wa-flow-row .wa-flow-l span b{color:var(--gray-700);font-weight:800}
+.wa-flow-row .wa-flow-r{text-align:left;padding-left:12px}
+.wa-flow-row .wa-flow-arrows{height:1px;position:relative}
+.wa-flow-row .wa-flow-arrows::before,
+.wa-flow-row .wa-flow-arrows::after{content:"";position:absolute;top:50%;height:0;border-style:solid;border-width:5px 0 5px 7px;border-color:transparent transparent transparent var(--gray-400)}
+.wa-flow-row .wa-flow-arrows::before{left:0;transform:rotate(180deg)}
+.wa-flow-row .wa-flow-arrows::after{right:0}
+.wa-guardrail{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;max-width:680px;margin-left:auto;margin-right:auto}
+.wa-guard-cell{background:#fff;border:1px dashed var(--gray-400);border-radius:8px;padding:9px 13px;text-align:center;font-size:11.5px;color:var(--gray-700);font-weight:700;line-height:1.4}
+.wa-guard-cell b{display:block;font-size:10.5px;color:var(--muted);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.wa-os-row{display:grid;grid-template-columns:180px 1fr 180px;gap:16px;align-items:stretch}
+.wa-enterprise,.wa-agents{display:flex;flex-direction:column;gap:8px;padding:14px 12px;border-radius:11px;background:#fff;border:1px solid var(--line)}
+.wa-enterprise-label,.wa-agents-label{font-size:10px;color:var(--muted);font-weight:900;letter-spacing:.1em;text-transform:uppercase;text-align:center;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.wa-sys-item{padding:9px 11px;background:#fafafa;border:1px solid var(--line);border-radius:7px;font-size:11.5px;color:var(--gray-700);font-weight:700;text-align:center;line-height:1.4;transition:all .3s}
+.wa-sys-item b{display:block;color:var(--ink);font-weight:800;font-size:11.5px;margin-bottom:1px}
+.wa-sys-item small{display:block;font-size:10px;color:var(--muted);font-weight:600;margin-top:2px}
+.wa-os{background:#fff;border:2px solid var(--blue-strong);border-radius:12px;padding:14px;position:relative}
+.wa-os::before{content:"AAP OS";position:absolute;top:-11px;left:16px;background:var(--blue-strong);color:#fff;font-size:10.5px;font-weight:900;letter-spacing:.08em;padding:2px 9px;border-radius:5px}
+.wa-os-orch{padding:10px 14px;background:#eaf1fb;border:1px solid #b9cdec;border-radius:8px;text-align:center;font-size:11.5px;font-weight:800;color:var(--blue-strong);margin-bottom:12px;transition:all .3s}
+.wa-os-orch b{display:block;font-size:9.5px;color:var(--blue);font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.wa-os-mid{display:grid;grid-template-columns:1fr 36px 1fr 1fr;gap:10px;margin-bottom:12px}
+.wa-os-caps{display:flex;flex-direction:column;gap:6px}
+.wa-os-cap{background:#fafafa;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--gray-700);text-align:center;line-height:1.4;transition:all .3s}
+.wa-os-cap b{display:block;color:var(--ink);font-weight:800;font-size:11px;margin-bottom:1px}
+.wa-os-cap small{font-size:9.5px;color:var(--muted);font-weight:600}
+.wa-os-int{background:#fafafa;border:1px dashed var(--gray-400);border-radius:7px;padding:8px;display:flex;align-items:center;justify-content:center;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--gray-700);font-weight:800;transition:all .3s}
+.wa-os-planner{background:#fff;border:1.5px solid var(--blue);border-radius:8px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;transition:all .3s}
+.wa-os-planner .ic{width:32px;height:32px;border-radius:6px;background:var(--blue2);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;margin-bottom:3px}
+.wa-os-planner b{font-size:12px;color:var(--ink);font-weight:800;line-height:1.3}
+.wa-os-planner small{font-size:10px;color:var(--muted);font-weight:600;line-height:1.4}
+.wa-os-orch2{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;transition:all .3s}
+.wa-os-orch2 b{font-size:12px;color:var(--ink);font-weight:800;line-height:1.3}
+.wa-os-orch2 small{font-size:10px;color:var(--muted);font-weight:600;line-height:1.4}
+.wa-os-state{padding:10px 14px;background:#fafafa;border:1px solid var(--line);border-radius:8px;text-align:center;font-size:11.5px;color:var(--gray-700);font-weight:700;transition:all .3s}
+.wa-os-state b{display:block;font-size:9.5px;color:var(--muted);font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.wa-active{box-shadow:0 0 0 2px var(--red),0 0 18px rgba(224,40,47,.22);transform:translateY(-1px);position:relative;z-index:1}
+.wa-os-orch.wa-active{background:var(--red2);border-color:var(--red);color:var(--red)}
+.wa-os-orch.wa-active b{color:var(--red)}
+.wa-sys-item.wa-active{background:var(--red2);border-color:var(--red);color:var(--red)}
+.wa-sys-item.wa-active b{color:var(--red)}
+.wa-os-cap.wa-active{background:var(--red2);border-color:var(--red);color:var(--red)}
+.wa-os-cap.wa-active b{color:var(--red)}
+.wa-os-planner.wa-active{background:var(--red2);border-color:var(--red)}
+.wa-os-planner.wa-active b{color:var(--red)}
+.wa-os-planner.wa-active .ic{background:#ffe1e3;color:var(--red)}
+.wa-os-orch2.wa-active{background:var(--red2);border-color:var(--red)}
+.wa-os-orch2.wa-active b{color:var(--red)}
+.wa-os-state.wa-active{background:var(--red2);border-color:var(--red)}
+.wa-os-state.wa-active b{color:var(--red)}
+.wa-os-int.wa-active{background:var(--red2);border-color:var(--red);color:var(--red)}
+
+/* Steps */
+.steps{padding:18px 40px;background:#fafbfc;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;box-shadow:0 1px 0 var(--line)}
+.steps-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+.steps-row::before{content:"";position:absolute;top:18px;left:12.5%;right:12.5%;height:2px;background:var(--gray-200);z-index:0}
+.steps-row .step{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative;z-index:1;cursor:pointer;padding:0 8px}
+.steps-row .step .s-num{width:36px;height:36px;border-radius:50%;background:#fff;border:2px solid var(--gray-300);color:var(--gray-500);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;transition:all .25s}
+.steps-row .step .s-label{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;line-height:1.4}
+.steps-row .step .s-label b{display:block;color:var(--gray-700);font-weight:800;font-size:12.5px;margin-bottom:1px}
+.steps-row .step.active .s-num{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 0 4px rgba(224,40,47,.12)}
+.steps-row .step.active .s-label b{color:var(--ink)}
+.steps-row .step.done .s-num{background:var(--green);border-color:var(--green);color:#fff}
+.steps-row .step.done .s-num::after{content:"\2713"}
+.steps-row .step.done .s-num span{display:none}
+
+/* Stages */
+.stage{display:none;padding:28px 36px 36px;background:#fff;animation:fadein .3s ease}
+.stage.active{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.stage-head{margin-bottom:18px}
+.stage-head .sh-tag{display:inline-block;font-size:10.5px;color:var(--red);font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.stage-head h2{margin:0;font-size:22px;letter-spacing:-.02em;line-height:1.25;color:var(--ink)}
+.stage-head p.lead{margin:6px 0 0;font-size:13px;color:var(--sub);line-height:1.6;max-width:880px}
+
+.screen{background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(17,19,24,.06),0 1px 0 var(--gray-200);overflow:hidden;border:1px solid var(--line)}
+.browser-chrome{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:9px 14px;background:#fbfbfc;border-bottom:1px solid var(--line)}
+.browser-dots{display:flex;gap:5px}
+.browser-dots i{width:10px;height:10px;border-radius:50%;background:#e0e3eb}
+.browser-dots i:first-child{background:#ff5f57}
+.browser-dots i:nth-child(2){background:#febc2e}
+.browser-dots i:nth-child(3){background:#28c840}
+.browser-url{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 12px;text-align:center;max-width:560px;justify-self:center;width:100%;font-family:ui-monospace,Menlo,Consolas,monospace}
+.browser-url b{color:var(--ink);font-weight:700}
+.browser-actions{font-size:11px;color:var(--muted)}
+
+.app{display:grid;grid-template-columns:200px 1fr;min-height:580px}
+.app-side{background:#0e1014;color:rgba(255,255,255,.86);padding:18px 14px;display:flex;flex-direction:column;gap:14px}
+.app-brand{font-size:13px;font-weight:900;color:#fff;padding-bottom:12px;border-bottom:1px solid #2a2d35;display:flex;align-items:center;gap:8px}
+.app-brand .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.app-brand small{display:block;font-size:9.5px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:2px;margin-left:16px}
+.app-nav{display:flex;flex-direction:column;gap:2px}
+.app-nav .ng{font-size:9.5px;color:rgba(255,255,255,.45);font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin:6px 0 4px}
+.app-nav a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;font-size:12px;color:rgba(255,255,255,.78);cursor:default}
+.app-nav a .i{width:14px;height:14px;border-radius:3px;background:rgba(255,255,255,.16);flex-shrink:0}
+.app-nav a.active{background:rgba(255,255,255,.08);color:#fff;font-weight:800}
+.app-nav a.active .i{background:var(--red)}
+.app-nav a .badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:8px}
+.app-user{margin-top:auto;padding:11px;background:rgba(255,255,255,.04);border-radius:8px;display:flex;align-items:center;gap:9px;font-size:11.5px}
+.app-user .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#666,#333);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.app-user .who{color:#fff;font-weight:700;line-height:1.3}
+.app-user .who small{display:block;color:rgba(255,255,255,.55);font-weight:500;font-size:10px}
+.app-main{padding:20px 24px;background:#fafafa;overflow:hidden}
+.app-topbar{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.app-topbar h3{margin:0 0 3px;font-size:18px;color:var(--ink);letter-spacing:-.015em}
+.app-topbar .crumb{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:2px}
+.app-topbar .crumb b{color:var(--gray-700)}
+.app-topbar .top-act{display:flex;gap:6px;align-items:center}
+
+.btn{padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--gray-700);cursor:pointer;font-family:inherit;transition:all .15s}
+.btn:hover{border-color:var(--gray-400);color:var(--ink)}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn.green{background:var(--green);border-color:var(--green);color:#fff}
+.btn.subtle{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.lg{padding:11px 22px;font-size:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.pill .d{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.new{background:var(--red2);color:var(--red)}
+.pill.review{background:var(--amber2);color:var(--amber-strong)}
+.pill.done{background:var(--green2);color:var(--green)}
+.pill.gray{background:var(--gray-100);color:var(--gray-600)}
+.pill.live{background:#e8f6ee;color:var(--green)}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px}
+.card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.card-h h4{margin:0;font-size:13px;color:var(--ink);font-weight:800}
+.card-h .meta{font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid-2to1{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.grid-1to2{display:grid;grid-template-columns:1fr 1.55fr;gap:14px}
+
+.form-row{margin-bottom:12px}
+.form-row:last-child{margin-bottom:0}
+.form-row label{display:block;font-size:10.5px;color:var(--muted);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px}
+.input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;background:#fff;font-family:inherit;color:var(--ink)}
+.input:focus{outline:none;border-color:var(--ink)}
+textarea.input{min-height:64px;line-height:1.5;resize:vertical}
+.input-group{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.photo-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.photo{aspect-ratio:4/3;border-radius:8px;background:linear-gradient(135deg,#d8dde5 0%,#aab3bf 100%);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--gray-700);font-weight:700;letter-spacing:.04em;text-transform:uppercase;flex-direction:column;gap:4px}
+.photo .pi{font-size:18px;color:var(--gray-500)}
+.photo.evidence{background:linear-gradient(135deg,#fde2e3 0%,#f0a5a8 100%);color:#a51b22}
+
+.kv{display:grid;grid-template-columns:90px 1fr;gap:6px 12px;font-size:12px;margin:0;line-height:1.55}
+.kv dt{color:var(--muted);font-weight:700}
+.kv dd{margin:0;color:var(--gray-700)}
+.kv dd b{color:var(--ink);font-weight:800}
+
+.findings{display:flex;flex-direction:column;gap:6px}
+.finding{display:grid;grid-template-columns:1fr 80px 40px;gap:10px;align-items:center;padding:9px 11px;background:#fff;border:1px solid var(--line);border-radius:7px;font-size:12px}
+.finding .n{color:var(--gray-700)}
+.finding .n b{color:var(--ink);font-weight:800;display:block;margin-bottom:2px}
+.finding .n small{color:var(--muted);font-size:10.5px;font-weight:500;line-height:1.4}
+.finding .b{height:7px;background:var(--gray-100);border-radius:999px;position:relative;overflow:hidden}
+.finding .b i{position:absolute;left:0;top:0;height:100%;background:var(--gray-400);border-radius:999px;transition:width .6s ease}
+.finding.high .b i{background:var(--red)}
+.finding.med .b i{background:var(--amber)}
+.finding .p{text-align:right;font-weight:900;color:var(--gray-700);font-variant-numeric:tabular-nums;font-size:12px}
+
+.src{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;background:#fafafa;border:1px solid var(--line);border-radius:7px;font-size:11.5px;margin-bottom:5px}
+.src:last-child{margin-bottom:0}
+.src .si{width:22px;height:22px;border-radius:5px;background:var(--blue2);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
+.src b{display:block;color:var(--ink);font-weight:800;margin-bottom:1px}
+.src small{display:block;color:var(--muted);font-size:10.5px;line-height:1.45}
+
+.case-list .item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 11px;background:#fafafa;border:1px solid var(--line);border-radius:7px;margin-bottom:5px;font-size:11.5px}
+.case-list .item:last-child{margin-bottom:0}
+.item .c-ref{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--gray-700);font-size:10.5px;font-weight:700;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.item .c-reason b{color:var(--ink);font-weight:800}
+.item .c-out{font-size:11px;font-weight:800;color:var(--gray-700);text-align:right}
+
+.resp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.resp-cell{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:12px;text-align:center}
+.resp-cell .l{font-size:9.5px;color:var(--muted);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px}
+.resp-cell .v{font-size:24px;font-weight:900;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.resp-cell.store{border-color:#f3c2c5;background:var(--red2)}
+.resp-cell.store .v{color:var(--red)}
+.resp-cell.hq{border-color:#e9c66a;background:var(--amber2)}
+.resp-cell.hq .v{color:var(--amber-strong)}
+.resp-cell.customer{border-color:#a4dcd9;background:var(--teal2)}
+.resp-cell.customer .v{color:var(--teal-strong)}
+
+.action-list{display:flex;flex-direction:column;gap:6px}
+.action-item{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;padding:9px 11px;background:#fff;border:1px solid var(--line);border-radius:7px;font-size:12px}
+.action-item .n{width:22px;height:22px;border-radius:50%;background:var(--gray-700);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:900}
+.action-item .t{color:var(--gray-700);line-height:1.45}
+.action-item .t b{color:var(--ink);font-weight:800}
+
+.hitl-banner{background:#fffaef;border:1.5px solid var(--amber);border-radius:10px;padding:13px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;margin-bottom:14px}
+.hitl-banner .i{width:34px;height:34px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900}
+.hitl-banner .t{font-size:13px;color:var(--ink);font-weight:800;line-height:1.4}
+.hitl-banner .t small{display:block;font-size:11px;color:var(--amber-strong);font-weight:700;margin-top:2px}
+
+.prep-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.prep-list .prep{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:center;font-size:11.5px;color:var(--gray-700);line-height:1.5;padding:5px 0}
+.prep-list .prep::before{content:"\2713";color:var(--green);font-weight:900;display:flex;align-items:center;justify-content:center}
+.prep-list .prep b{color:var(--ink);font-weight:700}
+
+/* Overlay */
+.overlay{position:fixed;inset:0;background:rgba(17,19,24,.78);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.overlay.active{display:flex;animation:fadein .2s ease}
+.overlay-card{background:#fff;border-radius:14px;padding:32px 40px;box-shadow:0 24px 60px rgba(0,0,0,.3);max-width:480px;width:90%;text-align:center}
+.overlay-spinner{width:48px;height:48px;border:4px solid var(--gray-200);border-top-color:var(--red);border-radius:50%;animation:spin .9s linear infinite;margin:0 auto 18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay-card h3{margin:0 0 6px;font-size:17px;color:var(--ink);letter-spacing:-.01em}
+.overlay-card p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6}
+.overlay-card .live-mark{display:inline-flex;align-items:center;gap:6px;background:var(--green2);color:var(--green);padding:3px 10px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.06em;margin-bottom:12px}
+.overlay-card .live-mark .ld{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.4s infinite}
+.overlay-steps{display:flex;flex-direction:column;gap:5px;margin-top:18px;text-align:left}
+.overlay-step{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:center;font-size:12px;color:var(--muted);opacity:.35;transition:all .3s}
+.overlay-step::before{content:"\25CB";color:var(--gray-400);font-size:10px}
+.overlay-step.active{opacity:1;color:var(--ink)}
+.overlay-step.active::before{content:"\25CF";color:var(--red)}
+.overlay-step.done{opacity:.8;color:var(--green)}
+.overlay-step.done::before{content:"\2713";color:var(--green);font-weight:900}
+
+/* Stage 4 */
+.complete-hero{background:linear-gradient(135deg,#e8f6ee 0%,#d3ecdd 100%);border:1px solid #a4d4b6;border-radius:14px;padding:28px;text-align:center;margin-bottom:18px}
+.complete-hero .ch-i{display:inline-flex;width:54px;height:54px;border-radius:50%;background:var(--green);color:#fff;align-items:center;justify-content:center;font-size:24px;font-weight:900;margin-bottom:12px}
+.complete-hero h3{margin:0 0 5px;font-size:21px;color:var(--ink);letter-spacing:-.02em}
+.complete-hero p{margin:0;font-size:13px;color:var(--gray-700);line-height:1.6}
+
+.sms-phone{max-width:300px;margin:0 auto;background:#1c1d20;border-radius:24px;padding:18px 12px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.sms-frame{background:#fff;border-radius:14px;padding:14px;min-height:220px;display:flex;flex-direction:column;gap:9px}
+.sms-head{font-size:10.5px;color:var(--muted);font-weight:700;text-align:center;padding-bottom:7px;border-bottom:1px solid var(--gray-150)}
+.sms-msg{background:#eaf1fb;color:var(--ink);padding:10px 13px;border-radius:14px 14px 14px 4px;font-size:12px;line-height:1.55;align-self:flex-start;max-width:90%;white-space:pre-line}
+.sms-meta{font-size:9.5px;color:var(--muted);align-self:flex-start;margin-left:4px}
+.sms-llm-badge{display:inline-flex;align-items:center;gap:5px;background:#e8f6ee;color:var(--green);font-size:9.5px;font-weight:900;letter-spacing:.06em;padding:3px 8px;border-radius:5px;margin-top:8px;text-transform:uppercase}
+.sms-llm-badge .d{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+.outcome-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+.outcome{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.outcome .o-l{font-size:10px;color:var(--muted);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.outcome .o-v{font-size:21px;font-weight:900;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums}
+.outcome .o-v .unit{font-size:13px;color:var(--gray-500);font-weight:700;margin-left:2px}
+.outcome .o-d{font-size:10.5px;color:var(--green);font-weight:800;margin-top:3px}
+
+.compare-bars{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.cmp-line{display:grid;grid-template-columns:130px 1fr 80px;gap:12px;align-items:center}
+.cmp-line .cl-l{font-size:11.5px;color:var(--gray-700);font-weight:700}
+.cmp-line .cl-l small{display:block;color:var(--muted);font-weight:500;font-size:10.5px;margin-top:1px}
+.cmp-line .cl-b{height:18px;background:var(--gray-100);border-radius:5px;position:relative;overflow:hidden}
+.cmp-line .cl-b i{position:absolute;left:0;top:0;height:100%;border-radius:5px;display:flex;align-items:center;padding-left:8px;color:#fff;font-size:10.5px;font-weight:800}
+.cmp-line.manual .cl-b i{background:var(--gray-500);width:100%}
+.cmp-line.aap .cl-b i{background:var(--green)}
+.cmp-line .cl-v{font-size:12px;color:var(--gray-700);font-weight:900;text-align:right}
+
+.reset-row{margin-top:24px;padding-top:18px;border-top:1px dashed var(--gray-300);display:flex;justify-content:center;gap:10px}
+
+/* Value compare */
+.value-compare{padding:36px 40px;background:#f4f5f7;border-top:1px solid var(--line)}
+.vc-head{margin-bottom:18px}
+.vc-head .vc-tag{display:inline-block;font-size:10.5px;color:var(--red);font-weight:900;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
+.vc-head h2{margin:0 0 6px;font-size:20px;letter-spacing:-.02em;color:var(--ink)}
+.vc-head p{margin:0;font-size:13px;color:var(--sub);line-height:1.6;max-width:880px}
+.vc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.vc-card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.vc-head-card{padding:14px 18px;background:#0e1014;color:#fff;display:flex;align-items:center;gap:10px}
+.vc-head-card .avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+.vc-head-card .vh-info b{display:block;font-size:13.5px;color:#fff;font-weight:800;line-height:1.3}
+.vc-head-card .vh-info small{display:block;font-size:10.5px;color:rgba(255,255,255,.55);font-weight:600;margin-top:1px}
+.vc-card.staff .vc-head-card{background:#1e3a55}
+.vc-card.hq .vc-head-card{background:#5a3a07}
+.vc-card.customer .vc-head-card{background:#1f5754}
+.vc-body{padding:16px 18px;display:flex;flex-direction:column;gap:14px;flex:1}
+.vc-section{display:flex;flex-direction:column;gap:6px}
+.vc-sec-label{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.vc-sec-label.before{color:var(--gray-500)}
+.vc-sec-label.after{color:var(--red)}
+.vc-sec-label .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.vc-sec-body{font-size:12.5px;color:var(--gray-700);line-height:1.65;padding:10px 12px;border-radius:8px}
+.vc-sec-body.before{background:var(--gray-50);border:1px solid var(--line)}
+.vc-sec-body.after{background:var(--red2);border:1px solid #f3c2c5}
+.vc-sec-body b{color:var(--ink);font-weight:800}
+.vc-sec-body .num{font-size:18px;font-weight:900;color:var(--gray-500);display:block;margin-bottom:2px}
+.vc-sec-body.after .num{color:var(--red)}
+.vc-key{margin-top:auto;padding:11px 13px;background:#0e1014;color:#fff;border-radius:8px;font-size:12px;line-height:1.55;font-weight:700;display:flex;align-items:flex-start;gap:8px}
+.vc-key::before{content:"\2605";color:#ffd57a;font-size:13px}
+.vc-key b{color:#ffd57a;font-weight:900}
+
+.footer{padding:18px 40px;background:#0e1014;color:rgba(255,255,255,.66);display:flex;justify-content:space-between;font-size:11px}
+
+@media(max-width:1100px){
+  .hb-grid,.vc-grid{grid-template-columns:1fr}
+  .wa-os-row,.wa-os-mid{grid-template-columns:1fr}
+  .app{grid-template-columns:1fr}
+  .app-side{display:none}
+  .grid-2,.grid-3,.grid-2to1,.grid-1to2,.outcome-grid{grid-template-columns:1fr}
+  .resp{grid-template-columns:1fr}
+  .steps-row{grid-template-columns:1fr 1fr;gap:14px}
+  .steps-row::before{display:none}
+  .stage,.steps,.hero-business,.workflow-arch,.value-compare,.footer,.server-bar{padding-left:18px;padding-right:18px}
+  .wa-os-int{writing-mode:horizontal-tb;transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Static framing data (변경되지 않는 데모 컨텍스트만 인라인) -->
+<script type="application/json" id="framing-data">
+{
+  "businessContext": {
+    "industry": "세탁 프랜차이즈 (전국 87개 가맹점)",
+    "store": "강남점 (강남구 청담동)",
+    "ownerTenure": "5년차 점주 박철민",
+    "dailyVolume": "일평균 50~100건 접수, 그 중 클레임 1~3건",
+    "claimDifficulty": "고가 의류·소재 특성·고객 동의 범위 등 다요인 판단 필요",
+    "pains": [
+      "점주가 매뉴얼 검색 + 본사 콜 → 평균 <b>1시간 이상</b> 응대 지연",
+      "매장·점주마다 다른 결정 → 본사 일관성 관리 비용 ↑, 분쟁 재발 시 인용 불가",
+      "결정 사유가 <b>구두/메모로 흩어짐</b> → 감사·재발 방지 어려움",
+      "신규 점주 <b>OJT 수개월</b>, 본사 콜 응대 부담 매우 큼"
+    ],
+    "demoSummary": "한 건의 클레임이 AAP로 처리되는 <b>4단계 흐름</b>을 직접 클릭하고, 점주·본사·고객 각각의 변화를 봅니다. <b>실제 LLM이 응답</b>합니다."
+  },
+  "personaBenefits": [
+    {
+      "role": "점주 (현장)", "name": "박철민", "initial": "박", "color": "staff",
+      "context": "강남점 점주 · 5년차",
+      "before": {"label": "기존", "headline": "1시간+", "desc": "본사 콜 + 매뉴얼 검색 + 응대 정리. 매장마다 다른 결정 가능성."},
+      "after": {"label": "AAP", "headline": "5~10분", "desc": "정리된 자료를 자체 검토 → 본사 콜 없이 응대. 같은 사례는 같은 기준."},
+      "keyPoint": "<b>본사 콜 없이 응대 가능</b>, 매장간 일관성 확보."
+    },
+    {
+      "role": "본사 클레임팀", "name": "이지영", "initial": "이", "color": "hq",
+      "context": "정책 적용·중재·결재",
+      "before": {"label": "기존", "headline": "1시간+ × 매 건", "desc": "콜백 시마다 처음부터 자료 수집·정책 확인·사례 검색."},
+      "after": {"label": "AAP", "headline": "결정에만 집중", "desc": "정리된 케이스·근거를 그대로 받아 *결정에만* 집중. 결정 사유 자동 기록."},
+      "keyPoint": "<b>자료 수집 대신 결정에 집중</b>, 일관성이 자료로 누적."
+    },
+    {
+      "role": "고객", "name": "최민수", "initial": "최", "color": "customer",
+      "context": "정기 회원 5년",
+      "before": {"label": "기존", "headline": "며칠 대기", "desc": "결과를 며칠 후 매장 방문 시 들음. 사유 모호 → 불만 누적."},
+      "after": {"label": "AAP", "headline": "즉시 통보", "desc": "결정 직후 SMS로 사유·보상안 함께 통보. 결정 과정 투명."},
+      "keyPoint": "<b>결정 사유를 즉시 받음</b>, 매장 신뢰 회복."
+    }
+  ]
+}
+</script>
+
+<div class="page">
+
+<!-- Server status bar -->
+<div class="server-bar">
+  <span class="live" id="server-live">
+    <span class="dot"></span>
+    <span id="server-status">서버 상태 확인 중...</span>
+  </span>
+  <small id="server-meta">FastAPI · Anthropic Claude · SQLite</small>
+</div>
+
+<!-- HERO -->
+<section class="hero-business">
+  <div class="hb-tag">AAP PoC · 세탁 프랜차이즈 · 실 서버 작동</div>
+  <h1 class="hb-title">강남점 클레임 처리 1건으로 보는 — AAP가 매장·본사·고객에게 만드는 변화</h1>
+  <p class="hb-sub">
+    아래 4단계 시뮬레이션은 <b>실제로 백엔드 서버가 작동</b>합니다.
+    [→ 검토 자료 준비] 와 [→ 결정 확정] 시점에 <b>실제 Anthropic Claude LLM이 호출</b>되어
+    원인 후보와 고객 SMS를 생성합니다. 모든 단계가 SQLite에 영속 저장되어 감사 추적이 가능합니다.
+  </p>
+  <div class="hb-grid">
+    <div class="hb-card context">
+      <h4><span class="dot"></span>지금 매장 상황</h4>
+      <dl>
+        <dt>업종</dt><dd id="hb-industry">—</dd>
+        <dt>매장</dt><dd id="hb-store">—</dd>
+        <dt>점주</dt><dd id="hb-owner">—</dd>
+        <dt>일평균</dt><dd id="hb-daily">—</dd>
+        <dt>클레임 특성</dt><dd id="hb-claim-diff">—</dd>
+      </dl>
+    </div>
+    <div class="hb-card pain">
+      <h4><span class="dot"></span>현재 클레임 처리의 Pain</h4>
+      <ul class="hb-pains" id="hb-pains"></ul>
+    </div>
+  </div>
+  <div class="hb-demo-line">
+    <span class="label">본 데모</span>
+    <span id="hb-demo-summary">—</span>
+  </div>
+</section>
+
+<!-- WORKFLOW ARCHITECTURE -->
+<section class="workflow-arch">
+  <div class="wa-head">
+    <span class="wa-tag">시스템 구성도</span>
+    <h2>AAP가 매장·본사·고객을 잇는 방식</h2>
+    <p>
+      <b>점주(사용자)</b>가 클레임을 입력하면, AAP는 <b>기존 시스템</b>과 <b>전문 처리 모듈</b>을 조합해
+      <b>점주가 검토 가능한 자료</b>로 돌려줍니다.
+      현재 진행 중인 단계에 따라 관련 요소가 강조됩니다.
+    </p>
+  </div>
+  <div class="wa-frame">
+    <div class="wa-stage-label" id="wa-stage-label"><span class="pulse"></span>Stage 1 · 매장 접수</div>
+    <div class="wa-user-row">
+      <div class="wa-user"><span class="ic">사</span>사용자<small>점주 박철민</small></div>
+    </div>
+    <div class="wa-flow-row">
+      <div class="wa-flow-l"><span><b>Solution</b> · 검토 자료·결정 결과</span></div>
+      <div class="wa-flow-arrows"></div>
+      <div class="wa-flow-r"><span><b>Task</b> · 클레임 입력</span></div>
+    </div>
+    <div class="wa-guardrail">
+      <div class="wa-guard-cell"><b>맞춤 안내</b>점주 시점·매장 정책 반영</div>
+      <div class="wa-guard-cell"><b>권한 · HITL · 감사</b>본사 결재 · 모든 판단 기록</div>
+    </div>
+    <div class="wa-os-row">
+      <div class="wa-enterprise">
+        <div class="wa-enterprise-label">기존 시스템</div>
+        <div class="wa-sys-item" data-active-on="1,2,3,4"><b>POS</b><small>접수·결제·이력</small></div>
+        <div class="wa-sys-item" data-active-on="2,3"><b>본사 ERP</b><small>정책·약관·유사 사례</small></div>
+        <div class="wa-sys-item" data-active-on="2,3"><b>처리시설 · 고객 DB</b><small>처리 기록·고객 동의</small></div>
+        <div class="wa-sys-item" data-active-on="4"><b>매뉴얼·정책 자산</b><small>운영 지식 (학습 환류)</small></div>
+      </div>
+      <div class="wa-os">
+        <div class="wa-os-orch" data-active-on="1,2,3,4">
+          <b>Orchestration Layer</b>
+          단계 흐름 조율 · 점주 → AAP → 본사 → 고객
+        </div>
+        <div class="wa-os-mid">
+          <div class="wa-os-caps">
+            <div class="wa-os-cap" data-active-on="1,2"><b>점주 ↔ 시스템</b><small>입력·연계</small></div>
+            <div class="wa-os-cap" data-active-on="3"><b>점주 ↔ 본사 HITL</b><small>사람 검토 분기</small></div>
+            <div class="wa-os-cap" data-active-on="2,4"><b>점주 ↔ AI 도움</b><small>검토 자료 제공</small></div>
+          </div>
+          <div class="wa-os-int" data-active-on="2,3,4">시스템 연계</div>
+          <div class="wa-os-planner" data-active-on="2">
+            <div class="ic">⚙</div>
+            <b>검토 자료 준비</b>
+            <small>이력 통합 · 사례 추출 · 후보 정리</small>
+          </div>
+          <div class="wa-os-orch2" data-active-on="3,4">
+            <b>결정·실행 조율</b>
+            <small>본사 결재 · 시스템 반영</small>
+          </div>
+        </div>
+        <div class="wa-os-state" data-active-on="4">
+          <b>State and memory · 운영 자산</b>
+          판단 기록 · 학습 후보 · 다음 사례 인용
+        </div>
+      </div>
+      <div class="wa-agents">
+        <div class="wa-agents-label">전문 모듈</div>
+        <div class="wa-sys-item" data-active-on="2"><b>검토자료 생성</b><small>요약·정리</small></div>
+        <div class="wa-sys-item" data-active-on="2"><b>유사사례 검색</b><small>본사 케이스 풀</small></div>
+        <div class="wa-sys-item" data-active-on="2,3"><b>정책 · 규정 매칭</b><small>적용 가능한 기준</small></div>
+        <div class="wa-sys-item" data-active-on="4"><b>학습 자산 정리</b><small>다음 사례 자료화</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Step indicator -->
+<nav class="steps">
+  <div class="steps-row">
+    <div class="step active" data-step="1">
+      <div class="s-num"><span>1</span></div>
+      <div class="s-label"><b>1. 매장 접수</b>점주 박철민</div>
+    </div>
+    <div class="step" data-step="2">
+      <div class="s-num"><span>2</span></div>
+      <div class="s-label"><b>2. 점주 검토</b>준비된 자료 검토</div>
+    </div>
+    <div class="step" data-step="3">
+      <div class="s-num"><span>3</span></div>
+      <div class="s-label"><b>3. 본사 결정</b>이지영</div>
+    </div>
+    <div class="step" data-step="4">
+      <div class="s-num"><span>4</span></div>
+      <div class="s-label"><b>4. 처리 완료</b>고객 통보 · 자료 누적</div>
+    </div>
+  </div>
+</nav>
+
+<!-- Stage 1 -->
+<section class="stage active" id="stage-1">
+  <div class="stage-head">
+    <span class="sh-tag">Step 1 · 매장 접수</span>
+    <h2>점주가 신규 클레임을 입력하는 자리</h2>
+    <p class="lead">정보를 입력하고 [→ 검토 자료 준비] 를 누르면 <b>실제 Claude LLM이 호출</b>되어 원인 후보·책임 비율·권장 액션을 산출합니다. (약 5~15초)</p>
+  </div>
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">app.cleanops.kr / store / <b>claim / new</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="dot"></span>CleanOps<small>가맹점 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="ng">매장 업무</div>
+          <a><span class="i"></span>접수</a>
+          <a class="active"><span class="i"></span>클레임 <span class="badge">1</span></a>
+          <a><span class="i"></span>처리 대기</a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">박</div>
+          <div class="who">박철민<small>점주 · 강남점</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>클레임</b> / 신규 접수</div>
+            <h3>신규 클레임 입력</h3>
+          </div>
+          <div class="top-act">
+            <button class="btn subtle" type="button">취소</button>
+            <button class="btn primary" type="button" id="btn-submit-intake">→ 검토 자료 준비</button>
+          </div>
+        </div>
+        <div class="grid-2to1">
+          <div class="card">
+            <div class="card-h"><h4>클레임 정보</h4><span class="pill new"><span class="d"></span>신규</span></div>
+            <div class="form-row">
+              <label>고객 / 의류</label>
+              <div class="input-group">
+                <input class="input" id="f-customer">
+                <input class="input" id="f-item">
+              </div>
+            </div>
+            <div class="form-row">
+              <label>원 접수번호 (참조)</label>
+              <input class="input" id="f-receipt">
+            </div>
+            <div class="form-row">
+              <label>클레임 사유</label>
+              <textarea class="input" id="f-complaint"></textarea>
+            </div>
+            <div class="form-row">
+              <label>측정값</label>
+              <input class="input" id="f-measurement">
+            </div>
+            <div class="form-row">
+              <label>증빙 사진</label>
+              <div class="photo-strip">
+                <div class="photo"><span class="pi">▢</span>처리 전</div>
+                <div class="photo"><span class="pi">▢</span>처리 후</div>
+                <div class="photo evidence"><span class="pi">▢</span>측정 증빙</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h4>다음 단계 안내</h4><span class="pill live"><span class="d"></span>실제 LLM</span></div>
+            <p style="font-size:12px;color:var(--gray-700);line-height:1.6;margin:0 0 12px">
+              [→ 검토 자료 준비] 를 누르면 다음이 <b>실제 서버에서 수행</b>됩니다.
+            </p>
+            <div class="prep-list">
+              <div class="prep"><div>SQLite에 클레임 영속 저장 (<b>POST /api/claims</b>)</div></div>
+              <div class="prep"><div>본사 사례 풀에서 유사 사례 검색</div></div>
+              <div class="prep"><div>업무 정책 + 사례 + 클레임 → <b>Claude LLM 호출</b></div></div>
+              <div class="prep"><div>원인 후보 + 책임 비율 + 권장 액션 산출</div></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- Stage 2 -->
+<section class="stage" id="stage-2">
+  <div class="stage-head">
+    <span class="sh-tag">Step 2 · 점주 검토</span>
+    <h2>점주가 검토용 자료를 받는 자리</h2>
+    <p class="lead">아래 데이터는 <b>방금 실제 LLM이 생성한 결과</b>입니다. 책임 비율이 10% 이상이면 본사 결정 분기가 활성화됩니다.</p>
+  </div>
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">app.cleanops.kr / store / claim / <b id="s2-url">—</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="dot"></span>CleanOps<small>가맹점 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="ng">매장 업무</div>
+          <a><span class="i"></span>접수</a>
+          <a class="active"><span class="i"></span>클레임 <span class="badge">1</span></a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">박</div>
+          <div class="who">박철민<small>점주 · 강남점</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>클레임</b> / <span id="s2-crumb-id">—</span></div>
+            <h3 id="s2-title">—</h3>
+          </div>
+          <div class="top-act">
+            <span class="pill review"><span class="d"></span>검토중</span>
+            <button class="btn" type="button">메모 추가</button>
+            <button class="btn danger" type="button" id="btn-to-hq">→ 본사 결정 요청</button>
+          </div>
+        </div>
+        <div class="grid-1to2">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card">
+              <div class="card-h"><h4>사건 요약</h4><span class="pill live"><span class="d"></span>LLM 생성</span></div>
+              <dl class="kv" id="s2-summary"></dl>
+            </div>
+            <div class="card">
+              <div class="card-h"><h4>유사 사례 (본사 풀)</h4><span class="meta" id="s2-cases-meta">—</span></div>
+              <div class="case-list" id="s2-cases"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card">
+              <div class="card-h"><h4>검토 요약 · 가능한 원인 후보</h4><span class="pill live"><span class="d"></span>LLM 생성</span></div>
+              <div class="findings" id="s2-findings"></div>
+              <div style="margin-top:14px;padding:10px 12px;background:#fafafa;border-radius:7px;font-size:11.5px;color:var(--gray-700);line-height:1.55">
+                <b style="color:var(--ink)">참고</b> · 위 자료는 *판단에 도움이 되도록 정리된 후보*입니다. 최종 결정은 점주·본사가 합니다.
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h4>책임 비율 후보 + 권장 액션</h4><span class="pill review"><span class="d"></span>본사 결정 필요</span></div>
+              <div class="resp" id="s2-resp"></div>
+              <div class="action-list" id="s2-actions" style="margin-top:12px"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- Stage 3 -->
+<section class="stage" id="stage-3">
+  <div class="stage-head">
+    <span class="sh-tag">Step 3 · 본사 결정</span>
+    <h2>본사 클레임팀이 결정하는 자리</h2>
+    <p class="lead">아래 폼은 *AAP가 제안한 책임 비율·원인*으로 사전 채워져 있습니다. 필요시 수정하고 [→ 결정 확정] 을 누르면 <b>실제 LLM이 고객 SMS를 생성</b>합니다.</p>
+  </div>
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">hq.cleanops.kr / claims / review / <b id="s3-url">—</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="dot"></span>CleanOps<small>본사 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="ng">본사 업무</div>
+          <a class="active"><span class="i"></span>클레임 검토 <span class="badge">1</span></a>
+          <a><span class="i"></span>학습 환류</a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">이</div>
+          <div class="who">이지영<small>본사 클레임팀</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>클레임 검토</b> / <span id="s3-crumb-id">—</span> · 강남점 박철민</div>
+            <h3 id="s3-title">—</h3>
+          </div>
+          <div class="top-act">
+            <button class="btn subtle" type="button">검토 보류</button>
+            <button class="btn" type="button">반려</button>
+            <button class="btn green" type="button" id="btn-confirm">→ 결정 확정</button>
+          </div>
+        </div>
+        <div class="hitl-banner">
+          <div class="i">⚖</div>
+          <div class="t">본사 결정 필요 <small id="s3-trigger">—</small></div>
+          <span class="pill review"><span class="d"></span>검토 대기</span>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-h"><h4>매장에서 전달된 검토 자료</h4><span class="meta">자동 첨부</span></div>
+            <div class="findings" id="s3-findings"></div>
+            <div class="resp" id="s3-resp"></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h4>판단 근거 자료</h4><span class="meta" id="s3-evi-meta">—</span></div>
+            <div id="s3-evidence"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-h"><h4>최종 결정 작성</h4><span class="pill review"><span class="d"></span>작성중</span></div>
+          <div class="grid-3">
+            <div class="form-row"><label>매장 책임 (%)</label><input class="input" id="d-store" type="number" min="0" max="100"></div>
+            <div class="form-row"><label>본사 책임 (%)</label><input class="input" id="d-hq" type="number" min="0" max="100"></div>
+            <div class="form-row"><label>고객 / 자연 (%)</label><input class="input" id="d-customer" type="number" min="0" max="100"></div>
+          </div>
+          <div class="form-row"><label>채택한 원인</label><input class="input" id="d-cause"></div>
+          <div class="form-row"><label>고객 보상</label><input class="input" id="d-comp"></div>
+          <div class="form-row"><label>결정 사유 (기록 보관)</label><textarea class="input" id="d-reason"></textarea></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- Stage 4 -->
+<section class="stage" id="stage-4">
+  <div class="stage-head">
+    <span class="sh-tag">Step 4 · 처리 완료</span>
+    <h2>처리 결과가 고객·매장·본사 모두에게 자동 반영됩니다</h2>
+    <p class="lead">아래 SMS는 <b>방금 LLM이 생성한 실제 메시지</b>입니다. 모든 단계가 SQLite에 영속 저장되었고, 학습 자산 후보가 본사 결재 큐에 등록되었습니다.</p>
+  </div>
+  <div class="complete-hero">
+    <div class="ch-i">✓</div>
+    <h3>클레임 처리 완료 · <span id="s4-claim-id">—</span></h3>
+    <p>모든 판단·근거·이력이 SQLite에 영속 저장됨 — 다음 유사 케이스에서 즉시 인용 가능</p>
+  </div>
+  <div class="grid-2to1">
+    <div>
+      <h4 style="margin:0 0 10px;font-size:14px;color:var(--ink);font-weight:800">고객에게 발송된 SMS</h4>
+      <div class="sms-phone">
+        <div class="sms-frame">
+          <div class="sms-head">CleanOps · 강남점</div>
+          <div class="sms-msg" id="s4-sms">—</div>
+          <div class="sms-meta">방금 발송</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:10px">
+        <span class="sms-llm-badge"><span class="d"></span>실제 Claude LLM 생성</span>
+      </div>
+    </div>
+    <div>
+      <h4 style="margin:0 0 10px;font-size:14px;color:var(--ink);font-weight:800">이번 처리의 업무 결과</h4>
+      <div class="outcome-grid" id="s4-outcomes"></div>
+      <h4 style="margin:18px 0 8px;font-size:13px;color:var(--ink);font-weight:800">처리 시간 비교</h4>
+      <div class="compare-bars">
+        <div class="cmp-line manual">
+          <div class="cl-l">기존 방식<small>점주 수기 + 본사 콜</small></div>
+          <div class="cl-b"><i>90분</i></div>
+          <div class="cl-v">90분</div>
+        </div>
+        <div class="cmp-line aap">
+          <div class="cl-l">AAP<small>사람 검토만</small></div>
+          <div class="cl-b"><i style="width:31%">28분</i></div>
+          <div class="cl-v">28분</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <h4 style="margin:24px 0 8px;font-size:14px;color:var(--ink);font-weight:800">자료 누적 (본사 결재 대기)</h4>
+  <div style="background:var(--teal2);border:1px solid #a4dcd9;border-radius:10px;padding:14px 16px">
+    <p style="margin:0 0 8px;font-size:12px;color:var(--teal-strong);font-weight:800">
+      서버가 등록한 운영 정책 보강 후보 — 본사 결재 후 전국 매장에 즉시 반영
+    </p>
+    <ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--gray-700);line-height:1.7" id="s4-learning"></ul>
+  </div>
+  <div class="reset-row">
+    <button class="btn lg" type="button" id="btn-reset">↻ 다시 시작</button>
+  </div>
+</section>
+
+<!-- Value compare -->
+<section class="value-compare">
+  <div class="vc-head">
+    <span class="vc-tag">사용자 가치 비교</span>
+    <h2>이 변화가 누구에게, 어떻게 좋아지는가</h2>
+    <p>같은 1건의 클레임이 기존 방식과 AAP 방식으로 처리될 때, <b>점주·본사·고객</b> 각각이 무엇을 더 좋게 경험하는지를 한 화면으로 정리합니다.</p>
+  </div>
+  <div class="vc-grid" id="vc-grid"></div>
+</section>
+
+<!-- Loading overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-card">
+    <div class="overlay-spinner"></div>
+    <span class="live-mark"><span class="ld"></span>실제 서버 호출 중</span>
+    <h3 id="overlay-title">검토 자료 준비 중...</h3>
+    <p id="overlay-desc">실제 Claude LLM이 응답을 생성하고 있습니다. 5~15초 소요.</p>
+    <div class="overlay-steps" id="overlay-steps">
+      <div class="overlay-step" data-i="0">SQLite에 클레임 영속 저장</div>
+      <div class="overlay-step" data-i="1">본사 유사 사례 풀에서 추출</div>
+      <div class="overlay-step" data-i="2">Claude LLM 호출 (원인·책임 비율 산출)</div>
+      <div class="overlay-step" data-i="3">결과 저장 및 화면 렌더링</div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div>AAP PoC · 세탁 프랜차이즈 · v0.7 (server-backed) · FastAPI + Anthropic Claude + SQLite</div>
+  <div id="footer-date">2026-05-29</div>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  // ============================================================
+  // API helpers
+  // ============================================================
+  const API_BASE = window.location.origin;
+
+  async function apiCall(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API_BASE + path, opts);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`${res.status}: ${text}`);
+    }
+    return res.json();
+  }
+
+  // ============================================================
+  // Framing data (static)
+  // ============================================================
+  const framing = JSON.parse(document.getElementById('framing-data').textContent);
+  const $ = (id) => document.getElementById(id);
+
+  // ============================================================
+  // State
+  // ============================================================
+  let currentClaimId = null;
+  let currentReview = null;
+  let currentStage = 1;
+
+  const stages = [1,2,3,4].map(n => $('stage-' + n));
+  const stepEls = Array.from(document.querySelectorAll('.steps-row .step'));
+  const stageLabels = {
+    1: 'Stage 1 · 매장 접수',
+    2: 'Stage 2 · 점주 검토',
+    3: 'Stage 3 · 본사 결정',
+    4: 'Stage 4 · 처리 완료'
+  };
+
+  // ============================================================
+  // Workflow diagram highlights
+  // ============================================================
+  function applyWorkflowHighlight(n) {
+    document.querySelectorAll('[data-active-on]').forEach(el => {
+      const list = el.dataset.activeOn.split(',').map(s => +s.trim());
+      el.classList.toggle('wa-active', list.indexOf(n) !== -1);
+    });
+    const lbl = $('wa-stage-label');
+    if (lbl) lbl.innerHTML = '<span class="pulse"></span>' + stageLabels[n];
+  }
+
+  function showStage(n) {
+    currentStage = n;
+    stages.forEach(s => s.classList.toggle('active', +s.id.split('-')[1] === n));
+    stepEls.forEach(s => {
+      const sn = +s.dataset.step;
+      s.classList.toggle('active', sn === n);
+      s.classList.toggle('done', sn < n);
+    });
+    applyWorkflowHighlight(n);
+    window.scrollTo({ top: document.querySelector('.steps').offsetTop - 10, behavior: 'smooth' });
+  }
+
+  // ============================================================
+  // Hero & personas
+  // ============================================================
+  function renderHero() {
+    const c = framing.businessContext;
+    $('hb-industry').textContent = c.industry;
+    $('hb-store').innerHTML = '<b>' + c.store + '</b>';
+    $('hb-owner').textContent = c.ownerTenure;
+    $('hb-daily').textContent = c.dailyVolume;
+    $('hb-claim-diff').textContent = c.claimDifficulty;
+    $('hb-pains').innerHTML = c.pains.map(p => '<li class="hb-pain"><span>' + p + '</span></li>').join('');
+    $('hb-demo-summary').innerHTML = c.demoSummary;
+  }
+
+  function renderPersonas() {
+    $('vc-grid').innerHTML = framing.personaBenefits.map(p => `
+      <div class="vc-card ${p.color}">
+        <div class="vc-head-card">
+          <div class="avatar">${p.initial}</div>
+          <div class="vh-info"><b>${p.role} · ${p.name}</b><small>${p.context}</small></div>
+        </div>
+        <div class="vc-body">
+          <div class="vc-section">
+            <div class="vc-sec-label before"><span class="dot"></span>${p.before.label}</div>
+            <div class="vc-sec-body before"><span class="num">${p.before.headline}</span>${p.before.desc}</div>
+          </div>
+          <div class="vc-section">
+            <div class="vc-sec-label after"><span class="dot"></span>${p.after.label}</div>
+            <div class="vc-sec-body after"><span class="num">${p.after.headline}</span>${p.after.desc}</div>
+          </div>
+          <div class="vc-key">${p.keyPoint}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ============================================================
+  // Server status check
+  // ============================================================
+  async function checkServer() {
+    const live = $('server-live');
+    const status = $('server-status');
+    const meta = $('server-meta');
+    try {
+      const h = await apiCall('GET', '/api/health');
+      live.classList.remove('off', 'err');
+      if (h.anthropic_key_set) {
+        status.textContent = `서버 연결됨 · ${h.model} · 정책 ${h.policies_loaded}개 · 사례 ${h.cases_loaded}개`;
+      } else {
+        live.classList.add('err');
+        status.textContent = `서버 연결됨 — 다만 ANTHROPIC_API_KEY 미설정 (LLM 호출 시 fallback 사용)`;
+      }
+    } catch (e) {
+      live.classList.add('err');
+      status.textContent = '서버 연결 실패 — server.py 실행 확인';
+      meta.textContent = e.message.slice(0, 80);
+    }
+  }
+
+  // ============================================================
+  // Form pre-fill (Stage 1)
+  // ============================================================
+  async function loadDefaults() {
+    try {
+      const d = await apiCall('GET', '/api/scenario-defaults');
+      $('f-customer').value = d.customer;
+      $('f-item').value = d.item;
+      $('f-receipt').value = d.original_receipt;
+      $('f-complaint').value = d.complaint;
+      $('f-measurement').value = d.measurement;
+    } catch (e) {
+      console.warn('Failed to load defaults', e);
+    }
+  }
+
+  // ============================================================
+  // Overlay
+  // ============================================================
+  function showOverlay(title, desc, steps) {
+    const ov = $('overlay');
+    $('overlay-title').textContent = title;
+    $('overlay-desc').textContent = desc;
+    const stepEls = $('overlay-steps');
+    stepEls.innerHTML = steps.map((s, i) => `<div class="overlay-step" data-i="${i}">${s}</div>`).join('');
+    Array.from(stepEls.children).forEach(el => el.classList.remove('active','done'));
+    ov.classList.add('active');
+  }
+
+  function hideOverlay() {
+    $('overlay').classList.remove('active');
+  }
+
+  function advanceOverlayStep(i) {
+    const stepEls = Array.from(document.querySelectorAll('.overlay-step'));
+    stepEls.forEach((el, idx) => {
+      if (idx < i) { el.classList.add('done'); el.classList.remove('active'); }
+      else if (idx === i) { el.classList.add('active'); el.classList.remove('done'); }
+      else { el.classList.remove('active', 'done'); }
+    });
+  }
+
+  // ============================================================
+  // Stage 1 → Stage 2 (Submit + Prepare review)
+  // ============================================================
+  async function submitIntake() {
+    const intake = {
+      store: '강남점',
+      owner: '박철민',
+      customer: $('f-customer').value,
+      item: $('f-item').value,
+      complaint: $('f-complaint').value,
+      measurement: $('f-measurement').value,
+      original_receipt: $('f-receipt').value
+    };
+
+    showOverlay(
+      '검토 자료 준비 중...',
+      '실제 Claude LLM이 응답을 생성하고 있습니다. 5~15초 소요.',
+      [
+        'SQLite에 클레임 영속 저장',
+        '본사 유사 사례 풀에서 추출',
+        'Claude LLM 호출 (원인·책임 비율 산출)',
+        '결과 저장 및 화면 렌더링'
+      ]
+    );
+
+    try {
+      advanceOverlayStep(0);
+      const created = await apiCall('POST', '/api/claims', intake);
+      currentClaimId = created.claim_id;
+
+      advanceOverlayStep(1);
+      await new Promise(r => setTimeout(r, 300));
+
+      advanceOverlayStep(2);
+      const review = await apiCall('POST', `/api/claims/${encodeURIComponent(currentClaimId)}/prepare-review`);
+      currentReview = review;
+
+      advanceOverlayStep(3);
+      renderStage2(review);
+      await new Promise(r => setTimeout(r, 300));
+
+      hideOverlay();
+      showStage(2);
+    } catch (e) {
+      hideOverlay();
+      alert('서버 호출 실패: ' + e.message + '\n\nserver.py 실행 및 ANTHROPIC_API_KEY 확인 부탁드립니다.');
+    }
+  }
+
+  function renderStage2(review) {
+    $('s2-url').textContent = currentClaimId;
+    $('s2-crumb-id').textContent = currentClaimId;
+    $('s2-title').textContent = `클레임 검토 · ${$('f-customer').value.split(' (')[0]}`;
+
+    const sm = review.case_summary;
+    $('s2-summary').innerHTML = `
+      <dt>고객</dt><dd><b>${sm.customer}</b></dd>
+      <dt>의류</dt><dd>${sm.item}</dd>
+      <dt>원 접수</dt><dd>${sm.originalReceipt}</dd>
+      <dt>처리 기록</dt><dd>${sm.processingNote}</dd>
+      <dt>고객 동의</dt><dd><b>${sm.customerConsent}</b></dd>
+      <dt>오늘 호소</dt><dd><b style="color:var(--red)">${sm.todayComplaint}</b></dd>
+    `;
+
+    const cases = review.similar_cases || [];
+    $('s2-cases-meta').textContent = `${cases.length}건 추출`;
+    $('s2-cases').innerHTML = cases.map(c => `
+      <div class="item">
+        <span class="c-ref">${c.ref}</span>
+        <span class="c-reason"><b>${c.reason}</b></span>
+        <span class="c-out">${c.outcome}</span>
+      </div>
+    `).join('') || '<div style="font-size:11.5px;color:var(--muted);text-align:center;padding:14px">유사 사례 없음</div>';
+
+    const findings = review.findings || [];
+    $('s2-findings').innerHTML = findings.map((f, idx) => `
+      <div class="finding ${f.level === 'med' ? 'med' : f.level === 'high' ? 'high' : ''}">
+        <div class="n"><b>${['①','②','③','④','⑤'][idx] || '·'} ${f.name}</b><small>${f.detail}</small></div>
+        <div class="b"><i style="width:${f.weight}%"></i></div>
+        <div class="p">${f.weight}%</div>
+      </div>
+    `).join('');
+
+    const r = review.responsibility_proposal;
+    $('s2-resp').innerHTML = `
+      <div class="resp-cell store"><div class="l">매장</div><div class="v">${r.store}%</div></div>
+      <div class="resp-cell hq"><div class="l">본사</div><div class="v">${r.hq}%</div></div>
+      <div class="resp-cell customer"><div class="l">고객</div><div class="v">${r.customer}%</div></div>
+    `;
+
+    $('s2-actions').innerHTML = (review.recommended_actions || []).map((a, i) => `
+      <div class="action-item"><div class="n">${i+1}</div><div class="t">${a}</div></div>
+    `).join('');
+  }
+
+  // ============================================================
+  // Stage 2 → Stage 3 (Escalate)
+  // ============================================================
+  async function escalate() {
+    if (!currentClaimId) return;
+    try {
+      await apiCall('POST', `/api/claims/${encodeURIComponent(currentClaimId)}/escalate`);
+      renderStage3();
+      showStage(3);
+    } catch (e) {
+      alert('서버 호출 실패: ' + e.message);
+    }
+  }
+
+  function renderStage3() {
+    $('s3-url').textContent = currentClaimId;
+    $('s3-crumb-id').textContent = currentClaimId;
+    $('s3-title').textContent = `최종 판단 · ${$('f-customer').value.split(' (')[0]}`;
+    $('s3-trigger').textContent = currentReview.hitl_trigger || '책임 비율 10% 이상';
+
+    // Findings + resp (re-use Stage 2 data)
+    const findings = currentReview.findings || [];
+    $('s3-findings').innerHTML = findings.map((f, idx) => `
+      <div class="finding ${f.level === 'med' ? 'med' : f.level === 'high' ? 'high' : ''}">
+        <div class="n"><b>${['①','②','③','④','⑤'][idx] || '·'} ${f.name}</b></div>
+        <div class="b"><i style="width:${f.weight}%"></i></div>
+        <div class="p">${f.weight}%</div>
+      </div>
+    `).join('');
+    const r = currentReview.responsibility_proposal;
+    $('s3-resp').innerHTML = `
+      <div class="resp-cell store"><div class="l">매장 후보</div><div class="v">${r.store}%</div></div>
+      <div class="resp-cell hq"><div class="l">본사 후보</div><div class="v">${r.hq}%</div></div>
+      <div class="resp-cell customer"><div class="l">고객 후보</div><div class="v">${r.customer}%</div></div>
+    `;
+
+    const evi = currentReview.evidence || [];
+    $('s3-evi-meta').textContent = `${evi.length}건`;
+    $('s3-evidence').innerHTML = evi.map(e => `
+      <div class="src"><div class="si">${e.icon}</div><div><b>${e.title}</b><small>${e.detail}</small></div></div>
+    `).join('');
+
+    // Pre-fill decision form with the recommendation
+    // For demo: starting with AAP's suggested split
+    $('d-store').value = r.store;
+    $('d-hq').value = r.hq;
+    $('d-customer').value = r.customer;
+    $('d-cause').value = findings[0] ? findings[0].name : '';
+    $('d-comp').value = '50% 무료 재처리 (선의 보상)';
+    $('d-reason').value = '본사 정밀 측정 결과 검토 후 결정 예정. AAP가 정리한 후보 자료를 기반으로 판단.';
+  }
+
+  // ============================================================
+  // Stage 3 → Stage 4 (Decide + Generate SMS)
+  // ============================================================
+  async function confirmDecision() {
+    if (!currentClaimId) return;
+    const decision = {
+      store_pct: parseInt($('d-store').value) || 0,
+      hq_pct: parseInt($('d-hq').value) || 0,
+      customer_pct: parseInt($('d-customer').value) || 0,
+      cause: $('d-cause').value,
+      compensation: $('d-comp').value,
+      reason: $('d-reason').value,
+      reviewer: '이지영'
+    };
+
+    showOverlay(
+      '결정 확정 + SMS 생성 중...',
+      '실제 Claude LLM이 고객 SMS를 생성하고 있습니다.',
+      [
+        'SQLite에 본사 결정 영속 저장',
+        'Claude LLM 호출 (고객 SMS 생성)',
+        '학습 자산 후보 본사 결재 큐 등록',
+        'POS 반영 및 감사 추적 완료'
+      ]
+    );
+
+    try {
+      advanceOverlayStep(0);
+      await new Promise(r => setTimeout(r, 200));
+      advanceOverlayStep(1);
+      const result = await apiCall('POST', `/api/claims/${encodeURIComponent(currentClaimId)}/decide`, decision);
+      advanceOverlayStep(2);
+      await new Promise(r => setTimeout(r, 300));
+      advanceOverlayStep(3);
+      renderStage4(result);
+      await new Promise(r => setTimeout(r, 300));
+      hideOverlay();
+      showStage(4);
+    } catch (e) {
+      hideOverlay();
+      alert('서버 호출 실패: ' + e.message);
+    }
+  }
+
+  function renderStage4(result) {
+    $('s4-claim-id').textContent = currentClaimId;
+    $('s4-sms').textContent = result.sms_text;
+
+    $('s4-outcomes').innerHTML = `
+      <div class="outcome"><div class="o-l">처리 시간</div><div class="o-v">28<span class="unit">분</span></div><div class="o-d">기존 대비 -69%</div></div>
+      <div class="outcome"><div class="o-l">본사 콜 응대</div><div class="o-v">0<span class="unit">건</span></div><div class="o-d">점주 자체 검토</div></div>
+      <div class="outcome"><div class="o-l">감사 가능 항목</div><div class="o-v">${result.log_count}<span class="unit">건</span></div><div class="o-d">SQLite 영속</div></div>
+      <div class="outcome"><div class="o-l">학습 자산 후보</div><div class="o-v">${result.learning_count}<span class="unit">건</span></div><div class="o-d">본사 결재 큐</div></div>
+    `;
+
+    $('s4-learning').innerHTML = (result.learning_items || []).map(l => `<li>${l}</li>`).join('')
+      || '<li style="color:var(--muted)">이번 케이스에서는 자연 원인 비율이 낮아 학습 자산 등록 없음</li>';
+  }
+
+  // ============================================================
+  // Reset
+  // ============================================================
+  function reset() {
+    currentClaimId = null;
+    currentReview = null;
+    showStage(1);
+  }
+
+  // ============================================================
+  // Wiring
+  // ============================================================
+  $('btn-submit-intake').addEventListener('click', submitIntake);
+  $('btn-to-hq').addEventListener('click', escalate);
+  $('btn-confirm').addEventListener('click', confirmDecision);
+  $('btn-reset').addEventListener('click', reset);
+
+  stepEls.forEach(s => {
+    s.addEventListener('click', () => {
+      const n = +s.dataset.step;
+      // Allow free navigation between visited stages
+      if (n === 1 || (currentClaimId && n <= 2) || (currentReview && n <= 3) || n <= currentStage) {
+        showStage(n);
+      }
+    });
+  });
+
+  // ============================================================
+  // Init
+  // ============================================================
+  renderHero();
+  renderPersonas();
+  showStage(1);
+  applyWorkflowHighlight(1);
+  checkServer();
+  loadDefaults();
+})();
+</script>
+</body>
+</html>

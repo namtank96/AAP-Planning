@@ -22,3 +22,15 @@ desktop.ini
 
 # 로그
 *.log
+
+# 프로토타입 의존성·빌드 산출물
+node_modules/
+.venv/
+.next/
+__pycache__/
+*.pyc
+
+# 로컬 DB / 시크릿 (예제 파일 .env.example, .env.local.example 은 추적 유지)
+*.db
+.env
+.env.local

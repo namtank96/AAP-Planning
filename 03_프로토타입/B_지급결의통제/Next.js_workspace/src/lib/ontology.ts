@@ -1,0 +1,76 @@
+import type { Control } from "./types";
+
+export const CONTROLS: Control[] = [
+  {
+    id: "C-FIN-007",
+    name: "지급결의 분리원칙 통제",
+    domain: "재무 · 지급결의",
+    riskLevel: "high",
+    status: "pending",
+    description:
+      "5천만 원 초과 지급결의 시 요청자·결재자 분리원칙, 승인권한 매트릭스, 증빙 구비 여부를 평가합니다.",
+    policies: ["회계규정 §12", "회계규정 §12-3", "회계규정 §12-5", "K-SOX 4.3"],
+    evidenceTypes: ["영수증", "인보이스", "결재 이력"],
+    accounts: ["11800", "11801", "11802", "11803"],
+    populationSize: 1247,
+    sampleSize: 50,
+  },
+  {
+    id: "C-FIN-008",
+    name: "여신 한도 통제",
+    domain: "재무 · 여신",
+    riskLevel: "high",
+    status: "running",
+    description: "여신 한도 초과 거래의 사전 승인 및 모니터링 통제",
+    policies: ["여신규정 §8", "K-SOX 4.4"],
+    evidenceTypes: ["여신 한도표", "승인 이력", "예외 보고서"],
+    accounts: ["21100", "21101"],
+    populationSize: 856,
+    sampleSize: 40,
+  },
+  {
+    id: "C-OPS-021",
+    name: "IT 변경 통제",
+    domain: "IT · 변경관리",
+    riskLevel: "medium",
+    status: "completed",
+    description: "Production 환경 변경의 사전 승인·테스트·롤백 계획 검증",
+    policies: ["IT 변경관리규정 §4"],
+    evidenceTypes: ["변경 요청서", "테스트 결과", "승인 이력"],
+    accounts: [],
+    populationSize: 312,
+    sampleSize: 30,
+    findingsCount: 0,
+    lastEvaluated: "2026-05-14",
+  },
+  {
+    id: "C-FIN-012",
+    name: "계정 잔액 확인 통제",
+    domain: "재무 · 결산",
+    riskLevel: "medium",
+    status: "pending",
+    description: "월말 주요 계정 잔액의 외부 증빙 일치 확인",
+    policies: ["결산규정 §6"],
+    evidenceTypes: ["은행 잔액 증명", "재고 실사표"],
+    accounts: ["10100", "12000"],
+    populationSize: 184,
+    sampleSize: 25,
+  },
+  {
+    id: "C-HR-005",
+    name: "급여 지급 통제",
+    domain: "인사 · 급여",
+    riskLevel: "low",
+    status: "pending",
+    description: "월 급여 계산·승인·지급의 분리원칙 통제",
+    policies: ["인사규정 §15"],
+    evidenceTypes: ["급여 명세", "근태 기록", "승인 이력"],
+    accounts: ["51000"],
+    populationSize: 482,
+    sampleSize: 20,
+  },
+];
+
+export function getControl(id: string): Control | undefined {
+  return CONTROLS.find((c) => c.id === id);
+}

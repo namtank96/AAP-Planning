@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>금융 내부통제, AAP에서 이렇게 흐릅니다</title>
+<style>
+  :root{
+    --ink:#0F172A; --sub:#64748B; --mut:#94A3B8; --line:#E2E8F0; --bg:#F4F6F9; --card:#fff;
+    --blue:#2563EB; --blue-soft:#EFF4FF; --amber:#D97706; --amber-soft:#FFF7ED;
+    --green:#059669; --green-soft:#ECFDF5; --violet:#7C3AED;
+    --shadow:0 1px 2px rgba(15,23,42,.05),0 12px 34px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    background:radial-gradient(circle at 50% 0%,#FBFCFE,var(--bg));color:var(--ink);line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh}
+  .page{max-width:1180px;margin:0 auto;padding:40px 32px 56px}
+  /* header */
+  .head{text-align:center;margin-bottom:34px}
+  .head .eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--blue);text-transform:uppercase;margin-bottom:10px}
+  .head h1{margin:0 0 10px;font-size:30px;letter-spacing:-.02em;font-weight:800}
+  .head p{margin:0;font-size:15px;color:var(--sub)}
+  .head .case-chip{display:inline-flex;align-items:center;gap:8px;margin-top:16px;font-size:13px;font-weight:700;
+    background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 16px;box-shadow:var(--shadow)}
+  .head .case-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
+  .head .case-chip span{color:var(--sub);font-weight:600}
+  /* AAP layer container */
+  .layer{position:relative;border:1.5px solid #C7D2FE;background:linear-gradient(180deg,#fff,#FBFCFF);
+    border-radius:22px;padding:42px 28px 30px;box-shadow:var(--shadow)}
+  .layer-tag{position:absolute;top:-15px;left:50%;transform:translateX(-50%);white-space:nowrap;
+    background:var(--blue);color:#fff;font-size:13px;font-weight:800;letter-spacing:.02em;
+    padding:7px 20px;border-radius:999px;box-shadow:0 6px 16px rgba(37,99,235,.28)}
+  /* flow */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center}
+  .step{flex:1;min-width:150px;max-width:185px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:6px 8px}
+  .step .ic{width:62px;height:62px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+    font-size:28px;background:var(--blue-soft);border:1.5px solid #BFDBFE;margin-bottom:12px;transition:.2s}
+  .step .num{font-size:11px;font-weight:800;color:var(--mut);letter-spacing:.05em}
+  .step .ti{font-size:16px;font-weight:800;margin:2px 0 6px}
+  .step .de{font-size:12.5px;color:var(--sub);line-height:1.5}
+  .arrow{display:flex;align-items:center;color:#CBD5E1;font-size:22px;font-weight:700;padding:0 2px;align-self:flex-start;margin-top:34px}
+  /* human emphasis */
+  .step.human .ic{background:var(--amber-soft);border-color:#FCD34D}
+  .step.human .ti{color:var(--amber)}
+  .step.human .tag{display:inline-block;margin-top:7px;font-size:10.5px;font-weight:800;color:#92400E;
+    background:#fff;border:1px solid #FCD34D;border-radius:999px;padding:3px 10px}
+  .step.learn .ic{background:var(--green-soft);border-color:#A7F3D0}
+  .step.learn .ti{color:var(--green)}
+  /* loop hint */
+  .loop-note{text-align:center;font-size:12px;color:var(--mut);margin-top:18px}
+  .loop-note b{color:var(--violet)}
+  /* connector down */
+  .connector{display:flex;flex-direction:column;align-items:center;margin:10px 0 4px}
+  .connector .ln{width:2px;height:26px;background:#C7D2FE}
+  .connector .lbl{font-size:12.5px;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:999px;
+    padding:6px 16px;font-weight:600}
+  .connector .lbl b{color:var(--ink);font-weight:800}
+  /* base system */
+  .base{border:1.5px dashed var(--line);background:#fff;border-radius:18px;padding:18px 22px;display:flex;
+    align-items:center;gap:18px;box-shadow:var(--shadow)}
+  .base .btag{flex:none;font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
+  .base .bitems{display:flex;gap:9px;flex-wrap:wrap;flex:1}
+  .base .bi{font-size:12.5px;color:var(--sub);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-weight:600}
+  .base .keep{flex:none;font-size:11.5px;font-weight:800;color:#047857;background:var(--green-soft);border:1px solid #A7F3D0;border-radius:8px;padding:6px 12px}
+  /* footer message */
+  .msg{text-align:center;margin-top:30px;font-size:15px;color:var(--ink);font-weight:600;line-height:1.7}
+  .msg .hl{color:var(--blue);font-weight:800}
+  .foot{text-align:center;margin-top:26px;font-size:11px;color:var(--mut)}
+  @media(max-width:860px){
+    .flow{flex-direction:column;align-items:stretch}
+    .step{max-width:none;flex-direction:row;text-align:left;gap:14px;align-items:center}
+    .step .ic{margin-bottom:0}
+    .arrow{transform:rotate(90deg);align-self:center;margin:2px 0}
+    .head h1{font-size:23px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <div class="eyebrow">AAP · 금융 내부통제</div>
+    <h1>내부통제 업무, AAP에서 이렇게 흐릅니다</h1>
+    <p>사건 한 건이 접수되면, 판단부터 검토·실행·기록·학습까지 끊기지 않고 하나로 이어집니다.</p>
+    <div class="case-chip"><span class="dot"></span>예시 사건 <b style="margin:0 2px">승인권한 초과 가능성</b> <span>· 여신심사본부</span></div>
+  </div>
+
+  <!-- AAP 의사결정 운영 계층 -->
+  <div class="layer">
+    <div class="layer-tag">AAP가 더하는 것 · 내부통제 의사결정 흐름</div>
+
+    <div class="flow">
+      <div class="step">
+        <div class="ic">📥</div>
+        <div class="num">STEP 1</div>
+        <div class="ti">접수</div>
+        <div class="de">점검·이상 징후가 흩어지지 않고 한 곳으로 모입니다.</div>
+      </div>
+      <div class="arrow">→</div>
+
+      <div class="step">
+        <div class="ic">🔗</div>
+        <div class="num">STEP 2</div>
+        <div class="ti">연결</div>
+        <div class="de">관련 규정·책임자·비슷한 과거 사례를 자동으로 묶어줍니다.</div>
+      </div>
+      <div class="arrow">→</div>
+
+      <div class="step">
+        <div class="ic">💡</div>
+        <div class="num">STEP 3</div>
+        <div class="ti">제안</div>
+        <div class="de">위반 가능성과 조치 후보를 <b>근거와 함께</b> 정리해 보여줍니다.</div>
+      </div>
+      <div class="arrow">→</div>
+
+      <div class="step human">
+        <div class="ic">👤</div>
+        <div class="num">STEP 4</div>
+        <div class="ti">결정</div>
+        <div class="de">담당자가 검토하고 최종 판단합니다.</div>
+        <div class="tag">사람이 결정</div>
+      </div>
+      <div class="arrow">→</div>
+
+      <div class="step">
+        <div class="ic">⚙️</div>
+        <div class="num">STEP 5</div>
+        <div class="ti">실행 · 기록</div>
+        <div class="de">개선과제·소명 요청·알림이 실행되고, 감사 가능한 이력으로 남습니다.</div>
+      </div>
+      <div class="arrow">→</div>
+
+      <div class="step learn">
+        <div class="ic">↻</div>
+        <div class="num">STEP 6</div>
+        <div class="ti">학습</div>
+        <div class="de">이번 결정이 쌓여 다음 비슷한 사건에 다시 쓰입니다.</div>
+      </div>
+    </div>
+
+    <div class="loop-note">⟲ 결정이 쌓일수록 <b>다음 사건은 더 빠르고 일관되게</b> 처리됩니다.</div>
+  </div>
+
+  <!-- 기존 시스템 위에 얹힌다 -->
+  <div class="connector">
+    <div class="ln"></div>
+    <div class="lbl">AAP는 기존 시스템을 <b>대체하지 않고</b>, 그 위에 얹힙니다</div>
+    <div class="ln"></div>
+  </div>
+
+  <div class="base">
+    <div class="btag">기존 내부통제 시스템</div>
+    <div class="bitems">
+      <span class="bi">점검 데이터 수집</span>
+      <span class="bi">문서·증빙 보관</span>
+      <span class="bi">통합 관리 화면</span>
+      <span class="bi">보고·통계</span>
+    </div>
+    <div class="keep">그대로 유지</div>
+  </div>
+
+  <div class="msg">
+    기존 시스템은 <span style="color:var(--sub)">데이터를 모으고 관리</span>하는 데 강합니다.<br>
+    AAP는 그 위에서 <span class="hl">"사건이 들어온 순간부터 판단·검토·실행·기록·학습"</span>을 하나로 이어줍니다.
+  </div>
+
+  <div class="foot">AAP 내부통제 업무 플로우 구조도 · v0.1 (2026-05-29) · KT DS AX컨설팅팀 · 설명용 개념도</div>
+
+</div>
+</body>
+</html>

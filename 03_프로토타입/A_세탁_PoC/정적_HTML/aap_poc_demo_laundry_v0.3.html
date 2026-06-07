@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP 작동 방식 · 세탁 프랜차이즈 클레임 처리 사례 · v0.3</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2; --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--gray-75);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.7;font-size:15px}
+.page{max-width:1180px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px var(--gray-150)}
+
+/* ============= Hero ============= */
+.hero{padding:56px 64px 44px;background:var(--gray-900);color:#fff}
+.eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7);font-weight:800;margin-bottom:14px}
+.hero h1{font-size:34px;line-height:1.2;margin:0 0 16px;letter-spacing:-.03em;color:#fff;max-width:920px}
+.hero p.lead{font-size:15.5px;line-height:1.75;color:rgba(255,255,255,.78);max-width:880px;margin:0}
+.hero p.lead strong{color:#fff;font-weight:700}
+.hero-meta{margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,.16);display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;font-size:12.5px;color:rgba(255,255,255,.7)}
+.hero-meta b{display:block;color:#fff;font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:10.5px;margin-bottom:4px}
+
+/* ============= TOC ============= */
+.toc{padding:18px 64px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.toc-progress{height:2px;background:var(--gray-100);border-radius:999px;overflow:hidden;margin-bottom:10px}
+.toc-progress-bar{height:100%;width:0;background:var(--red);border-radius:999px;transition:width .12s linear}
+.toc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.toc a{display:flex;gap:6px;align-items:center;padding:7px 9px;border:1px solid var(--line);background:var(--gray-50);border-radius:8px;font-size:11.5px;color:var(--gray-600);transition:all .18s;line-height:1.3}
+.toc a b{display:inline-flex;min-width:22px;height:18px;align-items:center;justify-content:center;border-radius:5px;background:var(--gray-900);color:#fff;font-size:10px;font-weight:900;flex-shrink:0}
+.toc a:hover{border-color:var(--gray-400);background:#fff;color:var(--ink)}
+.toc a.active{border-color:var(--red);background:#fff;color:var(--ink);font-weight:800}
+.toc a.active b{background:var(--red)}
+
+/* ============= Sections ============= */
+section{padding:48px 64px;border-bottom:1px solid var(--line);background:#fff}
+.section-head{margin-bottom:22px}
+.section-head .s-num{display:inline-block;font-size:11px;font-weight:900;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+.section-head h2{margin:0;font-size:28px;letter-spacing:-.025em;line-height:1.22;color:var(--ink)}
+.section-head h2 strong{color:var(--red);font-weight:900}
+.section-head p.lead{margin:12px 0 0;font-size:15px;color:var(--sub);line-height:1.7;max-width:880px}
+.section-head p.lead strong{color:var(--ink);font-weight:700}
+
+p{margin:0 0 16px;color:var(--gray-700);line-height:1.78}
+p:last-child{margin-bottom:0}
+p strong{color:var(--ink);font-weight:700}
+p em{font-style:normal;background:linear-gradient(transparent 60%,rgba(224,40,47,.14) 60%);padding:0 1px;font-weight:600;color:var(--ink)}
+
+/* ============= TL;DR ============= */
+.tldr{background:#fbfbfc;border:1px solid var(--line);border-left:4px solid var(--red);border-radius:12px;padding:22px 26px}
+.tldr .tldr-label{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--red);margin-bottom:8px}
+.tldr h3{margin:0 0 10px;font-size:18px;letter-spacing:-.015em;line-height:1.35;color:var(--ink)}
+.tldr ul{margin:10px 0 0;padding-left:20px;font-size:14px;line-height:1.75;color:var(--gray-700)}
+.tldr ul li{margin-bottom:5px}
+.tldr ul li:last-child{margin-bottom:0}
+.tldr ul li b{color:var(--ink);font-weight:700}
+
+/* ============= Scenario intro ============= */
+.scenario-card{background:var(--gray-50);border:1px solid var(--line);border-radius:14px;padding:24px 28px;margin-top:14px}
+.scenario-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:16px 0 18px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.scenario-meta .sm-cell{display:flex;flex-direction:column;gap:3px}
+.scenario-meta .sm-label{font-size:10.5px;font-weight:900;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.scenario-meta .sm-val{font-size:13.5px;color:var(--ink);font-weight:700;line-height:1.4}
+.scenario-meta .sm-val small{display:block;color:var(--muted);font-size:11.5px;font-weight:500;margin-top:2px}
+.cast{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.cast .person{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.cast .p-role{font-size:10.5px;color:var(--muted);font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.cast .p-name{font-size:14px;color:var(--ink);font-weight:800;margin-bottom:3px}
+.cast .p-desc{font-size:11.5px;color:var(--sub);line-height:1.5}
+
+/* ============= Loop reference (compact) ============= */
+.loop-ref{margin-top:24px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.loop-ref h4{margin:0 0 4px;font-size:12.5px;color:var(--muted);font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.loop-ref p.sub{margin:0 0 12px;font-size:12px;color:var(--sub);line-height:1.55}
+.loop-ref .loop-row{display:grid;grid-template-columns:1fr 14px 1fr 14px 1fr 14px 1fr 14px 1fr;gap:0;align-items:center}
+.loop-ref .l-node{background:var(--gray-50);border:1px solid var(--line);border-radius:8px;padding:9px 8px;text-align:center;font-size:11.5px;font-weight:800;color:var(--ink);line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+.loop-ref .l-node.star{background:var(--teal2);border-color:#a4dcd9;color:var(--teal-strong)}
+.loop-ref .l-arr{text-align:center;color:var(--gray-400);font-weight:900;font-size:13px}
+.loop-ref .trust{margin-top:8px;background:var(--gray-900);color:rgba(255,255,255,.86);border-radius:7px;padding:6px 12px;font-size:10.5px;letter-spacing:.05em;text-align:center;font-weight:700}
+
+/* ============= Step block (main content) ============= */
+.step{padding:42px 0;border-top:1px solid var(--line)}
+.step:first-of-type{padding-top:28px;border-top:0}
+.step-head{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:baseline;margin-bottom:18px}
+.step-num{display:inline-flex;align-items:center;justify-content:center;background:var(--ink);color:#fff;border-radius:8px;width:42px;height:42px;font-size:15px;font-weight:900;letter-spacing:.02em}
+.step-num.star{background:var(--red)}
+.step-title{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.3;margin:0}
+.step-loop-pos{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--gray-50);border:1px solid var(--line);padding:5px 11px;border-radius:999px;white-space:nowrap}
+.step-loop-pos.star{background:var(--teal2);border-color:#a4dcd9;color:var(--teal-strong)}
+.step-loop-pos.hitl{background:#fff8e1;border-color:#e9c66a;color:#8a6210}
+
+.step-body{display:grid;grid-template-columns:1fr;gap:18px}
+.narrative{font-size:15px;line-height:1.78;color:var(--gray-700)}
+.narrative p{margin:0 0 14px}
+.narrative p:last-child{margin-bottom:0}
+.narrative ul.cands{margin:8px 0 16px;padding:0;list-style:none;border-left:3px solid var(--red);padding-left:16px}
+.narrative ul.cands li{font-size:14px;line-height:1.7;color:var(--gray-700);margin-bottom:4px}
+.narrative ul.cands li b{color:var(--ink);font-weight:700}
+.narrative ul.cases{margin:8px 0 16px;padding:0;list-style:none;border-left:3px solid var(--gray-300);padding-left:16px}
+.narrative ul.cases li{font-size:13.5px;line-height:1.7;color:var(--sub);margin-bottom:3px;font-family:inherit}
+.narrative ul.cases li b{color:var(--ink);font-weight:700}
+
+/* Comparison box (현장 ↔ AAP) embedded in step */
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:6px 0 6px}
+.compare-box .cb-side{padding:18px 20px;font-size:13.5px;line-height:1.7;color:var(--gray-700)}
+.compare-box .cb-side.before{background:#fafafa;border-right:1px solid var(--line)}
+.compare-box .cb-side.after{background:#fffafa}
+.compare-box .cb-label{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;display:inline-block;padding:3px 9px;border-radius:5px}
+.compare-box .cb-side.before .cb-label{background:var(--gray-200);color:var(--gray-700)}
+.compare-box .cb-side.after .cb-label{background:var(--red);color:#fff}
+.compare-box .cb-title{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:7px;letter-spacing:-.005em}
+.compare-box .cb-side p{margin:0;color:var(--gray-700);line-height:1.65;font-size:13px}
+.compare-box .cb-side p strong{color:var(--ink);font-weight:700}
+.compare-box .cb-side.after .cb-title{color:var(--ink)}
+
+/* Implementation note (작은 박스, 읽고싶은 사람만) */
+.impl-note{background:#fbfbfc;border:1px dashed var(--gray-300);border-radius:10px;padding:13px 16px;margin-top:8px}
+.impl-note .in-label{display:inline-block;font-size:9.5px;font-weight:900;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;padding:2px 7px;background:var(--gray-100);border-radius:4px}
+.impl-note p{margin:0;font-size:12.5px;color:var(--sub);line-height:1.65}
+.impl-note p strong{color:var(--gray-700);font-weight:700}
+
+/* ============= Feasibility section ============= */
+.feasibility{display:grid;gap:14px;margin-top:8px}
+.feas-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 24px;display:grid;grid-template-columns:64px 1fr;gap:18px;align-items:start}
+.feas-num{font-size:24px;font-weight:900;color:var(--red);letter-spacing:-.02em;line-height:1}
+.feas-body h3{margin:0 0 8px;font-size:16px;color:var(--ink);letter-spacing:-.01em}
+.feas-body p{margin:0;font-size:14px;line-height:1.75;color:var(--gray-700)}
+.feas-body p strong{color:var(--ink);font-weight:700}
+
+.feas-summary{margin-top:20px;background:var(--gray-900);color:#fff;border-radius:12px;padding:22px 26px}
+.feas-summary p{margin:0;color:rgba(255,255,255,.88);font-size:14.5px;line-height:1.75}
+.feas-summary p strong{color:#fff;font-weight:700}
+.feas-summary .fs-label{display:inline-block;font-size:10.5px;font-weight:900;color:#ffb4b8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+
+/* ============= Comparison matrix ============= */
+.compare-matrix{border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;width:100%;font-size:13px;margin-top:8px}
+.compare-matrix th{background:var(--gray-900);color:#fff;text-align:center;padding:12px 14px;font-size:12.5px;font-weight:800;letter-spacing:.02em}
+.compare-matrix th.head-row{background:var(--gray-700);text-align:left;width:230px}
+.compare-matrix th.head-aap{background:var(--red)}
+.compare-matrix td{padding:11px 14px;text-align:center;color:var(--gray-600);border-top:1px solid var(--line);vertical-align:middle;line-height:1.5}
+.compare-matrix td.scenario-name{text-align:left;background:var(--gray-50);color:var(--ink);font-weight:700}
+.compare-matrix td.scenario-name small{display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:2px}
+.compare-matrix td.col-aap{background:#fff8f8;color:var(--ink);font-weight:700}
+.compare-matrix td.col-aap b{color:var(--red);font-weight:800}
+.compare-matrix .x{color:var(--gray-400);font-weight:800}
+.compare-matrix .partial{color:var(--gray-600);font-weight:600}
+
+/* ============= Industry bridge ============= */
+.bridge-shell{margin-top:8px;border:1px solid var(--line);border-radius:14px;background:#fbfbfc;padding:22px 24px}
+.bridge-flow{display:grid;grid-template-columns:1fr 36px 1fr 36px 1fr;gap:8px;align-items:stretch}
+.bridge-node{border:1.5px solid var(--gray-300);background:#fff;border-radius:11px;padding:14px 16px;display:flex;flex-direction:column;gap:5px}
+.bridge-node.now{border-color:var(--red)}
+.bridge-node.mid{border-color:#e9c66a;background:#fffcf2}
+.bridge-node.next{border-color:#a4dcd9;background:var(--teal2)}
+.bridge-node .stage{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.bridge-node.now .stage{color:var(--red)}
+.bridge-node.mid .stage{color:#8a6210}
+.bridge-node.next .stage{color:var(--teal-strong)}
+.bridge-node h4{margin:1px 0 4px;font-size:14.5px;color:var(--ink);letter-spacing:-.005em}
+.bridge-node p{margin:0;font-size:12.5px;color:var(--gray-600);line-height:1.6}
+.bridge-arrow{display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--gray-400);font-weight:900}
+.bridge-shared{margin-top:16px;padding-top:14px;border-top:1px dashed var(--gray-400);font-size:13px;color:var(--sub);line-height:1.7}
+.bridge-shared strong{color:var(--ink)}
+
+/* ============= PoC plan ============= */
+.poc-stages{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+.poc-stage{background:#fff;border:1px solid var(--line);border-radius:11px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;position:relative}
+.poc-stage::after{content:"\2192";position:absolute;right:-9px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--gray-400);font-weight:900;background:#fff;width:18px;height:18px;display:flex;align-items:center;justify-content:center;z-index:1}
+.poc-stage:last-child::after{display:none}
+.poc-stage .ps-num{font-size:10.5px;font-weight:900;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.poc-stage h4{margin:1px 0 3px;font-size:15px;color:var(--ink)}
+.poc-stage .ps-dur{font-size:11.5px;color:var(--red);font-weight:800;letter-spacing:.02em;margin-bottom:6px}
+.poc-stage p{margin:0;font-size:12.5px;color:var(--gray-600);line-height:1.6}
+.poc-foot{margin-top:14px;padding:13px 16px;background:var(--gray-50);border:1px solid var(--line);border-radius:10px;font-size:12.5px;color:var(--sub);line-height:1.65}
+.poc-foot strong{color:var(--ink)}
+
+/* ============= Footer ============= */
+.footer{padding:22px 64px;background:#0e1014;color:#fff;display:flex;justify-content:space-between;gap:20px;font-size:11.5px}
+.footer div{color:rgba(255,255,255,.6)}
+
+/* ============= Responsive ============= */
+@media(max-width:1000px){
+  .toc-grid{grid-template-columns:repeat(2,1fr)}
+  .hero-meta{grid-template-columns:1fr}
+  .scenario-meta{grid-template-columns:1fr 1fr}
+  .cast{grid-template-columns:1fr 1fr}
+  .compare-box{grid-template-columns:1fr}
+  .compare-box .cb-side.before{border-right:0;border-bottom:1px solid var(--line)}
+  .loop-ref .loop-row{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
+  .loop-ref .l-arr{display:none}
+  .step-head{grid-template-columns:auto 1fr}
+  .step-loop-pos{grid-column:1/-1;justify-self:start;margin-top:6px}
+  .bridge-flow{grid-template-columns:1fr}
+  .bridge-arrow{transform:rotate(90deg);justify-self:center}
+  .poc-stages{grid-template-columns:1fr}
+  .poc-stage::after{display:none}
+  section,.hero,.footer,.toc{padding-left:24px;padding-right:24px}
+  .hero h1{font-size:24px}
+}
+@media print{
+  body{background:#fff}
+  .page{box-shadow:none;max-width:none}
+  .toc{position:static}
+  section{break-inside:avoid;page-break-inside:avoid}
+  .step{break-inside:avoid;page-break-inside:avoid}
+  .toc-progress{display:none}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ============= HERO ============= -->
+<section class="hero" style="border-bottom:0">
+  <div class="eyebrow">AAP Demo · v0.3 · 2026-05-27</div>
+  <h1>AAP가 실제로 작동하는 방식 · 세탁 프랜차이즈 클레임 처리 사례</h1>
+  <p class="lead">
+    본 문서는 <strong>한 건의 클레임이 처리되는 과정</strong>을 따라가며,
+    AAP가 <strong>어떻게 작동하는지</strong>, <strong>기존 방식과 어디서 다른지</strong>,
+    그리고 <strong>이 접근이 정말 구현 가능하고 타당한지</strong>를 한 번에 검토하기 위한 자료입니다.
+  </p>
+  <div class="hero-meta">
+    <div><b>대상</b>경영진 내부 보고 · 고객 시연(설득)</div>
+    <div><b>읽는 방법</b>위에서 아래로 순서대로 · 약 12분 소요</div>
+    <div><b>매핑</b>v300 선제안서 §4-1 · §5 · 별첨 A</div>
+  </div>
+</section>
+
+<!-- ============= TOC ============= -->
+<nav class="toc">
+  <div class="toc-progress"><div class="toc-progress-bar"></div></div>
+  <div class="toc-grid">
+    <a href="#s1"><b>01</b>TL;DR · 한눈에</a>
+    <a href="#s2"><b>02</b>시나리오 · 무슨 일이</a>
+    <a href="#s3"><b>03</b>AAP 작동 방식 (6단계)</a>
+    <a href="#s4"><b>04</b>구현 타당성</a>
+    <a href="#s5"><b>05</b>비교 · 산업 확장 · PoC</a>
+  </div>
+</nav>
+
+<!-- ============= 01. TL;DR ============= -->
+<section id="s1">
+  <div class="section-head">
+    <span class="s-num">01 · TL;DR</span>
+    <h2>한 건의 클레임이 보여주는 AAP의 본질</h2>
+  </div>
+  <div class="tldr">
+    <div class="tldr-label">요약</div>
+    <h3>AAP는 *판단을 대체*하는 시스템이 아니라, *판단의 근거·폭·일관성*을 갖춰주는 운영 구조입니다.</h3>
+    <p style="margin:0;font-size:14px;line-height:1.75;color:var(--gray-700)">
+      세탁 프랜차이즈의 가장 어려운 업무 중 하나인 *클레임 처리*를 따라가면,
+      기존 점주 수기 방식·RPA·챗봇이 닿지 못하는 영역을
+      AAP가 어떻게 <strong>운영 가능한 형태로 묶어내는지</strong> 한눈에 드러납니다.
+    </p>
+    <ul>
+      <li><b>작동 방식</b> · 입력 정리 → 이력 자동 로드 → 원인 후보·근거 제시 → 유사 사례·책임 비율 → 사람 검토(HITL) → 시스템 반영 + 학습 환류</li>
+      <li><b>기존과의 차이</b> · 점주 경험·감 의존 → <strong>근거·폭·일관성을 갖춘 후보 제시</strong>로 전환. 매장마다 다른 판단 → <strong>같은 사례는 같은 기준으로</strong></li>
+      <li><b>타당성</b> · 새 기술 발명이 아닙니다. <strong>이미 검증된 업무 운영 원칙 (정책·결재·감사·승인)</strong>을 Agent 시대에 맞게 재조립하는 작업입니다</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============= 02. 시나리오 ============= -->
+<section id="s2">
+  <div class="section-head">
+    <span class="s-num">02 · 시나리오</span>
+    <h2>어느 평범한 아침, 매장에 클레임이 접수되었습니다</h2>
+    <p class="lead">
+      이 문서가 따라가는 사례는 가장 흔하고, 가장 어려운 유형 중 하나입니다 — <strong>고가 의류 처리 후 수축 분쟁</strong>.
+      매장 직원·점주·본사·고객 네 명의 이해관계가 얽히는 자리에서, AAP가 어떻게 흐름을 정리하는지를 봅니다.
+    </p>
+  </div>
+
+  <div class="scenario-card">
+    <div class="scenario-meta">
+      <div class="sm-cell">
+        <span class="sm-label">사건</span>
+        <span class="sm-val">캐시미어 코트 수축 분쟁<small>처리 보름 후 클레임 접수</small></span>
+      </div>
+      <div class="sm-cell">
+        <span class="sm-label">접수자</span>
+        <span class="sm-val">박철민 (점주 5년차)<small>강남점</small></span>
+      </div>
+      <div class="sm-cell">
+        <span class="sm-label">고객</span>
+        <span class="sm-val">최민수 (회원 5년)<small>정기 회원 · 처리 이력 12건</small></span>
+      </div>
+      <div class="sm-cell">
+        <span class="sm-label">호소</span>
+        <span class="sm-val">"한 사이즈 줄었다"<small>고객 측 측정 -2cm</small></span>
+      </div>
+    </div>
+
+    <p style="font-size:14.5px;line-height:1.78;color:var(--gray-700);margin:0">
+      보름 전, 고객 최민수는 와인 얼룩이 묻은 캐시미어 코트를 매장에 맡겼습니다. 접수 시점에 점주는
+      <strong>"옅은 잔류·변색이 발생할 수 있다"</strong>는 위험을 사전에 안내했고, 고객은 디지털 서명으로 동의했습니다.
+      처리는 본점 캐시미어 전문 처리실에서 정상 범위로 진행됐고, 고객에게 인도됐습니다.
+      <br><br>
+      오늘 아침, 고객이 매장을 다시 방문해 호소합니다 — <em>한 사이즈 줄어서 입을 수 없다</em>.
+      어깨 너비가 2cm 줄어들었다는 측정값과 사진을 제시합니다.
+      점주 박철민은 어떻게 응대해야 할지 판단해야 합니다.
+    </p>
+
+    <div class="cast">
+      <div class="person">
+        <div class="p-role">현장</div>
+        <div class="p-name">박철민 · 점주</div>
+        <div class="p-desc">5년차. 매장 운영·클레임 응대 책임</div>
+      </div>
+      <div class="person">
+        <div class="p-role">현장</div>
+        <div class="p-name">김서연 · 직원</div>
+        <div class="p-desc">2년차. 처리·접수 보조</div>
+      </div>
+      <div class="person">
+        <div class="p-role">본사</div>
+        <div class="p-name">이지영 · 클레임팀</div>
+        <div class="p-desc">정책 적용·중재·결재 권한 보유</div>
+      </div>
+      <div class="person">
+        <div class="p-role">고객</div>
+        <div class="p-name">최민수</div>
+        <div class="p-desc">정기 회원. 호소·보상 요구</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loop-ref">
+    <h4>본 사례를 관통하는 운영 루프 (참고)</h4>
+    <p class="sub">v300 선제안서 §4-1과 동일한 구조입니다. 아래 6단계가 이 루프의 한 사이클입니다.</p>
+    <div class="loop-row">
+      <div class="l-node">Data &amp; Inputs</div>
+      <div class="l-arr">→</div>
+      <div class="l-node star">★ Business Semantic</div>
+      <div class="l-arr">→</div>
+      <div class="l-node">Agentic Reasoning</div>
+      <div class="l-arr">→</div>
+      <div class="l-node">Enterprise Action</div>
+      <div class="l-arr">→</div>
+      <div class="l-node star">★ Operational Learning</div>
+    </div>
+    <div class="trust">Trust · Security · Governance · 외곽 프레임 (권한 · HITL · 감사 추적 · 안전 통제)</div>
+  </div>
+</section>
+
+<!-- ============= 03. 6단계 작동 방식 ============= -->
+<section id="s3">
+  <div class="section-head">
+    <span class="s-num">03 · 작동 방식</span>
+    <h2>한 건의 클레임이 처리되는 여섯 단계</h2>
+    <p class="lead">
+      각 단계에서 <strong>현장에서 무슨 일이 일어나는지</strong>, <strong>AAP는 무엇을 하는지</strong>,
+      <strong>기존 방식과 어디서 다른지</strong>를 함께 봅니다.
+      각 단계 끝에는 <strong>이 부분이 어떤 방식으로 구현 가능한지</strong>에 대한 짧은 메모가 붙어 있습니다.
+    </p>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <h3 class="step-title">클레임 접수 · 입력의 출발점</h3>
+      <span class="step-loop-pos">Loop · Data &amp; Inputs</span>
+    </div>
+    <div class="step-body">
+      <div class="narrative">
+        <p>이른 아침, 점주 박철민에게 신규 클레임이 접수됩니다. 고객의 호소·사진·측정값이 매장에 도착했을 때,
+        가장 먼저 결정해야 할 것은 <em>다음에 무엇을 할 것인가</em> 입니다.
+        영수증 번호로 처리 이력을 찾아야 할지, 본사에 먼저 전화를 걸어야 할지, 약관을 떠올려야 할지.
+        평균 30분에서 한 시간이 걸리고, 그 사이 고객은 계속 매장에 머뭅니다.</p>
+
+        <p>AAP가 작동하는 매장에서는, 점주가 클레임 입력 화면에 사진·측정값·호소 내용을 그대로 옮기는 것으로 시작합니다.
+        그 순간 시스템은 입력 데이터를 <em>판단의 출발점</em>으로 정리합니다 — 누가 입력했는지,
+        어떤 의류·어떤 호소·어떤 증빙이 들어왔는지를 표준 형식으로 정돈해 다음 단계로 넘깁니다.</p>
+
+        <p>이 단계는 평범해 보입니다. 하지만 *입력의 출발점을 표준화한다*는 것은,
+        뒤따라오는 모든 자동·반자동 단계가 가능해지는 기반이 됩니다.</p>
+      </div>
+
+      <div class="compare-box">
+        <div class="cb-side before">
+          <span class="cb-label">기존 방식</span>
+          <div class="cb-title">점주가 다음 행동을 스스로 결정</div>
+          <p>이력을 찾을지, 본사에 전화할지, 환불을 약속할지 — 매장·점주마다 시작점이 다릅니다. 응대 품질이 점주의 경험에 좌우됩니다.</p>
+        </div>
+        <div class="cb-side after">
+          <span class="cb-label">AAP</span>
+          <div class="cb-title">입력 시점부터 처리 흐름을 안내</div>
+          <p>입력의 표준화는 뒤이어 올 <strong>자동 이력 로드·근거 추론·유사 사례 검색</strong>이 가능해지는 기반입니다. 첫 행동이 같은 형태에서 시작됩니다.</p>
+        </div>
+      </div>
+
+      <div class="impl-note">
+        <span class="in-label">구현 메모</span>
+        <p>이 단계는 매장 일선의 입력 화면과 입력 표준화 절차로 가능합니다.
+        새로운 기술이 아니라 <strong>입력값 검증·식별자 추적 같은 기존 업무 시스템의 운영 원칙</strong>을 적용합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <h3 class="step-title">처리 이력의 자동 로드 · 사실의 정리</h3>
+      <span class="step-loop-pos">Loop · Data &amp; Inputs · Reasoning</span>
+    </div>
+    <div class="step-body">
+      <div class="narrative">
+        <p>점주가 입력을 끝내자마자, AAP는 <em>이미 발생한 처리 이력</em>을 자동으로 불러옵니다.
+        영수증 번호 한 건만으로, 보름 전의 모든 정보가 한 화면에 정리됩니다 —
+        어떤 의류·어떤 얼룩·어떤 처리법·어떤 약품·어떤 온도였는지.
+        그리고 그날 고객이 어떤 동의를 했는지까지.</p>
+
+        <p>이 자동 로드는 클레임 처리에서 가장 큰 시간 손실을 만들던 단계를 사라지게 합니다.
+        점주는 이력을 <em>찾지 않고 검토만</em> 합니다. 특히 결정적인 사실이 드러납니다 —
+        고객은 접수 시점에 <strong>"옅은 잔류·변색이 발생할 수 있다"</strong>는 안내를 받고
+        디지털 서명으로 동의했습니다. 그런데 오늘 호소하는 내용은 <strong>"수축"</strong>입니다.
+        즉 동의 범위 밖의 호소입니다. 그러나 처리 기록은 약품·온도 모두 정상 범위에 있었습니다.</p>
+
+        <p>이 시점에서, 사람이 정보를 다 모은 뒤에야 판단을 시작하던 기존 방식과 달리,
+        AAP는 <em>판단의 입력이 이미 준비된 상태</em>에서 다음 단계로 넘어갑니다.</p>
+      </div>
+
+      <div class="compare-box">
+        <div class="cb-side before">
+          <span class="cb-label">기존 방식</span>
+          <div class="cb-title">사람이 직접 찾고 모으는 단계</div>
+          <p>영수증·약관·이력을 점주가 수기로 찾습니다. RPA는 정해진 절차만 자동화할 뿐, <strong>사건 단위의 맥락 통합</strong>은 못 합니다. 챗봇은 이 단계에 끼어들 자리가 없습니다.</p>
+        </div>
+        <div class="cb-side after">
+          <span class="cb-label">AAP</span>
+          <div class="cb-title">사건 단위로 맥락을 자동 통합</div>
+          <p>영수증 번호 하나로 처리·동의·약품·온도가 한 화면에 정리됩니다. 점주는 *판단 가능한 상태*에서 시작합니다. 결정적 사실(<strong>동의 범위와 호소 범위의 차이</strong>)이 즉시 드러납니다.</p>
+        </div>
+      </div>
+
+      <div class="impl-note">
+        <span class="in-label">구현 메모</span>
+        <p>이미 운영 중인 업무 시스템과 <strong>식별자 기반의 사건 단위 통합 조회</strong>로 구현 가능합니다.
+        새 데이터를 만들 필요가 없으며, <strong>고객의 기존 자산을 그대로 활용</strong>합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 (KEY) -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num star">3</div>
+      <h3 class="step-title">원인 추론 · 후보와 근거를 함께 제시</h3>
+      <span class="step-loop-pos star">Loop · ★ Semantic + Reasoning</span>
+    </div>
+    <div class="step-body">
+      <div class="narrative">
+        <p>이제 진짜 판단이 시작됩니다. 점주는 묻습니다 — "이게 누구 잘못인가?"</p>
+
+        <p>평범한 클레임이라면 점주의 경험·감으로 결정하거나, 본사에 전화로 자문을 구합니다.
+        매장마다 점주마다 다른 결정이 나올 수 있고, 그 자체가 또 다른 분쟁의 씨앗이 됩니다.
+        RPA는 정해진 절차만 따르므로 이런 *다다수 원인 추론*에는 적용 자체가 불가능합니다.
+        챗봇은 매뉴얼·FAQ 답변에 머무를 뿐, *건별 정황 추론*은 못 합니다.</p>
+
+        <p>AAP는 다르게 접근합니다. 미리 정리되어 있는 <strong>업무 의미와 정책 자산</strong> —
+        어떤 소재가 어떤 처리에서 어떤 위험을 갖는지, 어떤 사유와 원인의 조합에 어떤 책임 비율이 적용되는지 — 을
+        끌어와, 입력된 사실과 결합합니다.</p>
+
+        <p>그 결과로 <em>원인을 하나로 단정하지 않고</em> 가능한 후보를 <em>근거와 함께</em> 제시합니다.</p>
+
+        <ul class="cands">
+          <li><b>측정 오차 (30%)</b> — 고객 측 측정 방법이 검증되지 않음</li>
+          <li><b>자연 수축 (30%)</b> — 캐시미어는 -1~3cm 수축이 흔하다는 업무 지식</li>
+          <li><b>처리 오류 (25%)</b> — 그러나 이력 검토 결과 약품·온도는 정상 범위였음</li>
+          <li><b>소재 결함 (15%)</b> — 제조사 책임 가능성</li>
+        </ul>
+
+        <p>점주 입장에서 보면, 한 시간 가까이 걸리던 <em>"어떻게 응대해야 하나"</em> 가
+        몇 분 만에 <strong>근거를 갖춘 후보</strong>로 정리됩니다. 그리고 어느 후보를 선택할지는
+        <strong>여전히 사람의 판단</strong>입니다. AAP는 <em>판단을 대체하지 않고, 판단의 근거를 갖춰 제시</em>합니다.</p>
+      </div>
+
+      <div class="compare-box">
+        <div class="cb-side before">
+          <span class="cb-label">기존 방식</span>
+          <div class="cb-title">경험·감, 그리고 매장마다 다른 결정</div>
+          <p>점주의 연차·기억에 좌우되고, 같은 케이스라도 매장마다 다른 결정이 나옵니다. 결정의 <strong>근거가 휘발</strong>되어 감사 추적이 어렵습니다.</p>
+        </div>
+        <div class="cb-side after">
+          <span class="cb-label">AAP</span>
+          <div class="cb-title">근거·폭·일관성을 갖춘 후보 제시</div>
+          <p>같은 사례는 같은 기준으로 검토됩니다. <strong>판단의 폭</strong>(원인 후보 4개)과 <strong>판단의 근거</strong>(처리 기록·소재 특성)가 함께 제시되어, <strong>사람이 책임 있게 결정</strong>할 수 있는 토대를 만듭니다.</p>
+        </div>
+      </div>
+
+      <div class="impl-note">
+        <span class="in-label">구현 메모</span>
+        <p>업무 개념·관계·정책을 운영 자산으로 정리한 뒤, 입력 사실과 결합해 후보를 산출하는
+        <strong>검증된 운영 패턴</strong>으로 구현 가능합니다. 정책·업무 규정의 디지털화는
+        이미 다양한 산업(보험·금융 컴플라이언스 등)에서 사용 중인 접근입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">4</div>
+      <h3 class="step-title">유사 사례 + 책임 비율 후보</h3>
+      <span class="step-loop-pos">Loop · Reasoning</span>
+    </div>
+    <div class="step-body">
+      <div class="narrative">
+        <p>AAP는 한 걸음 더 나아갑니다. 같은 소재·같은 호소로 과거에 어떤 사례가 있었는지를
+        본사 케이스 풀에서 자동으로 찾고, 그 사례들이 <em>어떻게 결착되었는지</em>를 함께 보여줍니다.</p>
+
+        <p>이번 케이스에서는 캐시미어 + 수축으로 지난 12개월간 본사 케이스 5건,
+        그중 직접 비교 가능한 3건이 추려집니다.</p>
+
+        <ul class="cases">
+          <li><b>강남점 2025-08</b> — 측정 오차 → 매장 책임 0%</li>
+          <li><b>송파점 2025-11</b> — 처리 오류 일부 → 매장 20% / 본사 10%</li>
+          <li><b>강남점 2026-02</b> — 자연 수축 → 매장 0% / 본사 0%</li>
+        </ul>
+
+        <p>이 사례 분포와 본 건의 원인 후보를 결합해, AAP는 <strong>책임 비율 후보</strong>를 제시합니다 —
+        <em>매장 30% / 본사 20% / 고객 50%</em>. 다시 한 번, 이것은 <strong>결정이 아니라 후보</strong>입니다.
+        본 결정은 다음 단계 사람 검토자에게 넘어갑니다.</p>
+      </div>
+
+      <div class="compare-box">
+        <div class="cb-side before">
+          <span class="cb-label">기존 방식</span>
+          <div class="cb-title">본사가 손으로 케이스 풀을 뒤지는 단계</div>
+          <p>본사 클레임팀이 과거 사례를 수기로 찾아야 했고, 점주는 그 결과를 기다려야 했습니다. 검토 시간이 길고, 어떤 사례를 참조했는지가 <strong>구두로만 전달</strong>됩니다.</p>
+        </div>
+        <div class="cb-side after">
+          <span class="cb-label">AAP</span>
+          <div class="cb-title">같은 작업을 순간에 수행하고 추적 가능하게 남김</div>
+          <p>유사 사례 검색·책임 비율 후보 산출이 <strong>일관된 기준</strong>으로 즉시 수행됩니다. *어떤 사례를 왜 참조했는지*가 모두 기록되어 추후 인용 가능합니다.</p>
+        </div>
+      </div>
+
+      <div class="impl-note">
+        <span class="in-label">구현 메모</span>
+        <p>사례 풀과 정책 규칙의 결합은 <strong>조직 내 결재·판례 운영 원칙</strong>과 같은 패턴입니다.
+        새로운 패러다임이 아니라, <strong>이미 사람이 해온 일을 정리·재사용 가능한 형태로 옮기는 작업</strong>입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5 (HITL) -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">5</div>
+      <h3 class="step-title">사람 검토 · 본사 클레임팀의 최종 판단</h3>
+      <span class="step-loop-pos hitl">Trust 외곽 · HITL</span>
+    </div>
+    <div class="step-body">
+      <div class="narrative">
+        <p>AAP는 <em>모든 결정을 자동화하려 들지 않습니다</em>. 사전에 정의된 정책에 따라 —
+        책임 비율이 10% 이상인 케이스는 본사 클레임팀의 검토를 <strong>반드시 거치도록</strong> 분기시킵니다.
+        이 단계가 AAP의 핵심 설계 원칙 중 하나인 <strong>HITL(Human-in-the-Loop)</strong>입니다.</p>
+
+        <p>본사 클레임팀 이지영에게는 케이스가 정리된 상태로 전달됩니다 —
+        원인 후보 4개·근거·유사 사례·책임 비율 후보·지금까지의 모든 판단·도구 호출 이력.
+        그녀가 새로 자료를 모을 필요는 없습니다. 모든 근거가 <strong>감사 추적 가능한 형태</strong>로 갖춰져 있습니다.</p>
+
+        <p>이지영은 현장 점주에게 정밀 측정을 요청합니다. 결과는 <strong>-1.2cm</strong> —
+        캐시미어 자연 수축 범위 내입니다. 그녀는 Agent가 제시한 후보 ②(자연 수축)를 채택하고,
+        최종 책임을 <em>매장 0% / 본사 0% / 고객 50% (자연 수축)</em>으로 결정합니다.
+        다만 정기 회원 관리 차원에서 50% 무료 재처리를 선의 보상으로 제공하기로 합니다.</p>
+
+        <p>이 결정은 모두 <em>왜 그렇게 결정했는지</em>의 사유와 함께 시스템에 기록됩니다.
+        다음 유사 케이스에서 즉시 인용 가능한 형태로.</p>
+      </div>
+
+      <div class="compare-box">
+        <div class="cb-side before">
+          <span class="cb-label">기존 방식</span>
+          <div class="cb-title">결정이 구두·메모로 흩어지는 구조</div>
+          <p>본사 결정이 *구두 또는 짧은 메모* 단위로 흩어지고, 매장마다·시점마다 일관성이 흔들립니다. <strong>왜 그렇게 결정했는지</strong>를 6개월 뒤 다시 찾기 어렵습니다.</p>
+        </div>
+        <div class="cb-side after">
+          <span class="cb-label">AAP</span>
+          <div class="cb-title">결정과 사유를 운영 자산으로 축적</div>
+          <p>모든 결정에 <strong>사유와 근거 출처가 함께 남습니다</strong>. 검토자가 무엇을 보고 어떻게 결정했는지가 감사 가능하며, 다음 유사 케이스에 인용 가능한 자산이 됩니다.</p>
+        </div>
+      </div>
+
+      <div class="impl-note">
+        <span class="in-label">구현 메모</span>
+        <p>결재·승인·감사 추적은 모든 기업 업무 시스템의 <strong>기본 운영 원칙</strong>입니다.
+        AAP는 이 원칙을 Agent 실행 흐름과 결합할 뿐, <strong>새로운 패러다임을 요구하지 않습니다</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 6 (Action + Learning) -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num star">6</div>
+      <h3 class="step-title">시스템 반영 + 학습 환류 · 한 사례가 전국 자산이 되는 순간</h3>
+      <span class="step-loop-pos star">Loop · Action + ★ Learning</span>
+    </div>
+    <div class="step-body">
+      <div class="narrative">
+        <p>본사의 결정이 내려진 그 순간, AAP는 마지막 단계를 자동으로 수행합니다 —
+        결과를 <em>시스템에 반영</em>하고, 동시에 <em>운영 자산을 갱신</em>합니다.</p>
+
+        <p>첫째, 매장 시스템에 클레임 처리 결과가 자동 기입됩니다.
+        둘째, 고객에게 결정 사유와 무료 재처리 안내가 즉시 발송됩니다.
+        셋째, 본 건의 모든 판단·근거·HITL 게이트·결정 사유가 <strong>감사 추적 가능한 이력</strong>으로 묶여 저장됩니다.</p>
+
+        <p>여기까지가 *본 건의 종료*입니다. 그러나 AAP는 한 단계를 더 갑니다 — <strong>학습 환류</strong>입니다.</p>
+
+        <p>이번 케이스를 통해 두 가지 운영 자산 후보가 등록됩니다.</p>
+
+        <ul class="cands" style="border-left-color:var(--teal-strong)">
+          <li><b>캐시미어 정상 수축 범위 -1~2cm</b> — 업무 의미 모델 보강 후보로 등록</li>
+          <li><b>점주 사전 안내 멘트 가이드</b> — "캐시미어는 -1~2cm 자연 수축이 가능합니다" 템플릿 자동 생성</li>
+        </ul>
+
+        <p>본사 운영기획팀이 이 후보들을 검토·승인하면, <em>전국 모든 가맹점</em>이 동일하게 알게 됩니다.
+        즉, <strong>한 매장의 한 클레임이 전국 운영 자산이 됩니다</strong>.
+        다음에 비슷한 사례가 들어오면, 점주는 사전에 안내할 수 있고, Agent는 즉시 그 패턴을 활용합니다.</p>
+      </div>
+
+      <div class="compare-box">
+        <div class="cb-side before">
+          <span class="cb-label">기존 방식</span>
+          <div class="cb-title">분기·연간 정책 개정 사이클</div>
+          <p>본사가 클레임을 모아 분기·연간 단위로 정책을 개정하고, 가맹점에 *공문·교육*으로 전파합니다. 학습이 사람 사이를 거치며 <strong>몇 달 단위</strong>로 지연됩니다.</p>
+        </div>
+        <div class="cb-side after">
+          <span class="cb-label">AAP</span>
+          <div class="cb-title">건별 단위로 학습 자산이 누적</div>
+          <p>본사 검토 후 즉시 모든 가맹점 Agent가 같은 지식을 활용합니다. <strong>학습 사이클이 건 단위·시간 단위</strong>로 단축되고, 점주 교육·매뉴얼 갱신 비용이 함께 줄어듭니다.</p>
+        </div>
+      </div>
+
+      <div class="impl-note">
+        <span class="in-label">구현 메모</span>
+        <p>학습 환류는 <strong>검증된 감사·정책 운영 체계</strong>의 확장입니다.
+        새로운 학습 알고리즘이 아니라, <strong>사람의 결정과 사유를 재사용 가능한 형태로 정리하는 운영 패턴</strong>입니다.</p>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============= 04. 구현 타당성 ============= -->
+<section id="s4">
+  <div class="section-head">
+    <span class="s-num">04 · 구현 타당성</span>
+    <h2>이 접근이 정말 만들 수 있는 것이라는 다섯 가지 근거</h2>
+    <p class="lead">
+      AAP가 *정말 만들 수 있는가* 라는 질문은, <strong>기술적 도전</strong>이 아니라
+      <strong>조직·운영 설계</strong>의 문제로 다시 봐야 합니다.
+      AAP의 본질은 새로운 기술의 발명이 아니라,
+      <strong>이미 검증된 운영 원칙을 Agent 시대에 맞게 재조립</strong>하는 일입니다.
+    </p>
+  </div>
+
+  <div class="feasibility">
+    <div class="feas-card">
+      <div class="feas-num">01</div>
+      <div class="feas-body">
+        <h3>단계적 도입이 가능합니다</h3>
+        <p>AAP는 한 번에 모든 것을 자동화하지 않습니다. <strong>한 시나리오·한 매장</strong>에서 시작해,
+        검증된 부분만 점진적으로 확장합니다. 첫 PoC는 한 시나리오의 한 매장에서 운영 가능한 수준이면 충분하며,
+        이후 운영 결과를 보고 점점 확장 범위를 결정합니다. <em>큰 빅뱅 도입의 위험을 처음부터 차단</em>합니다.</p>
+      </div>
+    </div>
+
+    <div class="feas-card">
+      <div class="feas-num">02</div>
+      <div class="feas-body">
+        <h3>고객 자산을 그대로 활용합니다</h3>
+        <p>AAP는 고객의 기존 데이터 플랫폼·업무 시스템·문서 자산을 <strong>대체하지 않습니다</strong>.
+        그 위에 운영 레이어를 더할 뿐입니다. 데이터 이전·시스템 재구축 같은 <em>큰 비용을 만들지 않습니다</em>.
+        도입 후에도 기존 운영팀이 그대로 시스템을 유지할 수 있습니다.</p>
+      </div>
+    </div>
+
+    <div class="feas-card">
+      <div class="feas-num">03</div>
+      <div class="feas-body">
+        <h3>사람 검토 가능한 형태로 작동합니다</h3>
+        <p>모든 자동 판단에는 <strong>근거가 따라붙고</strong>, 책임이 명확하지 않은 케이스는 자동으로 사람에게 분기됩니다.
+        <em>AI가 단독으로 결정해 사고를 내는</em> 위험을 구조적으로 차단합니다.
+        이는 금융·보험·공공처럼 책임이 무거운 영역에서도 적용 가능하다는 의미입니다.</p>
+      </div>
+    </div>
+
+    <div class="feas-card">
+      <div class="feas-num">04</div>
+      <div class="feas-body">
+        <h3>검증된 운영 패턴 위에 구축됩니다</h3>
+        <p>정책·권한·감사·결재·승인은 모든 기업 업무 시스템의 <strong>기본 운영 원칙</strong>입니다.
+        AAP는 이 원칙을 Agent 실행 흐름과 결합할 뿐입니다. 새로운 운영 원칙을 만들지 않으며,
+        <em>이미 조직 안에 존재하는 거버넌스를 디지털화하는 방식</em>으로 작동합니다.</p>
+      </div>
+    </div>
+
+    <div class="feas-card">
+      <div class="feas-num">05</div>
+      <div class="feas-body">
+        <h3>위험을 통제 가능한 형태로 가져갑니다</h3>
+        <p>판단·실행 이력의 추적, 사람 검토 분기, 정책 기반 자동/수동 경계 정의 — 이 모든 장치는
+        <strong>운영 위험을 통제 가능한 형태</strong>로 만듭니다.
+        도입 후에도 *언제든 검토·롤백·점진 확장이 가능*하고, 잘못된 학습이 누적되지 않도록 <em>본사 결재가 자산 갱신을 통제</em>합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="feas-summary">
+    <div class="fs-label">정리</div>
+    <p>AAP는 <strong>"새로운 기술이 가능해졌으니 시도해보자"</strong> 가 아니라,
+    <strong>"이미 검증된 운영 원칙을 Agent 시대에 맞게 재조립한다"</strong>는 입장에 있습니다.
+    그래서 도입의 핵심 질문은 *기술이 작동하는가* 가 아니라,
+    <strong>고객 업무의 어느 시나리오부터 시작할 것인가</strong> 입니다.</p>
+  </div>
+</section>
+
+<!-- ============= 05. 비교 · 산업 확장 · PoC ============= -->
+<section id="s5">
+  <div class="section-head">
+    <span class="s-num">05 · 정리</span>
+    <h2>비교 · 산업 확장 · 다음 단계</h2>
+  </div>
+
+  <h3 style="margin:18px 0 8px;font-size:17px;letter-spacing:-.01em;color:var(--ink)">기존 방식과의 비교 매트릭스</h3>
+  <p style="margin:0 0 10px;font-size:13.5px;color:var(--sub);line-height:1.65">시연·검토에서 한 화면으로 보여줄 정리입니다. ②와 ④는 RPA·챗봇 어떤 조합으로도 닿지 않는 영역입니다.</p>
+  <table class="compare-matrix">
+    <thead>
+      <tr>
+        <th class="head-row">시나리오</th>
+        <th>기존 POS</th>
+        <th>RPA</th>
+        <th>개별 챗봇 / RAG</th>
+        <th class="head-aap">AAP</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="scenario-name">접수 (캐시미어 + 와인)<small>위험 사전 안내·동의</small></td>
+        <td><span class="partial">직원 수기</span></td>
+        <td><span class="partial">가격 계산만</span></td>
+        <td><span class="partial">분류 추천</span></td>
+        <td class="col-aap"><b>분류 + 위험도 + 사전 안내 + 동의 + 감사 이력</b></td>
+      </tr>
+      <tr>
+        <td class="scenario-name">클레임 ②<small>본 문서 시연 케이스</small></td>
+        <td><span class="partial">점주 판단</span></td>
+        <td><span class="x">불가능</span></td>
+        <td><span class="partial">FAQ 검색</span></td>
+        <td class="col-aap"><b>원인 후보·근거 + 유사 사례 + 책임 비율 + HITL + 학습</b></td>
+      </tr>
+      <tr>
+        <td class="scenario-name">신규 점주 교육<small>OJT 의존 영역</small></td>
+        <td><span class="x">수개월 OJT</span></td>
+        <td><span class="x">불가능</span></td>
+        <td><span class="partial">매뉴얼 검색</span></td>
+        <td class="col-aap"><b>업무 의미 기반 안내 + 실제 사례 + 멘트 가이드</b></td>
+      </tr>
+      <tr>
+        <td class="scenario-name">본사 운영 학습 ④<small>전국 즉시 반영</small></td>
+        <td><span class="x">매뉴얼 개정</span></td>
+        <td><span class="x">불가능</span></td>
+        <td><span class="x">불가능</span></td>
+        <td class="col-aap"><b>패턴 감지 + 본사 결재 + 전국 즉시 반영</b></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin:32px 0 8px;font-size:17px;letter-spacing:-.01em;color:var(--ink)">산업 확장 — 본 사례가 보여주는 것</h3>
+  <p style="margin:0 0 10px;font-size:13.5px;color:var(--sub);line-height:1.65">
+    <strong>세탁 클레임 → 금융 내부통제 → 손해사정·제조 클레임</strong> — 도메인 어휘만 다를 뿐, 운영 루프 구조는 동일합니다.
+  </p>
+  <div class="bridge-shell">
+    <div class="bridge-flow">
+      <div class="bridge-node now">
+        <span class="stage">Now · 본 문서</span>
+        <h4>세탁 클레임</h4>
+        <p>호소 → 원인 후보·근거 → 책임 비율 → 본사 HITL → 학습 환류</p>
+      </div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-node mid">
+        <span class="stage">Next · 다음 시연</span>
+        <h4>금융 내부통제 점검</h4>
+        <p>이상 거래 → 위반 사유 후보 → 책임 부서·통제 갭 → 컴플라이언스 HITL → 감사 이력</p>
+      </div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-node next">
+        <span class="stage">Far · 일반화</span>
+        <h4>손해사정 · 제조 클레임</h4>
+        <p>사고·결함 → 원인·책임 후보 → 보상/배상 → 손해사정사 HITL → 사례·정책 누적</p>
+      </div>
+    </div>
+    <div class="bridge-shared">
+      <strong>공통 구조</strong> — 사실의 정리 → 후보·근거 제시 → 사람 검토 → 시스템 반영 → 운영 자산화.
+      <strong>도메인 자산(개념·정책·권한 매트릭스)만 교체하면, 본 문서의 구조가 그대로 재사용 가능합니다.</strong>
+    </div>
+  </div>
+
+  <h3 style="margin:32px 0 8px;font-size:17px;letter-spacing:-.01em;color:var(--ink)">PoC 진행 방안</h3>
+  <p style="margin:0 0 10px;font-size:13.5px;color:var(--sub);line-height:1.65">v300 선제안서 §4-3 수행 모델(Assess → Define → Compose → Connect → Operate)을 본 시나리오에 맞춰 압축한 4단계입니다.</p>
+  <div class="poc-stages">
+    <div class="poc-stage">
+      <span class="ps-num">Stage 01</span>
+      <h4>Assess</h4>
+      <div class="ps-dur">2~4주</div>
+      <p>대상 매장·시나리오 확정. 기존 시스템·데이터 확인. 도입 제약·KPI 합의.</p>
+    </div>
+    <div class="poc-stage">
+      <span class="ps-num">Stage 02</span>
+      <h4>Define</h4>
+      <div class="ps-dur">4~6주</div>
+      <p>업무 의미·정책·권한·HITL 분기 기준 정의. 운영 자산의 초안 구축.</p>
+    </div>
+    <div class="poc-stage">
+      <span class="ps-num">Stage 03</span>
+      <h4>Compose</h4>
+      <div class="ps-dur">4~6주</div>
+      <p>운영 흐름 조립. 첫 시연 가능 형태로 통합. 검토·승인 화면·감사 추적 구성.</p>
+    </div>
+    <div class="poc-stage">
+      <span class="ps-num">Stage 04</span>
+      <h4>Operate</h4>
+      <div class="ps-dur">8~12주</div>
+      <p>한 매장 운영 적용. 학습 자산 축적 시작. 본사 결재 사이클 정착. 확장 가능성 평가.</p>
+    </div>
+  </div>
+  <div class="poc-foot">
+    <strong>다음 작업 후보</strong> ·
+    ① 본 문서를 토대로 한 임원 보고 자료(슬라이드) 제작 ·
+    ② 고객 시연용 단축본(읽는 시간 5분) 제작 ·
+    ③ 금융 내부통제 시나리오 동일 구조로 작성 ·
+    ④ 본 PoC 일정·인력·산출물 상세 정의서 작성
+  </div>
+</section>
+
+<footer class="footer">
+  <div>AAP 작동 방식 · 세탁 프랜차이즈 클레임 처리 사례 · v0.3 · v300 선제안서 §4-1·§5·별첨 A 매핑</div>
+  <div>2026-05-27</div>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  // TOC scroll-spy
+  const links = Array.from(document.querySelectorAll('.toc a[href^="#"]'));
+  const sectionToLink = new Map();
+  links.forEach(a => {
+    const sec = document.getElementById(a.getAttribute('href').slice(1));
+    if(sec) sectionToLink.set(sec, a);
+  });
+  const setActive = (link) => links.forEach(a => a.classList.toggle('active', a === link));
+  let lastTop = null;
+  const io = new IntersectionObserver((entries) => {
+    const visible = entries.filter(e => e.isIntersecting);
+    if(visible.length === 0) return;
+    visible.sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top);
+    const top = visible[0].target;
+    if(top === lastTop) return;
+    lastTop = top;
+    setActive(sectionToLink.get(top));
+  }, {rootMargin: '-20% 0px -70% 0px', threshold: 0});
+  sectionToLink.forEach((_, sec) => io.observe(sec));
+
+  // Progress bar
+  const bar = document.querySelector('.toc-progress-bar');
+  const doc = document.documentElement;
+  const update = () => {
+    const max = (doc.scrollHeight - doc.clientHeight) || 1;
+    const pct = Math.max(0, Math.min(1, (window.scrollY || doc.scrollTop) / max));
+    if(bar) bar.style.width = (pct * 100) + '%';
+  };
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update);
+  update();
+})();
+</script>
+</body>
+</html>

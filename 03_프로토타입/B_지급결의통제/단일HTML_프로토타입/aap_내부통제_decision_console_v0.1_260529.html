@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Decision Operations Console · 금융 내부통제</title>
+<style>
+  :root{
+    --ink:#0F172A; --sub:#64748B; --mut:#94A3B8; --line:#E2E8F0; --bg:#F4F6F9; --card:#fff;
+    --blue:#2563EB; --blue-soft:#EFF4FF; --amber:#D97706; --amber-soft:#FFF7ED;
+    --green:#059669; --green-soft:#ECFDF5; --red:#DC2626; --red-soft:#FEF2F2; --violet:#7C3AED; --violet-soft:#F5F3FF;
+    --shadow:0 1px 2px rgba(15,23,42,.05),0 10px 30px rgba(15,23,42,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;font-size:14px}
+  button{font-family:inherit}
+  .mono{font-family:ui-monospace,'SF Mono',monospace}
+  /* ── Top bar ── */
+  .topbar{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line);padding:10px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .tb-brand{display:flex;flex-direction:column}
+  .tb-brand .t{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--blue);text-transform:uppercase}
+  .tb-brand .n{font-size:15px;font-weight:800;letter-spacing:-.01em}
+  .tb-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .trust{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--sub)}
+  .trust .pill{background:var(--green-soft);color:#047857;border:1px solid #A7F3D0;border-radius:6px;padding:3px 8px;font-weight:700}
+  .trust .pill.human{background:var(--amber-soft);color:#92400E;border-color:#FDE68A}
+  .trust .mono{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--ink);font-weight:600}
+  /* ── Decision Loop bar ── */
+  .loopbar{background:#fff;border-bottom:1px solid var(--line);padding:11px 22px;display:flex;align-items:center;gap:0;overflow-x:auto;position:sticky;top:55px;z-index:29}
+  .lp-node{display:flex;align-items:center;gap:9px;flex:none}
+  .lp-node .lc{width:26px;height:26px;border-radius:8px;background:#F1F5F9;color:#94A3B8;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;transition:.3s;border:2px solid transparent;flex:none}
+  .lp-node .lt{display:flex;flex-direction:column;line-height:1.2}
+  .lp-node .lt b{font-size:12px;font-weight:800;color:var(--sub);transition:.3s}
+  .lp-node .lt span{font-size:9px;color:var(--mut);letter-spacing:.05em;text-transform:uppercase}
+  .lp-node.active .lc{background:var(--blue);color:#fff;transform:scale(1.1);box-shadow:0 0 0 4px var(--blue-soft)}
+  .lp-node.active .lt b{color:var(--ink)}
+  .lp-node.done .lc{background:var(--green);color:#fff}
+  .lp-node.human.active .lc{background:var(--amber);box-shadow:0 0 0 4px var(--amber-soft)}
+  .lp-arrow{color:var(--line);flex:none;margin:0 14px}
+  /* ── Layout ── */
+  .stage-wrap{max-width:1400px;margin:0 auto;padding:18px 22px 30px}
+  .con-grid{display:grid;grid-template-columns:255px 1fr 340px;gap:14px;align-items:start}
+  @media(max-width:1180px){.con-grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+  .col-h{font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin:0 0 10px;display:flex;align-items:center;gap:7px}
+  /* ── Case Queue (left) ── */
+  .queue-card{padding:16px}
+  .q-summary{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:13px}
+  .q-summary .qs-big{font-size:13px;font-weight:800;margin-bottom:8px}
+  .q-summary .qs-row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);padding:2px 0}
+  .q-summary .qs-row b{font-weight:800}
+  .q-summary .qs-row .hi{color:var(--red)}
+  .queue-item{padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:.15s}
+  .queue-item:hover{border-color:var(--blue)}
+  .queue-item.active{border-color:var(--blue);background:var(--blue-soft);box-shadow:0 0 0 3px var(--blue-soft)}
+  .queue-item .qi-id{font-size:10px;color:var(--mut);font-weight:700;letter-spacing:.03em}
+  .queue-item .qi-t{font-size:12.5px;font-weight:700;margin-top:1px}
+  .queue-item .qi-m{font-size:11px;color:var(--sub);margin-top:2px}
+  .queue-item .qi-foot{display:flex;gap:5px;margin-top:6px;align-items:center}
+  .risk{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:5px}
+  .risk.High{background:var(--red-soft);color:var(--red)}.risk.Medium{background:var(--amber-soft);color:var(--amber)}.risk.Low{background:#F1F5F9;color:var(--sub)}
+  .qi-s{font-size:9px;font-weight:800;letter-spacing:.03em;padding:2px 6px;border-radius:5px;background:#F1F5F9;color:var(--sub)}
+  .qi-s.review{background:var(--violet-soft);color:var(--violet)}.qi-s.auto{background:var(--blue-soft);color:var(--blue)}.qi-s.resolved{background:var(--green-soft);color:#047857}
+  /* ── Center stage ── */
+  .con-main .card{padding:20px;margin-bottom:0}
+  .con-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .con-head h3{margin:0;font-size:17px;letter-spacing:-.01em}
+  .con-head .badge{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue);background:var(--blue-soft);padding:3px 8px;border-radius:6px;margin-bottom:6px}
+  .con-head .cid{font-size:11px;color:var(--sub);text-align:right;white-space:nowrap}
+  .stage-sub{font-size:12.5px;color:var(--sub);margin:0 0 16px}
+  .casecard{background:var(--blue-soft);border:1px solid #BFDBFE;border-radius:10px;padding:13px 15px;font-size:13px;margin-bottom:16px;line-height:1.7}
+  .casecard b{font-weight:800}
+  .casecard .row{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+  /* ontology blocks */
+  .onto-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  @media(max-width:620px){.onto-grid{grid-template-columns:1fr}}
+  .onto-block{border:1px solid var(--line);border-radius:11px;padding:12px 13px;opacity:0;transform:translateY(8px);transition:.4s}
+  .onto-block.show{opacity:1;transform:none}
+  .onto-block .ob-h{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .onto-block.event .ob-h{color:var(--red)} .onto-block.actor .ob-h{color:var(--blue)}
+  .onto-block.policy .ob-h{color:var(--violet)} .onto-block.control .ob-h{color:var(--amber)}
+  .onto-block.evidence{grid-column:1/-1}.onto-block.evidence .ob-h{color:#047857}
+  .onto-item{font-size:12px;padding:3px 0;display:flex;gap:7px;align-items:baseline}
+  .onto-item .k{color:var(--sub);min-width:62px;flex:none;font-size:11px}
+  .onto-item .v{font-weight:600}
+  .ev-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .ev-chip{font-size:11.5px;background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 10px;font-weight:600;cursor:default}
+  .ev-chip b{color:#047857}
+  /* reasoning */
+  .gauge-row{display:flex;gap:12px;margin-bottom:16px}
+  .gauge{flex:1;border:1px solid var(--line);border-radius:11px;padding:13px;text-align:center}
+  .gauge .gl{font-size:10.5px;color:var(--sub);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .gauge .gv{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
+  .gauge.risk-g .gv{color:var(--red)}.gauge.impact-g .gv{color:var(--amber)}.gauge.prio-g .gv{color:var(--blue)}
+  .gauge .gbar{height:6px;background:#F1F5F9;border-radius:4px;margin-top:8px;overflow:hidden}
+  .gauge .gbar i{display:block;height:100%;border-radius:4px;background:var(--red);width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+  .sec-h{font-size:12px;font-weight:800;margin:16px 0 9px;display:flex;align-items:center;gap:7px}
+  .ground{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #F1F5F9;font-size:12.5px;opacity:0;transform:translateX(-6px);transition:.35s}
+  .ground.show{opacity:1;transform:none}
+  .ground .src{flex:none;font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:4px;margin-top:1px}
+  .src.규정{background:#DBEAFE;color:#1D4ED8}.src.책무{background:#FEF3C7;color:#B45309}
+  .src.사례{background:#DCFCE7;color:#15803D}.src.이력{background:#EDE9FE;color:#6D28D9}
+  .ground .gx{flex:1}.ground .gx b{color:var(--ink)}.ground .wt{flex:none;font-weight:800;color:var(--blue);font-size:11px}
+  .reco{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;background:var(--bg)}
+  .reco .rc{width:20px;height:20px;border-radius:6px;background:var(--blue-soft);color:var(--blue);font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+  /* HITL */
+  .hitl-box{border:1.5px solid #FCD34D;background:var(--amber-soft);border-radius:12px;padding:16px;margin-bottom:14px}
+  .hitl-box .hh{font-size:13px;font-weight:800;color:#92400E;display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .checklist{margin-bottom:13px}
+  .check-item{font-size:12px;color:#78350F;display:flex;gap:8px;padding:4px 0;align-items:center}
+  .check-item .ck{width:18px;height:18px;border-radius:5px;background:#fff;color:var(--green);font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+  .reco-decision{font-size:12px;color:#78350F;background:#fff;border:1px solid #FDE68A;border-radius:9px;padding:10px 12px;margin-bottom:13px}
+  .reco-decision b{color:#92400E}
+  .decide-row{display:flex;gap:7px;flex-wrap:wrap}
+  .decide-row button{flex:1;min-width:96px;border:1px solid var(--line);background:#fff;border-radius:9px;padding:11px 8px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+  .decide-row button:hover{border-color:var(--amber)}
+  .decide-row button.approve{background:var(--green);color:#fff;border-color:var(--green)}
+  .decide-row button.approve:hover{filter:brightness(1.05)}
+  .decide-row button.reject{color:var(--red)}.decide-row button.esc{color:var(--violet)}
+  /* action */
+  .action-item{display:flex;align-items:center;gap:11px;font-size:13px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;color:var(--mut);transition:.35s}
+  .action-item .ac{width:22px;height:22px;border-radius:7px;background:#F1F5F9;color:var(--mut);font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .action-item.active{color:var(--ink);border-color:#A7F3D0;background:var(--green-soft)}
+  .action-item.active .ac{background:var(--green);color:#fff}
+  .decision-id{margin-top:14px;background:var(--ink);color:#fff;border-radius:11px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .decision-id .di-l{font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+  .decision-id .di-v{font-size:18px;font-weight:800;letter-spacing:.02em}
+  /* learning */
+  .learn-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .learn-card{flex:1;min-width:150px;border:1px solid var(--line);border-radius:11px;padding:14px}
+  .learn-card .ll{font-size:11px;color:var(--sub);font-weight:700}
+  .learn-card .lv{font-size:15px;font-weight:800;margin-top:5px;display:flex;align-items:center;gap:8px}
+  .learn-card .lv .arrow{color:var(--green)}
+  .learn-card .lv .new{font-size:10px;font-weight:800;background:var(--green-soft);color:#047857;padding:2px 7px;border-radius:5px}
+  .metric-strip{background:var(--violet-soft);border:1px solid #DDD6FE;border-radius:11px;padding:14px 16px}
+  .metric-strip h4{margin:0 0 11px;font-size:12px;color:var(--violet);font-weight:800;display:flex;align-items:center;gap:7px}
+  .metric-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid #EDE9FE}
+  .metric-row:last-child{border:0}
+  .metric-row .mk{color:var(--sub)}
+  .metric-row .mv{font-weight:700;display:flex;align-items:center;gap:7px}
+  .metric-row .mv .was{color:var(--mut);text-decoration:line-through;font-size:11px}
+  .metric-row .mv .now{color:var(--violet);font-weight:800}
+  /* primary CTA */
+  .cta-row{display:flex;gap:9px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 18px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+  .btn:hover{border-color:var(--blue)}
+  .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn:disabled{opacity:.4;cursor:default}
+  .btn.ghost{color:var(--sub)}
+  .cta-row .spacer{margin-left:auto}
+  .auto-note{font-size:11px;color:var(--mut)}
+  /* Right panel: Evidence & Reasoning */
+  .con-side > .card{padding:16px;margin-bottom:14px}
+  .ev-empty{font-size:12px;color:var(--mut);text-align:center;padding:24px 8px;line-height:1.6}
+  .link-item{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #F1F5F9;font-size:12px;opacity:0;transform:translateY(6px);transition:.35s}
+  .link-item.show{opacity:1;transform:none}
+  .link-item:last-child{border:0}
+  .link-item .li-t{flex:none;font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:4px;margin-top:1px}
+  .link-item .li-x{flex:1}.link-item .li-x b{display:block;color:var(--ink);font-size:12px}
+  .link-item .li-x span{color:var(--sub);font-size:11px}
+  .li-t.규정{background:#DBEAFE;color:#1D4ED8}.li-t.책무{background:#FEF3C7;color:#B45309}
+  .li-t.사례{background:#DCFCE7;color:#15803D}.li-t.개선{background:#EDE9FE;color:#6D28D9}.li-t.보고{background:#F1F5F9;color:#475569}
+  /* bottom strip: HITL / Action / Learning + Decision Log */
+  .bottom-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+  @media(max-width:1180px){.bottom-grid{grid-template-columns:1fr}}
+  .mini-card{padding:14px 16px}
+  .mini-card .mc-h{font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+  .mini-status{font-size:12.5px;color:var(--mut);line-height:1.7}
+  .mini-status.set{color:var(--ink)}
+  .tag-ok{color:#047857;font-weight:700}.tag-wait{color:var(--amber);font-weight:700}
+  .dlog{margin-top:14px;padding:16px 18px}
+  .dlog table{width:100%;border-collapse:collapse;font-size:12px}
+  .dlog th{text-align:left;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;font-weight:800;padding:0 10px 8px;border-bottom:1px solid var(--line)}
+  .dlog td{padding:9px 10px;border-bottom:1px solid #F1F5F9;color:var(--ink)}
+  .dlog tr:last-child td{border:0}
+  .dlog .empty td{color:var(--mut);text-align:center;padding:18px}
+  .dlog .mono{font-size:11px}
+  .footer{margin-top:22px;font-size:11px;color:var(--mut);text-align:center;line-height:1.7}
+  .sim-flag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);background:var(--amber-soft);border:1px solid #FDE68A;border-radius:5px;padding:2px 8px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ TOP BAR ══════════════ -->
+<div class="topbar">
+  <div class="tb-brand">
+    <span class="t">AAP · Decision Operations Console</span>
+    <span class="n">금융 내부통제 · 이상 징후 / 점검 이슈 처리</span>
+  </div>
+  <div class="tb-right">
+    <span class="sim-flag">Simulation PoC</span>
+    <div class="trust">
+      <span class="pill human">HITL 통제</span>
+      <span class="pill">감사 재현성</span>
+      <span class="mono" id="trustId">Decision ID —</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DECISION LOOP BAR ══════════════ -->
+<div class="loopbar" id="loopbar"></div>
+
+<!-- ══════════════ STAGE ══════════════ -->
+<div class="stage-wrap">
+  <div class="con-grid">
+
+    <!-- ── LEFT: Case Queue ── -->
+    <div class="con-side-left">
+      <div class="card queue-card">
+        <h3 class="col-h">📥 Case Queue</h3>
+        <div class="q-summary">
+          <div class="qs-big">오늘 접수된 내부통제 사건 <b>12건</b></div>
+          <div class="qs-row"><span>고위험 검토 필요</span><b class="hi">2건</b></div>
+          <div class="qs-row"><span>담당자 확인 필요</span><b>6건</b></div>
+          <div class="qs-row"><span>자동 조치 후보</span><b>4건</b></div>
+        </div>
+        <div id="queueList"></div>
+      </div>
+    </div>
+
+    <!-- ── CENTER: Decision Flow / Stage ── -->
+    <div class="con-main">
+      <div class="card" id="stageCard"></div>
+      <div class="cta-row" id="ctaRow"></div>
+    </div>
+
+    <!-- ── RIGHT: Evidence & Reasoning ── -->
+    <div class="con-side">
+      <div class="card">
+        <h3 class="col-h">🔗 Evidence &amp; Reasoning</h3>
+        <div id="evPanel"><div class="ev-empty">사건을 선택하고 <b>의미화(Semantic)</b> 단계를 실행하면<br>관련 규정·책무·유사사례·개선과제가<br>자동으로 연결됩니다.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM: HITL / Action / Learning ── -->
+  <div class="bottom-grid">
+    <div class="card mini-card">
+      <div class="mc-h">👤 HITL Decision</div>
+      <div class="mini-status" id="miHitl">검토 대기</div>
+    </div>
+    <div class="card mini-card">
+      <div class="mc-h">⚙ Action Log</div>
+      <div class="mini-status" id="miAction">실행 전</div>
+    </div>
+    <div class="card mini-card">
+      <div class="mc-h">↻ Learning Result</div>
+      <div class="mini-status" id="miLearn">학습 전</div>
+    </div>
+  </div>
+
+  <!-- ── Decision Log ── -->
+  <div class="card dlog">
+    <h3 class="col-h">🗂 Decision Log · 감사 추적</h3>
+    <table>
+      <thead><tr><th>Decision ID</th><th>사건</th><th>판단</th><th>검토자 결정</th><th>시각</th></tr></thead>
+      <tbody id="dlogBody"><tr class="empty"><td colspan="5">아직 기록된 의사결정이 없습니다. 루프를 완주하면 감사 가능한 이력이 적재됩니다.</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    AAP Decision Operations Console for Internal Control · v0.1 (2026-05-29) · KT DS AX컨설팅팀<br>
+    본 화면은 <b>시뮬레이션 PoC</b>입니다. 실제 금융사 시스템·LLM·권한계 연동 없이 결정론 엔진으로 동작합니다.
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   AAP Decision Operations Console — 내부통제 (결정론 시뮬레이션)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Decision Loop 정의 ── */
+const LOOP = [
+  {key:'input',     n:'Input',     ko:'접수',  human:false},
+  {key:'semantic',  n:'Semantic',  ko:'의미화', human:false},
+  {key:'reasoning', n:'Reasoning', ko:'추론',  human:false},
+  {key:'control',   n:'Control',   ko:'검토(HITL)', human:true},
+  {key:'action',    n:'Action',    ko:'실행',  human:false},
+  {key:'learning',  n:'Learning',  ko:'학습',  human:false},
+];
+
+/* ── 사건 큐 (더미 데이터) ── */
+const CASES = [
+  { id:'IC-2026-001', type:'승인권한 초과 가능성', dept:'여신심사본부', risk:'High',   status:'준법 검토 필요', statusClass:'review', from:'정기 점검',   demo:true },
+  { id:'IC-2026-002', type:'증빙 누락 (인보이스)',  dept:'자금부',       risk:'Medium', status:'담당자 확인 필요', statusClass:'auto', from:'상시 모니터링' },
+  { id:'IC-2026-003', type:'직무분리 위반 의심',   dept:'영업1팀',      risk:'High',   status:'준법 검토 필요', statusClass:'review', from:'정기 점검' },
+  { id:'IC-2026-004', type:'한도 초과 거래',       dept:'외환딜링룸',   risk:'Medium', status:'자동 조치 후보', statusClass:'auto',   from:'상시 모니터링' },
+  { id:'IC-2026-005', type:'보고기한 경과',        dept:'리스크관리부', risk:'Low',    status:'자동 조치 후보', statusClass:'auto',   from:'상시 모니터링' },
+];
+
+/* ── 대표 사건 IC-2026-001 상세 (온톨로지 + 추론 + 근거) ── */
+const DEMO = {
+  ontology:{
+    event:[ {k:'유형', v:'승인권한 초과 가능성'}, {k:'탐지', v:'정기 점검 (2026-05-29)'} ],
+    actor:[ {k:'담당 부서', v:'여신심사본부'}, {k:'책임자', v:'여신담당 부행장 (책무 항목)'}, {k:'검토자', v:'준법·내부통제 담당자'} ],
+    policy:[ {k:'POL-IC-003', v:'직무권한 및 승인 기준'}, {k:'기준', v:'내부통제 기준 규정'}, {k:'관리', v:'보고 및 개선과제 관리 기준'} ],
+    control:[ {k:'점검 항목', v:'고위험 승인 관리'}, {k:'책무 항목', v:'여신 승인 통제'}, {k:'개선과제', v:'1건 미완료'}, {k:'보고 기한', v:'D+5'} ],
+    evidence:[ {label:'유사 점검 사례', v:'4건'}, {label:'과거 개선과제', v:'2건'}, {label:'관련 보고서', v:'3건'} ],
+  },
+  /* 결정론 근거 — 가중치 합산으로 위반 가능성 산출 */
+  grounds:[
+    {src:'규정', t:'승인권한 기준 초과 가능성', d:'5,800만원 — 팀장 전결 한도(5천만원) 초과, 임원 승인 누락 (POL-IC-003)', w:30},
+    {src:'책무', t:'임원 책무 항목과 연결', d:'여신담당 부행장의 「여신 승인 통제」 책무 항목에 직접 해당', w:18},
+    {src:'사례', t:'동일 유형 유사 점검 사례 4건', d:'과거 4건 중 4건 모두 개선과제 등록·소명 요청으로 종결', w:20},
+    {src:'이력', t:'미완료 개선과제 1건 존재', d:'직전 점검에서 등록된 승인권한 관련 개선과제가 아직 미완료', w:10},
+  ],
+  reco:['준법 담당자 검토', '담당 부서 추가 소명 요청', '개선과제 등록', '차기 점검 항목에 반영'],
+  recoDecision:'개선과제 등록 · 담당 부서 소명 요청 · 임원 보고 대상 포함',
+  checklist:['관련 규정 확인 (POL-IC-003)', '책무 담당자 확인 (여신담당 부행장)', '유사사례 확인 (4건)', '미완료 개선과제 확인 (1건)'],
+  actions:[
+    ['IC','내부통제 케이스 등록'],
+    ['소','담당 부서 소명 요청 생성'],
+    ['과','개선과제 초안 생성'],
+    ['알','준법 담당자 알림 발송'],
+    ['보','임원 보고 후보에 포함'],
+    ['감','감사로그 생성'],
+  ],
+  links:[
+    {t:'규정', b:'POL-IC-003 직무권한 및 승인 기준', s:'권한 초과 시 개선과제 등록 + 소명 요청'},
+    {t:'규정', b:'내부통제 기준 규정 §12', s:'고위험 승인 관리 통제 항목'},
+    {t:'책무', b:'여신담당 부행장 · 여신 승인 통제', s:'책무구조도 상 직접 책임 항목'},
+    {t:'사례', b:'IC-HIST-004 승인권한 초과', s:'결과: 개선과제 등록 / High'},
+    {t:'사례', b:'유사 점검 사례 외 3건', s:'모두 소명 요청으로 종결'},
+    {t:'개선', b:'IMP-2025-118 (미완료)', s:'승인권한 매트릭스 정비 — 진행 중'},
+    {t:'보고', b:'관련 내부통제 보고서 3건', s:'분기 점검 결과 · 책무 점검 결과'},
+  ],
+};
+/* 위반 가능성 = 가중치 합 (정규화 78%로 설계) */
+const RISK_PCT = DEMO.grounds.reduce((a,g)=>a+g.w,0); // 78
+const DEMO_DATE = '2026-05-29';
+
+/* ── 상태 ── */
+let selectedId = 'IC-2026-001';
+let stage = -1;          // -1: 미시작, 0..5: LOOP index
+let decision = null;     // 검토자 결정
+let decisionId = null;
+let autoPlaying = false;
+const decisionLog = [];
+
+/* ── 유틸 ── */
+const $ = id => document.getElementById(id);
+const cur = () => CASES.find(c=>c.id===selectedId);
+const isDemo = () => cur() && cur().demo;
+function pad(n){return String(n).padStart(2,'0');}
+let clock = 9*3600 + 12*60; // 09:12 시작, 단계마다 진행 (결정론)
+function stamp(){ const h=Math.floor(clock/3600), m=Math.floor((clock%3600)/60); clock += 137; return `${pad(h)}:${pad(m)}`; }
+
+/* ── Decision Loop bar 렌더 ── */
+function renderLoop(){
+  const el = $('loopbar'); el.innerHTML='';
+  LOOP.forEach((s,i)=>{
+    const node = document.createElement('div');
+    node.className = 'lp-node' + (s.human?' human':'') + (i<stage?' done':'') + (i===stage?' active':'');
+    node.innerHTML = `<div class="lc">${i<stage?'✓':i+1}</div><div class="lt"><b>${s.n}</b><span>${s.ko}</span></div>`;
+    el.appendChild(node);
+    if(i<LOOP.length-1){
+      const ar=document.createElement('span'); ar.className='lp-arrow'; ar.textContent='→'; el.appendChild(ar);
+    }
+  });
+}
+
+/* ── Case Queue 렌더 ── */
+function renderQueue(){
+  const el=$('queueList'); el.innerHTML='';
+  CASES.forEach(c=>{
+    const resolved = (c.id===selectedId && stage>=4 && decision==='approve');
+    const div=document.createElement('div');
+    div.className='queue-item'+(c.id===selectedId?' active':'');
+    const st = resolved ? '조치 완료' : c.status;
+    const stc = resolved ? 'resolved' : c.statusClass;
+    div.innerHTML=`<div class="qi-id">${c.id}</div>
+      <div class="qi-t">${c.type}</div>
+      <div class="qi-m">${c.dept} · ${c.from}</div>
+      <div class="qi-foot"><span class="risk ${c.risk}">${c.risk}</span><span class="qi-s ${stc}">${st}</span></div>`;
+    div.onclick=()=>selectCase(c.id);
+    el.appendChild(div);
+  });
+}
+
+function selectCase(id){
+  if(autoPlaying) return;
+  selectedId=id; stage=-1; decision=null; decisionId=null; clock=9*3600+12*60;
+  $('trustId').textContent='Decision ID —';
+  resetBottom();
+  $('evPanel').innerHTML=`<div class="ev-empty">사건을 선택하고 <b>의미화(Semantic)</b> 단계를 실행하면<br>관련 규정·책무·유사사례·개선과제가<br>자동으로 연결됩니다.</div>`;
+  renderAll();
+}
+
+function resetBottom(){
+  $('miHitl').className='mini-status'; $('miHitl').textContent='검토 대기';
+  $('miAction').className='mini-status'; $('miAction').textContent='실행 전';
+  $('miLearn').className='mini-status'; $('miLearn').textContent='학습 전';
+}
+
+/* ════════ STAGE 렌더 ════════ */
+function renderStage(){
+  const c=cur(); const card=$('stageCard');
+  const head = (badge,title,sub,cid) =>
+    `<div class="con-head"><div><span class="badge">${badge}</span><h3>${title}</h3></div>
+     <div class="cid">${cid||''}</div></div><p class="stage-sub">${sub}</p>`;
+
+  // 미시작 — 사건 개요(Input 화면)
+  if(stage<0){
+    card.innerHTML = head('Case','사건 개요', '운영 큐에서 선택된 내부통제 사건입니다. 처리를 시작하면 AAP Decision Loop가 작동합니다.', c.id)
+      + caseCardHtml(c);
+    return;
+  }
+  const key = LOOP[stage].key;
+
+  if(key==='input'){
+    card.innerHTML = head('① Input · 데이터/연동','사건 접수',
+      '기존 내부통제 시스템·점검 데이터·문서 자산이 하나의 사건 객체로 연결되었습니다.', c.id)
+      + caseCardHtml(c)
+      + `<div style="font-size:12.5px;color:var(--sub);margin-top:6px">→ 원천 시스템·점검 결과·증빙·보고 데이터가 <b>Case Object</b> 단위로 집결되었습니다.</div>`;
+    return;
+  }
+
+  if(key==='semantic'){
+    card.innerHTML = head('② Semantic · 지식/시멘틱','Ontology Context',
+      '단순 텍스트가 아니라, 사건이 업무 객체와 관계로 해석됩니다.', c.id)
+      + (isDemo()? ontologyHtml() : notImplHtml());
+    if(isDemo()) revealSeq('.onto-block', 220);
+    return;
+  }
+
+  if(key==='reasoning'){
+    card.innerHTML = head('③ Reasoning · 에이전트 실행 환경','Agent 판단 결과',
+      '정책·사례·권한·점검 이력을 근거로, 위반 가능성과 조치 경로를 생성합니다.', c.id)
+      + (isDemo()? reasoningHtml() : notImplHtml());
+    if(isDemo()){
+      requestAnimationFrame(()=>{ document.querySelectorAll('.gbar i').forEach(i=>i.style.width=i.dataset.w+'%'); });
+      revealSeq('.ground', 260);
+    }
+    return;
+  }
+
+  if(key==='control'){
+    card.innerHTML = head('④ Control · AI 컨트롤/거버넌스','HITL Decision Workspace',
+      '위험도·권한 기준에 따라 사람이 검토하는 통제 지점입니다. AI는 증강·제안, 결정은 사람이 합니다.', c.id)
+      + (isDemo()? hitlHtml() : notImplHtml());
+    return;
+  }
+
+  if(key==='action'){
+    card.innerHTML = head('⑤ Action · 데이터/연동 + 업무 시스템','Action Execution',
+      '검토자가 승인한 결과가 실제 업무 시스템에 반영됩니다.', c.id)
+      + actionHtml();
+    revealActions();
+    return;
+  }
+
+  if(key==='learning'){
+    card.innerHTML = head('⑥ Learning · AI 품질/평가 + 운영 학습','Learning Result',
+      '판단과 검토 결과가 조직 자산으로 축적되어, 다음 유사 사건에 재사용됩니다.', c.id)
+      + learningHtml();
+    return;
+  }
+}
+
+/* ── 사건 카드 ── */
+function caseCardHtml(c){
+  return `<div class="casecard">
+    <b>📋 ${c.type}</b><br>
+    부서: ${c.dept} · 탐지: ${c.from}
+    <div class="row">
+      <span class="risk ${c.risk}">위험도 ${c.risk}</span>
+      <span class="qi-s ${c.statusClass}">${c.status}</span>
+      <span class="qi-s" style="background:var(--bg)">${c.id}</span>
+    </div>
+  </div>`;
+}
+
+/* ── 미구현(데모 외 사건) 안내 ── */
+function notImplHtml(){
+  return `<div class="ev-empty" style="padding:34px 14px">이 사건은 1차 PoC 시연 범위 밖입니다.<br>
+    대표 사건 <b>IC-2026-001 (승인권한 초과 가능성)</b>을 선택하면<br>전체 의사결정 루프가 시연됩니다.</div>`;
+}
+
+/* ── ② Ontology ── */
+function ontologyHtml(){
+  const o=DEMO.ontology;
+  const block=(cls,icon,label,items)=>`<div class="onto-block ${cls}">
+    <div class="ob-h">${icon} ${label}</div>
+    ${items.map(it=>`<div class="onto-item"><span class="k">${it.k}</span><span class="v">${it.v}</span></div>`).join('')}
+  </div>`;
+  const ev=`<div class="onto-block evidence"><div class="ob-h">🔎 Evidence</div>
+    <div class="ev-chips">${o.evidence.map(e=>`<span class="ev-chip">${e.label} <b>${e.v}</b></span>`).join('')}</div></div>`;
+  return `<div class="onto-grid">
+    ${block('event','⚠','Event', o.event)}
+    ${block('actor','👥','Actor', o.actor)}
+    ${block('policy','📑','Policy', o.policy)}
+    ${block('control','🎯','Control Object', o.control)}
+    ${ev}
+  </div>`;
+}
+
+/* ── ③ Reasoning ── */
+function reasoningHtml(){
+  const g=DEMO.grounds;
+  const grounds=g.map(x=>`<div class="ground"><span class="src ${x.src}">${x.src}</span>
+    <div class="gx"><b>${x.t}</b><div style="color:var(--sub);font-size:11.5px;margin-top:1px">${x.d}</div></div>
+    <span class="wt">+${x.w}</span></div>`).join('');
+  const reco=DEMO.reco.map((r,i)=>`<div class="reco"><span class="rc">${i+1}</span>${r}</div>`).join('');
+  return `<div class="gauge-row">
+      <div class="gauge risk-g"><div class="gl">위반 가능성</div><div class="gv">${RISK_PCT}%</div><div class="gbar"><i data-w="${RISK_PCT}"></i></div></div>
+      <div class="gauge impact-g"><div class="gl">영향도</div><div class="gv">High</div><div class="gbar"><i data-w="85" style="background:var(--amber)"></i></div></div>
+      <div class="gauge prio-g"><div class="gl">조치 우선순위</div><div class="gv">1순위</div><div class="gbar"><i data-w="100" style="background:var(--blue)"></i></div></div>
+    </div>
+    <div class="sec-h">📌 주요 근거 <span style="font-weight:600;color:var(--mut);font-size:11px">· 결정론 가중치 합산 = 위반 가능성 ${RISK_PCT}% (재현 가능)</span></div>
+    ${grounds}
+    <div class="sec-h" style="margin-top:18px">✅ 권고 조치</div>
+    ${reco}`;
+}
+
+/* ── ④ HITL ── */
+function hitlHtml(){
+  const chk=DEMO.checklist.map(x=>`<div class="check-item"><span class="ck">✓</span>${x}</div>`).join('');
+  return `<div class="hitl-box">
+    <div class="hh">👤 준법 담당자 검토 필요 — 자동 첨부된 근거</div>
+    <div class="reco-decision"><b>권고 결정:</b> ${DEMO.recoDecision}</div>
+    <div class="checklist">
+      <div style="font-size:11px;font-weight:800;color:#92400E;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">승인 전 확인 항목</div>
+      ${chk}
+    </div>
+    <div class="decide-row">
+      <button class="approve" onclick="decide('approve')">승인</button>
+      <button onclick="decide('modify')">수정</button>
+      <button onclick="decide('addinfo')">추가 확인 요청</button>
+      <button class="esc" onclick="decide('escalate')">조사 이관</button>
+      <button class="reject" onclick="decide('reject')">반려</button>
+    </div>
+  </div>`;
+}
+
+/* ── ⑤ Action ── */
+function actionHtml(){
+  const items=DEMO.actions.map(a=>`<div class="action-item" data-act><span class="ac">${a[0]}</span>${a[1]}</div>`).join('');
+  return `${items}
+    <div class="decision-id"><div><div class="di-l">Decision ID · 감사 추적</div><div class="di-v" id="actDid">${decisionId||'발급 중…'}</div></div>
+    <div style="font-size:11px;color:#94A3B8;text-align:right">근거·판단·승인·실행 이력이<br>이 ID 기준으로 재현됩니다.</div></div>`;
+}
+
+/* ── ⑥ Learning ── */
+function learningHtml(){
+  return `<div class="learn-row">
+      <div class="learn-card"><div class="ll">유사 내부통제 사례</div><div class="lv">4건 <span class="arrow">→</span> 5건 <span class="new">+1</span></div></div>
+      <div class="learn-card"><div class="ll">개선과제 패턴</div><div class="lv">신규 후보 1건 <span class="new">추가</span></div></div>
+      <div class="learn-card"><div class="ll">반려/수정 사유</div><div class="lv">${decision==='approve'?'없음':'기록됨'}</div></div>
+    </div>
+    <div style="font-size:12.5px;color:var(--sub);margin-bottom:16px">→ 다음 유사 사건부터 <b>본 결정 기준이 참조</b>됩니다. (Decision Log · 유사사례 풀 · 개선과제 패턴 축적)</div>
+    <div class="metric-strip">
+      <h4>📊 시뮬레이션 운영 지표 (Before → After)</h4>
+      <div class="metric-row"><span class="mk">처리 리드타임</span><span class="mv"><span class="was">1~2일</span><span class="now">10~20분</span></span></div>
+      <div class="metric-row"><span class="mk">근거 확인</span><span class="mv"><span class="was">분산 문서 조회</span><span class="now">규정·책무·사례 자동 패키징</span></span></div>
+      <div class="metric-row"><span class="mk">판단 일관성</span><span class="mv"><span class="was">담당자 경험 의존</span><span class="now">정책·사례 기반 후보</span></span></div>
+      <div class="metric-row"><span class="mk">감사 대응</span><span class="mv"><span class="was">사후 취합</span><span class="now">Decision ID 즉시 재현</span></span></div>
+    </div>`;
+}
+
+/* ════════ Evidence & Reasoning (우측) ════════ */
+function renderEvidence(){
+  if(!isDemo() || stage<1) return; // semantic 이상에서만 채움
+  const el=$('evPanel');
+  el.innerHTML = DEMO.links.map(l=>`<div class="link-item"><span class="li-t ${l.t}">${l.t}</span>
+    <div class="li-x"><b>${l.b}</b><span>${l.s}</span></div></div>`).join('');
+  revealSeq('.link-item', 130);
+}
+
+/* ── 순차 등장 애니메이션 ── */
+function revealSeq(sel, gap){
+  const nodes=document.querySelectorAll(sel);
+  nodes.forEach((n,i)=>setTimeout(()=>n.classList.add('show'), 60+i*gap));
+}
+function revealActions(){
+  const nodes=document.querySelectorAll('[data-act]');
+  nodes.forEach((n,i)=>setTimeout(()=>n.classList.add('active'), 200+i*260));
+}
+
+/* ════════ 단계 진행 ════════ */
+function renderCTA(){
+  const el=$('ctaRow'); el.innerHTML='';
+  // control 단계에서는 HITL 버튼이 진행을 대체
+  if(stage>=0 && LOOP[stage] && LOOP[stage].key==='control' && !decision){
+    el.innerHTML = `<span class="auto-note">⬆ 위 HITL 워크스페이스에서 검토자 결정을 선택하세요. <b>AI는 자동 진행하지 않습니다.</b></span>
+      <span class="spacer"></span><button class="btn ghost" onclick="resetLoop()">↺ 처음부터</button>`;
+    return;
+  }
+  const atEnd = stage>=LOOP.length-1;
+  let nextLabel;
+  if(stage<0) nextLabel='▶ 사건 처리 시작';
+  else if(LOOP[stage].key==='input') nextLabel='의미화 실행 →';
+  else if(LOOP[stage].key==='semantic') nextLabel='추론 실행 →';
+  else if(LOOP[stage].key==='reasoning') nextLabel='검토 단계로 →';
+  else if(LOOP[stage].key==='action') nextLabel='학습 반영 →';
+  else nextLabel='다음 →';
+
+  const primary = atEnd
+    ? `<button class="btn" onclick="resetLoop()">↺ 새 사건 처리</button>`
+    : `<button class="btn primary" onclick="next()" ${(!isDemo()&&stage>=1)?'disabled':''}>${nextLabel}</button>`;
+  el.innerHTML = primary
+    + `<button class="btn ghost" onclick="autoPlay()" ${(autoPlaying||atEnd||!isDemo())?'disabled':''}>⏩ 전체 자동 재생</button>`
+    + `<span class="spacer"></span>`
+    + (stage>=0?`<button class="btn ghost" onclick="resetLoop()">↺ 처음부터</button>`:'')
+    + (atEnd?`<span class="auto-note" style="margin-left:10px">✓ 의사결정 루프 완주 — 하단 Decision Log에 감사 이력 적재됨</span>`:'');
+}
+
+function next(){
+  if(stage>=LOOP.length-1) return;
+  stage++;
+  // control 진입 시 자동재생 일시정지(사람 결정 필요)
+  if(LOOP[stage].key==='control' && autoPlaying){ autoPlaying=false; }
+  afterStage();
+}
+
+function afterStage(){
+  const key = LOOP[stage] ? LOOP[stage].key : null;
+  if(key==='control'){ $('miHitl').className='mini-status set'; $('miHitl').textContent='⏳ 준법 담당자 검토 대기'; }
+  if(key==='action'){
+    decisionId = 'IC-'+DEMO_DATE.replace(/-/g,'')+'-001';
+    $('trustId').textContent='Decision ID '+decisionId;
+    $('miAction').className='mini-status set';
+    $('miAction').innerHTML='<span class="tag-ok">✓ 6개 액션 실행</span> · 케이스 등록·소명 요청·개선과제·알림·보고·감사로그';
+  }
+  if(key==='learning'){
+    $('miLearn').className='mini-status set';
+    $('miLearn').innerHTML='<span class="tag-ok">✓ 축적 완료</span> · 유사사례 4→5 · 개선과제 패턴 +1';
+    appendDecisionLog();
+  }
+  renderAll();
+}
+
+/* ── HITL 결정 ── */
+const DECISION_LABEL = {approve:'승인', modify:'수정', addinfo:'추가 확인 요청', escalate:'조사 이관', reject:'반려'};
+function decide(d){
+  decision=d;
+  $('miHitl').className='mini-status set';
+  if(d==='approve'){
+    $('miHitl').innerHTML='<span class="tag-ok">✓ 승인</span> · 권고 결정 채택 (개선과제·소명·임원보고)';
+    next(); // action으로 진행
+  } else {
+    const branch = {
+      modify:'수정 후 승인 — 조치 범위 조정',
+      addinfo:'추가 확인 요청 — 담당 부서 회신 대기',
+      escalate:'조사 이관 — 감사부서 단독 조사',
+      reject:'반려 — 통제 위반 아님으로 종결',
+    }[d];
+    $('miHitl').innerHTML=`<span class="tag-wait">● ${DECISION_LABEL[d]}</span> · ${branch}`;
+    // 분기: 실행 단계는 결정 유형 기록 후 학습으로 (감사 이력 남김)
+    decisionId = 'IC-'+DEMO_DATE.replace(/-/g,'')+'-001';
+    $('trustId').textContent='Decision ID '+decisionId;
+    $('miAction').className='mini-status set';
+    $('miAction').innerHTML=`<span class="tag-wait">● 분기 처리</span> · ${branch} · 감사로그 기록`;
+    stage = LOOP.length-1; // learning으로 점프 (분기도 학습/감사에 적재)
+    $('miLearn').className='mini-status set';
+    $('miLearn').innerHTML='<span class="tag-ok">✓ 축적 완료</span> · 반려/수정 사유가 다음 판단 기준에 반영';
+    appendDecisionLog();
+    renderAll();
+  }
+}
+
+/* ── Decision Log 적재 ── */
+function appendDecisionLog(){
+  if(decisionLog.some(r=>r.id===decisionId)) return;
+  decisionLog.unshift({
+    id:decisionId,
+    caseLabel:`${cur().type} · ${cur().dept}`,
+    judge:`위반 가능성 ${RISK_PCT}% · High · 1순위`,
+    decision:DECISION_LABEL[decision]||'—',
+    time:`${DEMO_DATE} ${stamp()}`,
+  });
+  renderDlog();
+}
+function renderDlog(){
+  const b=$('dlogBody');
+  if(!decisionLog.length){ b.innerHTML='<tr class="empty"><td colspan="5">아직 기록된 의사결정이 없습니다. 루프를 완주하면 감사 가능한 이력이 적재됩니다.</td></tr>'; return; }
+  b.innerHTML=decisionLog.map(r=>`<tr>
+    <td class="mono">${r.id}</td><td>${r.caseLabel}</td><td>${r.judge}</td>
+    <td><b>${r.decision}</b></td><td class="mono">${r.time}</td></tr>`).join('');
+}
+
+/* ── 리셋 ── */
+function resetLoop(){
+  autoPlaying=false; stage=-1; decision=null; decisionId=null; clock=9*3600+12*60;
+  $('trustId').textContent='Decision ID —';
+  resetBottom();
+  $('evPanel').innerHTML=`<div class="ev-empty">사건을 선택하고 <b>의미화(Semantic)</b> 단계를 실행하면<br>관련 규정·책무·유사사례·개선과제가<br>자동으로 연결됩니다.</div>`;
+  renderAll();
+}
+
+/* ── 자동 재생 (control에서 멈춤) ── */
+function autoPlay(){
+  if(!isDemo()) return;
+  autoPlaying=true; renderCTA();
+  const step=()=>{
+    if(!autoPlaying){ return; }
+    if(stage>=LOOP.length-1){ autoPlaying=false; renderCTA(); return; }
+    if(LOOP[stage] && LOOP[stage].key==='control' && !decision){ autoPlaying=false; renderCTA(); return; }
+    next();
+    setTimeout(step, 1400);
+  };
+  setTimeout(step, 600);
+}
+
+/* ── 전체 렌더 ── */
+function renderAll(){
+  renderLoop(); renderQueue(); renderStage(); renderEvidence(); renderCTA(); renderDlog();
+}
+
+/* init */
+renderAll();
+</script>
+</body>
+</html>

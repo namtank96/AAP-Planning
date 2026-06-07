@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP PoC 프로토타입 · 세탁 프랜차이즈 클레임 처리 · v0.4</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2;
+  --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+  --amber:#b78313; --amber2:#fff8e1; --amber-strong:#8a6210;
+  --green:#1f8a4c; --green2:#e8f6ee;
+  --blue:#2563c4; --blue2:#eaf1fb;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#f4f5f7;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55;font-size:14px}
+.page{max-width:1320px;margin:0 auto;background:#fff}
+
+/* ====== Doc header ====== */
+.doc-head{padding:28px 40px 22px;background:#fff;border-bottom:1px solid var(--line)}
+.doc-eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--red);font-weight:900;margin-bottom:8px}
+.doc-head h1{margin:0;font-size:24px;letter-spacing:-.025em;line-height:1.2;color:var(--ink)}
+.doc-meta{display:flex;gap:24px;margin-top:10px;font-size:12px;color:var(--muted)}
+.doc-meta b{color:var(--ink);margin-right:4px;font-weight:700}
+
+/* ====== TOC ====== */
+.toc{padding:14px 40px;background:#fafafa;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.toc-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.toc a{display:flex;gap:7px;align-items:center;padding:7px 10px;border:1px solid var(--line);background:#fff;border-radius:7px;font-size:11.5px;color:var(--gray-700);transition:all .15s;line-height:1.3}
+.toc a b{display:inline-flex;min-width:20px;height:18px;align-items:center;justify-content:center;border-radius:4px;background:var(--gray-700);color:#fff;font-size:10px;font-weight:900;flex-shrink:0}
+.toc a:hover{border-color:var(--gray-400);color:var(--ink)}
+.toc a.active{border-color:var(--red);color:var(--ink);font-weight:800}
+.toc a.active b{background:var(--red)}
+
+/* ====== Section frame ====== */
+.section{padding:32px 40px;background:#fff;border-bottom:1px solid var(--line)}
+.section-head{margin-bottom:18px}
+.section-head .s-num{display:inline-block;font-size:10.5px;font-weight:900;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+.section-head h2{margin:0;font-size:20px;letter-spacing:-.02em;line-height:1.25;color:var(--ink)}
+.section-head p.lead{margin:8px 0 0;font-size:13px;color:var(--sub);line-height:1.65;max-width:920px}
+.section-head p.lead strong{color:var(--ink);font-weight:700}
+
+/* ====== Swimlane workflow ====== */
+.swim-wrap{border:1px solid var(--line);border-radius:12px;background:#fbfbfc;overflow:hidden}
+.swim-header{display:grid;grid-template-columns:140px repeat(6,1fr);background:#15171d;color:#fff}
+.swim-header .sh-corner{padding:11px 13px;font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.55);border-right:1px solid #2a2d35}
+.swim-header .sh-step{padding:11px 10px;text-align:center;border-right:1px solid #2a2d35;font-size:11px;font-weight:800;color:#fff;line-height:1.3}
+.swim-header .sh-step:last-child{border-right:0}
+.swim-header .sh-step b{display:block;font-size:9.5px;color:rgba(255,255,255,.55);font-weight:900;letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase}
+.swim-row{display:grid;grid-template-columns:140px repeat(6,1fr);background:#fff;border-top:1px solid var(--line)}
+.swim-row .sr-label{padding:14px 13px;background:#f5f6f8;font-size:12px;font-weight:800;color:var(--ink);border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;line-height:1.4}
+.swim-row .sr-label small{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.swim-row.lane-staff .sr-label{background:#eef1f5}
+.swim-row.lane-agent .sr-label{background:#fff1f2;color:var(--red)}
+.swim-row.lane-hq .sr-label{background:#fff8e1;color:var(--amber-strong)}
+.swim-row.lane-sys .sr-label{background:#eefafa;color:var(--teal-strong)}
+.swim-row .sr-cell{padding:11px 9px;border-right:1px solid var(--line);min-height:80px;display:flex;align-items:center;justify-content:center;position:relative}
+.swim-row .sr-cell:last-child{border-right:0}
+.swim-row .sr-cell.empty{background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(0,0,0,.025) 6px,rgba(0,0,0,.025) 7px)}
+
+.act{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:6px 7px;border-radius:7px;background:#fff;border:1.5px solid var(--gray-300);font-size:11px;color:var(--ink);line-height:1.35;width:100%;max-width:140px}
+.act.staff{border-color:#9ab2ce;background:#eef1f5}
+.act.agent{border-color:var(--red);background:#fff;color:var(--ink)}
+.act.agent::before{content:"AI";display:block;font-size:8.5px;font-weight:900;color:var(--red);letter-spacing:.08em;margin-bottom:2px}
+.act.hq{border-color:var(--amber);background:#fffaef}
+.act.hq::before{content:"HITL";display:block;font-size:8.5px;font-weight:900;color:var(--amber-strong);letter-spacing:.08em;margin-bottom:2px}
+.act.sys{border-color:#7dcac4;background:var(--teal2);color:var(--teal-strong)}
+.act b{font-weight:800;font-size:11px;line-height:1.3}
+.act .desc{font-size:10px;color:var(--muted);font-weight:500;line-height:1.4}
+.act.agent .desc{color:var(--gray-600)}
+
+/* Connecting arrows (CSS-only, between cells in same row or to next col) */
+.swim-row .sr-cell.has-flow-right::after{content:"";position:absolute;right:-1px;top:50%;transform:translateY(-50%);width:0;height:0;border-style:solid;border-width:6px 0 6px 8px;border-color:transparent transparent transparent var(--gray-400);z-index:2}
+.swim-row .sr-cell.has-flow-down::before{content:"";position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);width:0;height:0;border-style:solid;border-width:8px 6px 0 6px;border-color:var(--gray-400) transparent transparent transparent;z-index:2}
+
+.swim-foot{padding:10px 14px;background:#15171d;color:rgba(255,255,255,.78);font-size:11px;border-top:1px solid #2a2d35;text-align:center;letter-spacing:.04em}
+.swim-foot b{color:#fff;font-weight:700}
+
+/* ====== Screen frame ====== */
+.screen-section{padding:34px 40px;background:#f4f5f7;border-bottom:1px solid var(--line)}
+.screen-section .section-head h2{font-size:18px}
+.screen-section .section-head .s-num{color:var(--red)}
+
+.screen{background:#fff;border-radius:14px;box-shadow:0 6px 30px rgba(17,19,24,.08),0 1px 0 var(--gray-200);overflow:hidden;border:1px solid var(--line);margin-bottom:14px}
+.browser-chrome{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:10px 14px;background:#fbfbfc;border-bottom:1px solid var(--line)}
+.browser-dots{display:flex;gap:5px}
+.browser-dots i{width:10px;height:10px;border-radius:50%;background:#e0e3eb;display:inline-block}
+.browser-dots i:first-child{background:#ff5f57}
+.browser-dots i:nth-child(2){background:#febc2e}
+.browser-dots i:nth-child(3){background:#28c840}
+.browser-url{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 12px;text-align:center;max-width:540px;justify-self:center;width:100%;font-family:ui-monospace,Menlo,Consolas,monospace}
+.browser-url b{color:var(--ink);font-weight:700}
+.browser-actions{display:flex;gap:7px;font-size:11px;color:var(--muted)}
+
+/* App layout inside screen */
+.app{display:grid;grid-template-columns:200px 1fr;min-height:560px}
+.app.no-side{grid-template-columns:1fr}
+.app-side{background:#0e1014;color:rgba(255,255,255,.86);padding:18px 14px;display:flex;flex-direction:column;gap:14px}
+.app-brand{font-size:13px;font-weight:900;color:#fff;letter-spacing:-.005em;padding-bottom:12px;border-bottom:1px solid #2a2d35;display:flex;align-items:center;gap:8px}
+.app-brand .brand-dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.app-brand small{display:block;font-size:9.5px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:2px;margin-left:16px}
+.app-nav{display:flex;flex-direction:column;gap:2px}
+.app-nav-group{font-size:9.5px;color:rgba(255,255,255,.45);font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin:6px 0 4px}
+.app-nav a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;font-size:12px;color:rgba(255,255,255,.78);font-weight:600;cursor:default}
+.app-nav a .nav-i{width:14px;height:14px;border-radius:3px;background:rgba(255,255,255,.16);display:inline-block;flex-shrink:0}
+.app-nav a.active{background:rgba(255,255,255,.08);color:#fff;font-weight:800}
+.app-nav a.active .nav-i{background:var(--red)}
+.app-nav a .badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:8px;letter-spacing:.04em}
+
+.app-user{margin-top:auto;padding:11px;background:rgba(255,255,255,.04);border-radius:8px;display:flex;align-items:center;gap:9px;font-size:11.5px}
+.app-user .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#777,#444);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.app-user .who{color:#fff;font-weight:700;line-height:1.3}
+.app-user .who small{display:block;color:rgba(255,255,255,.55);font-weight:500;font-size:10px}
+
+/* App main area */
+.app-main{padding:20px 24px;background:#fafafa;overflow:hidden}
+.app-topbar{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.app-topbar h3{margin:0 0 3px;font-size:18px;color:var(--ink);letter-spacing:-.015em}
+.app-topbar .crumb{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:2px}
+.app-topbar .crumb b{color:var(--gray-700)}
+.app-topbar .top-act{display:flex;gap:6px}
+
+.btn{padding:7px 12px;border-radius:7px;font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--gray-700);cursor:default;font-family:inherit;letter-spacing:-.005em}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn.subtle{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.amber{background:var(--amber-strong);border-color:var(--amber-strong);color:#fff}
+.btn.green{background:var(--green);border-color:var(--green);color:#fff}
+
+/* Status pill */
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.pill .d{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.new{background:var(--red2);color:var(--red)}
+.pill.review{background:var(--amber2);color:var(--amber-strong)}
+.pill.done{background:var(--green2);color:var(--green)}
+.pill.ai{background:var(--blue2);color:var(--blue)}
+.pill.high{background:var(--red2);color:var(--red)}
+.pill.med{background:var(--amber2);color:var(--amber-strong)}
+.pill.low{background:var(--green2);color:var(--green)}
+
+/* App cards */
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px}
+.card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.card-h h4{margin:0;font-size:13px;color:var(--ink);font-weight:800;letter-spacing:-.005em}
+.card-h .meta{font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+
+/* Grid helpers */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid-2to1{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+.grid-1to2{display:grid;grid-template-columns:1fr 1.6fr;gap:14px}
+
+/* Form */
+.form-row{margin-bottom:11px}
+.form-row label{display:block;font-size:10.5px;color:var(--muted);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px}
+.input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;background:#fff;font-family:inherit;color:var(--ink)}
+.input:focus{outline:none;border-color:var(--ink)}
+.input.filled{background:#fafafa}
+textarea.input{min-height:60px;line-height:1.5;resize:none}
+.input-group{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Photo upload */
+.photo-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.photo{aspect-ratio:4/3;border-radius:8px;background:linear-gradient(135deg,#e6e8ec 0%,#c7ccd4 100%);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--gray-500);font-weight:700;letter-spacing:.04em;text-transform:uppercase;flex-direction:column;gap:4px}
+.photo .pi{font-size:18px;color:var(--gray-400)}
+.photo.filled{background:linear-gradient(135deg,#d8dde5 0%,#aab3bf 100%);color:var(--gray-700)}
+.photo.evidence{background:linear-gradient(135deg,#fde2e3 0%,#f0a5a8 100%);color:#a51b22}
+
+/* KV list */
+.kv{display:grid;grid-template-columns:90px 1fr;gap:5px 12px;font-size:12px;margin:0;line-height:1.55}
+.kv dt{color:var(--muted);font-weight:700}
+.kv dd{margin:0;color:var(--gray-700)}
+.kv dd b{color:var(--ink);font-weight:800}
+
+/* Candidate / probability */
+.cand{display:grid;grid-template-columns:1fr 80px 40px;gap:10px;align-items:center;padding:7px 0;font-size:12px}
+.cand:not(:last-child){border-bottom:1px dashed var(--line)}
+.cand .n{color:var(--gray-700)}
+.cand .n b{color:var(--ink);font-weight:800}
+.cand .n small{display:block;color:var(--muted);font-size:10.5px;font-weight:500;margin-top:1px}
+.cand .b{height:7px;background:var(--gray-100);border-radius:999px;position:relative;overflow:hidden}
+.cand .b i{position:absolute;left:0;top:0;height:100%;background:var(--gray-400);border-radius:999px}
+.cand.high .b i{background:var(--red)}
+.cand.med .b i{background:var(--amber)}
+.cand .p{text-align:right;font-weight:900;color:var(--gray-700);font-variant-numeric:tabular-nums;font-size:12px}
+
+/* Sources / evidence */
+.src{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;background:#fafafa;border:1px solid var(--line);border-radius:7px;font-size:11.5px;margin-bottom:5px}
+.src:last-child{margin-bottom:0}
+.src .si{width:22px;height:22px;border-radius:5px;background:var(--blue2);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
+.src b{display:block;color:var(--ink);font-weight:800;font-size:11.5px;margin-bottom:1px}
+.src small{display:block;color:var(--muted);font-size:10.5px;font-weight:600;line-height:1.45}
+
+/* Cases list */
+.case-list .case-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 11px;background:#fafafa;border:1px solid var(--line);border-radius:7px;margin-bottom:5px;font-size:11.5px}
+.case-list .case-item:last-child{margin-bottom:0}
+.case-item .c-ref{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--gray-700);font-size:10.5px;font-weight:700;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.case-item .c-reason{color:var(--gray-700)}
+.case-item .c-reason b{color:var(--ink);font-weight:800}
+.case-item .c-out{font-size:11px;font-weight:800;color:var(--gray-700);text-align:right}
+
+/* Responsibility split */
+.resp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.resp-cell{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:11px;text-align:center}
+.resp-cell .l{font-size:9.5px;color:var(--muted);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.resp-cell .v{font-size:22px;font-weight:900;color:var(--ink);letter-spacing:-.02em;line-height:1}
+.resp-cell.store{border-color:#f3c2c5;background:var(--red2)}
+.resp-cell.store .v{color:var(--red)}
+.resp-cell.hq{border-color:#e9c66a;background:var(--amber2)}
+.resp-cell.hq .v{color:var(--amber-strong)}
+.resp-cell.customer{border-color:#a4dcd9;background:var(--teal2)}
+.resp-cell.customer .v{color:var(--teal-strong)}
+
+/* Action recommendation */
+.action-list{display:flex;flex-direction:column;gap:6px}
+.action-item{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;padding:9px 11px;background:#fff;border:1px solid var(--line);border-radius:7px;font-size:12px}
+.action-item .num{width:22px;height:22px;border-radius:50%;background:var(--gray-700);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:900}
+.action-item .txt{color:var(--gray-700);line-height:1.45}
+.action-item .txt b{color:var(--ink)}
+
+/* HITL escalation banner */
+.hitl-banner{background:#fffaef;border:1.5px solid var(--amber);border-radius:10px;padding:13px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;margin-bottom:14px}
+.hitl-banner .hb-i{width:34px;height:34px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900}
+.hitl-banner .hb-t{font-size:13px;color:var(--ink);font-weight:800;line-height:1.4}
+.hitl-banner .hb-t small{display:block;font-size:11px;color:var(--amber-strong);font-weight:700;margin-top:2px}
+
+/* Decision log timeline */
+.tl{position:relative;padding-left:24px;margin:0}
+.tl::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--gray-200)}
+.tl .tl-item{position:relative;margin-bottom:11px;padding:10px 13px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.tl .tl-item:last-child{margin-bottom:0}
+.tl .tl-item::before{content:"";position:absolute;left:-21px;top:13px;width:10px;height:10px;border-radius:50%;background:var(--gray-400);border:2px solid #fff;box-shadow:0 0 0 1px var(--gray-300)}
+.tl .tl-item.input::before{background:var(--gray-500)}
+.tl .tl-item.tool::before{background:var(--blue)}
+.tl .tl-item.reason::before{background:var(--teal-strong)}
+.tl .tl-item.hitl::before{background:var(--amber)}
+.tl .tl-item.action::before{background:var(--green)}
+.tl .tl-item .h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.tl .tl-item .time{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:var(--muted);font-weight:700}
+.tl .tl-item .tag{font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:var(--gray-200);color:var(--gray-700)}
+.tl .tl-item.input .tag{background:var(--gray-100);color:var(--gray-700)}
+.tl .tl-item.tool .tag{background:var(--blue2);color:var(--blue)}
+.tl .tl-item.reason .tag{background:var(--teal2);color:var(--teal-strong)}
+.tl .tl-item.hitl .tag{background:var(--amber2);color:var(--amber-strong)}
+.tl .tl-item.action .tag{background:var(--green2);color:var(--green)}
+.tl .tl-item .body{font-size:12px;color:var(--gray-700);line-height:1.55}
+.tl .tl-item .body b{color:var(--ink)}
+.tl .tl-item .body code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;background:var(--gray-50);padding:1px 5px;border-radius:3px;color:var(--gray-700)}
+
+/* Dashboard tiles */
+.tile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:3px}
+.tile .l{font-size:10px;color:var(--muted);font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.tile .v{font-size:24px;font-weight:900;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+.tile .d{font-size:11px;color:var(--green);font-weight:800;margin-top:3px}
+.tile .d.down{color:var(--red)}
+
+/* Pattern list (learning candidates) */
+.pat-list{display:flex;flex-direction:column;gap:8px}
+.pat{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;padding:11px 13px;background:#fff;border:1px solid var(--line);border-radius:9px}
+.pat .pi{width:26px;height:26px;border-radius:6px;background:var(--teal2);color:var(--teal-strong);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
+.pat .pt{font-size:12px;color:var(--gray-700);line-height:1.45}
+.pat .pt b{color:var(--ink);font-weight:800}
+.pat .pt small{display:block;color:var(--muted);font-size:10.5px;font-weight:600;margin-top:2px}
+.pat .ps{display:flex;gap:5px}
+
+/* Chart bar (simple) */
+.bar-chart{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:grid;grid-template-columns:100px 1fr 48px;gap:10px;align-items:center;font-size:11.5px}
+.bar-row .lbl{color:var(--gray-700)}
+.bar-row .br{height:14px;background:var(--gray-100);border-radius:4px;overflow:hidden;position:relative}
+.bar-row .br i{position:absolute;left:0;top:0;height:100%;background:var(--gray-500);border-radius:4px}
+.bar-row.staff .br i{background:#9ab2ce}
+.bar-row.agent .br i{background:var(--red)}
+.bar-row.hq .br i{background:var(--amber)}
+.bar-row.sys .br i{background:var(--teal)}
+.bar-row .vv{text-align:right;color:var(--gray-700);font-weight:800;font-variant-numeric:tabular-nums;font-size:11px}
+
+/* Inter-screen flow arrow */
+.flow-arrow{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 0 10px;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.04em}
+.flow-arrow .fl-line{flex:1;max-width:160px;height:1px;background:var(--gray-300);position:relative}
+.flow-arrow .fl-line::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);width:0;height:0;border-style:solid;border-width:5px 0 5px 7px;border-color:transparent transparent transparent var(--gray-400)}
+.flow-arrow .fl-line.first::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--gray-400)}
+.flow-arrow .fl-label{padding:5px 11px;background:#fff;border:1px solid var(--line);border-radius:6px;color:var(--gray-700);font-size:11px;font-weight:700;letter-spacing:-.005em}
+
+/* Footer */
+.footer{padding:18px 40px;background:#0e1014;color:rgba(255,255,255,.66);display:flex;justify-content:space-between;font-size:11px}
+
+/* Print */
+@media print{
+  body{background:#fff}
+  .toc{position:static}
+  .screen{box-shadow:none;page-break-inside:avoid}
+  .swim-wrap{page-break-inside:avoid}
+}
+
+/* Responsive */
+@media(max-width:1100px){
+  .toc-grid{grid-template-columns:repeat(3,1fr)}
+  .swim-header,.swim-row{grid-template-columns:100px repeat(6,minmax(110px,1fr));overflow-x:auto}
+  .swim-wrap{overflow-x:auto}
+  .app{grid-template-columns:1fr}
+  .app-side{display:none}
+  .grid-2,.grid-3,.grid-2to1,.grid-1to2{grid-template-columns:1fr}
+  .tile-grid{grid-template-columns:1fr 1fr}
+  .resp{grid-template-columns:1fr}
+  .section,.screen-section,.doc-head,.toc,.footer{padding-left:18px;padding-right:18px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ============= DOC HEADER ============= -->
+<header class="doc-head">
+  <div class="doc-eyebrow">AAP PoC Prototype · v0.4 · 2026-05-27</div>
+  <h1>세탁 프랜차이즈 클레임 처리 · 실제 운영 시 보이는 화면과 흐름</h1>
+  <div class="doc-meta">
+    <div><b>대상</b>경영진 보고 · 고객 시연</div>
+    <div><b>범위</b>워크플로 도식 1장 + 제품 화면 5종</div>
+    <div><b>시나리오</b>캐시미어 코트 수축 분쟁 · 점주 → AI Agent → 본사 HITL → 시스템·학습</div>
+  </div>
+</header>
+
+<!-- ============= TOC ============= -->
+<nav class="toc">
+  <div class="toc-grid">
+    <a href="#s0"><b>00</b>워크플로 도식</a>
+    <a href="#s1"><b>01</b>매장 접수 화면</a>
+    <a href="#s2"><b>02</b>점주 클레임 콘솔</a>
+    <a href="#s3"><b>03</b>본사 HITL 검토</a>
+    <a href="#s4"><b>04</b>Decision Log · 감사</a>
+    <a href="#s5"><b>05</b>본사 운영 대시보드</a>
+  </div>
+</nav>
+
+<!-- ============= 00. WORKFLOW DIAGRAM ============= -->
+<section class="section" id="s0">
+  <div class="section-head">
+    <span class="s-num">00 · 워크플로 도식</span>
+    <h2>한 건의 클레임이 4개 주체를 거쳐 처리되는 흐름</h2>
+    <p class="lead">
+      각 단계를 <strong>누가 수행하는지</strong>가 레인별로 분리되어 있습니다. AI Agent는 *판단을 제안*하고, 본사는 *최종 결정*하고, 시스템은 *반영·기록·학습*합니다. <strong>아래 5개 화면이 이 도식의 각 단계에서 사용자가 실제로 보는 화면</strong>입니다.
+    </p>
+  </div>
+
+  <div class="swim-wrap">
+    <div class="swim-header">
+      <div class="sh-corner">단계 →<br>주체 ↓</div>
+      <div class="sh-step"><b>Step 1</b>접수</div>
+      <div class="sh-step"><b>Step 2</b>이력 통합</div>
+      <div class="sh-step"><b>Step 3</b>원인 추론</div>
+      <div class="sh-step"><b>Step 4</b>책임 비율</div>
+      <div class="sh-step"><b>Step 5</b>HITL 검토</div>
+      <div class="sh-step"><b>Step 6</b>반영·학습</div>
+    </div>
+
+    <!-- 점주·매장 -->
+    <div class="swim-row lane-staff">
+      <div class="sr-label">점주·매장 직원<small>박철민</small></div>
+      <div class="sr-cell has-flow-right">
+        <div class="act staff"><b>클레임 입력</b><span class="desc">사진·메모·측정값</span></div>
+      </div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell">
+        <div class="act staff"><b>현장 정밀 측정</b><span class="desc">본사 요청 시</span></div>
+      </div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell">
+        <div class="act staff"><b>고객 응대 완료</b><span class="desc">결정 결과 전달</span></div>
+      </div>
+    </div>
+
+    <!-- AI Agent -->
+    <div class="swim-row lane-agent">
+      <div class="sr-label">AI Agent<small>판단 제안</small></div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell has-flow-right">
+        <div class="act agent"><b>이력·동의·처리 기록 로드</b><span class="desc">접수번호 → 사건 통합</span></div>
+      </div>
+      <div class="sr-cell has-flow-right">
+        <div class="act agent"><b>원인 4후보 + 확률·근거</b><span class="desc">온톨로지·정책 결합</span></div>
+      </div>
+      <div class="sr-cell has-flow-right">
+        <div class="act agent"><b>유사 사례 + 책임 비율 후보</b><span class="desc">매장·본사·고객</span></div>
+      </div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell empty"></div>
+    </div>
+
+    <!-- 본사 클레임팀 -->
+    <div class="swim-row lane-hq">
+      <div class="sr-label">본사 클레임팀<small>이지영</small></div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell empty"></div>
+      <div class="sr-cell has-flow-right">
+        <div class="act hq"><b>케이스 검토 + 최종 결정</b><span class="desc">사유·보상 작성</span></div>
+      </div>
+      <div class="sr-cell empty"></div>
+    </div>
+
+    <!-- 시스템·데이터 -->
+    <div class="swim-row lane-sys">
+      <div class="sr-label">시스템·데이터<small>운영 기반</small></div>
+      <div class="sr-cell">
+        <div class="act sys"><b>입력 표준화</b><span class="desc">식별자·검증</span></div>
+      </div>
+      <div class="sr-cell">
+        <div class="act sys"><b>업무 시스템 조회</b><span class="desc">POS·고객·처리</span></div>
+      </div>
+      <div class="sr-cell">
+        <div class="act sys"><b>업무 의미·정책 자산</b><span class="desc">온톨로지·룰셋</span></div>
+      </div>
+      <div class="sr-cell">
+        <div class="act sys"><b>본사 사례 풀</b><span class="desc">유사 케이스</span></div>
+      </div>
+      <div class="sr-cell">
+        <div class="act sys"><b>감사 추적 저장</b><span class="desc">근거·사유·이력</span></div>
+      </div>
+      <div class="sr-cell">
+        <div class="act sys"><b>POS 반영 · 고객 SMS · 학습 자산 등록</b><span class="desc">전국 환류</span></div>
+      </div>
+    </div>
+
+    <div class="swim-foot">
+      Trust · Security · Governance — <b>전 단계를 감싸는 외곽 프레임</b> · 권한 · HITL 분기 · 감사 추적 · 안전 통제
+    </div>
+  </div>
+</section>
+
+<!-- ============= SCREEN 1 — 매장 접수 ============= -->
+<section class="screen-section" id="s1">
+  <div class="section-head">
+    <span class="s-num">화면 01 · Step 1</span>
+    <h2>매장 접수 화면 · 점주가 신규 클레임을 입력하는 자리</h2>
+  </div>
+
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">app.cleanops.kr / store / <b>claim / new</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="brand-dot"></span>CleanOps<small>가맹점 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="app-nav-group">매장 업무</div>
+          <a><span class="nav-i"></span>접수</a>
+          <a class="active"><span class="nav-i"></span>클레임 <span class="badge">1</span></a>
+          <a><span class="nav-i"></span>처리 대기</a>
+          <a><span class="nav-i"></span>고객</a>
+          <div class="app-nav-group">참고</div>
+          <a><span class="nav-i"></span>매뉴얼·지식</a>
+          <a><span class="nav-i"></span>본사 공지</a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">박</div>
+          <div class="who">박철민<small>점주 · 강남점</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>클레임</b> / 신규 접수</div>
+            <h3>신규 클레임 접수 · #20260527-CL-014</h3>
+          </div>
+          <div class="top-act">
+            <button class="btn subtle">취소</button>
+            <button class="btn">임시 저장</button>
+            <button class="btn primary">→ Agent에 전달</button>
+          </div>
+        </div>
+
+        <div class="grid-2to1">
+          <div class="card">
+            <div class="card-h"><h4>클레임 정보</h4><span class="pill new"><span class="d"></span>신규</span></div>
+            <div class="form-row">
+              <label>고객 / 의류</label>
+              <div class="input-group">
+                <input class="input filled" value="최민수 (#M-2851 · 정기회원)">
+                <input class="input filled" value="캐시미어 코트">
+              </div>
+            </div>
+            <div class="form-row">
+              <label>원 접수번호 (참조)</label>
+              <input class="input filled" value="#20260512-031 · 2026-05-12 와인 얼룩 처리">
+            </div>
+            <div class="form-row">
+              <label>클레임 사유</label>
+              <textarea class="input filled">한 사이즈 줄었다. 입을 수 없다고 호소. 어깨 폭이 줄어 보임.</textarea>
+            </div>
+            <div class="form-row">
+              <label>고객 측 측정값</label>
+              <div class="input-group">
+                <input class="input filled" value="어깨 너비 -2cm">
+                <input class="input filled" value="기장 변화 없음">
+              </div>
+            </div>
+            <div class="form-row">
+              <label>증빙 사진</label>
+              <div class="photo-strip">
+                <div class="photo filled"><span class="pi">▢</span>처리 전</div>
+                <div class="photo filled"><span class="pi">▢</span>처리 후</div>
+                <div class="photo evidence"><span class="pi">▢</span>측정 증빙</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><h4>다음 단계</h4><span class="pill ai"><span class="d"></span>Agent 자동</span></div>
+            <p style="font-size:12px;color:var(--gray-700);line-height:1.6;margin:0 0 12px">
+              [→ Agent에 전달] 을 누르면 다음이 <b>자동으로 실행</b>됩니다.
+            </p>
+            <div class="action-list">
+              <div class="action-item"><div class="num">1</div><div class="txt">원 접수번호 <b>#20260512-031</b> 처리·동의·약품·온도 이력 자동 로드</div></div>
+              <div class="action-item"><div class="num">2</div><div class="txt">업무 의미·정책 결합 → <b>원인 후보 + 확률·근거</b> 산출</div></div>
+              <div class="action-item"><div class="num">3</div><div class="txt">본사 케이스 풀에서 <b>유사 사례 자동 검색</b></div></div>
+              <div class="action-item"><div class="num">4</div><div class="txt">책임 비율 후보 산출 → <b>10% 이상 시 본사 HITL 자동 분기</b></div></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <div class="fl-line first"></div>
+    <div class="fl-label">Agent 분석 결과 → 점주 클레임 콘솔</div>
+    <div class="fl-line"></div>
+  </div>
+</section>
+
+<!-- ============= SCREEN 2 — 점주 클레임 콘솔 ============= -->
+<section class="screen-section" id="s2">
+  <div class="section-head">
+    <span class="s-num">화면 02 · Step 2–4</span>
+    <h2>점주 클레임 콘솔 · Agent 분석 결과 + 권장 액션</h2>
+  </div>
+
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">app.cleanops.kr / store / claim / <b>#20260527-CL-014</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="brand-dot"></span>CleanOps<small>가맹점 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="app-nav-group">매장 업무</div>
+          <a><span class="nav-i"></span>접수</a>
+          <a class="active"><span class="nav-i"></span>클레임 <span class="badge">1</span></a>
+          <a><span class="nav-i"></span>처리 대기</a>
+          <a><span class="nav-i"></span>고객</a>
+          <div class="app-nav-group">참고</div>
+          <a><span class="nav-i"></span>매뉴얼·지식</a>
+          <a><span class="nav-i"></span>본사 공지</a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">박</div>
+          <div class="who">박철민<small>점주 · 강남점</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>클레임</b> / #20260527-CL-014</div>
+            <h3>캐시미어 코트 수축 분쟁 · 최민수</h3>
+          </div>
+          <div class="top-act">
+            <span class="pill review"><span class="d"></span>검토중</span>
+            <button class="btn">메모 추가</button>
+            <button class="btn danger">⤴ 본사 이관</button>
+          </div>
+        </div>
+
+        <div class="grid-1to2">
+          <!-- Left column — Case summary -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card">
+              <div class="card-h"><h4>사건 요약</h4><span class="pill ai"><span class="d"></span>자동 통합</span></div>
+              <dl class="kv">
+                <dt>고객</dt><dd><b>최민수</b> · 회원 5년 · 처리 이력 12건</dd>
+                <dt>의류</dt><dd>캐시미어 코트</dd>
+                <dt>원 접수</dt><dd>#20260512-031 · 와인 얼룩 처리</dd>
+                <dt>처리 기록</dt><dd>본점 · 30℃ · 약품 정상 범위</dd>
+                <dt>고객 동의</dt><dd><b>"옅은 잔류·변색" 사전 안내 동의</b><br>(디지털 서명 완료)</dd>
+                <dt>오늘 호소</dt><dd><b>수축</b> (어깨 -2cm)</dd>
+              </dl>
+            </div>
+
+            <div class="card">
+              <div class="card-h"><h4>유사 사례</h4><span class="pill ai"><span class="d"></span>본사 풀 5건</span></div>
+              <div class="case-list">
+                <div class="case-item">
+                  <span class="c-ref">강남점 25-08</span>
+                  <span class="c-reason"><b>측정 오차</b></span>
+                  <span class="c-out">매장 0%</span>
+                </div>
+                <div class="case-item">
+                  <span class="c-ref">송파점 25-11</span>
+                  <span class="c-reason"><b>처리 오류 일부</b></span>
+                  <span class="c-out">매장 20% / 본사 10%</span>
+                </div>
+                <div class="case-item">
+                  <span class="c-ref">강남점 26-02</span>
+                  <span class="c-reason"><b>자연 수축</b></span>
+                  <span class="c-out">매장 0% / 본사 0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right column — Agent analysis + recommendation -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card">
+              <div class="card-h"><h4>Agent 원인 분석 · 4개 후보</h4><span class="pill ai"><span class="d"></span>업무 의미·정책 기반</span></div>
+              <div class="cand med">
+                <div class="n"><b>① 측정 오차</b><small>고객 측 측정 방법 검증되지 않음</small></div>
+                <div class="b"><i style="width:30%"></i></div>
+                <div class="p">30%</div>
+              </div>
+              <div class="cand med">
+                <div class="n"><b>② 자연 수축</b><small>캐시미어 특성 · -1~3cm 흔함</small></div>
+                <div class="b"><i style="width:30%"></i></div>
+                <div class="p">30%</div>
+              </div>
+              <div class="cand">
+                <div class="n"><b>③ 처리 오류</b><small>약품·온도 이력 정상 범위 → 가능성 낮음</small></div>
+                <div class="b"><i style="width:25%"></i></div>
+                <div class="p">25%</div>
+              </div>
+              <div class="cand">
+                <div class="n"><b>④ 소재 결함</b><small>제조사 책임 가능성</small></div>
+                <div class="b"><i style="width:15%"></i></div>
+                <div class="p">15%</div>
+              </div>
+
+              <div style="margin-top:14px;padding:10px 12px;background:#fafafa;border-radius:7px;font-size:11.5px;color:var(--gray-700);line-height:1.55">
+                <b style="color:var(--ink)">근거</b> · 처리 기록 정상 범위 → ③ 확률 낮춤 · Cashmere 자연 수축 -1~3cm는 업무 의미 자산 등록 사항 → ② 확률 높임 · 고객 측 측정 방법 미검증 → ① 확률 높임
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-h"><h4>책임 비율 후보 + 권장 액션</h4><span class="pill high"><span class="d"></span>HITL 분기 필요</span></div>
+              <div class="resp">
+                <div class="resp-cell store"><div class="l">매장</div><div class="v">30%</div></div>
+                <div class="resp-cell hq"><div class="l">본사</div><div class="v">20%</div></div>
+                <div class="resp-cell customer"><div class="l">고객</div><div class="v">50%</div></div>
+              </div>
+              <div class="action-list" style="margin-top:12px">
+                <div class="action-item"><div class="num">1</div><div class="txt">매장에서 <b>정밀 측정</b> 진행 (어깨·소매·기장 3축)</div></div>
+                <div class="action-item"><div class="num">2</div><div class="txt"><b>본사 클레임팀 검토 이관</b> (책임 ≥10% → 자동 분기)</div></div>
+                <div class="action-item"><div class="num">3</div><div class="txt">본사 결정 수신 후 <b>고객 응대 완료</b></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <div class="fl-line first"></div>
+    <div class="fl-label">[⤴ 본사 이관] 클릭 → 본사 HITL 검토 화면으로</div>
+    <div class="fl-line"></div>
+  </div>
+</section>
+
+<!-- ============= SCREEN 3 — 본사 HITL 검토 ============= -->
+<section class="screen-section" id="s3">
+  <div class="section-head">
+    <span class="s-num">화면 03 · Step 5</span>
+    <h2>본사 HITL 검토 화면 · 최종 결정과 사유 작성</h2>
+  </div>
+
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">hq.cleanops.kr / claims / review / <b>#20260527-CL-014</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="brand-dot"></span>CleanOps<small>본사 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="app-nav-group">본사 업무</div>
+          <a class="active"><span class="nav-i"></span>클레임 검토 <span class="badge">3</span></a>
+          <a><span class="nav-i"></span>정책·룰 관리</a>
+          <a><span class="nav-i"></span>가맹점 운영</a>
+          <a><span class="nav-i"></span>학습 환류</a>
+          <div class="app-nav-group">감사</div>
+          <a><span class="nav-i"></span>Decision Log</a>
+          <a><span class="nav-i"></span>운영 리포트</a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">이</div>
+          <div class="who">이지영<small>본사 클레임팀</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>클레임 검토</b> / #20260527-CL-014 · 강남점 박철민</div>
+            <h3>최종 판단 · 캐시미어 수축 분쟁</h3>
+          </div>
+          <div class="top-act">
+            <button class="btn subtle">검토 보류</button>
+            <button class="btn">반려</button>
+            <button class="btn green">결정 확정 →</button>
+          </div>
+        </div>
+
+        <div class="hitl-banner">
+          <div class="hb-i">⚖</div>
+          <div class="hb-t">HITL 분기 — 책임 비율 ≥ 10% 케이스<small>Agent 자동 확정 불가 · 본사 결재 필수</small></div>
+          <span class="pill review"><span class="d"></span>검토 대기</span>
+        </div>
+
+        <div class="grid-2">
+          <!-- Agent 분석 요약 -->
+          <div class="card">
+            <div class="card-h"><h4>Agent 분석 요약 (자동 전달)</h4><span class="meta">전달일 09:14</span></div>
+            <p style="font-size:11.5px;color:var(--gray-700);line-height:1.6;margin:0 0 10px">
+              매장에서 <b>측정 결과 + 동의 이력 + 처리 기록</b>을 결합해 원인 4후보·책임 비율 후보를 함께 전달.
+            </p>
+            <div class="cand med">
+              <div class="n"><b>① 측정 오차</b></div>
+              <div class="b"><i style="width:30%"></i></div>
+              <div class="p">30%</div>
+            </div>
+            <div class="cand med">
+              <div class="n"><b>② 자연 수축</b></div>
+              <div class="b"><i style="width:30%"></i></div>
+              <div class="p">30%</div>
+            </div>
+            <div class="cand">
+              <div class="n"><b>③ 처리 오류</b></div>
+              <div class="b"><i style="width:25%"></i></div>
+              <div class="p">25%</div>
+            </div>
+            <div class="cand">
+              <div class="n"><b>④ 소재 결함</b></div>
+              <div class="b"><i style="width:15%"></i></div>
+              <div class="p">15%</div>
+            </div>
+            <div class="resp">
+              <div class="resp-cell store"><div class="l">매장 후보</div><div class="v">30%</div></div>
+              <div class="resp-cell hq"><div class="l">본사 후보</div><div class="v">20%</div></div>
+              <div class="resp-cell customer"><div class="l">고객 후보</div><div class="v">50%</div></div>
+            </div>
+          </div>
+
+          <!-- 근거 자료 -->
+          <div class="card">
+            <div class="card-h"><h4>판단 근거 (자동 첨부)</h4><span class="meta">8개 출처</span></div>
+            <div class="src"><div class="si">처</div><div><b>처리 이력 #20260512-031</b><small>본점 Cashmere 처리실 · 30℃ · 약품 정상 범위</small></div></div>
+            <div class="src"><div class="si">동</div><div><b>고객 동의서 (디지털 서명)</b><small>"옅은 잔류·변색 시 책임 비율 사전 안내" 동의 — 동의 범위에 *수축* 없음</small></div></div>
+            <div class="src"><div class="si">정</div><div><b>업무 의미 자산 · Cashmere</b><small>정상 수축 범위 -1~3cm로 등록됨 (현재 v1.4)</small></div></div>
+            <div class="src"><div class="si">사</div><div><b>유사 사례 풀 · 본사</b><small>강남점 25-08, 송파점 25-11, 강남점 26-02 (3건 직접 비교 가능)</small></div></div>
+            <div class="src"><div class="si">측</div><div><b>매장 정밀 측정 (요청 후)</b><small>대기중 — 점주에게 자동 요청됨</small></div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <div class="card-h"><h4>최종 결정 작성</h4><span class="pill review"><span class="d"></span>작성중</span></div>
+          <div class="grid-3">
+            <div class="form-row">
+              <label>매장 책임</label>
+              <input class="input filled" value="0%">
+            </div>
+            <div class="form-row">
+              <label>본사 책임</label>
+              <input class="input filled" value="0%">
+            </div>
+            <div class="form-row">
+              <label>고객 / 자연 수축</label>
+              <input class="input filled" value="50% (자연 수축)">
+            </div>
+          </div>
+          <div class="form-row">
+            <label>채택 후보</label>
+            <input class="input filled" value="② 자연 수축 · 정밀 측정 -1.2cm 확인 → 업무 의미 자산 범위 내 (-1~3cm)">
+          </div>
+          <div class="form-row">
+            <label>고객 보상</label>
+            <input class="input filled" value="선의 보상 · 50% 무료 재처리 제공 (정기 회원 관리 차원)">
+          </div>
+          <div class="form-row">
+            <label>결정 사유 (감사 추적 기록)</label>
+            <textarea class="input filled">처리 기록 정상 + 정밀 측정 -1.2cm는 업무 의미 자산 등록 범위 내. 매장·본사 귀책 없음. 다만 정기 회원이며 호소 강함 → 선의 보상 적용. 향후 유사 케이스 시 본 건 인용 가능.</textarea>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <div class="fl-line first"></div>
+    <div class="fl-label">[결정 확정] → 시스템 반영 · 모든 단계 Decision Log로 적재</div>
+    <div class="fl-line"></div>
+  </div>
+</section>
+
+<!-- ============= SCREEN 4 — Decision Log / Audit ============= -->
+<section class="screen-section" id="s4">
+  <div class="section-head">
+    <span class="s-num">화면 04 · Step 6 (감사)</span>
+    <h2>Decision Log · 감사 추적 화면 · 모든 판단·근거의 시간순 이력</h2>
+  </div>
+
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">hq.cleanops.kr / audit / cases / <b>#20260527-CL-014</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="brand-dot"></span>CleanOps<small>본사 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="app-nav-group">본사 업무</div>
+          <a><span class="nav-i"></span>클레임 검토</a>
+          <a><span class="nav-i"></span>정책·룰 관리</a>
+          <a><span class="nav-i"></span>가맹점 운영</a>
+          <a><span class="nav-i"></span>학습 환류</a>
+          <div class="app-nav-group">감사</div>
+          <a class="active"><span class="nav-i"></span>Decision Log</a>
+          <a><span class="nav-i"></span>운영 리포트</a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">이</div>
+          <div class="who">이지영<small>본사 클레임팀</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>Decision Log</b> / 케이스 #20260527-CL-014</div>
+            <h3>판단·실행 이력 · 11건 (감사 가능)</h3>
+          </div>
+          <div class="top-act">
+            <button class="btn">필터</button>
+            <button class="btn">PDF 내보내기</button>
+          </div>
+        </div>
+
+        <div class="grid-2to1">
+          <div class="card">
+            <div class="card-h"><h4>판단·실행 타임라인</h4><span class="pill done"><span class="d"></span>결착 완료</span></div>
+            <div class="tl">
+              <div class="tl-item input">
+                <div class="h"><span class="time">09:14:00</span><span class="tag">Input</span></div>
+                <div class="body">클레임 <b>#20260527-CL-014</b> 접수 — 점주 박철민 · 캐시미어 코트 수축 호소</div>
+              </div>
+              <div class="tl-item tool">
+                <div class="h"><span class="time">09:14:03</span><span class="tag">Tool</span></div>
+                <div class="body"><code>case.load(#20260512-031)</code> → 원 접수·처리·약품·온도 이력 자동 로드</div>
+              </div>
+              <div class="tl-item input">
+                <div class="h"><span class="time">09:14:04</span><span class="tag">Data</span></div>
+                <div class="body">고객 사전 동의 확인 — <b>"옅은 잔류 수용"</b> 디지털 서명 / 호소 범위(수축)와 동의 범위 불일치</div>
+              </div>
+              <div class="tl-item tool">
+                <div class="h"><span class="time">09:14:06</span><span class="tag">Tool</span></div>
+                <div class="body"><code>ontology.lookup(Cashmere, 수축)</code> → 정상 범위 -1~3cm · claimPolicy 적용</div>
+              </div>
+              <div class="tl-item reason">
+                <div class="h"><span class="time">09:14:07</span><span class="tag">Reason</span></div>
+                <div class="body">원인 후보 4개 + 확률 산출 · <b>① 측정오차 30% / ② 자연수축 30% / ③ 처리오류 25% / ④ 소재결함 15%</b></div>
+              </div>
+              <div class="tl-item tool">
+                <div class="h"><span class="time">09:14:10</span><span class="tag">Tool</span></div>
+                <div class="body"><code>case.similar(material=Cashmere, symptom=수축)</code> → 유사 사례 3건 / 본사 케이스 5건</div>
+              </div>
+              <div class="tl-item reason">
+                <div class="h"><span class="time">09:14:11</span><span class="tag">Reason</span></div>
+                <div class="body">책임 비율 후보 산출 · <b>매장 30% / 본사 20% / 고객 50%</b></div>
+              </div>
+              <div class="tl-item hitl">
+                <div class="h"><span class="time">09:14:14</span><span class="tag">HITL</span></div>
+                <div class="body">책임 ≥10% → 본사 클레임팀 검토 요청 자동 분기 · 이지영에게 케이스 전달</div>
+              </div>
+              <div class="tl-item input">
+                <div class="h"><span class="time">10:38:22</span><span class="tag">Data</span></div>
+                <div class="body">매장 정밀 측정 결과 수신 — 어깨 <b>-1.2cm</b> (업무 의미 자산 정상 범위 내)</div>
+              </div>
+              <div class="tl-item hitl">
+                <div class="h"><span class="time">11:42:01</span><span class="tag">HITL 결정</span></div>
+                <div class="body">본사 결정 · <b>매장 0% / 본사 0% / 고객 50% (자연 수축)</b> · 선의 보상 50% 무료 재처리. 사유 기록 완료.</div>
+              </div>
+              <div class="tl-item action">
+                <div class="h"><span class="time">11:42:05</span><span class="tag">Action</span></div>
+                <div class="body">POS 클레임 결과 자동 반영 · 고객 SMS 자동 발송 · 학습 자산 후보 2건 본사 운영기획팀 큐 등록</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card">
+              <div class="card-h"><h4>케이스 요약</h4></div>
+              <dl class="kv">
+                <dt>케이스</dt><dd><b>#20260527-CL-014</b></dd>
+                <dt>접수</dt><dd>2026-05-27 09:14</dd>
+                <dt>결착</dt><dd>2026-05-27 11:42</dd>
+                <dt>소요</dt><dd><b>2시간 28분</b><br><small style="color:var(--muted)">(이 중 사람 검토 1시간 28분)</small></dd>
+                <dt>분기</dt><dd>HITL 1회 (본사)</dd>
+                <dt>이력 항목</dt><dd>11건 (모두 감사 가능)</dd>
+              </dl>
+            </div>
+
+            <div class="card">
+              <div class="card-h"><h4>주체별 작업 시간</h4></div>
+              <div class="bar-chart">
+                <div class="bar-row agent"><div class="lbl">AI Agent</div><div class="br"><i style="width:3%"></i></div><div class="vv">~14초</div></div>
+                <div class="bar-row sys"><div class="lbl">시스템</div><div class="br"><i style="width:2%"></i></div><div class="vv">~7초</div></div>
+                <div class="bar-row staff"><div class="lbl">매장 (측정)</div><div class="br"><i style="width:18%"></i></div><div class="vv">~10분</div></div>
+                <div class="bar-row hq"><div class="lbl">본사 HITL</div><div class="br"><i style="width:78%"></i></div><div class="vv">~1h 25m</div></div>
+              </div>
+              <p style="margin:10px 0 0;font-size:11px;color:var(--muted);line-height:1.55">
+                <b style="color:var(--gray-700)">기존 수기 방식 평균</b> · ~90분 (불일치율 ↑·근거 휘발). AAP는 <b style="color:var(--ink)">사람 검토 시간만 남기고 정보 정리 시간을 제거</b>합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <div class="fl-line first"></div>
+    <div class="fl-label">결착된 케이스 → 본사 운영 대시보드에 학습 자산 후보 누적</div>
+    <div class="fl-line"></div>
+  </div>
+</section>
+
+<!-- ============= SCREEN 5 — Ops Learning Dashboard ============= -->
+<section class="screen-section" id="s5">
+  <div class="section-head">
+    <span class="s-num">화면 05 · Step 6 (학습)</span>
+    <h2>본사 운영 학습 대시보드 · 한 사례가 전국 자산이 되는 자리</h2>
+  </div>
+
+  <div class="screen">
+    <div class="browser-chrome">
+      <div class="browser-dots"><i></i><i></i><i></i></div>
+      <div class="browser-url">hq.cleanops.kr / learning / <b>review-queue</b></div>
+      <div class="browser-actions">⌕ ⚙ ⊕</div>
+    </div>
+    <div class="app">
+      <aside class="app-side">
+        <div class="app-brand"><span class="brand-dot"></span>CleanOps<small>본사 콘솔</small></div>
+        <nav class="app-nav">
+          <div class="app-nav-group">본사 업무</div>
+          <a><span class="nav-i"></span>클레임 검토</a>
+          <a><span class="nav-i"></span>정책·룰 관리</a>
+          <a><span class="nav-i"></span>가맹점 운영</a>
+          <a class="active"><span class="nav-i"></span>학습 환류 <span class="badge">2</span></a>
+          <div class="app-nav-group">감사</div>
+          <a><span class="nav-i"></span>Decision Log</a>
+          <a><span class="nav-i"></span>운영 리포트</a>
+        </nav>
+        <div class="app-user">
+          <div class="avatar">이</div>
+          <div class="who">이지영<small>본사 운영기획</small></div>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="app-topbar">
+          <div>
+            <div class="crumb"><b>학습 환류</b> / 검토 대기 큐</div>
+            <h3>본 주 학습 자산 후보 · 본사 검토 대기 2건</h3>
+          </div>
+          <div class="top-act">
+            <button class="btn">필터</button>
+            <button class="btn primary">선택 일괄 결재</button>
+          </div>
+        </div>
+
+        <div class="tile-grid" style="margin-bottom:14px">
+          <div class="tile"><div class="l">본 주 학습 후보</div><div class="v">12</div><div class="d">+5 vs 지난주</div></div>
+          <div class="tile"><div class="l">본사 결재 대기</div><div class="v">2</div><div class="d">평균 1.8일 소요</div></div>
+          <div class="tile"><div class="l">반영 완료 · 전국</div><div class="v">8</div><div class="d">87 매장 일제 적용</div></div>
+          <div class="tile"><div class="l">반려·롤백</div><div class="v">2</div><div class="d down">검토 후 보류</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-h"><h4>검토 대기 — 이번 클레임에서 등록된 후보</h4><span class="meta">From #20260527-CL-014</span></div>
+          <div class="pat-list">
+            <div class="pat">
+              <div class="pi">의</div>
+              <div class="pt">
+                <b>업무 의미 자산 보강</b> · Cashmere 정상 수축 범위 -1~2cm 명시
+                <small>현재 v1.4의 "-1~3cm" 표기를 운영 데이터 누적 기준으로 -1~2cm로 좁힘. 본 건 외 강남점 26-02 1건 기반.</small>
+              </div>
+              <div class="ps"><button class="btn subtle">상세</button><button class="btn green">결재 →</button></div>
+            </div>
+            <div class="pat">
+              <div class="pi">멘</div>
+              <div class="pt">
+                <b>점주 멘트 가이드 신규</b> · 캐시미어 접수 시 사전 안내 템플릿
+                <small>"캐시미어는 -1~2cm 자연 수축이 가능합니다. 처리 전 안내 후 동의 부탁드립니다." 본 건 사후 분쟁 예방 목적.</small>
+              </div>
+              <div class="ps"><button class="btn subtle">상세</button><button class="btn green">결재 →</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-h"><h4>최근 반영된 자산</h4><span class="meta">최근 30일</span></div>
+            <div class="pat-list">
+              <div class="pat">
+                <div class="pi">의</div>
+                <div class="pt"><b>친환경 잉크 얼룩</b> 신규 분류 추가<small>2026-05-21 결재 · 87 매장 즉시 반영</small></div>
+                <div class="ps"><span class="pill done"><span class="d"></span>반영</span></div>
+              </div>
+              <div class="pat">
+                <div class="pi">처</div>
+                <div class="pt"><b>저온 Wet + Eco Solvent</b> 처리법 등록<small>2026-05-21 결재 · 87 매장 즉시 반영</small></div>
+                <div class="ps"><span class="pill done"><span class="d"></span>반영</span></div>
+              </div>
+              <div class="pat">
+                <div class="pi">멘</div>
+                <div class="pt">실크 + 화장품 사전 안내 가이드<small>2026-05-15 결재 · 87 매장 즉시 반영</small></div>
+                <div class="ps"><span class="pill done"><span class="d"></span>반영</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><h4>가맹점 학습 효과</h4><span class="meta">최근 30일</span></div>
+            <div class="bar-chart">
+              <div class="bar-row staff"><div class="lbl">분쟁 클레임</div><div class="br"><i style="width:38%"></i></div><div class="vv">-42%</div></div>
+              <div class="bar-row agent"><div class="lbl">처리 일관성</div><div class="br"><i style="width:84%"></i></div><div class="vv">+38%</div></div>
+              <div class="bar-row hq"><div class="lbl">본사 콜 응대</div><div class="br"><i style="width:32%"></i></div><div class="vv">-51%</div></div>
+              <div class="bar-row sys"><div class="lbl">OJT 의존도</div><div class="br"><i style="width:28%"></i></div><div class="vv">-46%</div></div>
+            </div>
+            <p style="margin:12px 0 0;font-size:11px;color:var(--muted);line-height:1.55">
+              <b style="color:var(--gray-700)">한 매장의 한 클레임 → 본사 결재 → 전국 87 매장 즉시 반영</b>. 학습이 사람 사이를 거치며 몇 개월 단위로 지연되던 사이클이 <b style="color:var(--ink)">건 단위·시간 단위</b>로 단축됩니다.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div>AAP PoC 프로토타입 · v0.4 · 워크플로 도식 + 제품 화면 5종 · v300 선제안서 §4-1·§5 매핑</div>
+  <div>2026-05-27</div>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  // TOC scroll-spy
+  const links = Array.from(document.querySelectorAll('.toc a[href^="#"]'));
+  const map = new Map();
+  links.forEach(a => { const s = document.getElementById(a.getAttribute('href').slice(1)); if (s) map.set(s, a); });
+  let last = null;
+  const io = new IntersectionObserver((entries) => {
+    const vis = entries.filter(e => e.isIntersecting);
+    if (vis.length === 0) return;
+    vis.sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top);
+    const top = vis[0].target;
+    if (top === last) return;
+    last = top;
+    links.forEach(a => a.classList.toggle('active', a === map.get(top)));
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+  map.forEach((_, s) => io.observe(s));
+})();
+</script>
+</body>
+</html>
