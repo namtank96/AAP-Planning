@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AAP 손해사정 — 업무 프로세스 비교 (Simulation PoC)</title>
+<!--
+  v0.25 — 콘텐츠 구조 재설계.
+   탭① 손해사정 업무 프로세스 비교: 단계별로 수기·챗봇·RAG·단일 Agent·AAP가 어떻게 처리하는지 비교(업무 결과 중심).
+   탭② AAP 작동 구조: 탭① 6단계와 동일 버튼, 각 단계가 어느 플랫폼 구성요소를 통해 처리되는지 + 구성요소 역할·특징.
+   화면 전면에서 기술 용어 정리(판단 불일치/사람 검토/판단 근거 기록). KT DS 자산명은 기능 중심 + 괄호 병기.
+   단일 HTML · 외부 라이브러리 0 · 오프라인 · Simulation PoC.
+-->
+<style>
+  :root{
+    --ink:#0F172A;--bg:#FFFFFF;--surf:#F8FAFC;--border:#E5E7EB;--muted:#64748B;--line:#EEF1F4;--slate:#475569;
+    --aap:#0D9488;--aap-soft:#ECFDF5;--aap-border:#5EEAD4;--aap-ink:#0F766E;
+    --amber:#D97706;--amber-soft:#FFFBEB;--amber-border:#FDE68A;--amber-ink:#B45309;
+    --danger:#DC2626;--danger-soft:#FEF2F2;--danger-border:#FECACA;--danger-ink:#B91C1C;
+    --radius:14px;--shadow:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);--mono:'SF Mono',ui-monospace,Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;font-size:14px}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 22px 70px}
+  .muted{color:var(--muted)}.mono{font-family:var(--mono)}
+
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 0 14px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
+  .logo .dot{width:11px;height:11px;border-radius:3px;background:var(--aap)}
+  .badge-sim{margin-left:auto;background:var(--ink);color:#fff;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
+
+  .tabbar{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;background:#fff}
+  .tabbar button{flex:1;border:0;border-right:1px solid var(--border);background:#fff;color:var(--muted);font:inherit;font-weight:700;font-size:13.5px;padding:13px 8px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.3}
+  .tabbar button:last-child{border-right:0}
+  .tabbar button small{font-size:11px;font-weight:600;color:var(--muted)}
+  .tabbar button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .tabbar button[aria-pressed="true"] small{color:#94A3B8}
+
+  section[data-tab]{display:none}
+  section[data-tab].on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* === 사건 요약 (쟁점 중심) === */
+  .casebox{border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px}
+  .casebox h2{font-size:17px;font-weight:800;letter-spacing:-.01em;line-height:1.4}
+  .casebox .cdesc{font-size:13px;color:var(--slate);line-height:1.7;margin-top:9px}
+  .casebox .cdesc b{color:var(--ink);font-weight:800}
+  .casebox .ckey{font-size:13px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:10px;padding:11px 14px;margin-top:13px;line-height:1.6}
+  .issues{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-top:14px}
+  @media(max-width:760px){.issues{grid-template-columns:1fr 1fr}}
+  .issue{border:1px solid var(--border);border-radius:11px;padding:11px 13px;background:var(--surf)}
+  .issue.hot{background:var(--amber-soft);border-color:var(--amber-border)}
+  .issue .it{font-size:12.5px;font-weight:800;color:var(--slate);margin-bottom:7px}
+  .issue.hot .it{color:var(--amber-ink)}
+  .issue ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+  .issue li{font-size:12px;color:var(--slate);line-height:1.45;padding-left:11px;position:relative}
+  .issue li::before{content:"·";position:absolute;left:2px;font-weight:800;color:var(--muted)}
+
+  /* === 단계 버튼 === */
+  .proctl{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow);margin-bottom:16px}
+  .proctl button{flex:1;border:0;border-right:1px solid var(--border);background:#fff;padding:12px 6px;cursor:pointer;font:inherit;text-align:center;transition:.18s;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.25}
+  .proctl button:last-child{border-right:0}
+  .proctl .pn{font-size:11px;font-weight:800;color:var(--muted)}
+  .proctl .pt{font-size:12px;font-weight:800;color:var(--slate);line-height:1.2}
+  .proctl button[aria-pressed="true"]{background:var(--ink)}
+  .proctl button[aria-pressed="true"] .pn{color:#94A3B8}
+  .proctl button[aria-pressed="true"] .pt{color:#fff}
+
+  /* === 업무 설명 === */
+  .workhd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:13px}
+  .workhd .wn{font-size:16px;font-weight:800}
+  .workhd .wd{font-size:13px;color:var(--slate);font-weight:600}
+
+  /* === 방식별 비교 카드 === */
+  .methods{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:11px}
+  @media(max-width:820px){.methods{grid-template-columns:1fr 1fr}}
+  .mcard{border:1px solid var(--border);border-radius:12px;background:#fff;padding:13px 14px;box-shadow:var(--shadow)}
+  .mcard .mname{font-size:13.5px;font-weight:800;color:var(--slate);display:flex;align-items:center;gap:7px;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .mcard .mname .mi{font-size:14px}
+  .mf{font-size:12px;line-height:1.5;color:var(--slate);margin-bottom:7px}
+  .mf:last-child{margin-bottom:0}
+  .mf .ml{display:block;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:2px}
+  .mf.lim .ml{color:var(--amber-ink)}
+  .mf.lim{color:#7c5b1e}
+
+  .aapcard{border:1.5px solid var(--aap-border);border-radius:14px;background:linear-gradient(180deg,#F0FDFA,#FBFFFE 60%);box-shadow:0 2px 16px rgba(13,148,136,.10);padding:15px 17px;margin-bottom:12px}
+  .aapcard .aname{font-size:15px;font-weight:800;color:var(--aap-ink);display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .aapcard .aname .abadge{font-size:11px;font-weight:800;background:var(--aap);color:#fff;border-radius:7px;padding:3px 10px}
+  .agrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:760px){.agrid{grid-template-columns:1fr}}
+  .af .al{font-size:11px;font-weight:800;color:var(--aap-ink);text-transform:uppercase;letter-spacing:.02em;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+  .af .al::before{content:"";width:4px;height:11px;border-radius:2px;background:var(--aap)}
+  .af .av{font-size:12.5px;line-height:1.6;color:var(--ink);font-weight:600}
+  .af.res .av b,.af .av b{color:var(--aap-ink);font-weight:800}
+
+  .keydiff{font-size:13px;font-weight:700;color:var(--ink);background:#fff;border:1px solid var(--aap-border);border-left:5px solid var(--aap);border-radius:10px;padding:12px 15px;line-height:1.6}
+  .keydiff b{color:var(--aap-ink);font-weight:800}
+  .keydiff .kl{font-size:11px;font-weight:800;color:var(--aap-ink);text-transform:uppercase;letter-spacing:.03em;margin-right:8px}
+
+  /* === 탭② 아키텍처 === */
+  .archtop{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow);margin-bottom:16px}
+  .archtop button{flex:1;border:0;border-right:1px solid var(--border);background:#fff;padding:12px 6px;cursor:pointer;font:inherit;text-align:center;transition:.18s;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.25}
+  .archtop button:last-child{border-right:0}
+  .archtop .pn{font-size:11px;font-weight:800;color:var(--muted)}
+  .archtop .pt{font-size:12px;font-weight:800;color:var(--slate);line-height:1.2}
+  .archtop button[aria-pressed="true"]{background:var(--aap)}
+  .archtop button[aria-pressed="true"] .pn,.archtop button[aria-pressed="true"] .pt{color:#fff}
+
+  .archgrid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+  @media(max-width:920px){.archgrid{grid-template-columns:1fr}}
+  .archstack{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border);border-radius:12px;background:var(--surf);padding:11px;box-shadow:var(--shadow)}
+  .archstack .stitle{font-size:11px;font-weight:800;color:var(--muted);padding:1px 3px 4px}
+  .layer{border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:#fff;display:flex;align-items:center;gap:9px;transition:.25s;opacity:.5}
+  .layer.on{opacity:1;border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.14)}
+  .layer.cust{background:#F1F5F9;border-style:dashed} .layer.cust.on{background:#fff;border-style:solid}
+  .layer .lname{font-weight:800;font-size:11.5px;flex:0 0 128px;line-height:1.25}
+  .layer .lcomps{display:flex;gap:5px;flex-wrap:wrap}
+  .layer .lcomp{font-size:10.5px;font-weight:700;background:var(--surf);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 7px;cursor:pointer;transition:.15s}
+  .layer .lcomp:hover{border-color:var(--slate);color:var(--slate)}
+  .layer .lcomp.use{background:var(--aap);color:#fff;border-color:var(--aap)}
+  .layer .lcomp.diff{border-color:var(--aap);color:var(--aap-ink)}
+  .layer .lcomp.asset{border-color:var(--amber);color:var(--amber-ink)}
+  .layer .lcomp.use.diff,.layer .lcomp.use.asset{color:#fff}
+
+  .archpanel{border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow);padding:16px 18px;align-self:start}
+  .archpanel .apn{font-size:11px;font-weight:800;color:var(--aap-ink);text-transform:uppercase;letter-spacing:.03em}
+  .archpanel .apt{font-size:16px;font-weight:800;margin-top:3px;margin-bottom:9px}
+  .apsec{margin-top:12px}
+  .apsec .apl{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:7px}
+  .apdo{font-size:13px;line-height:1.65;color:var(--slate);font-weight:600}
+  .apdo b{color:var(--ink);font-weight:800}
+  .apout{display:flex;flex-direction:column;gap:5px}
+  .apout li{font-size:12.5px;font-weight:700;color:var(--aap-ink);line-height:1.5;list-style:none;padding-left:16px;position:relative}
+  .apout li::before{content:"▸";position:absolute;left:2px;color:var(--aap)}
+
+  .compl{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 8px;padding-top:13px;border-top:1px dashed var(--border)}
+  .compcard{border:1px solid var(--border);border-radius:10px;background:var(--surf);padding:11px 13px;margin-bottom:8px}
+  .compcard.sel{border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.12);background:#fff}
+  .compcard .cch{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+  .compcard .ccn{font-size:13px;font-weight:800;color:var(--ink)}
+  .compcard .ccl{font-size:10.5px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:5px;padding:1px 7px}
+  .cbadge{font-size:10px;font-weight:800;border-radius:5px;padding:2px 8px;color:#fff}
+  .cbadge.diff{background:var(--aap)} .cbadge.asset{background:var(--amber)}
+  .compcard .ccr{font-size:12px;line-height:1.55;color:var(--slate)}
+  .compcard .ccr+.ccr{margin-top:3px}
+  .compcard .ccr b{color:var(--ink);font-weight:800;margin-right:7px;font-size:10.5px;display:inline-block;min-width:30px}
+
+  .verifyhd{font-size:15px;font-weight:800;margin:24px 0 11px;padding-top:20px;border-top:1px dashed var(--border)}
+  .vrow{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  @media(max-width:860px){.vrow{grid-template-columns:1fr}}
+  .vcard{border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow);padding:15px 17px}
+  .vcard .vt{font-weight:800;font-size:13.5px;margin-bottom:10px;display:flex;align-items:center;gap:7px;color:var(--aap-ink)}
+  .vcard.lim{background:#FFFCFB;border-color:var(--amber-border)} .vcard.lim .vt{color:var(--amber-ink)}
+  .vcard ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .vcard li{font-size:12.5px;line-height:1.5;color:var(--slate);padding-left:16px;position:relative}
+  .vcard li::before{content:"";position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:var(--aap)}
+  .vcard.lim li::before{background:var(--amber)}
+
+  .footnote{margin-top:22px;font-size:12px;color:var(--muted);text-align:center;line-height:1.7}
+
+  /* 자동 재생 */
+  .playbar{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+  .playbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--aap);background:var(--aap);color:#fff;font:inherit;font-weight:800;font-size:12.5px;padding:8px 15px;border-radius:9px;cursor:pointer;transition:.15s}
+  .playbtn.paused{background:#fff;color:var(--aap-ink)}
+  .playhint{font-size:12px;color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"></span> AAP 손해사정</div>
+    <span class="badge-sim">Simulation PoC</span>
+  </header>
+
+  <div class="tabbar" id="tabbar">
+    <button data-tab="0" aria-pressed="true">① 손해사정 업무 프로세스 비교<small>수기 · 챗봇 · RAG · 단일 Agent · AAP</small></button>
+    <button data-tab="1" aria-pressed="false">② AAP 작동 구조<small>업무 단계별 플랫폼 구성요소</small></button>
+  </div>
+
+  <!-- ===================== 탭① ===================== -->
+  <section data-tab="0" class="on">
+    <div class="casebox">
+      <h2>사건 CL-2026-0417 — 왜 자동 처리와 사람 검토를 나눠야 하는가</h2>
+      <p class="cdesc">차로변경 접촉사고입니다. 상대 차량 수리 견적은 <b>480만 원</b>이고, 상대 운전자는 경추 염좌 2주 진단과 함께 별도 <b>합의금 300만 원</b>을 요구합니다. 그런데 과실 기준은 블랙박스 <b>20:80</b>, 유사 판례 <b>30:70</b>으로 엇갈리고, 최근 6개월 내 유사청구 2건으로 사기 의심점수 <b>78점</b>이 발생했습니다.</p>
+      <div class="ckey">이 사건은 단순 금액 산정보다, 과실 다툼과 사기 의심이 얽힌 항목을 자동 처리와 사람 검토로 나누는 것이 핵심입니다.</div>
+      <div class="issues">
+        <div class="issue"><div class="it">과실 다툼</div><ul><li>블랙박스 20:80</li><li>유사 판례 30:70</li></ul></div>
+        <div class="issue"><div class="it">대인 합의금</div><ul><li>경추 염좌 2주</li><li>합의금 300만 원 요구</li></ul></div>
+        <div class="issue hot"><div class="it">사기 의심</div><ul><li>6개월 내 유사청구 2건</li><li>의심점수 78점</li></ul></div>
+        <div class="issue"><div class="it">처리 쟁점</div><ul><li>전액 자동 처리할 것인가</li><li>일부만 사람 검토로 보낼 것인가</li></ul></div>
+      </div>
+    </div>
+
+    <div class="playbar">
+      <button class="playbtn" id="playbtn">▶ 자동 재생</button>
+      <span class="playhint" id="playhint">또는 아래 단계를 직접 선택하세요</span>
+    </div>
+    <div class="proctl" id="proctl"></div>
+
+    <div class="workhd"><span class="wn" id="w-name"></span><span class="wd" id="w-desc"></span></div>
+    <div class="methods" id="w-methods"></div>
+    <div class="aapcard" id="w-aap"></div>
+    <div class="keydiff" id="w-key"></div>
+  </section>
+
+  <!-- ===================== 탭② ===================== -->
+  <section data-tab="1">
+    <div style="margin-bottom:14px">
+      <h2 style="font-size:17px;font-weight:800;letter-spacing:-.01em">업무 단계별 AAP 작동 구조</h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6">손해사정 각 단계에서 생성되는 결과물이 AAP의 어느 구성요소를 통해 만들어지는지 보여줍니다. 구성요소를 누르면 <b>역할·특징</b>을 볼 수 있습니다.</p>
+    </div>
+
+    <div class="archtop" id="archtop"></div>
+
+    <div class="archgrid">
+      <div class="archstack" id="archstack">
+        <div class="stitle">AAP 플랫폼 · 업무 단계에서 사용하는 구성요소</div>
+      </div>
+      <div class="archpanel">
+        <div class="apn" id="a-step"></div>
+        <div class="apt" id="a-name"></div>
+        <div class="apsec"><div class="apl">이 단계에서 AAP가 하는 일</div><div class="apdo" id="a-do"></div></div>
+        <div class="apsec"><div class="apl">생성되는 업무 산출물</div><ul class="apout" id="a-out"></ul></div>
+        <div class="compl" id="a-compl">주요 구성요소</div>
+        <div id="a-comps"></div>
+      </div>
+    </div>
+
+    <div class="verifyhd">검증 요청 / 한계</div>
+    <div class="vrow">
+      <div class="vcard">
+        <div class="vt">⚖ 검증 요청</div>
+        <ul>
+          <li>단계별 비교 방식이 실제 손해사정 업무 흐름과 맞는가?</li>
+          <li>수기·챗봇·RAG·단일 Agent의 한계가 과장되지 않았는가?</li>
+          <li>AAP의 자동/검토 분기 기준이 실무상 타당한가?</li>
+          <li>과실 20:80 vs 30:70을 사람 검토 대상으로 보는 것이 타당한가?</li>
+          <li>사기 의심점수 78점을 SIU 후보로 보는 것이 적절한가?</li>
+          <li>자동 90만 / 검토 171만 분기 예시가 설명용으로 적절한가?</li>
+        </ul>
+      </div>
+      <div class="vcard lim">
+        <div class="vt">⚠ 한계</div>
+        <ul>
+          <li>실제 LLM / Agent / Ontology 미구동</li>
+          <li>결정론 기반 시뮬레이션</li>
+          <li>수치 SME · 계리 검증 전</li>
+          <li>KT DS 자산명 및 기능 범위는 실제 제품 기준 확인 필요</li>
+          <li>원본 단일 데모와의 비교 공정성 추가 검토 필요</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="footnote">Simulation PoC — 사건 · 금액 · 라우팅은 시연용 가정값(확정 성과 아님). 자산명·기능 범위는 실제 제품 기준 확인이 필요합니다.</div>
+</div>
+
+<script>
+"use strict";
+const PHASE_NAMES=['접수·계약 확인','사고조사','과실 판단','손해액 산정','보험금 산정','손해사정서·지급'];
+
+/* === 탭 전환 === */
+const tabs=document.querySelectorAll('#tabbar button');
+const sections=document.querySelectorAll('section[data-tab]');
+function setTab(i){
+  tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i)));
+  sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i));
+  if(i!==0) stopPlay();
+}
+tabs.forEach(b=>b.addEventListener('click',()=>setTab(+b.dataset.tab)));
+
+/* ===================== 탭① 5방식 비교 ===================== */
+const PHASES=[
+ { name:'접수·계약 확인', work:'사고를 접수하고, 담보·한도·면책과 필요서류를 확인한다.',
+   manual:{how:'담당자가 계약과 필요서류를 직접 확인한다.',can:'예외 상황을 유연하게 확인할 수 있다.',limit:'서류 누락이나 담보 확인 오류가 뒤늦게 발견될 수 있다.'},
+   chatbot:{how:'접수 안내와 필요서류 문의에 답변한다.',can:'고객 문의 응대와 기본 안내가 가능하다.',limit:'실제 계약·담보 확인과 업무 분기는 어렵다.'},
+   rag:{how:'약관과 필요서류 기준을 검색한다.',can:'어떤 서류가 필요한지 근거를 제시할 수 있다.',limit:'실제 접수 건의 누락 여부를 자동 판정하기 어렵다.'},
+   single:{how:'고정 규칙으로 접수 항목과 필요서류를 체크한다.',can:'반복 접수 업무를 자동화할 수 있다.',limit:'예외 담보나 특이 사고 유형 대응이 약하다.'},
+   aap:{how:'사고정보와 계약정보를 사건 단위로 묶고, 담보별 필요서류를 확인한다.',
+        result:'담보·한도·면책 확인표, 필요서류 체크리스트, 자료 누락 표시',
+        effect:'초기 접수 단계에서 누락을 줄이고, 산정 단계로 넘어갈 수 있는 사건과 추가자료가 필요한 사건을 구분한다.'},
+   key:'AAP는 접수 내용을 단순 입력값으로 보지 않고, 이후 산정과 검토에 필요한 사건 구조로 정리한다.' },
+
+ { name:'사고조사', work:'블랙박스, 사고 경위, 진단서, 과거 청구이력으로 사실관계를 확인한다.',
+   manual:{how:'담당자가 자료를 수집하고 사고 경위를 정리한다.',can:'정황을 종합적으로 판단할 수 있다.',limit:'조사 기준과 의심 신호 반영이 담당자별로 달라질 수 있다.'},
+   chatbot:{how:'사고 경위와 제출 자료를 요약한다.',can:'긴 문서와 사고 설명을 빠르게 정리할 수 있다.',limit:'과거 청구 패턴과 현재 사고를 연결해 판단하기 어렵다.'},
+   rag:{how:'사기 의심 기준과 조사 매뉴얼을 검색한다.',can:'조사 기준과 참고 근거를 제시할 수 있다.',limit:'실제 이 사건의 유사청구 여부를 업무 큐로 연결하기 어렵다.'},
+   single:{how:'사기 점수와 정해진 규칙을 반영한다.',can:'사기 의심점수를 표시할 수 있다.',limit:'사기 신호가 최종 판단 안에 흡수될 수 있다.'},
+   aap:{how:'사고조사와 사기 의심 판단을 분리해 확인한다.',
+        result:'사고경위 확인 결과, 유사청구 2건, 조사 필요 신호, SIU 후보',
+        effect:'사기 의심을 지급 거절 근거로 바로 쓰지 않고, 별도 조사 필요 신호로 분리한다.'},
+   key:'AAP는 사고조사와 사기 의심을 섞지 않고, 조사 대상만 별도 업무 항목으로 분리한다.' },
+
+ { name:'과실 판단', work:'블랙박스와 유사 판례 기준으로 과실비율을 판단한다.',
+   manual:{how:'담당자가 블랙박스와 판례를 참고해 하나의 비율을 선택한다.',can:'경험 기반 조정이 가능하다.',limit:'20:80과 30:70의 판단 차이가 별도 검토 항목으로 남지 않는다.'},
+   chatbot:{how:'일반적인 과실비율 의견을 제시한다.',can:'참고 의견을 빠르게 받을 수 있다.',limit:'근거 일관성과 책임 소재가 약하다.'},
+   rag:{how:'유사 판례와 분쟁심의 기준을 검색한다.',can:'판단 근거를 찾을 수 있다.',limit:'서로 다른 기준이 충돌할 때 최종 업무 분기로 연결하기 어렵다.'},
+   single:{how:'규칙 기반으로 하나의 과실비율을 산정한다.',can:'빠른 자동 산정이 가능하다.',limit:'애매한 사건도 하나의 값으로 확정될 수 있다.'},
+   aap:{how:'블랙박스 기준 판단과 유사사례 기준 판단을 분리하고, 차이가 크면 사람 검토 항목으로 올린다.',
+        result:'과실 20:80, 유사사례 30:70, 판단 불일치, 상급 손해사정사 검토 후보',
+        effect:'엇갈린 판단을 숨기지 않고 검토 대상으로 올려, 분쟁 가능성이 높은 건을 먼저 확인할 수 있다.'},
+   key:'AAP는 하나의 과실비율을 바로 확정하지 않고, 엇갈린 판단을 사람 검토 대상으로 분리한다.' },
+
+ { name:'손해액 산정', work:'대물 수리비, 치료비, 휴업손해, 위자료, 합의금 요구를 산정한다.',
+   manual:{how:'견적서와 진단서를 보고 담당자가 산정한다.',can:'상황별 협의와 조정이 가능하다.',limit:'대인 합의금 적정성 판단이 경험에 의존한다.'},
+   chatbot:{how:'산정 기준과 항목을 설명한다.',can:'기준 안내와 문안 작성 보조가 가능하다.',limit:'실제 금액 산정과 검토 분기는 어렵다.'},
+   rag:{how:'단가 기준, 매뉴얼, 산정 사례를 검색한다.',can:'산정 근거를 제시할 수 있다.',limit:'합의금과 사기 신호를 함께 판단하기 어렵다.'},
+   single:{how:'손해액 산정 규칙으로 자동 계산한다.',can:'대물 손해액 자동 산정이 가능하다.',limit:'대인 합의금처럼 협의·검토가 필요한 항목을 분리하기 어렵다.'},
+   aap:{how:'대물 손해액은 산정하고, 대인 합의금은 과실·상해·사기 신호와 함께 검토 대상으로 표시한다.',
+        result:'대물 손해액 후보 480만, 합의금 300만 검토, 산정 근거',
+        effect:'객관 산정 가능한 항목과 협의·검토가 필요한 항목을 구분한다.'},
+   key:'AAP는 손해액을 단일 금액으로만 보지 않고, 자동 산정 가능한 항목과 검토가 필요한 항목을 나눈다.' },
+
+ { name:'보험금 산정', work:'약관, 과실상계, 담보, 사기 리스크를 반영해 실제 지급 가능 금액을 산정한다.',
+   manual:{how:'담당자가 약관과 과실상계를 적용한다.',can:'예외 판단과 조정이 가능하다.',limit:'보장 가능 항목과 보류 항목이 명확히 분리되지 않을 수 있다.'},
+   chatbot:{how:'약관 설명과 지급 가능성에 대한 참고 답변을 제공한다.',can:'설명과 안내를 빠르게 할 수 있다.',limit:'지급 결정이나 보류 판단에는 부적합하다.'},
+   rag:{how:'약관, 면책, 판례 근거를 검색한다.',can:'지급 판단의 근거를 제시할 수 있다.',limit:'사기 리스크와 지급 여부를 업무적으로 분기하기 어렵다.'},
+   single:{how:'약관 규칙과 사기 점수를 함께 반영한다.',can:'산정 자동화가 가능하다.',limit:'리스크가 금액 안에 흡수되어 보류 사유가 분리되지 않을 수 있다.'},
+   aap:{how:'약관 판단, 손해액 판단, 사기 리스크 판단을 분리하고, 충돌이 있으면 검토 항목으로 올린다.',
+        result:'보장 확인, 과실상계 반영 금액, 사기 리스크 78점, SIU 검토 후보',
+        effect:'보장 가능 여부와 사기 검토 대상을 분리해 전액 자동 지급 위험을 줄인다.'},
+   key:'AAP는 지급 가능성 판단과 보류 필요 사유를 한 금액 안에 섞지 않고 분리한다.' },
+
+ { name:'손해사정서·지급', work:'손해사정서를 작성하고, 자동 지급할 항목과 검토 보류할 항목을 나눈다.',
+   manual:{how:'담당자가 총액 산정 후 손해사정서를 작성한다.',can:'최종 협의와 조정이 가능하다.',limit:'검토 사유와 지급 항목을 사후에 다시 설명해야 한다.'},
+   chatbot:{how:'통지문이나 설명문 초안을 작성한다.',can:'문안 작성 보조가 가능하다.',limit:'지급 결정과 책임 있는 보류 판단은 어렵다.'},
+   rag:{how:'약관·판례·매뉴얼 근거를 검색한다.',can:'손해사정서 근거를 보강할 수 있다.',limit:'자동 지급과 검토 보류를 나누지는 못한다.'},
+   single:{how:'지급권고 금액 1개를 산출한다.',can:'빠른 금액 권고가 가능하다.',limit:'자동 가능 금액과 사람 검토 금액이 분리되지 않는다.'},
+   aap:{how:'자동 처리 가능 항목과 사람 검토 항목을 나누고, 그 이유를 남긴다.',
+        result:'자동 90만, 검토 171만, 손해사정서 초안, 손해사정사/SIU 검토 큐, 판단 근거 기록(Decision Log)',
+        effect:'확실한 금액은 빠르게 처리하고, 다툼·의심이 있는 금액은 사람 검토로 넘긴다.'},
+   key:'AAP는 하나의 지급권고가 아니라, 자동 처리와 사람 검토를 나눈 운영 결과를 만든다.' },
+];
+
+const proctl=document.getElementById('proctl');
+proctl.innerHTML=PHASES.map((p,i)=>`<button data-ph="${i}" aria-pressed="${i===0}"><span class="pn">STEP ${i+1}</span><span class="pt">${p.name}</span></button>`).join('');
+
+const METHODS=[
+ {k:'manual', i:'🖐', n:'수기'},
+ {k:'chatbot', i:'💬', n:'챗봇'},
+ {k:'rag', i:'🔎', n:'RAG'},
+ {k:'single', i:'⚙', n:'단일 Agent'},
+];
+let curPhase=0;
+function setPhase(i){
+  curPhase=i; const p=PHASES[i];
+  document.querySelectorAll('#proctl button').forEach((b,bi)=>b.setAttribute('aria-pressed',String(bi===i)));
+  document.getElementById('w-name').textContent='STEP '+(i+1)+'. '+p.name;
+  document.getElementById('w-desc').textContent=p.work;
+  document.getElementById('w-methods').innerHTML=METHODS.map(m=>{
+    const d=p[m.k];
+    return `<div class="mcard"><div class="mname"><span class="mi">${m.i}</span>${m.n}</div>`
+      +`<div class="mf"><span class="ml">처리 방식</span>${d.how}</div>`
+      +`<div class="mf"><span class="ml">가능한 일</span>${d.can}</div>`
+      +`<div class="mf lim"><span class="ml">한계</span>${d.limit}</div></div>`;
+  }).join('');
+  const a=p.aap;
+  document.getElementById('w-aap').innerHTML=
+    `<div class="aname"><span class="abadge">AAP</span> 업무별 Agent가 역할을 나눠 처리</div>`
+    +`<div class="agrid">`
+    +`<div class="af"><div class="al">처리 방식</div><div class="av">${a.how}</div></div>`
+    +`<div class="af res"><div class="al">생성 결과</div><div class="av"><b>${a.result}</b></div></div>`
+    +`<div class="af eff"><div class="al">기대 효과</div><div class="av">${a.effect}</div></div>`
+    +`</div>`;
+  document.getElementById('w-key').innerHTML=`<span class="kl">핵심 차이</span>${p.key}`;
+}
+document.querySelectorAll('#proctl button').forEach(b=>b.addEventListener('click',()=>{stopPlay();setPhase(+b.dataset.ph);}));
+
+/* 자동 재생 */
+let playTimer=null;
+const playbtn=document.getElementById('playbtn');
+const playhint=document.getElementById('playhint');
+function stopPlay(){ if(playTimer){clearInterval(playTimer);playTimer=null;} playbtn.classList.add('paused'); playbtn.textContent='▶ 자동 재생'; }
+function startPlay(){
+  playbtn.classList.remove('paused'); playbtn.textContent='⏸ 일시정지'; playhint.textContent='재생 중 — 단계가 자동으로 넘어갑니다';
+  if(curPhase>=PHASES.length-1) setPhase(0);
+  playTimer=setInterval(()=>{
+    if(curPhase>=PHASES.length-1){ stopPlay(); playhint.textContent='완료 — 다시 재생하거나 단계를 선택하세요'; return; }
+    setPhase(curPhase+1);
+  },3200);
+}
+playbtn.addEventListener('click',()=>{ if(playTimer) stopPlay(); else startPlay(); });
+setPhase(0); stopPlay();
+
+/* ===================== 탭② AAP 작동 구조 ===================== */
+const COMPONENT_INFO={
+ '보험 청구 데이터':{l:'고객 자산',role:'청구·계약 원천 데이터 제공',feat:'AAP가 대체하지 않고 읽기 기반 활용'},
+ '약관·문서 자산':{l:'고객 자산',role:'담보·면책 판단의 근거 문서',feat:'문서 자동 인식·구조화를 거쳐 사건 정리 입력이 됨'},
+ '사고·청구 시스템':{l:'고객 자산',role:'접수·지급 기간계 연동 대상',feat:'커넥터로 양방향 연동'},
+ '과거 청구이력 DB':{l:'고객 자산',role:'유사청구·사기 신호 확인의 핵심 소스',feat:'사기 Agent에 권한이 분리되어 제공',badge:'diff'},
+ '에이전트 포털':{l:'경험/접근',role:'접수·진행·검토 큐 화면',feat:'손해사정사·SIU의 작업대(사람 검토 콘솔)'},
+ '코파일럿':{l:'경험/접근',role:'담당자 보조(요약·근거 제시)',feat:'판단을 대체하지 않고 보조'},
+ '관리자 콘솔':{l:'경험/접근',role:'정책·권한·현황 관리',feat:'팀장이 자동/검토 현황을 통제'},
+ 'API Gateway':{l:'경험/접근',role:'외부 채널·시스템 진입점',feat:'접수·연동 표준 인터페이스'},
+ '에이전트 설계':{l:'설계/개발',role:'과실/손해액/약관/사기 Agent 정의',feat:'업무별 역할·권한을 사전에 규정'},
+ 'BPMN·DMN 규칙':{l:'설계/개발',role:'손해사정 절차·판정 규칙 정의',feat:'규칙과 Agent 판단의 결합점'},
+ 'Tool Registry':{l:'설계/개발',role:'Agent가 쓰는 도구 등록',feat:'도구 사용 통제와 연결'},
+ 'Agent Registry':{l:'설계/개발',role:'운영 Agent 카탈로그',feat:'재사용·버전 관리'},
+ '에이전트 코어':{l:'실행환경',role:'추론·계획·메모리 실행',feat:'단계별 근거를 남기는 실행 단위'},
+ 'Supervisor':{l:'실행환경',role:'사건을 업무별 Agent로 나누고 조율',feat:'단일 처리가 아닌 업무별 Agent 분리 중심',badge:'diff'},
+ 'Task Routing':{l:'실행환경',role:'업무를 적합한 Agent에 배정',feat:'사건 특성에 따라 배정'},
+ 'Agent 간 판단 비교(A2A)':{l:'실행환경',role:'Agent 판단을 교차 확인하고 불일치를 드러냄',feat:'단일 처리가 못 보는 판단 차이를 검토 항목으로 올림',badge:'diff'},
+ '사람 검토 게이트(HITL)':{l:'실행환경',role:'위험·충돌 항목만 사람 검토로 분기',feat:'전건 자동/전건 수작업이 아닌 선별 검토',badge:'diff'},
+ '도구 사용 통제':{l:'실행환경',role:'Agent의 도구 호출 안전·권한 통제',feat:'도구 사용을 정책으로 제약 (BEAST 연계 가능)',badge:'asset'},
+ '온톨로지':{l:'지식/시멘틱',role:'담보·과실·손해항목·사기 개념 정리',feat:'문서가 아닌 의미 단위 → Agent 간 일관 참조',badge:'diff'},
+ 'Knowledge Graph':{l:'지식/시멘틱',role:'사건·관계·이력 연결',feat:'유사청구·관계 확인 기반'},
+ 'Case/Claim Model':{l:'지식/시멘틱',role:'흩어진 자료를 하나의 손해사정 사건으로 통합',feat:'모든 Agent가 같은 사건을 참조하는 단일 모델'},
+ 'RAG':{l:'지식/시멘틱',role:'약관·판례·매뉴얼 근거 검색',feat:'판단에 근거 문서를 결합'},
+ '커넥터':{l:'데이터/연동',role:'기간계·외부 시스템 연동',feat:'읽기·쓰기 양방향'},
+ '문서 자동 인식·구조화':{l:'데이터/연동',role:'진단서·견적서·블박을 구조화',feat:'비정형 문서를 사건 정리 입력으로 변환 (AI:ON-U 적용 가능)',badge:'asset'},
+ '업무 자동 실행':{l:'데이터/연동',role:'지급결의·통지 자동 실행',feat:'확정분만 자동 처리 (Antbot 연계 가능)',badge:'asset'},
+ 'Data Quality':{l:'데이터/연동',role:'자료 누락·정합성 점검',feat:'누락 시 추가자료 요청으로 분기'},
+ 'Evaluation':{l:'AI 품질/평가',role:'Agent 판단 품질 평가',feat:'정확도·일관성 확인'},
+ 'Tracing':{l:'AI 품질/평가',role:'판단 근거 추적·기록',feat:'판단 근거 기록(Decision Log)의 기반'},
+ 'Drift 모니터':{l:'AI 품질/평가',role:'성능·기준 변화 감지',feat:'모델·규칙 변화 조기 경보'},
+ 'Skill Catalog':{l:'AI 품질/평가',role:'검증된 판단 기준 자산화',feat:'유사사건 재사용·환류'},
+ 'Policy':{l:'컨트롤/거버넌스',role:'자동/검토 기준 등 운영 정책',feat:'코드가 아닌 정책으로 통제'},
+ 'Access · 권한':{l:'컨트롤/거버넌스',role:'Agent·사용자 권한 분리',feat:'사기 Agent가 청구이력만 보도록 권한 분리',badge:'diff'},
+ '사람 검토 승인정책(HITL)':{l:'컨트롤/거버넌스',role:'사람이 봐야 할 항목 기준',feat:'선별 사람 검토의 승인 규칙'},
+ 'Audit Trail':{l:'컨트롤/거버넌스',role:'모든 분기·접근 감사 기록',feat:'민원·소송·감사 대응 근거'},
+ 'Compute':{l:'인프라',role:'실행 기반(연산)',feat:'온프렘·클라우드 선택, 고객 환경 위에 배치'},
+ 'Network':{l:'인프라',role:'실행 기반(네트워크)',feat:'온프렘·클라우드 선택, 고객 환경 위에 배치'},
+ 'On-prem/Cloud':{l:'인프라',role:'실행 기반(배치 환경)',feat:'온프렘·클라우드 선택, 고객 환경 위에 배치'},
+ 'Storage':{l:'인프라',role:'실행 기반(저장)',feat:'온프렘·클라우드 선택, 고객 환경 위에 배치'},
+ // 업무 Agent (런타임 인스턴스)
+ '사기 Agent':{l:'업무 Agent',role:'과거 청구이력으로 사기 의심을 별도 확인',feat:'청구이력 범위만 보도록 권한 분리',badge:'diff'},
+ '과실 Agent':{l:'업무 Agent',role:'블랙박스 기준으로 과실 판단',feat:'유사사례 Agent와 분리해 판단'},
+ '유사사례 Agent':{l:'업무 Agent',role:'유사 판례 기준으로 과실 판단',feat:'과실 Agent와 분리해 판단'},
+ '손해액 Agent':{l:'업무 Agent',role:'대물·대인 손해액 산정',feat:'대인 합의금은 검토 대상으로 분리'},
+ '약관 Agent':{l:'업무 Agent',role:'담보·면책·보장 판단',feat:'사기 리스크와 분리해 판단'},
+};
+const LAYERS=[
+ {n:'CUST', name:'고객 자산', cust:true, comps:['보험 청구 데이터','약관·문서 자산','사고·청구 시스템','과거 청구이력 DB']},
+ {n:'L1', name:'경험 / 접근',     comps:['에이전트 포털','코파일럿','관리자 콘솔','API Gateway']},
+ {n:'L2', name:'설계 / 개발',     comps:['에이전트 설계','BPMN·DMN 규칙','Tool Registry','Agent Registry']},
+ {n:'L3', name:'에이전트 실행환경', comps:['에이전트 코어','Supervisor','Task Routing','Agent 간 판단 비교(A2A)','사람 검토 게이트(HITL)','도구 사용 통제']},
+ {n:'L4', name:'지식 / 시멘틱',    comps:['온톨로지','Knowledge Graph','Case/Claim Model','RAG']},
+ {n:'L5', name:'데이터 / 연동',    comps:['커넥터','문서 자동 인식·구조화','업무 자동 실행','Data Quality']},
+ {n:'L6', name:'AI 품질 / 평가',   comps:['Evaluation','Tracing','Drift 모니터','Skill Catalog']},
+ {n:'L7', name:'컨트롤 / 거버넌스', comps:['Policy','Access · 권한','사람 검토 승인정책(HITL)','Audit Trail']},
+ {n:'L8', name:'인프라',          comps:['Compute','Network','On-prem/Cloud','Storage']},
+];
+const ARCH_CHIPS=new Set(); LAYERS.forEach(L=>L.comps.forEach(c=>ARCH_CHIPS.add(c)));
+
+const ARCH=[
+ { layers:['CUST','L1','L5','L4'],
+   comps:['보험 청구 데이터','약관·문서 자산','사고·청구 시스템','에이전트 포털','커넥터','Data Quality','Case/Claim Model'],
+   does:'접수된 사고정보와 계약정보를 연결하고, 담보·한도·면책 및 필요서류를 확인한다.',
+   out:['담보·한도·면책 확인표','필요서류 체크리스트','자료 누락 표시'] },
+ { layers:['CUST','L5','L4','L3','L7'],
+   comps:['과거 청구이력 DB','문서 자동 인식·구조화','Case/Claim Model','사기 Agent','Access · 권한','Policy'],
+   does:'사고 경위와 과거 청구이력을 분리해 확인하고, 사기 의심은 지급 판단이 아니라 조사 필요 신호로 관리한다.',
+   out:['사고경위 확인 결과','유사청구 2건','조사 필요 신호','SIU 후보'] },
+ { layers:['L4','L3','L7','L6'],
+   comps:['Case/Claim Model','RAG','과실 Agent','유사사례 Agent','Agent 간 판단 비교(A2A)','사람 검토 승인정책(HITL)','Audit Trail'],
+   does:'블랙박스 기준과 유사 판례 기준을 분리해 판단하고, 차이가 크면 상급 손해사정사 검토 대상으로 올린다.',
+   out:['과실 20:80','유사사례 30:70','판단 불일치','상급 손해사정사 검토 후보','판단 근거 기록(Decision Log)'] },
+ { layers:['L5','L4','L3','L6'],
+   comps:['문서 자동 인식·구조화','Case/Claim Model','손해액 Agent','사기 Agent','RAG','Tracing'],
+   does:'대물 손해액과 대인 합의금 요구를 분리해 보고, 합의금은 과실·상해·사기 신호와 함께 검토 대상으로 관리한다.',
+   out:['대물 손해액 후보 480만','합의금 300만 검토','산정 근거','합의금 검토 사유'] },
+ { layers:['L4','L3','L7','L6'],
+   comps:['약관 Agent','손해액 Agent','사기 Agent','Policy','사람 검토 승인정책(HITL)','Audit Trail'],
+   does:'약관상 보장 가능 여부와 사기 리스크를 분리해 판단하고, 보장 가능하더라도 리스크가 높으면 검토 대상으로 보낸다.',
+   out:['보장 확인 결과','과실상계 반영 금액','사기 리스크 78점','SIU 검토 후보','보류 사유'] },
+ { layers:['L1','L3','L5','L6','L7'],
+   comps:['에이전트 포털','관리자 콘솔','사람 검토 게이트(HITL)','업무 자동 실행','Tracing','Audit Trail','Policy'],
+   does:'자동 처리 가능 금액과 사람 검토 금액을 분리하고, 지급결의 후보와 검토 큐를 생성한다.',
+   out:['자동 90만','검토 171만','손해사정서 초안','손해사정사 검토 큐','SIU 검토 큐','판단 근거 기록(Decision Log)'] },
+];
+
+const archstack=document.getElementById('archstack');
+LAYERS.forEach(L=>{
+  const row=document.createElement('div');
+  row.className='layer'+(L.cust?' cust':''); row.dataset.l=L.n;
+  const comps=L.comps.map(c=>{ const b=(COMPONENT_INFO[c]&&COMPONENT_INFO[c].badge)||''; return `<span class="lcomp ${b}" data-c="${c}">${c}</span>`; }).join('');
+  row.innerHTML=`<span class="lname">${L.name}</span><span class="lcomps">${comps}</span>`;
+  archstack.appendChild(row);
+});
+
+const archtop=document.getElementById('archtop');
+archtop.innerHTML=PHASE_NAMES.map((n,i)=>`<button data-a="${i}" aria-pressed="${i===0}"><span class="pn">STEP ${i+1}</span><span class="pt">${n}</span></button>`).join('');
+
+let curArch=[], selComp=null;
+function compCard(name,sel){
+  const info=COMPONENT_INFO[name]; if(!info) return '';
+  const badge=info.badge==='diff'?'<span class="cbadge diff">차별점</span>':info.badge==='asset'?'<span class="cbadge asset">자산 연계</span>':'';
+  return `<div class="compcard${sel?' sel':''}"><div class="cch"><span class="ccn">${name}</span><span class="ccl">${info.l}</span>${badge}</div>`
+    +`<div class="ccr"><b>역할</b>${info.role}</div><div class="ccr"><b>특징</b>${info.feat}</div></div>`;
+}
+function renderComps(){
+  const names=[]; if(selComp && !curArch.includes(selComp)) names.push(selComp);
+  curArch.forEach(n=>names.push(n));
+  document.getElementById('a-compl').textContent = selComp ? '선택한 구성요소 · 이 단계의 주요 구성요소' : '주요 구성요소';
+  document.getElementById('a-comps').innerHTML=names.map(n=>compCard(n, n===selComp)).join('');
+}
+function setArch(i){
+  const x=ARCH[i]; selComp=null; curArch=x.comps.slice();
+  document.querySelectorAll('#archtop button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.a===i)));
+  document.getElementById('a-step').textContent='작동 단계 · STEP '+(i+1);
+  document.getElementById('a-name').textContent=PHASE_NAMES[i];
+  document.getElementById('a-do').innerHTML=x.does;
+  document.getElementById('a-out').innerHTML=x.out.map(o=>`<li>${o}</li>`).join('');
+  document.querySelectorAll('#archstack .layer').forEach(row=>{
+    const on=x.layers.includes(row.dataset.l);
+    row.classList.toggle('on',on);
+    row.querySelectorAll('.lcomp').forEach(c=>c.classList.toggle('use', on && x.comps.includes(c.dataset.c)));
+  });
+  renderComps();
+}
+document.querySelectorAll('#archtop button').forEach(b=>b.addEventListener('click',()=>setArch(+b.dataset.a)));
+document.getElementById('archstack').addEventListener('click',e=>{
+  const c=e.target.closest('.lcomp'); if(!c) return; selComp=c.dataset.c; renderComps();
+});
+setArch(0);
+</script>
+</body>
+</html>

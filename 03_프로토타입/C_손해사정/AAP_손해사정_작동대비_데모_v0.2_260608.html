@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AAP 손해사정 · 단일 AGENT vs AAP — 한 사건으로 보는 작동·효과 (Simulation PoC)</title>
+<style>
+  :root{
+    --kt-brand:#0A0A0A; --kt-accent:#22C55E; --kt-ink:#0A0A0A; --kt-muted:#737373;
+    --kt-border:#EAEAEA; --kt-bg:#FAFAFA; --kt-card:#FFFFFF; --kt-surf:#F5F5F5;
+    --warn:#F59E0B; --danger:#EF4444; --info:#3B82F6;
+    --accent-soft:#F0FDF4; --warn-soft:#FFFBEB; --danger-soft:#FEF2F2; --info-soft:#EFF6FF;
+    --radius:14px; --radius-sm:9px;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.04);
+    --mono:'SF Mono',ui-monospace,'Menlo',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--kt-bg);color:var(--kt-ink);
+    font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5;font-size:14px}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 22px 90px}
+  .muted{color:var(--kt-muted)}
+  .mono{font-family:var(--mono)}
+  .label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--kt-muted)}
+
+  /* 헤더 */
+  header{display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding:4px 0 16px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .logo .dot{width:10px;height:10px;border-radius:3px;background:var(--kt-accent)}
+  .badge-sim{margin-left:auto;background:#111;color:#fff;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:600}
+
+  /* Act 헤더 */
+  .act-h{display:flex;align-items:center;gap:11px;margin:30px 0 13px}
+  .act-h .num{width:27px;height:27px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+  .act-h h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .act-h .sub{font-size:12.5px;color:var(--kt-muted)}
+  .num.n1{background:var(--kt-ink);color:#fff}
+  .num.n2{background:var(--danger-soft);color:var(--danger);border:1.5px solid #FECACA}
+  .num.n3{background:var(--kt-ink);color:#fff}
+  .num.n4{background:var(--accent-soft);color:#15803D;border:1.5px solid #BBF7D0}
+  .flow-arrow{display:grid;place-items:center;height:22px;color:var(--kt-border);font-size:18px}
+
+  .card{background:var(--kt-card);border:1px solid var(--kt-border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:16px 18px}
+
+  /* 사건 카드 */
+  .case{display:grid;grid-template-columns:auto 1fr;gap:0;overflow:hidden}
+  .case .left{background:var(--kt-ink);color:#fff;padding:18px 20px;display:flex;flex-direction:column;justify-content:center;min-width:210px}
+  .case .left .cid{font-family:var(--mono);font-size:18px;font-weight:700}
+  .case .left .ctype{font-size:12.5px;color:#A3A3A3;margin-top:4px}
+  .case .right{padding:14px 18px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:760px){.case{grid-template-columns:1fr}.case .right{grid-template-columns:repeat(2,1fr)}}
+  .fact .label{margin-bottom:3px}
+  .fact .val{font-size:14px;font-weight:700}
+  .fact .val small{font-weight:500;color:var(--kt-muted);font-size:11.5px}
+
+  /* What-if */
+  .whatif{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px;padding:11px 14px;
+    background:var(--kt-surf);border:1px dashed var(--kt-border);border-radius:var(--radius-sm)}
+  .whatif .label{margin-right:3px}
+  .chip-toggle{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--kt-border);
+    border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;user-select:none;transition:.15s}
+  .chip-toggle[data-on="true"]{background:var(--accent-soft);border-color:#BBF7D0;color:#15803D;font-weight:600}
+  .chip-toggle .sw{width:26px;height:15px;border-radius:999px;background:#D4D4D4;position:relative;transition:.15s;flex:none}
+  .chip-toggle[data-on="true"] .sw{background:var(--kt-accent)}
+  .chip-toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:.15s}
+  .chip-toggle[data-on="true"] .sw::after{left:13px}
+  .whatif .note{font-size:11.5px;color:var(--kt-muted);margin-left:auto}
+
+  /* Act1 — 단일 결과 */
+  .single-flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .sf-steps{flex:1;min-width:300px;border-right:1px solid var(--kt-border)}
+  .stepper{display:flex;align-items:center;flex-wrap:wrap;gap:4px 0;padding-bottom:14px}
+  .step{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--kt-ink);font-weight:600}
+  .step .n{width:21px;height:21px;border-radius:50%;background:var(--kt-ink);color:#fff;display:grid;place-items:center;font-size:10.5px;font-weight:700}
+  .step .arr{color:var(--kt-border);margin:0 7px}
+  .sf-kv .kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--kt-border);font-size:13px}
+  .sf-kv .kv:last-child{border-bottom:0}
+  .sf-kv .kv .k{color:var(--kt-muted)} .sf-kv .kv .v{font-weight:700;font-family:var(--mono)}
+  .sf-result{flex:1;min-width:260px;padding:4px 0 0 18px;display:flex;flex-direction:column;justify-content:center}
+  .verdict-box{background:var(--warn-soft);border:1px solid #FDE68A;border-radius:var(--radius-sm);padding:14px 15px}
+  .verdict-box .vlabel{font-size:11px;font-weight:700;color:#92400E;letter-spacing:.03em;text-transform:uppercase}
+  .verdict-box .vamt{font-size:28px;font-weight:800;font-family:var(--mono);color:#0A0A0A;margin:5px 0}
+  .verdict-box .vdesc{font-size:12.5px;color:#92400E}
+  @media(max-width:760px){.sf-steps{border-right:0;border-bottom:1px solid var(--kt-border);padding-bottom:8px}.sf-result{padding:14px 0 0}}
+
+  /* Act2 — 한계 */
+  .limits{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+  @media(max-width:760px){.limits{grid-template-columns:1fr}}
+  .limit{background:var(--kt-card);border:1px solid #FECACA;border-radius:var(--radius);padding:15px 16px;position:relative}
+  .limit .lh{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13.5px;color:var(--danger)}
+  .limit .lh .x{width:20px;height:20px;border-radius:6px;background:var(--danger-soft);display:grid;place-items:center;font-size:12px}
+  .limit .ltag{font-size:10.5px;font-weight:700;color:var(--kt-muted);text-transform:uppercase;letter-spacing:.04em;margin-top:9px}
+  .limit p{font-size:12.5px;color:var(--kt-ink);margin-top:4px;line-height:1.55}
+  .limit .impact{margin-top:10px;font-size:12px;font-weight:700;color:var(--danger);background:var(--danger-soft);border-radius:7px;padding:6px 9px}
+
+  /* Act3 — AAP 작동 */
+  .player-bar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--kt-ink);color:#fff;border:0;border-radius:9px;
+    padding:9px 15px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+  .btn:hover{opacity:.88}
+  .btn.ghost{background:#fff;color:var(--kt-ink);border:1px solid var(--kt-border)}
+  .caption{flex:1;min-width:260px;font-size:13px;font-weight:600;background:var(--info-soft);border:1px solid #BFDBFE;
+    color:#1E40AF;border-radius:9px;padding:9px 13px;min-height:38px;display:flex;align-items:center;transition:.2s}
+
+  .orch{display:flex;flex-direction:column;gap:10px}
+  .lane-label{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--kt-muted)}
+  .node{border:1px solid var(--kt-border);border-radius:11px;padding:11px 13px;background:#fff;transition:.25s}
+  .node.dim{opacity:.32;filter:saturate(.4)}
+  .node.lit{box-shadow:0 0 0 2px var(--kt-accent),var(--shadow)}
+  .node.planner{background:var(--kt-surf);border-style:dashed}
+  .node .nh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px}
+  .node .nh .ic{width:8px;height:8px;border-radius:2px;background:var(--kt-muted);flex:none}
+  .node .v{font-size:12.5px;margin-top:5px} .node .v b{font-weight:700}
+  .node .hint{font-size:11.5px;color:var(--kt-muted);margin-top:3px}
+  .rule{font-family:var(--mono);font-size:10px;background:var(--kt-surf);border:1px solid var(--kt-border);border-radius:5px;padding:1px 5px;color:var(--kt-muted);margin-left:5px}
+  .agents{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  @media(max-width:760px){.agents{grid-template-columns:repeat(2,1fr)}}
+  .node.agent .ic{background:var(--info)}
+  .node.agent[data-flag="true"]{border-color:#FDE68A;background:var(--warn-soft)}
+  .node.agent[data-flag="true"] .ic{background:var(--warn)}
+  .node.agent .v{font-weight:700}
+  .node.recon{border-color:var(--kt-ink);border-width:1.5px}.node.recon .ic{background:var(--kt-ink)}
+  .conflict{display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:9px 11px;margin-top:8px;font-size:12px;background:var(--danger-soft);border:1px solid #FECACA}
+  .conflict .cx{color:var(--danger);font-weight:800;flex:none}
+  .conflict .res{display:block;margin-top:3px;color:#15803D;font-weight:600}
+  .conflict .res::before{content:"→ "}
+  .node.gateway{background:linear-gradient(0deg,var(--accent-soft),#fff)}.node.gateway .ic{background:var(--kt-accent)}
+  .route{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px dashed var(--kt-border)}
+  .route:first-of-type{border-top:0}
+  .route .who{font-weight:700;margin-left:auto;font-size:11px;padding:2px 9px;border-radius:999px;background:var(--kt-surf);border:1px solid var(--kt-border)}
+  .route .who.siu{background:var(--danger-soft);border-color:#FECACA;color:var(--danger)}
+  .route .who.auto{background:var(--accent-soft);border-color:#BBF7D0;color:#15803D}
+  .connector{height:11px;display:grid;place-items:center}.connector::after{content:"";width:1.5px;height:100%;background:var(--kt-border)}
+
+  /* 해결 매핑 */
+  .solve{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:18px}
+  @media(max-width:760px){.solve{grid-template-columns:1fr}}
+  .sol{background:var(--accent-soft);border:1px solid #BBF7D0;border-radius:var(--radius);padding:14px 15px}
+  .sol .from{font-size:11px;color:var(--kt-muted);font-weight:600}
+  .sol .from b{color:var(--danger)}
+  .sol .sh{display:flex;align-items:center;gap:7px;font-weight:800;font-size:13px;color:#15803D;margin-top:5px}
+  .sol p{font-size:12.5px;margin-top:5px;line-height:1.55}
+
+  /* Act4 — 효과 */
+  .effects{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+  @media(max-width:760px){.effects{grid-template-columns:repeat(2,1fr)}}
+  .effect{background:var(--kt-card);border:1px solid var(--kt-border);border-radius:var(--radius);padding:16px;text-align:center}
+  .effect .big{font-size:24px;font-weight:800;font-family:var(--mono);color:#15803D}
+  .effect .et{font-size:12.5px;font-weight:700;margin-top:6px}
+  .effect .ed{font-size:11.5px;color:var(--kt-muted);margin-top:3px;line-height:1.5}
+
+  .footnote{margin-top:26px;font-size:11.5px;color:var(--kt-muted);text-align:center;line-height:1.7}
+  .footnote code{font-family:var(--mono);background:var(--kt-surf);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"></span> AAP 손해사정 · 단일 AGENT vs AAP</div>
+    <span class="badge-sim">Simulation PoC</span>
+  </header>
+
+  <!-- ===== 공유 사건 ===== -->
+  <div class="card case">
+    <div class="left">
+      <div class="label" style="color:#A3A3A3">같은 사건 1건</div>
+      <div class="cid">CL-2026-0417</div>
+      <div class="ctype">신호교차로 · 직진(A) vs 좌회전(B)<br>대물 + 경상 대인</div>
+    </div>
+    <div class="right">
+      <div class="fact"><div class="label">대물</div><div class="val">₩480만 <small>수리 / 차량가 1,200</small></div></div>
+      <div class="fact"><div class="label">대인</div><div class="val">경추염좌 2주 <small>합의금 요구 ₩300만</small></div></div>
+      <div class="fact"><div class="label">기본 과실 (A:B)</div><div class="val" id="f-base">30 : 70</div></div>
+      <div class="fact"><div class="label">사기 점검</div><div class="val" id="f-fraud">6개월 유사청구 2건</div></div>
+    </div>
+  </div>
+
+  <div class="whatif">
+    <span class="label">What-if (라이브 재계산)</span>
+    <span class="chip-toggle" data-wi="signalViolationB"><span class="sw"></span>블박: B 신호위반</span>
+    <span class="chip-toggle" data-wi="speedingA"><span class="sw"></span>A 과속 정황</span>
+    <span class="chip-toggle" data-wi="priorClaims"><span class="sw"></span>유사청구 2건</span>
+    <span class="note">토글하면 과실·금액·충돌이 결정론적으로 재계산됩니다 (하드코딩 아님)</span>
+  </div>
+
+  <!-- ===== ① 기존 단일 ===== -->
+  <div class="act-h"><span class="num n1">1</span>
+    <div><h2>기존 단일 AGENT는 이렇게 처리한다</h2>
+    <div class="sub">선형 5단계를 순차로 흘려 <b>최종 권고 1개</b>를 낸다 — 원본 데모(②)의 작동 방식</div></div>
+  </div>
+  <div class="card pad">
+    <div class="single-flow">
+      <div class="sf-steps">
+        <div class="stepper">
+          <div class="step"><span class="n">1</span>지급심사</div><span class="arr">→</span>
+          <div class="step"><span class="n">2</span>견적</div><span class="arr">→</span>
+          <div class="step"><span class="n">3</span>대인</div><span class="arr">→</span>
+          <div class="step"><span class="n">4</span>과실</div><span class="arr">→</span>
+          <div class="step"><span class="n">5</span>처리</div>
+        </div>
+        <div class="sf-kv" id="single-kv"></div>
+      </div>
+      <div class="sf-result">
+        <div class="verdict-box">
+          <div class="vlabel">단일 에이전트 최종 권고</div>
+          <div class="vamt" id="single-amt">₩261만</div>
+          <div class="vdesc" id="single-desc"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">▼</div>
+
+  <!-- ===== ② 한계 ===== -->
+  <div class="act-h"><span class="num n2">2</span>
+    <div><h2>그런데 이 결과엔 한계가 있다</h2>
+    <div class="sub">한 줄 추론 · 독립 교차검증 없음 · 거친 라우팅에서 비롯되는 세 가지</div></div>
+  </div>
+  <div class="limits">
+    <div class="limit">
+      <div class="lh"><span class="x">⚠</span>① 근거·재현성</div>
+      <div class="ltag">과실 산정</div>
+      <p>과실을 <b>한 줄 규칙 추론</b>으로 산정 — 규칙기반 비율과 판례(유사사례)가 어긋나도 <b>충돌이 드러나지 않는다</b>. 어떤 규칙이 마지막에 떴느냐로 답이 흔들림.</p>
+      <div class="impact">분쟁 시 "왜 이 과실?" 방어가 약하다</div>
+    </div>
+    <div class="limit">
+      <div class="lh"><span class="x">⚠</span>② 교차검증 부재</div>
+      <div class="ltag">합의금 · 사기</div>
+      <p>사기 점수는 앞단에서 뜨지만(<b id="lim-score">78점</b>), <b>합의금 산정과 독립적으로 맞물리지 않는다</b>. 합의금 적정성을 도전·게이트하는 단계가 명시적이지 않아 권고에 그대로 포함.</p>
+      <div class="impact" id="lim-impact">부당지급 ₩90만 여지</div>
+    </div>
+    <div class="limit">
+      <div class="lh"><span class="x">⚠</span>③ 병목·추적</div>
+      <div class="ltag">검토 · 감사</div>
+      <p>사람이 전건/끝에서 <b>일괄 검토</b>하고 라우팅이 거칠다. 근거는 <b>선형 로그</b>로만 남아 위험별로 적임자에게 못 보내고 감사 방어가 빈약.</p>
+      <div class="impact">처리 병목 + 감사 추적 빈약</div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">▼</div>
+
+  <!-- ===== ③ AAP 해결 ===== -->
+  <div class="act-h"><span class="num n3">3</span>
+    <div><h2>AAP는 이렇게 해결한다</h2>
+    <div class="sub">전문 에이전트가 분업·독립 판단 → 충돌을 표면화 → 위험별로 사람에게 라우팅</div></div>
+  </div>
+  <div class="card pad">
+    <div class="player-bar">
+      <button class="btn" id="play">▶ 작동 과정 보기</button>
+      <button class="btn ghost" id="replay">↻ 다시</button>
+      <div class="caption" id="caption">전체 작동이 펼쳐져 있습니다. <b>▶ 작동 과정 보기</b>를 누르면 단계별로 재생됩니다.</div>
+    </div>
+
+    <div class="orch">
+      <div class="lane-label">① Planner · 작업 분해</div>
+      <div class="node planner" id="n-planner">
+        <div class="nh"><span class="ic"></span>Planner</div>
+        <div class="v" id="planner-v"></div>
+        <div class="hint">※ 단순 대물단독·명확과실 건이면 단일 경로로 자동처리 — 항상 멀티가 아니라 <b>복잡도 보고 선택</b>.</div>
+      </div>
+      <div class="connector"></div>
+      <div class="lane-label">② 전문 에이전트 · 병렬 독립 산출</div>
+      <div class="agents" id="agents"></div>
+      <div class="connector"></div>
+      <div class="lane-label">③ Reconciler · 종합 / 충돌 표면화</div>
+      <div class="node recon" id="n-recon">
+        <div class="nh"><span class="ic"></span>Reconciler<span class="rule" id="conflict-count" style="margin-left:auto"></span></div>
+        <div id="conflicts"></div>
+      </div>
+      <div class="connector"></div>
+      <div class="lane-label">④ HITL Gateway · 위험·금액별 차등 라우팅</div>
+      <div class="node gateway" id="n-gateway">
+        <div class="nh"><span class="ic"></span>HITL Gateway</div>
+        <div id="routes"></div>
+      </div>
+    </div>
+
+    <!-- 한계 → 해결 매핑 -->
+    <div class="solve">
+      <div class="sol">
+        <div class="from">한계 <b>① 근거·재현성</b> 해결</div>
+        <div class="sh">✓ 독립 산출 + 충돌 표면화</div>
+        <p>과실·유사사례를 <b>독립 에이전트가 각각</b> 산출 → Reconciler가 규칙↔판례 불일치를 띄우고 <b>양쪽 근거를 DAG에 보존</b>. 동일입력=동일결과(재현성ID).</p>
+      </div>
+      <div class="sol">
+        <div class="from">한계 <b>② 교차검증</b> 해결</div>
+        <div class="sh">✓ 합의금 독립 게이트</div>
+        <p>사기·유사사례 에이전트가 <b>합의금 적정성을 독립 도전</b> → 충돌 시 합의금분 <b id="sol-hold">₩90만</b> 보류·SIU. 부당지급을 명시적으로 차단.</p>
+      </div>
+      <div class="sol">
+        <div class="from">한계 <b>③ 병목·추적</b> 해결</div>
+        <div class="sh">✓ 차등 HITL + 전건 DAG</div>
+        <p>Gateway가 <b>위험·금액별로 라우팅</b>(대물 자동 / 과실 사정사 / 합의금 SIU). 사람은 분쟁·고액만, 전 과정은 감사 DAG로 보존.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">▼</div>
+
+  <!-- ===== ④ 효과 ===== -->
+  <div class="act-h"><span class="num n4">4</span>
+    <div><h2>그래서 예상 효과는</h2>
+    <div class="sub">같은 입력, 다른 결과 — 정량 효과</div></div>
+  </div>
+  <div class="effects">
+    <div class="effect">
+      <div class="big" id="eff-block">₩90만</div>
+      <div class="et">부당지급 차단</div>
+      <div class="ed">사기 의심 합의금분을 독립 검증으로 보류</div>
+    </div>
+    <div class="effect">
+      <div class="big">100%</div>
+      <div class="et">재현·추적</div>
+      <div class="ed">동일입력=동일결과 + 근거 DAG로 분쟁·소송 방어</div>
+    </div>
+    <div class="effect">
+      <div class="big">↓ 병목</div>
+      <div class="et">HITL 차등</div>
+      <div class="ed">저위험 대물 자동, 사람은 분쟁·고액·사기만</div>
+    </div>
+    <div class="effect">
+      <div class="big">×N</div>
+      <div class="et">도메인 확장</div>
+      <div class="ed">어휘만 교체 → 화재·배상·실손으로 복제</div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    결정론 시뮬레이션 — 과실·금액·사기점수는 <code>입력값에서 계산</code>(하드코딩 아님). 원본 단일 데모
+    <code>01_AI자동차_손해사정_심사처리시스템.html</code>의 디자인·케이스 승계 · 궁극적으로 실물 임베드 예정.
+  </div>
+
+</div>
+
+<script>
+/* ===================== 결정론 엔진 ===================== */
+const CASE = {
+  대물:{수리견적:480,차량가액:1200}, 대인:{치료비:90,합의금:300},
+  과실기본:{A:30,B:70}, 유사사례평균:{A:30,B:70}
+};
+const state = {wi:{signalViolationB:false,speedingA:false,priorClaims:true}};
+
+function fault(wi){
+  let A=CASE.과실기본.A,B=CASE.과실기본.B; const tr=[`기본 ${A}:${B}`];
+  if(wi.signalViolationB){A=10;B=90;tr.push('블박 B 신호위반 → 10:90 [R04]');}
+  if(wi.speedingA){A+=10;B-=10;tr.push(`A 과속 +10 → ${A}:${B}`);}
+  return {A,B,tr};
+}
+function fraud(wi){
+  let s=0;const tr=[];const c=wi.priorClaims?2:0;
+  if(c>=2){s+=55;tr.push(`6개월 유사청구 ${c}건 → +55 [R20]`);}
+  s+=23;tr.push('경추염좌 2주 대비 합의금 과다 → +23');
+  return {score:s,claims:c,flag:s>=75,tr};
+}
+const won = n => '₩'+Math.round(n).toLocaleString()+'만';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+/* ===================== 렌더 ===================== */
+function render(){
+  const F=fault(state.wi), FR=fraud(state.wi);
+  const claim=CASE.대물.수리견적+CASE.대인.치료비+CASE.대인.합의금;
+  const singlePay=Math.round(claim*F.A/100);
+  const hold=FR.flag?Math.round(CASE.대인.합의금*F.A/100):0;
+  const fc=Math.abs(F.B-CASE.유사사례평균.B)>=10;
+
+  // 사건 카드
+  $('#f-base').textContent=`${F.A} : ${F.B}`;
+  $('#f-fraud').textContent=FR.claims?`6개월 유사청구 ${FR.claims}건`:'특이사항 없음';
+
+  // What-if 칩
+  $$('.chip-toggle').forEach(c=>c.dataset.on=state.wi[c.dataset.wi]);
+
+  // ① 단일
+  $('#single-kv').innerHTML=`
+    <div class="kv"><span class="k">과실비율 (A:B)</span><span class="v">${F.A} : ${F.B}</span></div>
+    <div class="kv"><span class="k">대물 손해액</span><span class="v">${won(CASE.대물.수리견적)}</span></div>
+    <div class="kv"><span class="k">대인 (치료비+합의금)</span><span class="v">${won(CASE.대인.치료비+CASE.대인.합의금)}</span></div>
+    <div class="kv"><span class="k">사기 점수</span><span class="v">${FR.score}점 ${FR.flag?'⚠':''}</span></div>`;
+  $('#single-amt').textContent=won(singlePay);
+  $('#single-desc').innerHTML=`총 청구 ${won(claim)} · 과실 ${F.A}% 반영 · <b>합의금 포함 일괄 권고</b>`
+    +(FR.flag?`<br>사기 ${FR.score}점이 떴지만 합의금과 분리·게이트되지 않음`:'');
+
+  // ② 한계
+  $('#lim-score').textContent=`${FR.score}점`;
+  $('#lim-impact').textContent=hold?`부당지급 ${won(hold)} 여지`:'부당지급 여지 낮음';
+
+  // ③ AAP
+  $('#planner-v').innerHTML=`분쟁(과실)+대인+사기 의심(${FR.score}점) → <b>멀티 오케스트레이션 소집 · 5개 에이전트</b>`;
+  const agents=[
+    {id:'fault',k:'과실비율',rule:'R04',v:`A ${F.A} : B ${F.B}`,hint:F.tr[F.tr.length-1],flag:false},
+    {id:'amount',k:'손해액',rule:'R02',v:`대물 ${won(CASE.대물.수리견적)}`,hint:'전손 아님 (40%)',flag:false},
+    {id:'policy',k:'약관·보장',rule:'—',v:'담보 적용',hint:'면책 없음',flag:false},
+    {id:'fraud',k:'사기·이상',rule:'R20',v:`${FR.score}점`,hint:FR.flag?'SIU 임계 초과':'정상 범위',flag:FR.flag},
+    {id:'similar',k:'유사사례',rule:'—',v:`${CASE.유사사례평균.A}:${CASE.유사사례평균.B}`,hint:'동형 사고 평균',flag:false},
+  ];
+  $('#agents').innerHTML=agents.map(a=>`
+    <div class="node agent" id="ag-${a.id}" data-flag="${a.flag}">
+      <div class="nh"><span class="ic"></span>${a.k}<span class="rule">${a.rule}</span></div>
+      <div class="v">${a.v}</div><div class="hint">${a.hint}</div></div>`).join('');
+
+  const conflicts=[];
+  if(fc) conflicts.push({t:'과실 근거 불일치',
+    d:`규칙기반 <b>${F.A}:${F.B}</b> ↔ 유사사례 <b>${CASE.유사사례평균.A}:${CASE.유사사례평균.B}</b>`,
+    res:'블박 증거력 검토 → 상급 사정사 (근거 양쪽 보존)'});
+  if(FR.flag) conflicts.push({t:'사기 게이트',
+    d:`손해액 합의금 <b>${won(CASE.대인.합의금)}</b> ↔ 사기 <b>${FR.score}점</b>`,
+    res:`합의금분 ${won(hold)} 보류 → SIU 이관`});
+  $('#conflict-count').textContent=conflicts.length?`충돌 ${conflicts.length}건`:'정합';
+  $('#conflicts').innerHTML=conflicts.length?conflicts.map(c=>
+    `<div class="conflict"><span class="cx">⚠</span><div><b>${c.t}:</b> ${c.d}<span class="res">${c.res}</span></div></div>`).join('')
+    :`<div class="hint" style="margin-top:7px">전 판단 정합 — 자동 처리 후보.</div>`;
+
+  const routes=[{l:`대물 ${won(CASE.대물.수리견적)} · 과실 ${F.A}% 반영`,who:'자동',cls:'auto'}];
+  if(fc) routes.push({l:'과실 근거 불일치',who:'상급 사정사',cls:''});
+  if(FR.flag) routes.push({l:`대인 합의금 ${won(CASE.대인.합의금)} 사기 의심`,who:'SIU+의료자문',cls:'siu'});
+  $('#routes').innerHTML=routes.map(r=>`<div class="route"><span>${r.l}</span><span class="who ${r.cls}">${r.who}</span></div>`).join('');
+
+  // 해결·효과 숫자
+  $('#sol-hold').textContent=won(hold);
+  $('#eff-block').textContent=won(hold);
+}
+
+/* ===================== 작동 과정 플레이어 ===================== */
+const NODES=['n-planner','ag-fault','ag-amount','ag-policy','ag-fraud','ag-similar','n-recon','n-gateway'];
+function steps(){
+  const FR=fraud(state.wi);
+  return [
+    {nodes:['n-planner'],cap:'① Planner — 사건을 분해해 5개 전문 에이전트를 소집한다 (분쟁·대인·사기 의심)'},
+    {nodes:['ag-fault','ag-amount','ag-policy','ag-fraud','ag-similar'],cap:'② 5개 에이전트가 동시에 독립 판단 — 서로의 결론을 모른 채 각자 산출'},
+    {nodes:['ag-fraud','ag-similar'],cap:`③ 사기·유사사례 에이전트가 합의금의 적정성을 독립 검증 → ${FR.score}점, 과다 패턴`},
+    {nodes:['n-recon'],cap:'④ Reconciler가 충돌을 표면화 — 합의금 ↔ 사기점수가 맞물려 보류로 결정'},
+    {nodes:['n-gateway'],cap:'⑤ HITL Gateway가 위험별로 사람에게 라우팅 — 대물 자동 / 합의금 SIU+의료자문'},
+    {nodes:NODES,cap:'⑥ 결과 — 사기 의심 합의금분을 보류해 부당지급 차단 + 전 과정 근거 DAG 보존'},
+  ];
+}
+let timer=null;
+function setDim(on){ NODES.forEach(id=>{const el=document.getElementById(id); if(el){el.classList.toggle('dim',on);el.classList.remove('lit');}}); }
+function play(){
+  clearTimeout(timer); const S=steps(); let i=0; setDim(true);
+  const run=()=>{
+    if(i>=S.length){ NODES.forEach(id=>document.getElementById(id)?.classList.remove('dim','lit'));
+      $('#caption').innerHTML='작동 완료 — <b>↻ 다시</b>로 재생하거나, 위 What-if를 토글해 라이브 재계산을 보세요.'; return; }
+    const st=S[i];
+    if(i>0) S[i-1].nodes.forEach(id=>document.getElementById(id)?.classList.remove('lit'));
+    st.nodes.forEach(id=>{const el=document.getElementById(id); if(el){el.classList.remove('dim');el.classList.add('lit');}});
+    $('#caption').innerHTML=st.cap; i++; timer=setTimeout(run,1500);
+  };
+  run();
+}
+function resetView(){ clearTimeout(timer); NODES.forEach(id=>document.getElementById(id)?.classList.remove('dim','lit'));
+  $('#caption').innerHTML='전체 작동이 펼쳐져 있습니다. <b>▶ 작동 과정 보기</b>를 누르면 단계별로 재생됩니다.'; }
+
+/* ===================== 이벤트 ===================== */
+$$('.chip-toggle').forEach(c=>c.addEventListener('click',()=>{state.wi[c.dataset.wi]=!state.wi[c.dataset.wi];render();resetView();}));
+$('#play').addEventListener('click',play);
+$('#replay').addEventListener('click',play);
+render();
+</script>
+</body>
+</html>

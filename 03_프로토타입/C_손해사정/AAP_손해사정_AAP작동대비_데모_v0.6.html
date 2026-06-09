@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AAP 손해사정 — 최신 아키텍처 위에서 사건이 흐른다 (Simulation PoC)</title>
+<!--
+  파일: AAP_손해사정_AAP작동대비_데모_v0.6.html
+  기반: 참고자료/AAP 아키텍처_260608ver..png (최신) — Execution Loop 바 + 8계층.
+  핵심: 실제 아키텍처 위에서 손해사정 사건(CL-2026-0417)이 흐르며,
+        Execution Loop 단계 + 실제 쓰이는 구성요소가 함께 점등 → "어떤 구성요소를 어떻게 활용해 저 결과가 나오는지".
+  단일 HTML · 외부 라이브러리 0 · Simulation PoC 가정값. iframe 임베드 없음.
+-->
+<style>
+  :root{
+    --ink:#0F172A; --bg:#FFFFFF; --surf:#F8FAFC; --border:#E5E7EB; --muted:#64748B; --line:#EEF1F4;
+    --aap:#0D9488; --aap-soft:#ECFDF5; --aap-border:#5EEAD4; --aap-ink:#0F766E;
+    --warn:#B45309; --warn-soft:#FFFBEB; --warn-border:#FDE68A;
+    --danger:#DC2626; --danger-soft:#FEF2F2; --danger-border:#FECACA;
+    --info:#2563EB; --info-soft:#EFF6FF; --info-border:#BFDBFE;
+    --radius:14px; --radius-sm:10px; --shadow:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);
+    --mono:'SF Mono',ui-monospace,Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;font-size:14px}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px 22px 70px}
+  .muted{color:var(--muted)} .mono{font-family:var(--mono)}
+  .ko{font-weight:500;color:var(--muted)} .en{font-size:9.5px;color:var(--muted);font-weight:500;display:block;margin-top:1px}
+
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 0 14px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
+  .logo .dot{width:11px;height:11px;border-radius:3px;background:var(--aap)}
+  .logo small{font-weight:500;color:var(--muted);font-size:12px}
+  .badge-sim{margin-left:auto;background:var(--ink);color:#fff;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
+
+  .tabs{display:flex;gap:4px;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:5px;width:max-content;max-width:100%;margin-bottom:14px;flex-wrap:wrap}
+  .tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:13.5px;padding:9px 18px;border-radius:9px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .tabs button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.1)}
+  .tabpane{display:none}.tabpane.on{display:block;animation:fade .25s}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+  .casebar{display:flex;align-items:center;gap:12px;background:var(--ink);color:#fff;border-radius:12px;padding:11px 16px;margin-bottom:14px;flex-wrap:wrap}
+  .casebar .cid{font-family:var(--mono);font-weight:700;font-size:15px}
+  .casebar .meta{font-size:12.5px;color:#CBD5E1}
+  .casebar .state{margin-left:auto;font-size:11.5px;color:#FBBF24;border:1px solid #4B5563;border-radius:999px;padding:4px 11px;font-weight:600}
+
+  /* 컨트롤 + 캡션 */
+  .ctrl{display:flex;align-items:center;gap:11px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border:0;border-radius:9px;padding:9px 15px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+  .btn:hover{opacity:.88}.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--border)}
+  .stepnum{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--muted);min-width:40px}
+  .caption{flex:1;min-width:280px;font-size:13px;font-weight:600;background:var(--aap-soft);border:1px solid var(--aap-border);color:var(--aap-ink);border-radius:9px;padding:10px 13px;display:flex;align-items:center;min-height:42px}
+  .databox{font-size:11.5px;color:var(--muted);background:var(--surf);border:1px dashed var(--border);border-radius:8px;padding:8px 11px;margin-bottom:12px}
+  .databox b{color:var(--ink);font-family:var(--mono);font-weight:600}
+
+  /* ===== Execution Loop 바 ===== */
+  .loopbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(0deg,#FBFDFF,#fff);margin-bottom:9px}
+  .loopbar .lbtitle{font-weight:800;font-size:12px;color:var(--info);background:var(--info-soft);border:1px solid var(--info-border);border-radius:8px;padding:7px 11px;margin-right:4px}
+  .lstage{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:#334155;transition:.22s}
+  .lstage.lit{background:var(--aap);border-color:var(--aap);color:#fff;box-shadow:0 0 0 4px rgba(13,148,136,.2);transform:translateY(-1px)}
+  .lstage.used{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink)}
+  .loopbar .arr{color:#CBD5E1;font-size:12px}
+
+  /* ===== 8계층 ===== */
+  .layhint{font-size:11px;color:var(--muted);margin:4px 2px 10px}
+  .layhint .k{display:inline-flex;align-items:center;gap:5px;margin-right:14px}
+  .swatch{width:11px;height:11px;border-radius:3px;display:inline-block;border:1px solid var(--border)}
+  .swatch.lit{background:var(--aap);border-color:var(--aap)} .swatch.used{background:var(--aap-soft);border-color:var(--aap-border)}
+
+  .arch{display:flex;flex-direction:column;gap:9px}
+  .layer{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#fff;transition:.25s}
+  .layer.active{border-color:var(--aap-border);box-shadow:0 0 0 2px rgba(13,148,136,.14)}
+  .layer-h{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .layer-h .lnum{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--ink);border-radius:5px;padding:1px 6px}
+  .layer-h .ln{font-size:13px;font-weight:800}
+  .layer-h .le{font-size:10px;color:var(--muted);font-weight:600}
+  .layer.accent{background:linear-gradient(0deg,#FCFDFE,#fff)}
+  .comps{display:flex;flex-wrap:wrap;gap:6px}
+  .chip2{font-size:11px;font-weight:600;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:5px 9px;color:#334155;transition:.22s;white-space:nowrap;line-height:1.25}
+  .chip2 .en{font-size:8.5px}
+  .chip2.used{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink)}
+  .chip2.lit{background:var(--aap);border-color:var(--aap);color:#fff;box-shadow:0 0 0 4px rgba(13,148,136,.22);transform:translateY(-1px);font-weight:700}
+  .chip2.lit .en{color:#CFFAF1}
+  .chip2.litwarn{background:var(--warn);border-color:var(--warn);color:#fff;box-shadow:0 0 0 4px rgba(180,83,9,.22);transform:translateY(-1px);font-weight:700}
+  .chip2.litwarn .en{color:#FDE9C8}
+  .subgroup{border:1px dashed var(--border);border-radius:9px;padding:8px 9px;margin-top:8px;background:#FDFEFE}
+  .subgroup .sgh{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px}
+  .engine{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .engine .arr{color:#CBD5E1;font-size:12px}
+  /* HITL 런타임 게이트 강조 */
+  .chip2.gate{background:var(--info-soft);border-color:var(--info-border);color:#1E40AF;font-weight:700}
+  .chip2.gate.lit{background:var(--info);border-color:var(--info);color:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.22)}
+
+  /* ===== Tab2 트레이스 ===== */
+  .trace{display:flex;flex-direction:column;gap:10px}
+  .tcard{display:grid;grid-template-columns:240px 1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+  @media(max-width:880px){.tcard{grid-template-columns:1fr}}
+  .tcard .comp{padding:13px 14px;background:var(--surf);border-right:1px solid var(--border)}
+  .tcard .comp .cn{font-weight:800;font-size:13px}
+  .tcard .comp .badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:6px;padding:2px 7px}
+  .tcard .comp .asset{display:block;margin-top:5px;font-size:10.5px;color:var(--muted)}
+  .tcard .did{padding:13px 14px;border-right:1px solid var(--border)}
+  .tcard .did .lbl,.tcard .old .lbl{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .tcard .did .txt{font-size:12.5px}.tcard .did .out{margin-top:7px;font-size:12px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border-radius:7px;padding:6px 9px}
+  .tcard .old{padding:13px 14px;background:#FEFCFB}.tcard .old .txt{font-size:12.5px;color:var(--warn)}
+
+  /* ===== Tab3 비교 ===== */
+  table.cmp{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  table.cmp th,table.cmp td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);font-size:12.5px}
+  table.cmp thead th{background:var(--surf);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  table.cmp thead th.aapcol{color:var(--aap-ink)}
+  table.cmp td.dim{font-weight:700;width:120px}table.cmp td.old{color:var(--warn);width:26%}
+  table.cmp td.aapcol{color:var(--aap-ink);font-weight:600;width:26%}table.cmp td.evi{color:var(--muted)}
+  table.cmp tr:last-child td{border-bottom:0}
+  @media(max-width:760px){table.cmp,table.cmp tbody,table.cmp tr,table.cmp td{display:block}table.cmp thead{display:none}table.cmp td{border-bottom:0}table.cmp tr{border-bottom:1px solid var(--border);padding:6px 0}table.cmp td.dim{width:auto}}
+  .outcome{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  @media(max-width:640px){.outcome{grid-template-columns:1fr}}
+  .ocard{border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .ocard.old{background:var(--warn-soft);border-color:var(--warn-border)}.ocard.aap{background:var(--aap-soft);border-color:var(--aap-border)}
+  .ocard .ot{font-size:12px;font-weight:800;margin-bottom:6px}.ocard.old .ot{color:var(--warn)}.ocard.aap .ot{color:var(--aap-ink)}
+  .ocard .ov{font-family:var(--mono);font-size:15px;font-weight:800}.ocard .ol{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+  .footnote{margin-top:22px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.7}
+  .footnote code{font-family:var(--mono);background:var(--surf);padding:1px 5px;border-radius:4px}
+  .sec-label{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin:0 2px 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"></span> AAP 손해사정 <small>· 최신 아키텍처 작동(260608)</small></div>
+    <span class="badge-sim">Simulation PoC</span>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="보기 전환">
+    <button role="tab" id="t-arch"  aria-controls="tab-arch"  aria-selected="true"  data-tab="arch">① 아키텍처 위 작동</button>
+    <button role="tab" id="t-trace" aria-controls="tab-trace" aria-selected="false" data-tab="trace">② 구성요소 트레이스</button>
+    <button role="tab" id="t-cmp"   aria-controls="tab-cmp"   aria-selected="false" data-tab="cmp">③ 심층 비교</button>
+  </div>
+
+  <div class="casebar">
+    <span class="cid">CL-2026-0417</span>
+    <span class="meta">차선변경 접촉 + 대인 합의 포함</span>
+    <span class="state">분쟁 · 고위험 · 사기 의심 가능성</span>
+  </div>
+
+  <!-- ============ TAB 1 ============ -->
+  <section class="tabpane on" id="tab-arch" role="tabpanel" aria-labelledby="t-arch">
+    <div class="ctrl">
+      <button class="btn" id="play">▶ 사건 흘려보내기</button>
+      <button class="btn ghost" id="reset">초기화</button>
+      <span class="stepnum" id="stepnum">0 / 9</span>
+      <div class="caption" id="caption">▶ 를 누르면 이 사건이 <b>Execution Loop</b>와 <b>8계층 아키텍처</b>를 통과하며 실제로 쓰이는 구성요소만 점등됩니다.</div>
+    </div>
+    <div class="databox" id="databox">이 사건 데이터: <b>진단서</b> 경추염좌 2주 · <b>견적</b> 480만 · <b>차량가</b> 1,200만 · <b>청구이력</b> 6개월 2건 · <b>블박</b> 영상 확보</div>
+
+    <!-- Execution Loop -->
+    <div class="loopbar">
+      <span class="lbtitle">Execution Loop</span>
+      <span class="lstage" id="lp-data">Data</span><span class="arr">→</span>
+      <span class="lstage" id="lp-semantic">Semantic</span><span class="arr">→</span>
+      <span class="lstage" id="lp-reasoning">Reasoning</span><span class="arr">→</span>
+      <span class="lstage" id="lp-decision">Decision</span><span class="arr">→</span>
+      <span class="lstage" id="lp-action">Action</span><span class="arr">→</span>
+      <span class="lstage" id="lp-learning">Learning</span>
+    </div>
+
+    <div class="layhint">
+      <span class="k"><span class="swatch lit"></span>이번 단계 사용</span>
+      <span class="k"><span class="swatch used"></span>이미 사용</span>
+      <span class="k"><span class="swatch"></span>미사용</span>
+      <span class="muted">· 출처: AAP 아키텍처_260608ver.</span>
+    </div>
+
+    <div class="arch" id="arch">
+      <!-- L1 -->
+      <div class="layer" data-layer="L1">
+        <div class="layer-h"><span class="lnum">1</span><span class="ln">경험 / 접근 계층</span><span class="le">Experience / Access</span></div>
+        <div class="comps">
+          <span class="chip2" id="c-portal">에이전트 포털<span class="en">Agent Portal</span></span>
+          <span class="chip2" id="c-copilot">코파일럿 / 챗 UI<span class="en">Copilot / Chat</span></span>
+          <span class="chip2" id="c-admin">관리자 콘솔<span class="en">Admin Console</span></span>
+          <span class="chip2" id="c-apigw">API Gateway / SDK</span>
+        </div>
+      </div>
+      <!-- L2 -->
+      <div class="layer" data-layer="L2">
+        <div class="layer-h"><span class="lnum">2</span><span class="ln">설계 / 개발 계층</span><span class="le">Build / Design</span></div>
+        <div class="comps">
+          <span class="chip2" id="c-agentdesign">에이전트 설계 · 빌더<span class="en">Agent Design · Low-Code</span></span>
+          <span class="chip2" id="c-wfdesign">프로세스 / 워크플로우 설계<span class="en">Workflow Design</span></span>
+          <span class="chip2" id="c-toolreg">Tool Registry<span class="en">API · MCP · 스킬 등록</span></span>
+          <span class="chip2" id="c-agentreg">Agent Registry<span class="en">카탈로그 · 메타</span></span>
+        </div>
+      </div>
+      <!-- L3 -->
+      <div class="layer accent" data-layer="L3">
+        <div class="layer-h"><span class="lnum">3</span><span class="ln">에이전트 실행 환경</span><span class="le">Agent Runtime Environment</span></div>
+        <div class="subgroup">
+          <div class="sgh">Interface</div>
+          <div class="comps">
+            <span class="chip2" id="c-rest">REST / GraphQL</span>
+            <span class="chip2" id="c-ws">WebSocket</span>
+            <span class="chip2" id="c-grpc">gRPC</span>
+            <span class="chip2" id="c-event">Event Trigger</span>
+          </div>
+        </div>
+        <div class="subgroup">
+          <div class="sgh">에이전트 코어 — 실행 엔진</div>
+          <div class="engine">
+            <span class="chip2" id="c-input">입력 처리<span class="en">Input</span></span><span class="arr">→</span>
+            <span class="chip2" id="c-planning">계획 · 추론<span class="en">Planning</span></span><span class="arr">→</span>
+            <span class="chip2" id="c-action">행동 실행<span class="en">Action</span></span><span class="arr">→</span>
+            <span class="chip2" id="c-response">응답 생성<span class="en">Response</span></span>
+          </div>
+        </div>
+        <div class="subgroup">
+          <div class="sgh">오케스트레이션 / 멀티에이전션 · 협업</div>
+          <div class="comps">
+            <span class="chip2" id="c-supervisor">Supervisor</span>
+            <span class="chip2" id="c-taskrouting">Task Routing</span>
+            <span class="chip2" id="c-a2a">Agent Coordination<span class="en">A2A</span></span>
+            <span class="chip2" id="c-mac">멀티에이전트 협업<span class="en">Multi-Agent Collab.</span></span>
+            <span class="chip2 gate" id="c-hitlgate">🛡 HITL 런타임 검토 게이트<span class="en">Runtime Review / Approval Gate</span></span>
+          </div>
+        </div>
+        <div class="subgroup">
+          <div class="sgh">에이전트 코어 — 관리 · 자원</div>
+          <div class="comps">
+            <span class="chip2" id="c-memory">메모리<span class="en">Memory</span></span>
+            <span class="chip2" id="c-modelgw">모델 게이트웨이<span class="en">Model Gateway · LLM</span></span>
+            <span class="chip2" id="c-toolexec">도구 실행<span class="en">Tool Invoke · Validate</span></span>
+            <span class="chip2" id="c-guard">안전 · 가드레일<span class="en">Policy / Safety Check</span></span>
+            <span class="chip2" id="c-agentmgmt">에이전트 관리<span class="en">RBAC · Version · Observability</span></span>
+          </div>
+        </div>
+      </div>
+      <!-- L4 -->
+      <div class="layer" data-layer="L4">
+        <div class="layer-h"><span class="lnum">4</span><span class="ln">지식 / 시멘틱 계층</span><span class="le">Knowledge / Semantic</span></div>
+        <div class="comps">
+          <span class="chip2" id="c-ontology">온톨로지 / 시멘틱 모델<span class="en">Ontology / Semantic Model</span></span>
+          <span class="chip2" id="c-kg">지식그래프 구축 · 관리<span class="en">Knowledge Graph</span></span>
+          <span class="chip2" id="c-store">하이브리드 지식 스토어<span class="en">Graph · Vector DB</span></span>
+          <span class="chip2" id="c-context">컨텍스트 조합 · 근거<span class="en">Context Assembly / RAG</span></span>
+        </div>
+      </div>
+      <!-- L5 -->
+      <div class="layer" data-layer="L5">
+        <div class="layer-h"><span class="lnum">5</span><span class="ln">데이터 / 연동 계층</span><span class="le">Data / Integration</span></div>
+        <div class="comps">
+          <span class="chip2" id="c-connect">연결 · 수집 커넥터<span class="en">Ingestion / Connectors</span></span>
+          <span class="chip2" id="c-pipeline">데이터 처리 파이프라인<span class="en">수집→정제→정규화→변환</span></span>
+          <span class="chip2" id="c-datamgmt">데이터 관리<span class="en">Schema · Quality · Lineage</span></span>
+        </div>
+      </div>
+      <!-- L6 -->
+      <div class="layer" data-layer="L6">
+        <div class="layer-h"><span class="lnum">6</span><span class="ln">AI 품질 / 평가 계층</span><span class="le">AI Quality / Evaluation</span></div>
+        <div class="comps">
+          <span class="chip2" id="c-trace">실행 과정 추적<span class="en">Execution Trace</span></span>
+          <span class="chip2" id="c-eval">품질 · 근거 평가<span class="en">Quality / Evidence</span></span>
+          <span class="chip2" id="c-rai">RAI · 안정성</span>
+          <span class="chip2" id="c-perf">성능 · 비용 모니터링</span>
+          <span class="chip2" id="c-feedback">사용자 피드백<span class="en">User Feedback</span></span>
+        </div>
+      </div>
+      <!-- L7 -->
+      <div class="layer" data-layer="L7">
+        <div class="layer-h"><span class="lnum">7</span><span class="ln">AI 컨트롤 / 거버넌스 계층</span><span class="le">AI Control / Governance</span></div>
+        <div class="comps">
+          <span class="chip2" id="c-policy">정책 관리 · 통제<span class="en">Policy Mgmt / Control</span></span>
+          <span class="chip2" id="c-authority">에이전트 권한 관리<span class="en">Agent Access Mgmt</span></span>
+          <span class="chip2 gate" id="c-hitl">🛡 HITL 승인 · 검토<span class="en">Approval Policy / Criteria</span></span>
+          <span class="chip2" id="c-selfimprove">개선 · 환류<span class="en">Self-Improving</span></span>
+          <span class="chip2" id="c-guardrail">사용량 · 비용 가드레일</span>
+        </div>
+      </div>
+      <!-- L8 -->
+      <div class="layer" data-layer="L8">
+        <div class="layer-h"><span class="lnum">8</span><span class="ln">플랫폼 인프라 계층</span><span class="le">Infra / Foundation</span></div>
+        <div class="comps">
+          <span class="chip2" id="c-gpu">컴퓨팅 / GPU</span>
+          <span class="chip2" id="c-k8s">컨테이너 / K8s</span>
+          <span class="chip2" id="c-net">네트워크 / 보안</span>
+          <span class="chip2" id="c-rdb">RDB / 스토리지</span>
+          <span class="chip2" id="c-graphdb">GraphDB / VectorDB</span>
+          <span class="chip2" id="c-onprem">온프레미스</span>
+          <span class="chip2" id="c-cloud">클라우드</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB 2 ============ -->
+  <section class="tabpane" id="tab-trace" role="tabpanel" aria-labelledby="t-trace">
+    <div class="sec-label">이 사건에서 — 어떤 구성요소가 / 무엇을 해서 / 무엇을 냈는가 · 기존 단일 Agent와 비교</div>
+    <div class="trace" id="trace"></div>
+  </section>
+
+  <!-- ============ TAB 3 ============ -->
+  <section class="tabpane" id="tab-cmp" role="tabpanel" aria-labelledby="t-cmp">
+    <div class="sec-label">기존 단일 Agent vs ★ AAP — 7개 차원</div>
+    <table class="cmp">
+      <thead><tr><th>차원</th><th>기존 단일 Agent</th><th class="aapcol">★ AAP</th><th>이 사건의 증거</th></tr></thead>
+      <tbody id="cmp-body"></tbody>
+    </table>
+    <div class="sec-label" style="margin-top:22px">같은 사건 · 다른 결과 <span style="font-weight:600;text-transform:none;letter-spacing:0">(Simulation PoC 가정값)</span></div>
+    <div class="outcome">
+      <div class="ocard old"><div class="ot">기존 단일 Agent</div><div class="ov">2,610,000원 지급권고</div><div class="ol">합의금 포함 일괄 · 과잉진료/과실가정 충돌 미표면화 · 선형 로그</div></div>
+      <div class="ocard aap"><div class="ot">★ AAP</div><div class="ov">자동 900,000원 · 보류 1,710,000원</div><div class="ol">충돌 2건 표면화 → HITL 런타임 게이트 → SIU·손해사정사 · 전 과정 Decision Log</div></div>
+    </div>
+  </section>
+
+  <div class="footnote">
+    Simulation PoC — 사건·금액·라우팅은 시연용 가정값(확정 성과 아님). 아키텍처 출처 <code>참고자료/AAP 아키텍처_260608ver..png</code>.
+  </div>
+</div>
+
+<script>
+"use strict";
+/* 탭 전환 */
+const tabBtns=[...document.querySelectorAll('.tabs button')];
+const panes=[...document.querySelectorAll('.tabpane')];
+tabBtns.forEach(b=>b.addEventListener('click',()=>{tabBtns.forEach(x=>x.setAttribute('aria-selected',String(x===b)));panes.forEach(p=>p.classList.toggle('on',p.id==='tab-'+b.dataset.tab));}));
+
+/* ===== Tab1: 9단계 흐름 — Execution Loop 단계 + 계층 + 구성요소 ===== */
+const FLOW=[
+  { loop:'lp-data', comps:['c-connect','c-pipeline','c-rdb'], layers:['L5','L8'],
+    cap:'<b>Data</b> · 데이터 수집 — AI:ON-U 문서파싱이 진단서·견적서·경찰확인원·블박 메타를 수집·정규화',
+    data:'입력 문서 5종 → <b>구조화 사건데이터</b>' },
+  { loop:'lp-semantic', comps:['c-ontology','c-kg','c-store','c-graphdb','c-context'], layers:['L4','L8'],
+    cap:'<b>Semantic</b> · 의미화 — 온톨로지가 사고유형(차선변경 접촉)↔과실인정기준을 매핑, 손해항목·약관·면책을 연결',
+    data:'<b>Case/Claim 의미그래프</b> 생성' },
+  { loop:'lp-reasoning', comps:['c-input','c-planning','c-supervisor','c-taskrouting','c-agentreg'], layers:['L3','L2'],
+    cap:'<b>Reasoning</b> · Planner/오케스트레이션 — Supervisor가 복잡도(대인+사기+과실분쟁) 판단 → 멀티 경로, Task Routing이 5 Agent 배분',
+    data:'경로=<b>멀티</b> · 소집=과실·손해액·약관·사기·유사사례' },
+  { loop:'lp-reasoning', comps:['c-toolreg','c-toolexec','c-modelgw','c-guard','c-authority'], layers:['L2','L3','L7'],
+    cap:'<b>Reasoning</b> · 권한 스코핑 — 각 Agent가 Tool Registry로 자기 권한 범위 도구만 호출 (사기→청구이력, 약관→약관 코퍼스)',
+    data:'Agent별 <b>Credential Scope</b> 분리 적용' },
+  { loop:'lp-reasoning', comps:['c-action','c-a2a','c-mac','c-memory','c-context'], layers:['L3','L4'], warn:true,
+    cap:'<b>Reasoning</b> · 독립 판단 + A2A 협업 — 5 Agent 독립 산출, Agent Coordination(A2A)로 상호 검증: 과실 20:80 ↔ 손해액 30:70 가정 / 합의금 ↔ 사기 과잉진료',
+    data:'<b>충돌 2건</b> 검출 (과실가정 · 합의금)' },
+  { loop:'lp-decision', comps:['c-hitlgate','c-trace','c-eval'], layers:['L3','L6'], warn:true,
+    cap:'<b>Decision</b> · 충돌 → HITL 런타임 검토 게이트 — 충돌·위험을 표면화하고 근거를 Decision Log로 기록',
+    data:'<b>런타임 검토 게이트</b> 발동 · 근거사슬 생성' },
+  { loop:'lp-decision', comps:['c-hitl','c-policy','c-authority'], layers:['L7'],
+    cap:'<b>Decision</b> · 차등 HITL — 승인 정책(임계·위험·금액)에 따라 자동/사람 검토로 차등 이관',
+    data:'자동 <b>900,000원</b> / 보류 <b>1,710,000원</b> (SIU·손해사정사)' },
+  { loop:'lp-action', comps:['c-response','c-admin','c-portal'], layers:['L3','L1'],
+    cap:'<b>Action</b> · 실행 · 전달 — 자동분 지급결의(Antbot Writeback), 보류분 케이스를 손해사정사 콘솔로 전달',
+    data:'지급결의 실행 / 보류 케이스 오픈' },
+  { loop:'lp-learning', comps:['c-selfimprove','c-feedback','c-ontology'], layers:['L7','L6','L4'],
+    cap:'<b>Learning</b> · 학습 환류 — 확정 결과·근거가 사기룰·과실DB·온톨로지로 환류되어 다음 판단을 개선',
+    data:'<b>Operational Learning</b> — 조직 자산화' },
+];
+const LOOP_IDS=['lp-data','lp-semantic','lp-reasoning','lp-decision','lp-action','lp-learning'];
+let timer=null,idx=0;
+
+function clearArch(){
+  document.querySelectorAll('.chip2,.lstage').forEach(c=>c.classList.remove('lit','litwarn','used'));
+  document.querySelectorAll('.layer').forEach(l=>l.classList.remove('active'));
+}
+function applyStep(i,markUsed){
+  const s=FLOW[i];
+  if(markUsed){ document.querySelectorAll('.chip2.lit,.chip2.litwarn').forEach(c=>{c.classList.remove('lit','litwarn');c.classList.add('used');});
+    document.querySelectorAll('.lstage.lit').forEach(c=>{c.classList.remove('lit');c.classList.add('used');}); }
+  // Loop 단계 점등
+  document.querySelectorAll('.lstage.lit').forEach(c=>c.classList.remove('lit'));
+  const lp=document.getElementById(s.loop); if(lp){lp.classList.remove('used');lp.classList.add('lit');}
+  // 구성요소 점등
+  s.comps.forEach(id=>{const el=document.getElementById(id); if(el){el.classList.remove('used');el.classList.add(s.warn?'litwarn':'lit');}});
+  // 활성 계층
+  document.querySelectorAll('.layer').forEach(l=>l.classList.toggle('active', s.layers.includes(l.dataset.layer)));
+  document.getElementById('caption').innerHTML=s.cap;
+  document.getElementById('databox').innerHTML='이 사건 데이터: '+s.data;
+  document.getElementById('stepnum').textContent=(i+1)+' / '+FLOW.length;
+}
+function play(){
+  clearTimeout(timer); clearArch(); idx=0;
+  const run=()=>{
+    if(idx>=FLOW.length){
+      document.querySelectorAll('.chip2.lit,.chip2.litwarn').forEach(c=>{c.classList.remove('lit','litwarn');c.classList.add('used');});
+      document.querySelectorAll('.lstage.lit').forEach(c=>{c.classList.remove('lit');c.classList.add('used');});
+      document.querySelectorAll('.layer').forEach(l=>l.classList.remove('active'));
+      document.getElementById('caption').innerHTML='완료 — 이 사건이 거쳐간 <b>Loop 단계 + 구성요소 전체 경로</b>가 표시됩니다.';
+      document.getElementById('databox').innerHTML='결과: 자동 <b>900,000원</b> 지급 후보 / 보류 <b>1,710,000원</b> (SIU·손해사정사) · 전 과정 Decision Log';
+      return;
+    }
+    applyStep(idx, idx>0); idx++; timer=setTimeout(run,1900);
+  };
+  run();
+}
+function resetView(){
+  clearTimeout(timer); clearArch();
+  document.getElementById('caption').innerHTML='▶ 를 누르면 이 사건이 <b>Execution Loop</b>와 <b>8계층 아키텍처</b>를 통과하며 실제로 쓰이는 구성요소만 점등됩니다.';
+  document.getElementById('databox').innerHTML='이 사건 데이터: <b>진단서</b> 경추염좌 2주 · <b>견적</b> 480만 · <b>차량가</b> 1,200만 · <b>청구이력</b> 6개월 2건 · <b>블박</b> 영상 확보';
+  document.getElementById('stepnum').textContent='0 / '+FLOW.length;
+}
+document.getElementById('play').addEventListener('click',play);
+document.getElementById('reset').addEventListener('click',resetView);
+
+/* ===== Tab2: 구성요소 트레이스 ===== */
+const TRACE=[
+  {cn:'AI:ON-U 문서파싱',badge:'L5 데이터 · ds자산',asset:'OCR·Parser·정규화',did:'진단서·견적서·경찰확인원·블박 메타를 수집·정규화',out:'구조화 사건데이터',old:'기존도 OCR은 함 — 이 단계는 차이가 작음(정직하게)'},
+  {cn:'온톨로지 / 시멘틱 모델',badge:'L4 시멘틱 · ds주도',asset:'Case/Claim Model·지식그래프',did:'사고유형↔과실인정기준 매핑, 손해항목·약관·면책을 관계로 연결',out:'Case/Claim 의미그래프',old:'사정사 머릿속 암묵지 — 구조화된 지식 자산이 없음'},
+  {cn:'Supervisor · Task Routing',badge:'L3 오케스트레이션',asset:'동적 작업 분해·배분',did:'복잡도(대인+사기+과실분쟁) 판단 → 멀티 경로, 5 Agent 배분',out:'동적 작업분해 계획',old:'고정 5단계 — 모든 사건을 같은 흐름에 넣음(단순건 과잉·복잡건 누락)'},
+  {cn:'Tool Registry + Credential Scope',badge:'L2·L3 · BEAST',asset:'Tool Governance·권한범위',did:'5 Agent가 각자 권한 범위 도구만 호출 — 사기→청구이력, 약관→약관 코퍼스',out:'Agent별 독립 산출',old:'한 에이전트가 모든 데이터에 접근 — 권한 분리·거버넌스 공백'},
+  {cn:'Agent Coordination (A2A) · 멀티에이전트 협업',badge:'L3 실행환경',asset:'에이전트 상호 검증',did:'과실 20:80 ↔ 손해액 30:70 가정 / 합의금 ↔ 사기 과잉진료 불일치를 상호 검증·표면화',out:'충돌 2건 + 조정안',old:'한 체인이라 자기모순이 드러나지 않고 조용히 통과'},
+  {cn:'HITL 런타임 검토 게이트',badge:'L3·L7 거버넌스',asset:'Runtime Review·Approval Gate',did:'충돌·위험분을 런타임에서 사람 검토로 차등 이관 (자동/사정사/SIU)',out:'자동 90만 / 보류 171만',old:'사람이 전건/끝에서 일괄 검토 — 병목 + 라우팅이 거침'},
+  {cn:'실행 과정 추적 (Decision Log)',badge:'L6 품질',asset:'Execution Trace·Evidence',did:'판단 근거·도구호출·증거링크를 단계별로 기록',out:'감사 추적 근거사슬',old:'선형 로그 — 분쟁·소송 방어가 약함'},
+  {cn:'Antbot Workflow + BEAST Writeback',badge:'L3·통합 · ds자산',asset:'RPA·API Gateway',did:'자동분 지급결의·시스템 반영, 보류분 케이스 생성',out:'실행 / 보류 처리',old:'수기 지급·통지 — 누락·편차 가능'},
+  {cn:'Self-Improving · Operational Learning',badge:'L7·L6 · ds주도',asset:'환류·Skill 개선',did:'확정 결과·근거를 사기룰·과실DB·온톨로지로 환류',out:'조직 학습 자산화',old:'개인 노하우 — 조직에 쌓이지 않음'},
+];
+document.getElementById('trace').innerHTML=TRACE.map(t=>`
+  <div class="tcard">
+    <div class="comp"><div class="cn">${t.cn}</div><span class="badge">${t.badge}</span><span class="asset">${t.asset}</span></div>
+    <div class="did"><div class="lbl">이 사건에서 한 일</div><div class="txt">${t.did}</div><div class="out">→ ${t.out}</div></div>
+    <div class="old"><div class="lbl">기존 단일 Agent는</div><div class="txt">${t.old}</div></div>
+  </div>`).join('');
+
+/* ===== Tab3: 심층 비교 ===== */
+const CMP=[
+  ['작업 분해','고정 파이프라인 — 모든 건 동일 5단계','Supervisor가 복잡도 보고 단일/멀티 경로 선택','대인+사기+과실분쟁 → 멀티 경로 소집'],
+  ['독립 교차검증','순차 누적 — 앞 단계 오류 전파','전문 Agent 독립 산출 + A2A 상호 검증','5 Agent 병렬 판단'],
+  ['충돌 처리','한 체인 — 자기모순이 드러나지 않음','Reconciler·런타임 게이트가 표면화','과실가정·합의금 충돌 2건 검출'],
+  ['권한·거버넌스','한 에이전트 전권 — 거버넌스 공백','Agent별 Credential Scope·Tool Governance','사기=청구이력만, 약관=약관 코퍼스만'],
+  ['차등 HITL','전건/끝 일괄 검토 — 병목','HITL 런타임 게이트가 위험·금액별 이관','자동 90만 / 보류 171만 (SIU·사정사)'],
+  ['추적·재현','선형 로그 — 분쟁 방어 약함','Decision Log 근거사슬 — 동일입력=동일결과','단계별 근거ID·도구호출 기록'],
+  ['학습·확장','개인 노하우 — 조직에 안 쌓임','Self-Improving 환류 + Agent 재조합','사기룰 환류 · 화재·배상·실손 복제'],
+];
+document.getElementById('cmp-body').innerHTML=CMP.map(r=>`<tr><td class="dim">${r[0]}</td><td class="old">${r[1]}</td><td class="aapcol">${r[2]}</td><td class="evi">${r[3]}</td></tr>`).join('');
+</script>
+</body>
+</html>

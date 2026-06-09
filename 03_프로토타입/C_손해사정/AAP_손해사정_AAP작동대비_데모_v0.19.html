@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AAP 손해사정 — 프로세스 × 방법론 비교 (Simulation PoC)</title>
+<!--
+  v0.19 — 실제 손해사정 업무 프로세스(상단 타임라인) × 방법론 비교(수기/챗봇·단일LLM/단일에이전트/★AAP).
+   탭①: 6단계 프로세스를 ▶자동 재생하며, 각 단계를 4가지 방법이 어떻게 처리하는지 비교(AAP가 주인공).
+   탭②: 결과 — 금액 분기(261만 → 자동90/검토171) 토글.
+   탭③: 아키텍처 X-ray — Customer Environment + L1~L8 전체 캐논 + 횡단 Trust·Sec·Gov, 앞단계(접수·연동)까지 컴포넌트 점등.
+   이미지 임베딩 절대 금지(아키텍처는 HTML 컴포넌트). 단일 HTML · 외부 라이브러리 0 · 오프라인 · Simulation PoC.
+-->
+<style>
+  :root{
+    --ink:#0F172A;--bg:#FFFFFF;--surf:#F8FAFC;--border:#E5E7EB;--muted:#64748B;--line:#EEF1F4;--slate:#475569;
+    --aap:#0D9488;--aap-soft:#ECFDF5;--aap-border:#5EEAD4;--aap-ink:#0F766E;
+    --amber:#D97706;--amber-soft:#FFFBEB;--amber-border:#FDE68A;--amber-ink:#B45309;
+    --danger:#DC2626;--danger-soft:#FEF2F2;--danger-border:#FECACA;--danger-ink:#B91C1C;
+    --radius:14px;--shadow:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);--mono:'SF Mono',ui-monospace,Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;font-size:14px}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 22px 70px}
+  .muted{color:var(--muted)}.mono{font-family:var(--mono)}
+
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 0 12px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
+  .logo .dot{width:11px;height:11px;border-radius:3px;background:var(--aap)}
+  .logo small{font-weight:500;color:var(--muted);font-size:12px}
+  .badge-sim{margin-left:auto;background:var(--ink);color:#fff;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
+
+  .thesis{background:var(--ink);color:#fff;border-radius:13px;padding:14px 18px;margin-bottom:12px}
+  .thesis .t1{font-size:15.5px;font-weight:800;line-height:1.55}
+  .thesis .t1 b.r{color:#FCA5A5} .thesis .t1 b.g{color:#5EEAD4} .thesis .t1 b.a{color:#FBBF24}
+  .thesis .t2{font-size:12.5px;color:#CBD5E1;margin-top:7px;line-height:1.6}
+  .thesis .t2 .pill{display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:2px 8px;margin:1px 2px;font-weight:700;font-size:11.5px;color:#E2E8F0}
+
+  .tabbar{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;background:#fff}
+  .tabbar button{flex:1;border:0;border-right:1px solid var(--border);background:#fff;color:var(--muted);font:inherit;font-weight:700;font-size:13px;padding:12px 8px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.25}
+  .tabbar button:last-child{border-right:0}
+  .tabbar button small{font-size:10px;font-weight:600;color:var(--muted)}
+  .tabbar button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .tabbar button[aria-pressed="true"] small{color:#94A3B8}
+
+  section[data-tab]{display:none}
+  section[data-tab].on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .lede{margin-bottom:12px}
+  .lede h2{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .lede p{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.65;max-width:920px}
+
+  /* ===== 탭① 프로세스 타임라인 ===== */
+  .playbar{display:flex;align-items:center;gap:11px;margin-bottom:8px}
+  .playbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--aap);background:var(--aap);color:#fff;font:inherit;font-weight:800;font-size:12.5px;padding:8px 15px;border-radius:9px;cursor:pointer;transition:.15s}
+  .playbtn.paused{background:#fff;color:var(--aap-ink)}
+  .playhint{font-size:11.5px;color:var(--muted);font-weight:600}
+  .proctl{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow);margin-bottom:13px}
+  .proctl button{flex:1;border:0;border-right:1px solid var(--border);background:#fff;padding:11px 6px 12px;cursor:pointer;font:inherit;text-align:center;transition:.18s;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .proctl button:last-child{border-right:0}
+  .proctl .pn{font-size:9.5px;font-weight:800;color:var(--muted);font-family:var(--mono)}
+  .proctl .pt{font-size:12.5px;font-weight:800;color:var(--slate);line-height:1.2}
+  .proctl button[aria-pressed="true"]{background:var(--ink)}
+  .proctl button[aria-pressed="true"] .pn{color:#94A3B8}
+  .proctl button[aria-pressed="true"] .pt{color:#fff}
+  .proctl button.done::after{content:"✓";position:absolute;top:4px;right:6px;font-size:9px;color:var(--aap);font-weight:800}
+  .proctl button[aria-pressed="true"].done::after{color:#5EEAD4}
+
+  .phctx{background:var(--surf);border:1px solid var(--border);border-radius:11px;padding:11px 15px;margin-bottom:13px;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .phctx .pjob{font-size:13.5px;font-weight:800}
+  .phctx .pthis{font-size:12px;color:var(--slate);font-weight:600}
+  .phctx .pthis b{color:var(--amber-ink)}
+  .phctx .ptag{margin-left:auto;font-size:10.5px;font-weight:800;color:#fff;background:var(--ink);border-radius:6px;padding:3px 9px}
+
+  /* 방법론 비교: 좌 3 기존(작게) / 우 AAP(크게) */
+  .methods{display:grid;grid-template-columns:1fr 1.25fr;gap:13px;align-items:start}
+  @media(max-width:880px){.methods{grid-template-columns:1fr}}
+  .existing{display:flex;flex-direction:column;gap:9px}
+  .exhd{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .mcard{border:1px solid var(--border);border-radius:11px;background:#fff;padding:10px 13px;box-shadow:var(--shadow)}
+  .mcard .mh{display:flex;align-items:center;gap:7px;font-weight:800;font-size:12.5px;color:var(--slate)}
+  .mcard .mh .ic{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surf);border:1px solid var(--border)}
+  .mcard .mh .mt2{margin-left:auto;font-size:9.5px;font-weight:700;color:var(--muted);background:var(--surf);border:1px solid var(--border);border-radius:5px;padding:2px 6px}
+  .mcard .md{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .mcard .mlim{font-size:11px;color:var(--amber-ink);margin-top:5px;font-weight:600;line-height:1.45}
+
+  .aappanel{border:1.5px solid var(--aap-border);border-radius:14px;background:linear-gradient(180deg,#F4FFFD,#FBFFFE 70%);box-shadow:0 2px 16px rgba(13,148,136,.10);padding:13px 15px}
+  .aappanel .ah{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .aappanel .ah .star{color:var(--aap);font-weight:900}
+  .aappanel .ah .at{font-weight:800;font-size:13.5px;color:var(--aap-ink)}
+  .aappanel .ah .ad{margin-left:auto;font-size:10px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:6px;padding:2px 8px}
+  .aappanel .adesc{font-size:12px;color:var(--slate);font-weight:600;line-height:1.55;margin-bottom:10px}
+  .aappanel .adesc b{color:var(--aap-ink)}
+  .agentchips{display:flex;flex-wrap:wrap;gap:6px}
+  .agentchip{font-size:11px;font-weight:800;background:#fff;border:1px solid var(--aap-border);color:var(--aap-ink);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:1px;min-width:84px;animation:pop .3s ease}
+  .agentchip b{font-family:var(--mono);font-size:11.5px;font-weight:800}
+  .agentchip small{font-size:9.5px;color:var(--muted);font-weight:600}
+  .agentchip.flag{background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber-ink)} .agentchip.flag small{color:var(--amber-ink)}
+  @keyframes pop{from{opacity:0;transform:translateY(4px) scale(.97)}to{opacity:1;transform:none}}
+  .conflictbox{margin-top:10px;border:1px solid var(--danger-border);background:var(--danger-soft);border-radius:10px;padding:9px 12px;animation:pop .35s ease}
+  .conflictbox .cl{font-size:10.5px;font-weight:800;color:var(--danger-ink);text-transform:uppercase;letter-spacing:.03em}
+  .conflictbox .cc{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:6px}
+  .conflictbox .cv{flex:1;text-align:center;font-size:12px;font-weight:800;font-family:var(--mono);background:#fff;border:1px solid var(--danger-border);border-radius:8px;padding:6px 4px;color:var(--slate)}
+  .conflictbox .vs{font-weight:800;color:var(--danger)}
+  .conflictbox .cr{font-size:11px;font-weight:700;color:var(--danger-ink);margin-top:7px;text-align:center}
+  .aapout{margin-top:10px;display:flex;gap:9px;flex-wrap:wrap}
+  .aapout .ao{flex:1;min-width:120px;border-radius:9px;padding:9px 11px;border:1px solid}
+  .aapout .ao.auto{background:var(--aap-soft);border-color:var(--aap-border)}
+  .aapout .ao.rev{background:var(--amber-soft);border-color:var(--amber-border)}
+  .aapout .ao .aol{font-size:9.5px;font-weight:800;text-transform:uppercase}
+  .aapout .ao.auto .aol{color:var(--aap-ink)} .aapout .ao.rev .aol{color:var(--amber-ink)}
+  .aapout .ao .aov{font-family:var(--mono);font-weight:800;font-size:14px;margin-top:2px}
+  .aapout .ao.auto .aov{color:var(--aap-ink)} .aapout .ao.rev .aov{color:var(--amber-ink)}
+  .aapout .ao .aod{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600}
+
+  /* ===== 탭② 금액 바 ===== */
+  .toggle{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+  .toggle button{border:0;background:#fff;font:inherit;font-weight:700;font-size:13px;padding:9px 18px;cursor:pointer;color:var(--muted);transition:.15s}
+  .toggle button[aria-pressed="true"].o{background:var(--slate);color:#fff}
+  .toggle button[aria-pressed="true"].a{background:var(--aap);color:#fff}
+  .heroscene{border:1px solid var(--border);border-radius:14px;padding:20px 22px;background:#fff;box-shadow:var(--shadow)}
+  .scenelabel{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:10px}
+  .moneybar{display:flex;height:96px;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+  .moneybar .seg{display:flex;flex-direction:column;justify-content:center;align-items:center;transition:width .6s cubic-bezier(.4,0,.2,1),background .4s;overflow:hidden;white-space:nowrap;position:relative;min-width:0}
+  .moneybar .seg .amt{font-family:var(--mono);font-weight:800;font-size:20px}
+  .moneybar .seg .sub{font-size:11.5px;margin-top:4px;opacity:.92;font-weight:600}
+  .moneybar .seg-auto{background:var(--aap);color:#fff;width:0}
+  .moneybar.aap .seg-auto{width:34.48%}
+  .moneybar .seg-review{background:var(--slate);color:#fff;flex:1;transition:background .4s}
+  .moneybar.aap .seg-review{background:var(--amber)}
+  .moneybar .lab{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity .35s;padding:0 8px;text-align:center}
+  .moneybar.old .lab-aap{opacity:0;pointer-events:none} .moneybar.aap .lab-old{opacity:0;pointer-events:none}
+  .belowbar{margin-top:12px;min-height:64px}
+  .warnrow{display:flex;gap:8px;flex-wrap:wrap}
+  .warnrow .w{font-size:11.5px;font-weight:700;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:8px;padding:6px 11px}
+  .reviewroutes{display:flex;gap:10px;justify-content:flex-end;width:65.52%;margin-left:34.48%}
+  .reviewroutes .rt{flex:1;text-align:center;font-size:11.5px;font-weight:700;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:9px;padding:8px 6px;position:relative}
+  .reviewroutes .rt::before{content:"↓";position:absolute;top:-17px;left:50%;transform:translateX(-50%);color:var(--amber);font-weight:800}
+  .scenedesc{margin-top:14px;font-size:12.5px;line-height:1.6;color:var(--slate);font-weight:600}
+  .scenedesc b.o{color:var(--slate)} .scenedesc b.a{color:var(--aap-ink)}
+  .effectline{margin-top:16px;padding:13px 16px;border-radius:11px;background:var(--surf);border:1px solid var(--border);font-size:13px;line-height:1.7}
+  .effectline .er{display:flex;gap:9px;align-items:flex-start} .effectline .er+.er{margin-top:6px}
+  .effectline .tg{flex:0 0 42px;font-size:10px;font-weight:800;text-align:center;border-radius:5px;padding:2px 0}
+  .effectline .tg.o{background:#fff;border:1px solid var(--border);color:var(--slate)}
+  .effectline .tg.a{background:var(--aap-soft);border:1px solid var(--aap-border);color:var(--aap-ink)}
+
+  /* ===== 탭③ 컴포넌트화 아키텍처 X-ray ===== */
+  .xraytop{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+  .xraytop button{border:1px solid var(--border);background:#fff;font:inherit;font-weight:700;font-size:11.5px;padding:8px 11px;border-radius:9px;cursor:pointer;color:var(--muted);transition:.15s;display:flex;align-items:center;gap:6px}
+  .xraytop button .n{font-family:var(--mono);font-size:9.5px;opacity:.7}
+  .xraytop button[aria-pressed="true"]{background:var(--aap);color:#fff;border-color:var(--aap)}
+  .xraygrid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+  @media(max-width:900px){.xraygrid{grid-template-columns:1fr}}
+  .archwrap{display:grid;grid-template-columns:1fr 84px;gap:7px;align-items:stretch}
+  .archstack{display:flex;flex-direction:column;gap:5px;border:1px solid var(--border);border-radius:12px;background:var(--surf);padding:10px;box-shadow:var(--shadow)}
+  .archstack .stitle{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding:1px 3px 3px}
+  .layer{border:1px solid var(--border);border-radius:9px;padding:6px 9px;background:#fff;display:flex;align-items:center;gap:8px;transition:.25s;opacity:.42}
+  .layer.lit{opacity:1;border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.16)}
+  .layer.cust{background:#F1F5F9;border-style:dashed}
+  .layer.cust.lit{background:#fff;border-style:solid}
+  .layer .lnum{font-family:var(--mono);font-weight:800;color:var(--muted);font-size:10px;flex:0 0 30px}
+  .layer.lit .lnum{color:var(--aap-ink)}
+  .layer .lname{font-weight:800;font-size:11px;flex:0 0 112px;line-height:1.2}
+  .layer .lcomps{display:flex;gap:4px;flex-wrap:wrap}
+  .layer .lcomp{font-size:9px;font-weight:700;background:var(--surf);border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:2px 5px}
+  .layer .lcomp.hot{background:var(--aap);color:#fff;border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.2)}
+  .layer .lcomp.ds{border-color:var(--aap-border);color:var(--aap-ink)}
+  .crosscut{border:1px dashed var(--slate);border-radius:10px;background:#F8FAFC;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px 6px;transition:.25s;opacity:.5}
+  .crosscut.lit{opacity:1;border-color:var(--aap);border-style:solid;background:#fff;box-shadow:0 0 0 2px rgba(13,148,136,.14)}
+  .crosscut .ct{font-size:10px;font-weight:800;color:var(--slate);writing-mode:vertical-rl;letter-spacing:.08em;line-height:1.3}
+  .crosscut.lit .ct{color:var(--aap-ink)}
+  @media(max-width:520px){.archwrap{grid-template-columns:1fr}.crosscut .ct{writing-mode:horizontal-tb}.crosscut{flex-direction:row;gap:6px}}
+
+  .xraypanel{border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow);padding:15px 17px;align-self:start}
+  .xraypanel .xstep{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--aap-ink)}
+  .xraypanel .xttl{font-size:15.5px;font-weight:800;margin-top:4px}
+  .xraypanel .xout{margin:10px 0;padding:10px 12px;border-radius:9px;background:var(--aap-soft);border:1px solid var(--aap-border)}
+  .xraypanel .xout .xol{font-size:10px;font-weight:800;color:var(--aap-ink);text-transform:uppercase}
+  .xraypanel .xout .xov{font-size:12.5px;font-weight:700;color:var(--aap-ink);margin-top:3px;line-height:1.45}
+  .xraypanel .xdesc{font-size:12.5px;line-height:1.65;color:var(--slate)}
+  .xraypanel .xdesc b{color:var(--ink)}
+
+  .verifyhd{font-size:14px;font-weight:800;margin:22px 0 10px;padding-top:18px;border-top:1px dashed var(--border)}
+  .vgrid{display:grid;grid-template-columns:2fr 1.1fr;gap:12px}
+  @media(max-width:860px){.vgrid{grid-template-columns:1fr}}
+  .vcard{border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow);padding:14px 16px}
+  .vcard .vt{font-weight:800;font-size:13px;margin-bottom:9px;display:flex;align-items:center;gap:7px;color:var(--aap-ink)}
+  .vcard.lim{background:#FFFCFB;border-color:var(--amber-border)} .vcard.lim .vt{color:var(--amber-ink)}
+  .vcard ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .vcard li{font-size:12px;line-height:1.5;color:var(--slate);padding-left:15px;position:relative}
+  .vcard li::before{content:"";position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:var(--aap)}
+  .vcard.lim li::before{background:var(--amber)}
+  .askline{margin-top:16px;padding:14px 17px;border-radius:12px;background:var(--aap-soft);border:1px solid var(--aap-border);color:var(--aap-ink);font-size:13.5px;font-weight:700;line-height:1.6;text-align:center}
+
+  .footnote{margin-top:20px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.7}
+  .footnote code{font-family:var(--mono);background:var(--surf);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"></span> AAP 손해사정 <small>· 프로세스 × 방법론 비교</small></div>
+    <span class="badge-sim">Simulation PoC</span>
+  </header>
+
+  <div class="thesis">
+    <div class="t1">같은 손해사정 업무를 — <b class="r">수기·챗봇·단일 에이전트</b>가 처리하면 한 덩어리 결론, <b class="g">AAP</b>는 <b class="a">단계마다 나누고·충돌을 드러내고·책임 있게 분기</b>합니다.</div>
+    <div class="t2">실제 손해사정 프로세스 <span class="pill">접수</span> → <span class="pill">사실확인</span> → <span class="pill">손해액</span> → <span class="pill">과실</span> → <span class="pill">심사</span> → <span class="pill">지급</span> 를 단계별로 4가지 방법이 어떻게 처리하는지 비교합니다.</div>
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <button data-tab="0" aria-pressed="true">① 프로세스 × 방법론<small>단계별 수기·챗봇·단일·AAP 비교</small></button>
+    <button data-tab="1" aria-pressed="false">② 결과 — 금액 분기<small>261만 → 자동 90 / 검토 171</small></button>
+    <button data-tab="2" aria-pressed="false">③ 아키텍처 X-ray<small>고객자산 → L1~L8 어디서 발생</small></button>
+  </div>
+
+  <!-- ===================== 탭① 프로세스 × 방법론 ===================== -->
+  <section data-tab="0" class="on">
+    <div class="lede">
+      <h2>실제 손해사정은 6단계로 흐릅니다. 같은 단계를 4가지 방법이 다르게 처리합니다.</h2>
+      <p>사건 <b>CL-2026-0417</b>(차선변경 접촉 · 대인 합의금 · 사기 의심 · 과실 충돌)을 단계별로 따라갑니다. <b>▶ 자동 재생</b>을 누르면 접수→지급까지 흐르며, 각 단계에서 수기 · 챗봇 · 단일 에이전트와 <b>AAP</b>가 어떻게 갈라지는지 보여줍니다.</p>
+    </div>
+
+    <div class="playbar">
+      <button class="playbtn" id="playbtn">▶ 자동 재생</button>
+      <span class="playhint" id="playhint">또는 아래 단계를 직접 클릭하세요</span>
+    </div>
+    <div class="proctl" id="proctl"></div>
+
+    <div class="phctx" id="phctx"></div>
+
+    <div class="methods">
+      <div class="existing">
+        <div class="exhd">기존 방식 — 한 덩어리로 처리</div>
+        <div class="mcard">
+          <div class="mh"><span class="ic">🖐</span> 현행 수기 <span class="mt2">사람</span></div>
+          <div class="md" id="m-su"></div>
+          <div class="mlim" id="m-su-lim"></div>
+        </div>
+        <div class="mcard">
+          <div class="mh"><span class="ic">💬</span> 단일 LLM · 챗봇 <span class="mt2">프롬프트 한 방</span></div>
+          <div class="md" id="m-bot"></div>
+          <div class="mlim" id="m-bot-lim"></div>
+        </div>
+        <div class="mcard">
+          <div class="mh"><span class="ic">🤖</span> 단일 에이전트 <span class="mt2">고정 파이프라인</span></div>
+          <div class="md" id="m-single"></div>
+          <div class="mlim" id="m-single-lim"></div>
+        </div>
+      </div>
+
+      <div class="aappanel">
+        <div class="ah"><span class="star">★</span><span class="at">AAP — 멀티 에이전트</span><span class="ad" id="aap-tag">동적 작업분해</span></div>
+        <div class="adesc" id="aap-desc"></div>
+        <div class="agentchips" id="aap-agents"></div>
+        <div id="aap-extra"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 탭② 결과 — 금액 분기 ===================== -->
+  <section data-tab="1">
+    <div class="lede">
+      <h2>6단계를 다 거친 결과 — 같은 총액, 다른 운영 결과.</h2>
+      <p>같은 2,610,000원을 기존(수기·챗봇·단일)은 <b>한 덩어리로 권고</b>하고, AAP는 <b>자동 90만 / 검토 171만으로 분기</b>합니다. AAP가 금액을 바꾼 게 아니라, 숨은 솔기를 드러낼 뿐입니다.</p>
+    </div>
+
+    <div class="toggle" id="moneytoggle">
+      <button class="o" data-mode="old" aria-pressed="true">기존 방식</button>
+      <button class="a" data-mode="aap" aria-pressed="false">AAP 방식</button>
+    </div>
+
+    <div class="heroscene">
+      <div class="scenelabel" id="scenelabel">기존 방식 — 한 덩어리 지급권고</div>
+      <div class="moneybar old" id="moneybar">
+        <div class="seg seg-auto"><span class="amt">자동 ₩900,000</span><span class="sub">확실한 대물 · 기본 지급 후보</span></div>
+        <div class="seg seg-review">
+          <div class="lab lab-old"><span class="amt">₩2,610,000</span><span class="sub">일괄 지급권고</span></div>
+          <div class="lab lab-aap"><span class="amt">검토 ₩1,710,000</span><span class="sub">과실 충돌 · 합의금 · 사기 리스크 검토</span></div>
+        </div>
+      </div>
+      <div class="belowbar">
+        <div class="warnrow" id="warnrow">
+          <span class="w">⚠ 과실 20:80 ↔ 30:70</span><span class="w">⚠ 합의금 300만 ↔ 사기 78점</span>
+        </div>
+        <div class="reviewroutes" id="reviewroutes" style="display:none">
+          <div class="rt">손해사정사 검토</div><div class="rt">SIU 검토</div>
+        </div>
+      </div>
+      <div class="scenedesc" id="scenedesc">충돌 신호가 최종 판단 안에 흡수되어, <b class="o">하나의 지급권고</b>로 나갑니다.</div>
+    </div>
+
+    <div class="effectline">
+      <div class="er"><span class="tg o">기존</span><span>빠르게 결론은 나오지만, <b>사람이 봐야 할 쟁점이 분리되지 않습니다.</b></span></div>
+      <div class="er"><span class="tg a">AAP</span><span>자동 처리할 부분과 검토할 부분이 나뉘고, <b>이유가 Decision Log로 남습니다.</b></span></div>
+      <span class="muted" style="display:block;margin-top:8px;font-size:11px;">※ 숫자는 성과가 아니라 분기 예시입니다. (Simulation PoC · SME 검증 전 가정값)</span>
+    </div>
+  </section>
+
+  <!-- ===================== 탭③ 아키텍처 X-ray (전체 캐논) ===================== -->
+  <section data-tab="2">
+    <div class="lede">
+      <h2>이 처리가 AAP 아키텍처의 어디에서 발생하는가 — 고객 자산부터 8계층까지.</h2>
+      <p>사건 1건이 <b>Customer Environment(고객 자산) → 접수 → 자료 연동 → 의미화 → 분해 → 충돌 → HITL → 실행 → 학습</b> 으로 흐르며 캐논 전체를 통과합니다. 각 단계가 어느 계층·컴포넌트에서 일어나는지 점등합니다. <span class="muted">(아키텍처는 이미지가 아니라 컴포넌트로 재현)</span></p>
+    </div>
+
+    <div class="xraytop" id="xraytop"></div>
+
+    <div class="xraygrid">
+      <div class="archwrap">
+        <div class="archstack" id="archstack">
+          <div class="stitle">Agentic AI Platform · Customer Env + L1~L8 (관련 컴포넌트만 점등)</div>
+          <!-- 레이어는 JS가 렌더 -->
+        </div>
+        <div class="crosscut" id="crosscut"><span class="ct">Trust · Security · Governance (전 영역 횡단)</span></div>
+      </div>
+      <div class="xraypanel">
+        <div class="xstep" id="xstep"></div>
+        <div class="xttl" id="xttl"></div>
+        <div class="xout"><div class="xol">이 단계의 산출물</div><div class="xov" id="xout"></div></div>
+        <div class="xdesc" id="xdesc"></div>
+      </div>
+    </div>
+
+    <div class="verifyhd">검증 요청 / 한계</div>
+    <div class="vgrid">
+      <div class="vcard">
+        <div class="vt">⚖ 오늘 검증받고 싶은 것</div>
+        <ul>
+          <li>90만 / 171만 분기 기준이 현실적인가?</li>
+          <li>과실 20:80 vs 30:70 충돌이 실무적으로 타당한가?</li>
+          <li>사기 78점 기준의 SIU 라우팅이 적절한가?</li>
+          <li>각 단계의 캐논 계층 매핑(고객자산~L8)이 맞는가?</li>
+        </ul>
+      </div>
+      <div class="vcard lim">
+        <div class="vt">⚠ 한계</div>
+        <ul>
+          <li>실제 LLM / Agent / 온톨로지 미구동</li>
+          <li>결정론 시뮬레이션</li>
+          <li>수치 SME · 계리 미검증</li>
+          <li>비교 공정성 추가 검토 필요</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="askline">오늘 검증받고 싶은 것은 숫자 성과가 아니라, <u>이 분기 구조(충돌 표면화 → 차등 HITL → 근거 기록)가 손해사정 도메인에서 타당한가</u>입니다.</div>
+  </section>
+
+  <div class="footnote">Simulation PoC — 사건 · 금액 · 라우팅은 시연용 가정값(확정 성과 아님). 탭③ 아키텍처는 <code>AAP 아키텍처_260608ver.</code>를 HTML 컴포넌트로 재현(이미지 임베딩 ✕).</div>
+</div>
+
+<script>
+"use strict";
+
+/* === 탭 전환 === */
+const tabs=document.querySelectorAll('#tabbar button');
+const sections=document.querySelectorAll('section[data-tab]');
+function setTab(i){
+  tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i)));
+  sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i));
+  if(i!==0) stopPlay();
+}
+tabs.forEach(b=>b.addEventListener('click',()=>setTab(+b.dataset.tab)));
+
+/* === 탭① 프로세스 × 방법론 === */
+const PHASES=[
+  { tab:'사고 접수', en:'FNOL', job:'사고를 접수하고 필요한 자료 목록을 잡는 단계',
+    cthis:'차선변경 접촉 신고 · 상대방 대인(목 부상) 주장 접수',
+    su:'콜센터가 수기로 접수표 작성. 자료 요청을 사람이 일일이 챙김.', suLim:'누락·재요청 잦고 느림',
+    bot:'정형 질문엔 응답하나, 비정형 정황은 놓침.', botLim:'무엇을 더 받아야 할지 스스로 모름',
+    single:'접수 폼 자동 채움. 고정 항목만 수집.', singleLim:'사건별로 필요한 자료가 다른데 고정',
+    aapTag:'사건 그래프 초안', aapDesc:'접수와 동시에 <b>사건 그래프 초안</b>을 만들고, 이 사건에 필요한 자료(블박·견적·진단서·청구이력)를 <b>자동 도출</b>합니다.',
+    agents:[{n:'Planner',v:'자료 목록화'}] },
+
+  { tab:'사실 확인·조사', en:'조사', job:'블박·경찰기록·상대 청구이력으로 사실관계를 확인하는 단계',
+    cthis:'블박 확보 · <b>상대방 6개월 내 유사청구 2건 발견</b>',
+    su:'사정사가 서류·이력을 일일이 조회·대조.', suLim:'이력 교차분석은 사실상 수작업, 시간 소요',
+    bot:'문서 요약은 잘하나 청구이력 교차분석 불가.', botLim:'"수상함"을 스스로 연결 못 함',
+    single:'정해진 DB만 조회, 이상징후는 별도 표시 안 함.', singleLim:'이상신호가 흐름에 묻힘',
+    aapTag:'사기 Agent 독립 가동', aapDesc:'<b>사기 Agent</b>가 청구이력 <b>전체 스코프</b>로 조회해, 다른 판단과 독립적으로 위험 신호를 띄웁니다. (권한 스코핑)',
+    agents:[{n:'사기 Agent',v:'유사청구 2건',flag:true},{n:'사기 점수',v:'78점',flag:true}] },
+
+  { tab:'손해액 산정', en:'견적·대인', job:'대물 수리비와 대인 치료·합의금을 산정하는 단계',
+    cthis:'대물 수리 480만(전손 아님) · 대인 치료 2주 · <b>합의금 300만 요구</b>',
+    su:'견적서 수기 검토, 표준 단가표 대조.', suLim:'대인 합의금의 적정성 판단은 주관적',
+    bot:'금액 계산은 하나 부품 인증·근거 구분 약함.', botLim:'합의금과 사기 신호를 연결 못 함',
+    single:'산정 후 다음 단계로 값 전달.', singleLim:'견적 오류가 과실·구상까지 전파',
+    aapTag:'A2A 교차', aapDesc:'<b>손해액 Agent</b>가 대물 480만을 산정하고, 대인 합의금은 <b>사기 Agent와 교차(A2A)</b>해 의심 시 보류 후보로 둡니다.',
+    agents:[{n:'손해액 Agent',v:'대물 480만'},{n:'사기 Agent',v:'합의금 의심',flag:true}] },
+
+  { tab:'과실 판단', en:'과실', job:'사고가 누구 잘못인지 과실 비율을 정하는 단계',
+    cthis:'블박 기준 <b>20:80</b> · 유사 판례 기준 <b>30:70</b> → 애매',
+    su:'사정사 경험으로 한 값 결정.', suLim:'분쟁·소송 시 근거가 약함',
+    bot:'"몇 대 몇?"에 그럴듯한 답 1개.', botLim:'일관성·근거 약함, 매번 흔들림',
+    single:'고정 규칙으로 한 값 산출.', singleLim:'"애매함"이 사라지고 한 값으로 확정',
+    aapTag:'충돌 표면화', aapDesc:'<b>과실 Agent(20:80)</b>와 <b>유사사례 Agent(30:70)</b>가 독립 판단 → 불일치를 <b>충돌로 표면화</b>해 상급 사정사 검토로 올립니다.',
+    agents:[{n:'과실 Agent',v:'블박 20:80'},{n:'유사사례 Agent',v:'판례 30:70'}],
+    conflict:{label:'CONFLICT · 과실 가정 불일치', a:'블박 20:80', b:'판례 30:70', r:'→ 애매 → 상급 손해사정사 HITL 이관'} },
+
+  { tab:'보험금 심사', en:'약관·사기', job:'약관 보장 여부와 사기·이상 여부를 점검하는 단계',
+    cthis:'약관상 대인·대물 보장 확인 + <b>사기 리스크 78점</b>',
+    su:'약관 수동 확인, 사기 여부는 주관적 판단.', suLim:'기준이 사람마다 다름',
+    bot:'약관 인용은 하나 사기 신호와 못 엮음.', botLim:'리스크가 금액에 흡수됨',
+    single:'사기 점수는 내나 최종 금액에 합산.', singleLim:'사기 신호가 별도 경로로 안 빠짐',
+    aapTag:'경로 분기', aapDesc:'<b>약관 Agent</b>가 보장을 확인하고, <b>사기 Agent 78점</b>은 금액에 묻지 않고 <b>SIU 검토 경로로 분기</b>합니다. 충돌 티켓은 유지됩니다.',
+    agents:[{n:'약관 Agent',v:'보장 확인'},{n:'사기 Agent',v:'78점 · SIU',flag:true}],
+    conflict:{label:'CONFLICT · 합의금 ↔ 리스크', a:'합의금 300만', b:'사기 78점', r:'→ 합의금 보류 · SIU 검토 경로'} },
+
+  { tab:'합의·지급', en:'처리·구상', job:'보험금을 얼마·어떻게 줄지 최종 결정하고 통지·구상하는 단계',
+    cthis:'확실분은 자동 / 의심·충돌분은 보류 후 사람 검토',
+    su:'전체를 사람이 최종 결정·통지.', suLim:'느리고, 무엇을 봤는지 근거 남기기 어려움',
+    bot:'최종 금액 1개 제시.', botLim:'책임·근거 불명, 감사 대응 약함',
+    single:'261만 일괄 지급권고, 사람 검토는 끝에 한 번.', singleLim:'무엇이 수상한지 사람이 다시 다 찾아야',
+    aapTag:'차등 HITL · Decision Log', aapDesc:'<b>확실한 90만은 자동 지급결의(Antbot)</b>, <b>의심·충돌 171만은 손해사정사·SIU로 차등 이관</b>. 왜 그랬는지 <b>Decision Log</b>로 남깁니다.',
+    agents:[{n:'Reconciler',v:'자동/검토 분기'},{n:'Decision Log',v:'근거 기록'}],
+    out:[{c:'auto',l:'자동 처리',v:'₩900,000',d:'대물 명확 · 규칙 충족'},{c:'rev',l:'사람 검토',v:'₩1,710,000',d:'손해사정사 · SIU'}] },
+];
+
+const proctl=document.getElementById('proctl');
+proctl.innerHTML=PHASES.map((p,i)=>`<button data-ph="${i}" aria-pressed="${i===0}"><span class="pn">STEP ${i+1}</span><span class="pt">${p.tab}</span></button>`).join('');
+
+let curPhase=0;
+function setPhase(i){
+  curPhase=i; const p=PHASES[i];
+  document.querySelectorAll('#proctl button').forEach((b,bi)=>{
+    b.setAttribute('aria-pressed',String(bi===i));
+    b.classList.toggle('done', bi<i);
+  });
+  document.getElementById('phctx').innerHTML=
+    `<span class="pjob">${p.job}</span><span class="pthis">이 사건: ${p.cthis}</span><span class="ptag">STEP ${i+1} / 6</span>`;
+  document.getElementById('m-su').textContent=p.su;
+  document.getElementById('m-su-lim').textContent='⚠ '+p.suLim;
+  document.getElementById('m-bot').textContent=p.bot;
+  document.getElementById('m-bot-lim').textContent='⚠ '+p.botLim;
+  document.getElementById('m-single').textContent=p.single;
+  document.getElementById('m-single-lim').textContent='⚠ '+p.singleLim;
+  document.getElementById('aap-tag').textContent=p.aapTag;
+  document.getElementById('aap-desc').innerHTML=p.aapDesc;
+  document.getElementById('aap-agents').innerHTML=(p.agents||[]).map(a=>
+    `<span class="agentchip ${a.flag?'flag':''}"><b>${a.v}</b><small>${a.n}</small></span>`).join('');
+  let extra='';
+  if(p.conflict){
+    extra=`<div class="conflictbox"><div class="cl">${p.conflict.label}</div>`+
+      `<div class="cc"><span class="cv">${p.conflict.a}</span><span class="vs">↔</span><span class="cv">${p.conflict.b}</span></div>`+
+      `<div class="cr">${p.conflict.r}</div></div>`;
+  }
+  if(p.out){
+    extra=`<div class="aapout">`+p.out.map(o=>
+      `<div class="ao ${o.c}"><div class="aol">${o.l}</div><div class="aov">${o.v}</div><div class="aod">${o.d}</div></div>`).join('')+`</div>`;
+  }
+  document.getElementById('aap-extra').innerHTML=extra;
+}
+document.querySelectorAll('#proctl button').forEach(b=>b.addEventListener('click',()=>{stopPlay();setPhase(+b.dataset.ph);}));
+
+/* 자동 재생 */
+let playTimer=null;
+const playbtn=document.getElementById('playbtn');
+const playhint=document.getElementById('playhint');
+function stopPlay(){ if(playTimer){clearInterval(playTimer);playTimer=null;} playbtn.classList.add('paused'); playbtn.textContent='▶ 자동 재생'; }
+function startPlay(){
+  playbtn.classList.remove('paused'); playbtn.textContent='⏸ 일시정지'; playhint.textContent='재생 중 — 단계가 자동으로 넘어갑니다';
+  if(curPhase>=PHASES.length-1) setPhase(0);
+  playTimer=setInterval(()=>{
+    if(curPhase>=PHASES.length-1){ stopPlay(); playhint.textContent='완료 — 다시 재생하거나 단계를 클릭하세요'; return; }
+    setPhase(curPhase+1);
+  },2600);
+}
+playbtn.addEventListener('click',()=>{ if(playTimer) stopPlay(); else startPlay(); });
+setPhase(0); stopPlay();
+
+/* === 탭② 금액 토글 === */
+const moneybar=document.getElementById('moneybar');
+const warnrow=document.getElementById('warnrow');
+const reviewroutes=document.getElementById('reviewroutes');
+const scenelabel=document.getElementById('scenelabel');
+const scenedesc=document.getElementById('scenedesc');
+function setMoney(mode){
+  document.querySelectorAll('#moneytoggle button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
+  const aap = mode==='aap';
+  moneybar.classList.toggle('aap',aap); moneybar.classList.toggle('old',!aap);
+  warnrow.style.display = aap?'none':'flex';
+  reviewroutes.style.display = aap?'flex':'none';
+  scenelabel.textContent = aap ? 'AAP 방식 — 자동 처리분과 사람 검토분 분리' : '기존 방식 — 한 덩어리 지급권고';
+  scenedesc.innerHTML = aap
+    ? '충돌 신호를 <b class="a">표면화</b>해 자동 처리할 금액과 <b class="a">사람이 봐야 할 금액을 분리</b>합니다. 검토 171만 원은 손해사정사 · SIU로 라우팅됩니다.'
+    : '충돌 신호가 최종 판단 안에 흡수되어, <b class="o">하나의 지급권고</b>로 나갑니다.';
+}
+document.querySelectorAll('#moneytoggle button').forEach(b=>b.addEventListener('click',()=>setMoney(b.dataset.mode)));
+setMoney('old');
+
+/* === 탭③ 컴포넌트화 아키텍처 (이미지 ✕, 전체 캐논) === */
+const LAYERS=[
+  {n:'CUST', name:'Customer Environment · 고객 자산', cust:true, comps:['보험 청구 데이터','약관·문서 자산','사고·청구 시스템','과거 청구이력 DB']},
+  {n:'L1', name:'경험 / 접근',     comps:['에이전트 포털','코파일럿','관리자 콘솔','API Gateway']},
+  {n:'L2', name:'설계 / 개발',     comps:['에이전트 설계','BPMN·DMN 규칙','Tool Registry','Agent Registry']},
+  {n:'L3', name:'에이전트 실행환경', comps:['에이전트 코어','Supervisor','Task Routing','Agent Coordination · A2A','HITL 런타임 게이트',{t:'BEAST · Tool Gov',ds:true}]},
+  {n:'L4', name:'지식 / 시멘틱',    comps:['온톨로지','Knowledge Graph','Case/Claim Model','RAG']},
+  {n:'L5', name:'데이터 / 연동',    comps:['커넥터',{t:'AI:ON-U · OCR/Parser',ds:true},{t:'Antbot · RPA',ds:true},'Data Quality']},
+  {n:'L6', name:'AI 품질 / 평가',   comps:['Evaluation','Tracing','Drift 모니터','Skill Catalog']},
+  {n:'L7', name:'컨트롤 / 거버넌스', comps:['Policy','Access · 권한','HITL 승인정책','Audit Trail']},
+  {n:'L8', name:'인프라',          comps:['Compute','Network','On-prem/Cloud','Storage']},
+];
+const archstack=document.getElementById('archstack');
+LAYERS.forEach(L=>{
+  const row=document.createElement('div');
+  row.className='layer'+(L.cust?' cust':''); row.dataset.l=L.n;
+  const comps=L.comps.map(c=>{ const t=(typeof c==='string')?c:c.t; const ds=(typeof c==='object'&&c.ds)?' ds':'';
+    return `<span class="lcomp${ds}" data-c="${t}">${t}</span>`; }).join('');
+  row.innerHTML=`<span class="lnum">${L.n}</span><span class="lname">${L.name}</span><span class="lcomps">${comps}</span>`;
+  archstack.appendChild(row);
+});
+const crosscut=document.getElementById('crosscut');
+
+const XRAY=[
+  { key:'cust', n:'고객자산', label:'고객 자산',
+    ttl:'사건의 원천 — 고객 자산에서 출발',
+    out:'청구 데이터 · 약관 문서 · 과거 청구이력이 입력 기반(대체 아님)',
+    lit:['CUST'], hot:['보험 청구 데이터','과거 청구이력 DB'], cc:false,
+    desc:'AAP는 고객 시스템을 대체하지 않습니다. <b>청구 데이터·문서·과거 이력</b>을 입력·실행 기반으로 그대로 활용합니다. (Customer Environment)' },
+  { key:'intake', n:'L1', label:'접수·접근',
+    ttl:'포털로 사고 접수(FNOL)',
+    out:'접수 이벤트 — 현업/고객 접점에서 사건 생성',
+    lit:['L1'], hot:['에이전트 포털','API Gateway'], cc:false,
+    desc:'사고 접수가 <b>에이전트 포털·API</b>를 통해 들어옵니다. 현업 사용자 접점에서 사건이 생성됩니다. (L1 경험/접근)' },
+  { key:'ingest', n:'L5', label:'자료 연동',
+    ttl:'진단서·견적·블박을 수집·정규화',
+    out:'정규화된 자료 — AI:ON-U OCR/Parser로 문서 구조화',
+    lit:['L5'], hot:['커넥터','AI:ON-U · OCR/Parser'], cc:false,
+    desc:'커넥터가 외부 자료를 끌어오고 <b>AI:ON-U(OCR·Parser)</b>가 진단서·견적·블박을 구조화합니다. (L5 데이터/연동 · ds자산)' },
+  { key:'semantic', n:'L4', label:'의미화',
+    ttl:'흩어진 자료를 하나의 사건으로',
+    out:'사건 그래프 — 사고유형·과실·담보·합의금·사기리스크 정렬',
+    lit:['L4'], hot:['온톨로지','Case/Claim Model'], cc:false,
+    desc:'문서·숫자를 단순 데이터가 아니라 <b>하나의 손해사정 사건(Case Model)</b>으로 의미화합니다. (L4 지식/시멘틱)' },
+  { key:'split', n:'L3', label:'Agent 분해',
+    ttl:'Supervisor가 전문 Agent로 분기',
+    out:'Agent 분기표 — 과실·손해액·사기·약관 Agent 분배',
+    lit:['L3'], hot:['Supervisor','Task Routing'], cc:false,
+    desc:'단일 판단이 아니라 <b>전문 Agent로 동적 분해</b>합니다. 각 Agent가 자기 영역만 독립 판단합니다. (L3 실행환경)' },
+  { key:'conflict', n:'L3', label:'충돌 표면화',
+    ttl:'충돌을 금액에 묻지 않고 티켓으로',
+    out:'Conflict Ticket 2건 — 과실 20:80↔30:70 · 합의금↔사기',
+    lit:['L3'], hot:['Agent Coordination · A2A'], cc:false,
+    desc:'Agent들이 <b>A2A</b>로 교차 검증하며 충돌 2건을 검토 이벤트로 승격합니다. (L3 Agent Coordination)' },
+  { key:'hitl', n:'L3·L7', label:'HITL 분기',
+    ttl:'위험분만 사람 검토로 라우팅',
+    out:'라우팅 보드 — 자동 90만 / 검토 171만 → 손해사정사·SIU',
+    lit:['L3','L7'], hot:['HITL 런타임 게이트','HITL 승인정책'], cc:true,
+    desc:'위험·충돌 <b>171만 원</b>은 자동 확정하지 않고 검토로 보냅니다. L3 런타임 게이트가 실시간 분기를, L7이 승인 기준을, 횡단 거버넌스가 권한·감사를 담당합니다.' },
+  { key:'action', n:'L5', label:'실행·통지',
+    ttl:'확정분 지급결의·통지·구상',
+    out:'실행 — Antbot(RPA/Workflow)으로 지급결의·통지 자동화',
+    lit:['L5'], hot:['Antbot · RPA','커넥터'], cc:false,
+    desc:'확정된 자동 처리분은 <b>Antbot(RPA·Workflow)</b>이 지급결의·통지·구상으로 실행합니다. (L5 연동 · ds자산)' },
+  { key:'learn', n:'L6·L7', label:'품질·학습',
+    ttl:'근거를 남기고 학습 자산으로',
+    out:'Decision Log + Skill Catalog — 근거 사슬·기준 개선 후보',
+    lit:['L6','L7'], hot:['Tracing','Skill Catalog','Audit Trail'], cc:true,
+    desc:'왜 자동/보류했는지 <b>Decision Log</b>로 남기고, 사기 패턴·판단 기준은 <b>Skill Catalog</b>로 환류합니다. 민원·소송 방어 근거가 됩니다. (L6 품질, L7 거버넌스)' },
+];
+const xraytop=document.getElementById('xraytop');
+xraytop.innerHTML=XRAY.map((x,i)=>`<button data-x="${i}" aria-pressed="${i===0}"><span class="n">${x.n}</span>${x.label}</button>`).join('');
+function setXray(i){
+  const x=XRAY[i];
+  document.querySelectorAll('#xraytop button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.x===i)));
+  document.getElementById('xstep').textContent='작동 지점 · '+x.label;
+  document.getElementById('xttl').textContent=x.ttl;
+  document.getElementById('xout').textContent=x.out;
+  document.getElementById('xdesc').innerHTML=x.desc;
+  document.querySelectorAll('#archstack .layer').forEach(row=>{
+    const on=x.lit.includes(row.dataset.l);
+    row.classList.toggle('lit',on);
+    row.querySelectorAll('.lcomp').forEach(c=>c.classList.toggle('hot', on && x.hot.includes(c.dataset.c)));
+  });
+  crosscut.classList.toggle('lit', !!x.cc);
+}
+document.querySelectorAll('#xraytop button').forEach(b=>b.addEventListener('click',()=>setXray(+b.dataset.x)));
+setXray(0);
+</script>
+</body>
+</html>
