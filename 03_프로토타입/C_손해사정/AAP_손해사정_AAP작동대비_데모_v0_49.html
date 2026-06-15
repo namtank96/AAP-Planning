@@ -673,17 +673,22 @@
   .arch-loop .als.on{background:linear-gradient(135deg,#0D9488,#0F766E);border-color:#0F766E}
   .arch-loop .als.on b{color:#fff}.arch-loop .als.on span{color:#CCFBF1}
   .arch-loop .ala{align-self:center;color:var(--aap);font-weight:900;font-size:11px}
-  .arch-board{display:grid;grid-template-columns:130px minmax(0,1fr) 142px;gap:8px;align-items:stretch}
-  @media(max-width:760px){.arch-board{grid-template-columns:1fr}}
-  .arch-rail{border:1px solid var(--border);border-radius:10px;background:var(--surf);padding:8px;display:flex;flex-direction:column;gap:5px}
-  .arch-rail .arh{font-size:9.5px;font-weight:800;color:var(--slate);line-height:1.2}
-  .arch-rail .ars{font-size:8px;font-weight:700;color:var(--muted);margin-bottom:2px;line-height:1.25}
-  .arch-railitem{font-size:9px;font-weight:700;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:7px;padding:5px 7px;line-height:1.25}
-  .arch-railitem span{display:block;font-size:8px;font-weight:600;color:var(--muted);margin-top:1px}
-  .arch-rail.trust{background:#1E293B;border-color:#1E293B}
-  .arch-rail.trust .arh{color:#fff}.arch-rail.trust .ars{color:#94A3B8}
-  .arch-rail.trust .arch-railitem{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:#E2E8F0}
-  .arch-rail.trust .arch-railitem span{color:#94A3B8}
+  /* v0.49b 위→아래 구조: Customer Env 밴드 / 8계층 / Trust 밴드 (가로 밴드로 빈 공간 해소) */
+  .arch-band{border:1px solid var(--border);border-radius:10px;background:var(--surf);padding:7px 11px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .arch-band.cust{margin-bottom:7px}
+  .arch-band.trust{margin-top:7px;background:#1E293B;border-color:#1E293B}
+  .arch-band .abh{display:flex;flex-direction:column;line-height:1.2;min-width:104px}
+  .arch-band .abh b{font-size:9.5px;font-weight:800;color:var(--slate)}
+  .arch-band .abh span{font-size:8px;font-weight:700;color:var(--muted);margin-top:1px}
+  .arch-band.trust .abh b{color:#fff}.arch-band.trust .abh span{color:#94A3B8}
+  .arch-banditems{display:flex;gap:7px;flex-wrap:wrap;flex:1;min-width:0}
+  .arch-bandcell{font-size:9.5px;font-weight:700;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:8px;padding:5px 10px;line-height:1.3;transition:background .2s,border-color .2s,box-shadow .2s}
+  .arch-bandcell span{display:block;font-size:8px;font-weight:600;color:var(--muted);margin-top:1px}
+  .arch-bandcell.on{border-color:var(--aap);background:var(--aap-soft);box-shadow:0 0 0 2px rgba(13,148,136,.2)}
+  .arch-bandcell.on span{color:var(--aap-ink)}
+  .arch-band.trust .arch-bandcell{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#E2E8F0}
+  .arch-band.trust .arch-bandcell span{color:#94A3B8}
+  .arch-band.trust .arch-bandcell.on{border-color:var(--aap);background:rgba(13,148,136,.34)}
   .arch-stack{display:flex;flex-direction:column;gap:6px;min-width:0}
   .arch-row{display:grid;grid-template-columns:104px minmax(0,1fr);gap:8px;align-items:stretch;border:1px solid var(--border);border-radius:10px;background:#fff;padding:7px 9px;min-height:52px}
   .arch-row .arrowhead{display:flex;flex-direction:column;justify-content:center;gap:3px;border-right:1px solid var(--line);padding-right:6px}
@@ -787,7 +792,7 @@
   .pc-head .pch-t{font-size:15px;font-weight:800;color:var(--ink)}
   .pc-head .pch-s{font-size:10px;font-weight:700;color:var(--muted)}
   .pc-head .pch-ai{margin-left:auto;font-size:9.5px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:999px;padding:4px 11px}
-  .pc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(218px,1fr));gap:10px}
+  .pc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px}
   .pc-card{border:1px solid var(--border);border-radius:11px;background:#fff;box-shadow:var(--shadow);padding:10px 12px;display:flex;flex-direction:column;gap:7px}
   .pc-card .pcc-h{font-size:11.5px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px;justify-content:space-between;line-height:1.25}
   .pc-vd{font-size:9px;font-weight:800;border-radius:6px;padding:2px 8px;white-space:nowrap;border:1px solid}
@@ -833,6 +838,26 @@
   .pc-scn .pcs-row b{color:var(--ink)}
   .pc-approval{font-size:9.5px;font-weight:700;color:var(--muted);background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:7px 10px;margin-top:9px;line-height:1.45}
   .pc-approval b{color:var(--slate)}
+  /* v0.49b 탭③ 분할: 좌 업무 콘솔 / 우 AAP 작동 구조·설명 */
+  .sim3{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:13px;align-items:start}
+  @media(max-width:1000px){.sim3{grid-template-columns:1fr}}
+  .aapx{border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,#FCFEFE,#F6FAFB);box-shadow:var(--shadow);padding:13px 14px;min-height:638px}
+  .aapx-h{font-size:12.5px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .aapx-h::before{content:'';width:9px;height:9px;border-radius:2px;background:var(--aap)}
+  .aapx-sub{font-size:9.5px;font-weight:600;color:var(--muted);margin:3px 0 11px;line-height:1.4}
+  .aapx-sec{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:13px 0 6px}
+  .aapx-flow{display:flex;flex-direction:column;gap:0}
+  .aapx-stage{display:grid;grid-template-columns:62px 1fr;gap:9px;align-items:start;padding:5px 0;position:relative}
+  .aapx-stage:not(:last-child)::after{content:'';position:absolute;left:31px;top:23px;height:14px;width:1.5px;background:var(--aap-border)}
+  .aapx-stage .cap-tag{justify-content:center;width:100%}
+  .aapx-do{font-size:10.5px;font-weight:700;color:var(--slate);line-height:1.35;overflow-wrap:anywhere}
+  .aapx-agents{display:flex;flex-wrap:wrap;gap:6px}
+  .aapx-agent{font-size:10px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:7px;padding:5px 9px;line-height:1.3}
+  .aapx-agent span{display:block;font-size:8px;font-weight:600;color:var(--muted);margin-top:1px}
+  .aapx-diff{font-size:11px;font-weight:700;color:var(--aap-ink);background:rgba(13,148,136,.08);border:1px solid var(--aap-border);border-left:3px solid var(--aap);border-radius:8px;padding:9px 11px;line-height:1.5;overflow-wrap:anywhere}
+  .aapx-diff b{color:var(--aap-ink)}
+  .aapx-result{font-size:11px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:8px;padding:8px 10px;line-height:1.5;margin-top:9px}
+  .aapx-result span{display:block;font-size:8.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
 
   @media print{
     .tabbar,.keymsg .kmstep,#playBtn{display:none}
@@ -894,7 +919,10 @@
 
   <section data-tab="2">
     <div class="tlede"><h3>③ AAP 작동 시뮬레이션</h3><span class="aud">SME / 손해사정사 업무 콘솔</span><p>실제 손해사정사 업무 콘솔입니다. 좌측 업무 네비에서 단계를 고르면 각 화면에서 <b>AI 검증·산출 결과를 확인하고 직접 판단</b>합니다(지급 PASS·검토, 견적 확정, 합의·과실 검토, 처리 시나리오 선택). 상단 STEP을 넘기거나 재생하면 같은 흐름이 단계별로 이어집니다. <b>(Simulation PoC · 수치는 가정값)</b></p></div>
-    <div id="pcConsole"></div>
+    <div class="sim3">
+      <div id="pcConsole"></div>
+      <aside class="aapx" id="aapx"></aside>
+    </div>
   </section>
 
   <div class="valwrap">
@@ -1092,7 +1120,7 @@ function setPhase(i){
   document.querySelectorAll('#phaseRail .pchev').forEach((b,bi)=>{ b.setAttribute('aria-pressed',String(bi===i)); b.classList.toggle('done',bi<i); });
   const p=PHASES[i];
   document.getElementById('keyMsg').innerHTML=`<span class="kmstep">${p.step} ${p.name}</span><span class="kmtxt">핵심: ${p.keyMsg}</span>`;
-  renderWorkflow(i); renderPC(i); updateArchStep(i);
+  renderWorkflow(i); renderPC(i); renderAapx(i); updateArchStep(i);
 }
 document.querySelectorAll('#phaseRail .pchev').forEach(b=>b.addEventListener('click',()=>{ stopPlay(); setPhase(+b.dataset.ph); }));
 
@@ -1264,8 +1292,8 @@ function renderArchMap(){
   const map=document.getElementById('archMap'); if(!map)return;
   const loop=`<div class="arch-loop"><span class="alh">Execution Loop</span>`+
     ARCH_LOOP.map((x,k)=>`<span class="als" data-stage="${x.s}"><b>${x.s}</b><span>${x.l}</span></span>`+(k<ARCH_LOOP.length-1?'<span class="ala">▶</span>':'')).join('')+`</div>`;
-  const railHTML=(D,type,extra)=>`<aside class="arch-rail${extra||''}"><div class="arh">${D.h}</div><div class="ars">${D.s}</div><div class="arch-railitems">`+
-    D.items.map((x,k)=>`<div class="arch-railitem" data-rail="${type}" data-idx="${k}">${x.t}<span>${x.s}</span></div>`).join('')+`</div></aside>`;
+  const bandHTML=(D,type)=>`<div class="arch-band ${type}"><div class="abh"><b>${D.h}</b><span>${D.s}</span></div><div class="arch-banditems">`+
+    D.items.map((x,k)=>`<div class="arch-bandcell" data-rail="${type}" data-idx="${k}">${x.t}<span>${x.s}</span></div>`).join('')+`</div></div>`;
   const stack=`<div class="arch-stack">`+ARCH_LAYERS.map(L=>{
     const rc='arch-row'+(L.accent==='core'?' core':(L.accent==='ds'?' ds':''));
     const mark=L.mark?`<span class="armark">${L.mark}</span>`:'';
@@ -1273,7 +1301,7 @@ function renderArchMap(){
     return `<div class="${rc}"><div class="arrowhead"><div class="arl"><span class="arn">${L.id.replace('L','')}</span><span class="arnm">${L.ko}</span></div>${mark}</div>`+
       `<div class="arch-cells">${L.cells.map(archCellHTML).join('')}${mini}</div></div>`;
   }).join('')+`</div>`;
-  map.innerHTML=loop+`<div class="arch-board">${railHTML(ARCH_CUST,'cust')}${stack}${railHTML(ARCH_TRUST,'trust',' trust')}</div><svg class="arch-links" id="archLinks"></svg>`;
+  map.innerHTML=loop+bandHTML(ARCH_CUST,'cust')+stack+bandHTML(ARCH_TRUST,'trust')+`<svg class="arch-links" id="archLinks"></svg>`;
   map.querySelectorAll('.arch-cell').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
 }
 /* STEP 반응: 이 단계 경로만 강조 + 비활성 dim + Loop/레일 점등 + 우측 트레이스 패널 + 연결선 */
@@ -1287,7 +1315,7 @@ function updateArchStep(i){
     if(seq){ if(n){ seq.textContent=n; seq.hidden=false; } else { seq.hidden=true; } }
   });
   map.querySelectorAll('.arch-loop .als').forEach(el=>el.classList.toggle('on',t.loop.indexOf(el.dataset.stage)>=0));
-  map.querySelectorAll('.arch-railitem').forEach(el=>{
+  map.querySelectorAll('.arch-bandcell').forEach(el=>{
     const on=(el.dataset.rail==='cust'&&+el.dataset.idx===t.cust)||(el.dataset.rail==='trust'&&+el.dataset.idx===t.trust);
     el.classList.toggle('on',on);
   });
@@ -1431,6 +1459,21 @@ function renderPC(i){
   document.querySelectorAll('#pcConsole .pc-scn').forEach(el=>el.addEventListener('click',()=>{ pcSel[i]=+el.dataset.scn; pcDone[i]='sel'; renderPC(i); }));
 }
 
+/* 우측 AAP 작동 구조·설명 패널 (탭③ 분할) */
+function capOf(id){ const p=id.split('-')[0];
+  return ({l5:['DATA','cap-DATA'],l4:['SEMANTIC','cap-SEMANTIC'],l3:['AGENT','cap-AGENT'],l6:['EVAL','cap-EVAL'],l7:['CONTROL','cap-CONTROL'],l1:['ACTION','cap-ACTION'],l8:['LOG','cap-LOG']})[p]||['',''];
+}
+function renderAapx(i){
+  const el=document.getElementById('aapx'), t=STEP_TRACE[i], a=PHASES[i].wf.aap, d=PC[i];
+  if(!el||!t)return;
+  const flow=t.cells.map(c=>{ const cap=capOf(c.id); return `<div class="aapx-stage"><span class="cap-tag ${cap[1]}">${cap[0]}</span><span class="aapx-do">${c.do}</span></div>`; }).join('');
+  const agents=`<div class="aapx-agents"><span class="aapx-agent">${a.a1.t}<span>${a.a1.sub}</span></span><span class="aapx-agent">${a.a2.t}<span>${a.a2.sub}</span></span></div>`;
+  el.innerHTML=`<div class="aapx-h">AAP 작동 구조</div><div class="aapx-sub">왼쪽 업무 화면 뒤에서 AAP가 이 단계를 처리하는 방식입니다.</div>`+
+    `<div class="aapx-sec">작동 흐름 · 계층 / 역량</div><div class="aapx-flow">${flow}</div>`+
+    `<div class="aapx-sec">핵심 Agent</div>${agents}`+
+    `<div class="aapx-sec">AAP 차별화</div><div class="aapx-diff">${d.aap}</div>`+
+    `<div class="aapx-result"><span>이 단계 결과</span>${t.result}</div>`;
+}
 /* init */
 renderArchMap(); setPhase(curPhase); setTab(0);
 </script>
