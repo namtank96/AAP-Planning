@@ -566,6 +566,7 @@
   .t1-tk2.stop{background:var(--danger-soft);color:var(--danger-ink);border:1px solid var(--danger-border)}
   .t1-aapcol{border:2px solid var(--aap);background:linear-gradient(180deg,#F0FDFA,#FBFFFE 60%);box-shadow:0 3px 18px rgba(13,148,136,.13)}
   .t1-aapcol .t1-colh{color:var(--aap-ink)} .t1-aapcol .t1-colh .t1-tagm{background:var(--aap)}
+  .t1-aapcap{font-size:10px;font-weight:700;color:var(--muted);margin:2px 0 7px}
   .t1-steps4{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px}
   .t1-steps4 span{font-size:9.5px;font-weight:800;color:var(--aap-ink);background:#fff;border:1px solid var(--aap-border);border-radius:6px;padding:3px 8px}
   .t1-steps4 i{font-style:normal;color:var(--aap);font-weight:900;align-self:center}
@@ -1201,21 +1202,57 @@ const MANUAL_PAIN=[
 ];
 
 
-function t1Aap(a){
-  const W=720,H=158;
-  const nodes=[
-    {id:'a1',x:112,y:50,w:138,h:44,cls:'agent emph',num:1,label:a.a1.t,sub:a.a1.sub},
-    {id:'a2',x:112,y:112,w:138,h:44,cls:'agent emph',num:2,label:a.a2.t,sub:a.a2.sub},
-    {id:'cmp',x:322,y:80,w:128,h:52,cls:'hub',num:3,label:'Agent 간 판단 비교',sub:a.cmp},
-    {id:'auto',x:516,y:48,w:154,h:44,cls:'auto',num:4,label:a.auto},
-    {id:'rev',x:516,y:114,w:154,h:44,cls:'review',label:a.rev},
-    {id:'log',x:664,y:80,w:56,h:48,cls:'log',num:5,label:'근거 기록'},
-  ];
-  const edges=[
-    {a:'a1',b:'cmp',cls:'teal'},{a:'a2',b:'cmp',cls:'teal'},
-    {a:'cmp',b:'auto',cls:'teal',label:'확실',lcls:'teal'},{a:'cmp',b:'rev',cls:'amber',label:'다툼·검토',lcls:'amber'},
-    {a:'auto',b:'log',cls:'faint'},{a:'rev',b:'log',cls:'faint'},
-  ];
+/* 탭① AAP 작동 형상 — 단계마다 실제 흐름이 다르게(병렬검증/순차/비교/시나리오 분기) */
+function t1Aap(i){
+  const c=CASE; const W=720; let H=200,nodes=[],edges=[];
+  if(i===0){ H=212;
+    nodes=[{id:'i1',x:104,y:48,w:152,h:40,cls:'agent',num:1,label:'본인 확인'},
+      {id:'i2',x:104,y:106,w:152,h:40,cls:'agent',num:2,label:'운전자 적합성'},
+      {id:'i3',x:104,y:164,w:152,h:40,cls:'agent',num:3,label:'사기 탐지',sub:c.fraudScore+'점'},
+      {id:'g',x:364,y:106,w:126,h:58,cls:'hub',num:4,label:'자격 판정',sub:'3개 병렬 검증'},
+      {id:'b1',x:612,y:48,w:156,h:40,cls:'auto',label:'지급 대상 PASS'},
+      {id:'b2',x:612,y:106,w:156,h:40,cls:'review',label:'사람 검토 REVIEW'},
+      {id:'b3',x:612,y:164,w:156,h:40,cls:'risk',label:'면책 DENY'}];
+    edges=[{a:'i1',b:'g',cls:'teal'},{a:'i2',b:'g',cls:'teal'},{a:'i3',b:'g',cls:'teal'},
+      {a:'g',b:'b1',cls:'teal',label:'정상',lcls:'teal'},{a:'g',b:'b2',cls:'amber',label:'의심',lcls:'amber'},{a:'g',b:'b3',cls:'red',label:'면책',lcls:'amber'}];
+  } else if(i===1){ H=160;
+    nodes=[{id:'s1',x:76,y:66,w:110,h:42,cls:'agent',num:1,label:'사진 분석'},
+      {id:'s2',x:202,y:66,w:110,h:42,cls:'agent',num:2,label:'부품·공임 산출'},
+      {id:'s3',x:328,y:66,w:110,h:42,cls:'agent',num:3,label:'규칙 적용',sub:'인증부품·전손'},
+      {id:'g',x:466,y:66,w:96,h:50,cls:'hub',num:4,label:'견적 판정'},
+      {id:'b1',x:640,y:38,w:150,h:40,cls:'auto',label:'견적 확정 '+man(c.repairEstimate)},
+      {id:'b2',x:640,y:110,w:150,h:40,cls:'review',label:'전손·과다 검토'}];
+    edges=[{a:'s1',b:'s2',cls:'teal'},{a:'s2',b:'s3',cls:'teal'},{a:'s3',b:'g',cls:'teal'},
+      {a:'g',b:'b1',cls:'teal',label:'명확',lcls:'teal'},{a:'g',b:'b2',cls:'amber',label:'전손·과다',lcls:'amber'}];
+  } else if(i===2){ H=164;
+    nodes=[{id:'i1',x:108,y:52,w:154,h:42,cls:'agent',num:1,label:'상해등급 산정'},
+      {id:'i2',x:108,y:112,w:154,h:42,cls:'agent',num:2,label:'과잉진료 탐지'},
+      {id:'g',x:362,y:82,w:120,h:54,cls:'hub',num:3,label:'합의 판정'},
+      {id:'b1',x:606,y:52,w:158,h:42,cls:'auto',label:'합의 확정'},
+      {id:'b2',x:606,y:112,w:158,h:42,cls:'review',label:'적정성 검토'}];
+    edges=[{a:'i1',b:'g',cls:'teal'},{a:'i2',b:'g',cls:'teal'},
+      {a:'g',b:'b1',cls:'teal',label:'적정',lcls:'teal'},{a:'g',b:'b2',cls:'amber',label:'과잉·과다',lcls:'amber'}];
+  } else if(i===3){ H=164;
+    nodes=[{id:'i1',x:108,y:52,w:154,h:44,cls:'agent',num:1,label:'블랙박스 과실',sub:c.liabilityByBlackbox},
+      {id:'i2',x:108,y:112,w:154,h:44,cls:'agent',num:2,label:'판례 과실',sub:c.liabilityByPrecedent},
+      {id:'g',x:362,y:82,w:130,h:56,cls:'hub',num:3,label:'A2A 판정 비교',sub:'차이 '+c.liabilityGap},
+      {id:'b1',x:608,y:52,w:158,h:44,cls:'auto',label:'일치 시 확정'},
+      {id:'b2',x:608,y:112,w:158,h:44,cls:'review',label:'불일치 사람 검토'}];
+    edges=[{a:'i1',b:'g',cls:'teal'},{a:'i2',b:'g',cls:'teal'},
+      {a:'g',b:'b1',cls:'teal',label:'일치',lcls:'teal'},{a:'g',b:'b2',cls:'amber',label:'불일치',lcls:'amber'}];
+  } else { H=252;
+    nodes=[{id:'src',x:78,y:122,w:122,h:46,cls:'agent',num:1,label:'시나리오 생성'},
+      {id:'o1',x:302,y:38,w:134,h:36,cls:'mint',label:'① 최적안'},
+      {id:'o2',x:302,y:94,w:134,h:36,cls:'proc',label:'② 공격안'},
+      {id:'o3',x:302,y:150,w:134,h:36,cls:'proc',label:'③ 안전안'},
+      {id:'o4',x:302,y:206,w:134,h:36,cls:'proc',label:'④ 전략안'},
+      {id:'sel',x:504,y:122,w:110,h:52,cls:'hub',num:2,label:'손해사정사 선택'},
+      {id:'b1',x:642,y:86,w:150,h:40,cls:'auto',label:'자동 '+won(c.autoAmount)},
+      {id:'b2',x:642,y:162,w:150,h:40,cls:'review',label:'검토 '+won(c.reviewAmount)}];
+    edges=[{a:'src',b:'o1',cls:'teal'},{a:'src',b:'o2',cls:'teal'},{a:'src',b:'o3',cls:'teal'},{a:'src',b:'o4',cls:'teal'},
+      {a:'o1',b:'sel',cls:'teal'},{a:'o2',b:'sel',cls:'faint'},{a:'o3',b:'sel',cls:'faint'},{a:'o4',b:'sel',cls:'faint'},
+      {a:'sel',b:'b1',cls:'teal',label:'확실',lcls:'teal'},{a:'sel',b:'b2',cls:'amber',label:'다툼·의심',lcls:'amber'}];
+  }
   return buildDiagram(W,H,nodes,edges);
 }
 function renderWorkflow(i){
@@ -1241,8 +1278,8 @@ function renderWorkflow(i){
   // 우 — AAP (같은 업무를 구조로)
   document.getElementById('t1Aap').innerHTML=
     `<div class="t1-colh"><span class="t1-tagm">AAP</span>같은 업무를 구조로 바꾼다</div>
-     <div class="t1-steps4"><span>분리</span><i>→</i><span>비교</span><i>→</i><span>사람 검토</span><i>→</i><span>기록</span></div>
-     <div class="dgm-wrap">${t1Aap(a)}</div>
+     <div class="t1-aapcap">이 단계 AAP 작동 흐름 — 단계마다 구조가 다릅니다</div>
+     <div class="dgm-wrap">${t1Aap(i)}</div>
      <div class="t1-aap-row2"><span class="t1-tk2 help">작동</span><span>${a.method}</span></div>
      <div class="t1-aap-row2"><span class="t1-tk2 help">분기 기준</span><span>${a.branchRule}</span></div>
      <div class="t1-aap-row2"><span class="t1-tk2 help">업무 결과</span><span>${a.result}</span></div>
