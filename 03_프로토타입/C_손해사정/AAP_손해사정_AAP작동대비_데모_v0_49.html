@@ -672,7 +672,7 @@
   .t1-toolside .t1-colh{color:var(--muted)}
 
   /* ===== v0.48 탭② 아키텍처 포스터 (세부요소 기본 노출 + 우측 의미 패널) ===== */
-  .arch2{display:grid;grid-template-columns:minmax(0,2.25fr) minmax(250px,1fr);gap:13px;align-items:start}
+  .arch2{display:grid;grid-template-columns:minmax(0,2.25fr) minmax(250px,1fr);gap:13px;align-items:stretch}
   @media(max-width:1040px){.arch2{grid-template-columns:1fr}}
   .arch-map{position:relative;border:1px solid var(--border);border-radius:13px;background:linear-gradient(180deg,#FCFEFE,#F6FAFB);box-shadow:var(--shadow);padding:11px 12px;min-height:600px}
   .arch-loop{display:flex;align-items:stretch;gap:3px;border:1px solid var(--border);border-radius:10px;background:#fff;padding:7px 9px;margin-bottom:10px}
@@ -853,7 +853,7 @@
   .pc-approval{font-size:9.5px;font-weight:700;color:var(--muted);background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:7px 10px;margin-top:9px;line-height:1.45}
   .pc-approval b{color:var(--slate)}
   /* v0.49b 탭③ 분할: 좌 업무 콘솔 / 우 AAP 작동 구조·설명 */
-  .sim3{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:13px;align-items:start}
+  .sim3{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:13px;align-items:stretch}
   @media(max-width:1000px){.sim3{grid-template-columns:1fr}}
   .aapx{border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,#FCFEFE,#F6FAFB);box-shadow:var(--shadow);padding:13px 14px;min-height:638px}
   .aapx-h{font-size:12.5px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px}
@@ -1615,18 +1615,11 @@ const SCREEN_NARR=[
 let aapToken=0;
 function aapxSkeleton(i){
   const t=STEP_TRACE[i], d=PC[i], a=PHASES[i].wf.aap;
-  const stages=t.cells.map(c=>{ const cell=ARCH_CELL_BY_ID[c.id], m=ARCH_MEAN[c.id]; return {el:cell?cell.t:'',dt:c.do,det:m?m.link:''}; });
-  const stagesHTML=stages.map((s,k)=>`<div class="aapx-stage pending" id="aps${k}"><span class="aps-ic">${k+1}</span><span class="aps-body"><span class="aps-el">${s.el}</span><span class="aapx-do">${s.dt}</span>${s.det?`<span class="aapx-det">${s.det}</span>`:''}</span></div>`).join('');
-  const agents=`<div class="aapx-agents"><span class="aapx-agent">${a.a1.t}<span>${a.a1.sub}</span></span><span class="aapx-agent">${a.a2.t}<span>${a.a2.sub}</span></span></div>`;
-  const html=`<div class="aapx-h">AAP 작동 구조<button class="aapx-run" id="aapxRun" type="button">다시 실행</button></div>`+
-    `<div class="aapx-sub">좌측 업무 화면에서 손해사정사가 보는 것과, 그 화면을 만들어내는 AAP 작동입니다.</div>`+
-    `<div class="aapx-screen"><span class="aapx-screen-k">이 화면에서 — 핵심: ${SCREEN_NARR[i].find}</span>${SCREEN_NARR[i].txt}</div>`+
+  const stages=t.cells.map(c=>{ const cell=ARCH_CELL_BY_ID[c.id]; return {el:cell?cell.t:'',dt:c.do}; });
+  const stagesHTML=stages.map((s,k)=>`<div class="aapx-stage pending" id="aps${k}"><span class="aps-ic">${k+1}</span><span class="aps-body"><span class="aps-el">${s.el}</span><span class="aapx-do">${s.dt}</span></span></div>`).join('');
+  const html=`<div class="aapx-h">AAP 작동 순서<button class="aapx-run" id="aapxRun" type="button">다시 실행</button></div>`+
     `<div class="aapx-prog"><div class="aapx-prog-fill" id="aapxProg"></div></div>`+
-    `<div class="aapx-sec">AAP 작동 순서 · 어떤 요소가 무엇을 하는가</div><div class="aapx-flow">${stagesHTML}</div>`+
-    `<div class="aapx-sec">핵심 에이전트</div>${agents}`+
-    `<div class="aapx-sec">AAP 차별화</div><div class="aapx-diff">${d.aap}</div>`+
-    `<div class="aapx-result" id="aapxResult"><span>이 단계 결과</span>${t.result}</div>`+
-    (STEP_BASIS[i]?`<div class="aapx-result aapx-basis" id="aapxBasis"><span>판단 근거 · 설명가능성</span>`+STEP_BASIS[i].basis.map(b=>`<div class="aapx-bl">${b}</div>`).join('')+`</div>`:'');
+    `<div class="aapx-flow">${stagesHTML}</div>`;
   return {n:stages.length, html:html};
 }
 function renderAapx(i){
@@ -1635,7 +1628,7 @@ function renderAapx(i){
   document.getElementById('aapxRun').addEventListener('click',()=>runAapxAnim(i));
   if(curTab===2){ runAapxAnim(i); }
   else { for(let k=0;k<sk.n;k++){ const s=document.getElementById('aps'+k); s.classList.remove('pending'); s.classList.add('done'); const ic=s.querySelector('.aps-ic'); if(ic)ic.textContent='✓'; }
-         document.getElementById('aapxProg').style.width='100%'; document.getElementById('aapxResult').classList.add('show'); const bb=document.getElementById('aapxBasis'); if(bb)bb.classList.add('show'); }
+         const pf=document.getElementById('aapxProg'); if(pf)pf.style.width='100%'; }
 }
 function runAapxAnim(i){
   const el=document.getElementById('aapx'); if(!el||!STEP_TRACE[i])return;
