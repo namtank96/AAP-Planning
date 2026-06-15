@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP 손해사정 Operating Loop Prototype v0.2</title>
+<!--
+  AAP 손해사정 Operating Loop Prototype v0.2 (v0.1 보강 — 전면 재작성 ✕)
+  - 보강: Money Trail · HITL→Decision Log 연동 · 과실 3기준 표 · 대인Ⅱ/상해급수 SME · 레이아웃 안정성
+          · Tool Call 로그 · Supervisor Merge · Writeback 상태 분리 · Decision Route 통일 · Platform 실행 badge · 시나리오 프리셋
+  - 온톨로지/KG 데모가 아니라, 손해사정 사건 1건이 AAP 6단계 Operating Loop
+    (Data → Semantic → Reasoning → Decision → Action → Learning)를 통과하는 작동 프로토타입.
+  - 주연: Agent Runtime · Decision Gate · HITL · Action/Writeback · Operational Learning. 온톨로지는 Semantic의 재료(조연).
+  - 단일 HTML · 외부 라이브러리/이미지 0 · 결정론 엔진(같은 입력→같은 판정, Replay MATCHED).
+-->
+<style>
+:root{
+  --ink:#0F172A; --muted:#64748B; --line:#E5E7EB; --surf:#F8FAFC;
+  --aap:#0D9488; --aap-soft:#ECFDF5; --aap-ink:#0F766E;
+  --blue:#2563EB; --blue-soft:#EFF6FF; --violet:#6D28D9; --violet-soft:#F5F3FF;
+  --amber:#D97706; --amber-soft:#FFFBEB; --danger:#DC2626; --danger-soft:#FEF2F2;
+  --green:#15803D; --green-soft:#F0FDF4; --gray:#475569;
+  --shadow:0 1px 3px rgba(15,23,42,.07),0 1px 2px rgba(15,23,42,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'Pretendard','Segoe UI',-apple-system,'Malgun Gothic',sans-serif;background:var(--surf);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+
+/* ===== 사이드바 ===== */
+.side{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+.brand .bd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800}
+.brand .bd i{width:11px;height:11px;border-radius:3px;background:var(--aap);display:inline-block}
+.brand .bs{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:6px;line-height:1.4}
+.menu{padding:9px 8px;display:flex;flex-direction:column;gap:1px}
+.menu .mh{font-size:8.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:9px 10px 4px}
+.menu a{display:grid;grid-template-columns:20px 1fr;gap:9px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--gray);text-decoration:none;transition:background .12s,color .12s}
+.menu a .mn{width:20px;height:20px;border-radius:6px;background:var(--surf);border:1px solid var(--line);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.menu a .ml{font-size:12px;font-weight:700;line-height:1.15}
+.menu a .ml span{display:block;font-size:8.5px;font-weight:700;color:var(--muted);margin-top:1px}
+.menu a:hover{background:var(--surf)}
+.menu a.active{background:var(--aap-soft)}
+.menu a.active .mn{background:var(--aap);border-color:var(--aap);color:#fff}
+.menu a.active .ml{color:var(--aap-ink)}
+.menu a.active .ml span{color:var(--aap-ink);opacity:.8}
+.side-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--line);font-size:9px;font-weight:700;color:var(--muted);line-height:1.5}
+
+/* ===== 상단바 + 루프 인디케이터 ===== */
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line);padding:11px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.crumb{font-size:13px;font-weight:800}
+.crumb span{color:var(--muted);font-weight:700}
+.case-pill{font-size:10px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid #99F6E4;border-radius:999px;padding:4px 11px}
+.loopbar{margin-left:auto;display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.loopbar .lbh{font-size:8.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:6px}
+.loopbar .ls{font-size:9px;font-weight:800;color:var(--muted);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:3px 7px;line-height:1.1}
+.loopbar .ls b{display:block;font-size:10px;color:var(--gray)}
+.loopbar .ls.on{background:var(--aap);border-color:var(--aap)}
+.loopbar .ls.on,.loopbar .ls.on b{color:#fff}
+.loopbar .la{color:#CBD5E1;font-weight:900;font-size:9px;margin:0 1px}
+
+/* ===== 화면 공통 ===== */
+.screen{padding:22px 24px 40px;max-width:1180px}
+.h1{font-size:17px;font-weight:800;margin:0 0 3px}
+.lead{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 18px;line-height:1.55;max-width:880px}
+.lead b{color:var(--gray)}
+.sec{font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:22px 0 9px}
+.sec:first-of-type{margin-top:0}
+.row{display:grid;gap:13px}
+.r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:repeat(3,1fr)}.r4{grid-template-columns:repeat(4,1fr)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.card.tight{padding:11px 13px}
+.card h4{margin:0 0 8px;font-size:12px;font-weight:800}
+.card .ch-sub{font-size:9.5px;font-weight:700;color:var(--muted);margin-left:6px}
+@media(max-width:1000px){.app{grid-template-columns:1fr}.side{position:static;height:auto}.r2,.r3,.r4{grid-template-columns:1fr}}
+
+/* KPI */
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
+.kpi .kl{font-size:10px;font-weight:800;color:var(--muted)}
+.kpi .kv{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.02em}
+.kpi .kx{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:2px}
+.kpi.auto .kv{color:var(--green)}.kpi.review .kv{color:var(--amber)}.kpi.risk .kv{color:var(--danger)}
+
+/* badge */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;border-radius:6px;padding:2px 8px;border:1px solid;line-height:1.4;white-space:nowrap}
+.b-green{background:var(--green-soft);color:var(--green);border-color:#BBF7D0}
+.b-amber{background:var(--amber-soft);color:var(--amber);border-color:#FDE68A}
+.b-red{background:var(--danger-soft);color:var(--danger);border-color:#FECACA}
+.b-blue{background:var(--blue-soft);color:var(--blue);border-color:#BFDBFE}
+.b-violet{background:var(--violet-soft);color:var(--violet);border-color:#DDD6FE}
+.b-teal{background:var(--aap-soft);color:var(--aap-ink);border-color:#99F6E4}
+.b-gray{background:var(--surf);color:var(--gray);border-color:var(--line)}
+
+/* table */
+table.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+table.tbl th{text-align:left;font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:7px 9px;border-bottom:1px solid var(--line)}
+table.tbl td{padding:8px 9px;border-bottom:1px solid var(--line);font-weight:600;color:var(--gray);vertical-align:middle}
+table.tbl tr:last-child td{border-bottom:0}
+table.tbl td b{color:var(--ink);font-weight:800}
+.mono{font-family:'SFMono-Regular',Consolas,monospace;font-size:11px}
+
+/* comparison */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.cmp .ch{font-size:10px;font-weight:800;padding:8px 13px;border-bottom:1px solid var(--line)}
+.cmp .cl{background:#FCFCFD;color:var(--muted)}.cmp .cr{background:var(--aap-soft);color:var(--aap-ink)}
+.cmp .cc{padding:9px 13px;font-size:11px;font-weight:600;border-bottom:1px solid var(--line);line-height:1.45}
+.cmp .cc.l{color:var(--muted);background:#FCFCFD}.cmp .cc.r{color:var(--gray)}
+.cmp .cc:nth-last-child(-n+2){border-bottom:0}
+
+/* caps */
+.cap{border:1px solid var(--line);border-left:3px solid var(--aap);border-radius:9px;padding:10px 12px;background:#fff}
+.cap .cn{font-size:11.5px;font-weight:800;color:var(--aap-ink)}
+.cap .cd{font-size:10.5px;font-weight:600;color:var(--muted);margin-top:3px;line-height:1.45}
+
+/* asset list */
+.asset{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;margin-bottom:7px}
+.asset .ad{width:8px;height:8px;border-radius:50%;background:var(--green);flex:0 0 auto;box-shadow:0 0 0 3px var(--green-soft)}
+.asset .at{font-size:11.5px;font-weight:800}
+.asset .ax{font-size:9.5px;font-weight:700;color:var(--muted)}
+.asset .ak{margin-left:auto;font-size:9px;font-weight:800;color:var(--blue);background:var(--blue-soft);border:1px solid #BFDBFE;border-radius:5px;padding:2px 7px}
+
+/* context rows */
+.ctx{display:flex;gap:9px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.ctx:last-child{border-bottom:0}
+.ctx .ck{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;min-width:78px;flex:0 0 auto;padding-top:1px}
+.ctx .cv{font-size:11.5px;font-weight:600;color:var(--gray);line-height:1.45}
+
+/* semantic chips / relations */
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:10px;font-weight:700;color:var(--violet);background:var(--violet-soft);border:1px solid #DDD6FE;border-radius:6px;padding:3px 8px}
+.term{padding:7px 0;border-bottom:1px dashed var(--line)}
+.term:last-child{border-bottom:0}
+.term b{font-size:11px;color:var(--violet);font-weight:800}
+.term span{font-size:10.5px;color:var(--muted);font-weight:600}
+.rel{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;padding:6px 0;border-bottom:1px dashed var(--line);flex-wrap:wrap}
+.rel:last-child{border-bottom:0}
+.rel .rn{color:var(--gray);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.rel .rr{font-size:8.5px;font-weight:800;color:var(--aap-ink)}
+.rel .rv{margin-left:auto;font-size:9.5px;font-weight:800;color:var(--muted)}
+
+/* ===== Agent Runtime ===== */
+.runtime{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+@media(max-width:1040px){.runtime{grid-template-columns:1fr}}
+.rt-comp{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.rt-comp .rc{font-size:9.5px;font-weight:800;color:var(--gray);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px}
+.rt-comp .rc.sup{color:var(--aap-ink);background:var(--aap-soft);border-color:#99F6E4}
+.rt-comp .rc.gate{color:var(--violet);background:var(--violet-soft);border-color:#DDD6FE}
+.runbar{display:flex;align-items:center;gap:11px;margin:12px 0 10px}
+.btn{font:inherit;font-size:11px;font-weight:800;border-radius:8px;padding:8px 16px;cursor:pointer;border:1px solid;transition:opacity .15s,background .15s}
+.btn-pri{background:var(--aap);color:#fff;border-color:var(--aap)}
+.btn-pri:hover{background:var(--aap-ink)}
+.btn-pri:disabled{opacity:.5;cursor:default}
+.btn-ghost{background:#fff;color:var(--gray);border-color:var(--line)}
+.btn-ghost:hover{border-color:var(--aap);color:var(--aap-ink)}
+.prog{flex:1;height:6px;border-radius:4px;background:var(--surf);border:1px solid var(--line);overflow:hidden;min-width:120px}
+.prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--aap),var(--aap-ink));transition:width .4s ease}
+.steps{display:flex;flex-direction:column;gap:5px}
+.step{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;transition:border-color .2s,opacity .2s}
+.step .si{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:var(--muted);flex:0 0 auto}
+.step .st{font-size:11.5px;font-weight:800}
+.step .sd{font-size:9.5px;font-weight:600;color:var(--muted);margin-top:1px;line-height:1.35}
+.step .so{font-size:9.5px;font-weight:800;color:var(--aap-ink);margin-top:4px;display:none}
+.step.pending{opacity:.5}
+.step.running{border-color:var(--aap)}
+.step.running .si{border-color:var(--aap);color:var(--aap);animation:spin 1s linear infinite;border-top-color:transparent}
+.step.done .si{background:var(--aap);border-color:var(--aap);color:#fff}
+.step.done .so{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+@media(max-width:560px){.agrid{grid-template-columns:1fr}}
+.acard{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;transition:opacity .25s}
+.acard.pending{opacity:.45}
+.acard .an{font-size:11px;font-weight:800;display:flex;align-items:center;gap:6px}
+.acard .averd{margin-left:auto}
+.acard .achain{margin-top:6px;font-size:9.5px;font-weight:600;color:var(--gray);line-height:1.4}
+.acard .achain div{padding-left:11px;position:relative;margin-top:2px}
+.acard .achain div::before{content:'›';position:absolute;left:0;color:var(--aap);font-weight:900}
+.acard .ameta{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.acard .ameta .tg{font-size:8px;font-weight:800;border-radius:4px;padding:1px 5px;border:1px solid}
+.acard .ameta .tg.r{color:var(--aap-ink);background:var(--aap-soft);border-color:#99F6E4}
+.acard .ameta .tg.t{color:var(--blue);background:var(--blue-soft);border-color:#BFDBFE}
+.console{background:#0F172A;border-radius:10px;padding:12px 14px;min-height:300px}
+.console .conh{font-size:9px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.console .line{font-family:'SFMono-Regular',Consolas,monospace;font-size:10.5px;line-height:1.55;color:#CBD5E1;white-space:pre-wrap;word-break:break-word;margin-bottom:2px;animation:fadein .25s ease}
+.console .line .fired{color:#5EEAD4;font-weight:700}
+.console .line .key{color:#FBBF24}
+.console .line.dim{color:#64748B}
+@keyframes fadein{from{opacity:0;transform:translateY(2px)}to{opacity:1}}
+
+/* route lanes */
+.lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:780px){.lanes{grid-template-columns:1fr 1fr}}
+.lane{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;border-top:3px solid var(--line)}
+.lane.auto{border-top-color:var(--green)}.lane.review{border-top-color:var(--amber)}
+.lane.siu{border-top-color:var(--danger)}.lane.hold{border-top-color:var(--gray)}
+.lane .lh{font-size:11px;font-weight:800}
+.lane .lamt{font-size:16px;font-weight:800;margin:4px 0;letter-spacing:-.02em}
+.lane.auto .lamt{color:var(--green)}.lane.review .lamt{color:var(--amber)}.lane.siu .lamt{color:var(--danger)}
+.lane .litem{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:3px}
+
+/* HITL */
+.hitl{display:grid;grid-template-columns:230px minmax(0,1fr) 280px;gap:13px;align-items:start}
+@media(max-width:1080px){.hitl{grid-template-columns:1fr}}
+.queue{display:flex;flex-direction:column;gap:7px}
+.qitem{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.qitem:hover{border-color:var(--aap)}
+.qitem.sel{border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.16)}
+.qitem .qn{font-size:11px;font-weight:800}
+.qitem .qx{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:2px}
+.jcard{border:1px solid var(--line);border-radius:10px;background:#fff;padding:11px 13px;margin-bottom:9px}
+.jcard .jh{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800}
+.jcard .jbasis{font-size:10.5px;font-weight:600;color:var(--gray);margin-top:6px;line-height:1.45}
+.jcard .jbasis b{color:var(--ink)}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.acts .ab{font:inherit;font-size:10px;font-weight:800;border-radius:7px;padding:6px 11px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--gray);transition:all .12s}
+.acts .ab:hover{border-color:var(--aap);color:var(--aap-ink)}
+.acts .ab.done{background:var(--aap);color:#fff;border-color:var(--aap)}
+.evchain{display:flex;flex-direction:column;gap:5px}
+.evrow{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;color:var(--gray);border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:#fff}
+.evrow .et{font-size:8px;font-weight:800;color:var(--blue);background:var(--blue-soft);border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px}
+.evrow .ev{margin-left:auto;font-size:9px;font-weight:800;color:var(--muted)}
+
+/* action */
+.actplan{display:flex;flex-direction:column;gap:8px}
+.aprow{display:grid;grid-template-columns:30px 1fr auto;gap:11px;align-items:center;border:1px solid var(--line);border-radius:9px;background:#fff;padding:10px 12px;transition:border-color .2s}
+.aprow .ai{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;background:var(--surf);border:1px solid var(--line)}
+.aprow .acode{font-size:9px;font-weight:800;color:var(--aap-ink);letter-spacing:.02em}
+.aprow .alabel{font-size:11.5px;font-weight:800;margin-top:1px}
+.aprow .atgt{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:1px}
+.aprow.sent{border-color:var(--green)}
+.wb{margin-top:7px}
+.wbrow{display:flex;align-items:center;gap:9px;font-size:10.5px;font-weight:700;padding:6px 0;border-bottom:1px dashed var(--line)}
+.wbrow:last-child{border-bottom:0}
+.wbrow .wt{font-size:9px;color:var(--muted);font-family:'SFMono-Regular',Consolas,monospace}
+.wbrow .ws{margin-left:auto}
+
+/* log */
+.logrow{display:grid;grid-template-columns:120px 1fr;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:11px}
+.logrow:last-child{border-bottom:0}
+.logrow .lk{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;padding-top:1px}
+.logrow .lv{font-weight:700;color:var(--gray);word-break:break-word}
+.logrow .lv b{color:var(--ink)}
+.replay-box{border:1px dashed var(--aap);border-radius:10px;background:var(--aap-soft);padding:12px 14px;margin-top:10px;display:none}
+.replay-box.show{display:block;animation:fadein .3s ease}
+.replay-box .rbh{font-size:11px;font-weight:800;color:var(--aap-ink);display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.matched{font-size:10px;font-weight:800;color:#fff;background:var(--green);border-radius:6px;padding:3px 9px}
+
+/* closed loop diagram */
+.loopdg{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:14px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.loopdg .ld{flex:1;min-width:96px;text-align:center;border-radius:9px;padding:9px 6px;background:var(--surf);border:1px solid var(--line)}
+.loopdg .ld b{display:block;font-size:11px;font-weight:800;color:var(--gray)}
+.loopdg .ld span{font-size:8.5px;font-weight:700;color:var(--muted)}
+.loopdg .ld.teal{background:var(--aap-soft);border-color:#99F6E4}.loopdg .ld.teal b{color:var(--aap-ink)}
+.loopdg .lda{color:var(--aap);font-weight:900;font-size:13px}
+.loopnote{font-size:9.5px;font-weight:700;color:var(--muted);text-align:center;margin-top:8px}
+
+/* platform layers */
+.layer{display:grid;grid-template-columns:172px 1fr;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 13px;margin-bottom:7px}
+.layer .lname{font-size:11px;font-weight:800;color:var(--gray)}
+.layer .ldid{font-size:8.5px;font-weight:800;color:var(--muted);display:block;margin-bottom:2px}
+.layer .ldid b{color:var(--ink)}
+.layer .ldd{font-size:11px;font-weight:600;color:var(--gray);line-height:1.45}
+.layer.core{border:1.5px solid var(--aap);background:var(--aap-soft)}
+.layer.core .lname{color:var(--aap-ink)}
+.layer.ds{border:1.5px solid var(--violet);background:var(--violet-soft)}
+.layer.ds .lname{color:var(--violet)}
+.layer .dsmark{font-size:7.5px;font-weight:800;color:var(--violet);background:#fff;border:1px solid #DDD6FE;border-radius:4px;padding:1px 5px;margin-left:6px}
+.layer .coremark{font-size:7.5px;font-weight:800;color:var(--aap-ink);background:#fff;border:1px solid #99F6E4;border-radius:4px;padding:1px 5px;margin-left:6px}
+
+.note{font-size:9.5px;font-weight:700;color:var(--muted);background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:9px 12px;line-height:1.5;margin-top:14px}
+.note b{color:var(--gray)}
+
+/* ===== v0.2 보강 ===== */
+/* 콘솔: Tool Call 블록 (Spec B #1) */
+.toolcall{border:1px solid rgba(94,234,212,.35);border-left:3px solid var(--aap);background:rgba(13,148,136,.08);border-radius:8px;padding:8px 10px;margin:7px 0;font-family:'SFMono-Regular',Consolas,monospace;font-size:10.5px;color:#CBD5E1;word-break:break-word;animation:fadein .25s ease}
+.toolcall .tc-head{color:#5EEAD4;font-weight:800}
+.toolcall .tc-agent{color:#FBBF24;font-weight:700}
+.toolcall .tc-line{margin-top:2px}
+.toolcall .tc-line.in{color:#93C5FD}
+/* 콘솔: Supervisor Merge 블록 (Spec B #2) */
+.mergebox{border:1px solid rgba(251,191,36,.4);border-left:3px solid #FBBF24;background:rgba(251,191,36,.08);border-radius:8px;padding:8px 10px;margin:8px 0;font-family:'SFMono-Regular',Consolas,monospace;font-size:10.5px;color:#CBD5E1;word-break:break-word;animation:fadein .25s ease}
+.mergebox .mh{color:#FBBF24;font-weight:800;margin-bottom:3px}
+.mergebox .mline{padding-left:9px}
+.mergebox .mfin{color:#5EEAD4;font-weight:700;margin-top:4px}
+/* Money Trail (Spec A #1) */
+.money{display:grid;grid-template-columns:1.1fr 22px 0.9fr 22px 1.1fr;gap:8px;align-items:center;margin-bottom:8px}
+@media(max-width:880px){.money{grid-template-columns:1fr}}
+.money .mbox{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px}
+.money .mbox .ml{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.money .mbox .mv{font-size:15px;font-weight:800;margin-top:2px}
+.money .mbox .mx{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:2px;line-height:1.4}
+.money .mbox.split{border-color:var(--aap);background:var(--aap-soft)}
+.money .mar{text-align:center;color:var(--aap);font-weight:900;font-size:15px}
+.money .mrow{display:flex;justify-content:space-between;gap:6px;font-size:11px;font-weight:700;margin-top:3px}
+.money .mrow.auto b{color:var(--green)}.money .mrow.review b{color:var(--amber)}
+.est{font-size:9px;font-weight:800;color:var(--amber);background:var(--amber-soft);border:1px solid #FDE68A;border-radius:5px;padding:1px 6px;margin-left:5px}
+/* 과실 3기준 표 (Spec A #3) */
+.liab-concl{font-size:11px;font-weight:800;color:var(--amber-ink,var(--amber));background:var(--amber-soft);border:1px solid #FDE68A;border-left:3px solid var(--amber);border-radius:8px;padding:9px 11px;margin-top:9px;line-height:1.45}
+/* Layer status badge (Spec B #5) */
+.layer-status{display:inline-flex;align-items:center;font-size:8px;font-weight:900;color:var(--aap-ink);background:#fff;border:1px solid #99F6E4;border-radius:5px;padding:1px 6px;margin-left:6px}
+.layer-status.pending{color:var(--muted);border-color:var(--line);background:var(--surf)}
+.layer-status.done{color:var(--green);border-color:#BBF7D0;background:var(--green-soft)}
+.layer-status.warn{color:var(--amber);border-color:#FDE68A;background:var(--amber-soft)}
+/* 프리셋 토글 */
+.presets{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.presets .ph{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:3px}
+.presets .pb{font:inherit;font-size:10.5px;font-weight:800;border:1px solid var(--line);background:#fff;color:var(--gray);border-radius:999px;padding:5px 13px;cursor:pointer;transition:all .12s}
+.presets .pb:hover{border-color:var(--aap);color:var(--aap-ink)}
+.presets .pb.on{background:var(--aap);color:#fff;border-color:var(--aap)}
+/* Runtime Metrics strip (Spec B #11) */
+.metrics{display:flex;flex-wrap:wrap;gap:7px;align-items:center;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 13px}
+.metrics .mt{font-size:10.5px;font-weight:800;color:var(--gray);background:var(--surf);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
+.metrics .mt b{color:var(--aap-ink)}
+.metrics .mt.ok b{color:var(--green)}
+/* 레이아웃 안정성 (Spec A #5 / Spec B): 높이 점프·오버플로우 방지 */
+.acard{min-height:128px}
+.console{overflow:auto}
+.toolcall,.mergebox,.console .line{box-sizing:border-box;max-width:100%}
+.jcard{min-height:0}
+.aprow{box-sizing:border-box}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="bd"><i></i> AAP 손해사정</div>
+      <div class="bs">Operating Loop Prototype v0.2<br>업무 요청 → 판단·검토·실행·학습</div>
+    </div>
+    <nav class="menu" id="menu"></nav>
+    <div class="side-foot">Simulation PoC · 수치는 내장 fixture 산출값<br>외부 라이브러리/이미지 0 · 단일 HTML</div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb" id="crumb">AAP Overview</div>
+      <div class="case-pill" id="casePill">CLM-2026-0417 · 교차로 직진/좌회전</div>
+      <div class="loopbar" id="loopbar"></div>
+    </div>
+    <div class="screen" id="screen"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ===================== 0. fixtures ===================== */
+const CASE = {
+  id:"CLM-2026-0417", title:"교차로 직진/좌회전 충돌 사고", claimType:"자동차보험 대물·대인 청구",
+  accidentType:"교차로 직진/좌회전", requester:"고객 (모바일 청구 접수)", owner:"김민준 손해사정사",
+  authority:"팀장 전결 (≤100만원) · 그 외 검토", sla:"서류 접수 후 10일 이내 지급", receivedAt:"2026-06-15 09:42",
+  steps:["지급 심사","견적 산정","대인 피해","과실 산정","처리 방법"],
+  policy:{ id:"POL-AUTO-8842", product:"개인용 자동차보험", coverage:["대물배상","대인배상Ⅰ","대인배상Ⅱ","자기차량손해"],
+           special:["운전자 한정 특약","블랙박스 할인 특약"], active:true, medLimitI:30000000 },
+  amounts:{ claimTotal:7800000, repairEstimate:4800000, medicalSettlement:3000000, autoPay:900000, review:1710000, autoLimit:1000000 },
+  evidence:[
+    {id:"E01",type:"blackbox",name:"블랙박스 영상",status:"확보",trust:0.92},
+    {id:"E02",type:"photo",name:"사고 현장 사진",status:"확보",trust:0.81},
+    {id:"E03",type:"estimate",name:"수리견적서",status:"확보",trust:0.76},
+    {id:"E04",type:"medical",name:"진단서",status:"확보",trust:0.74},
+    {id:"E05",type:"statement",name:"운전자 진술",status:"불일치",trust:0.48}
+  ],
+  signals:{ similarClaims6m:3, repairOutlier:true, marketRange:"320만~410만", outlierPct:"+17%",
+            statementMismatch:true, fraudScore:78, fraudThreshold:75,
+            blackboxLiability:"85:15", precedentLiability:"70:30", liabilityGap:15, liabilityThreshold:10,
+            kniaType:"차26 교차로 직진·좌회전", kniaBase:"60:40", kniaMod:"신호위반 +25%p",
+            injuryGrade:"경추염좌 · 상해 14급", treatDays:14 }
+};
+/* 시나리오 프리셋 — 같은 엔진, 입력만 교체(입력 바뀌면 경로가 달라짐). signals/amounts 전체 교체. */
+const DEFAULT_SIGNALS=JSON.parse(JSON.stringify(CASE.signals));
+const DEFAULT_AMOUNTS=JSON.parse(JSON.stringify(CASE.amounts));
+const PRESETS={
+ default:{ name:"기본 (현 사건)", sig:{}, amt:{} },
+ low:{ name:"저위험", sig:{ similarClaims6m:0, repairOutlier:false, marketRange:"60만~95만", outlierPct:"범위 내", statementMismatch:false, fraudScore:32, blackboxLiability:"75:25", precedentLiability:"70:30", liabilityGap:5 },
+       amt:{ claimTotal:800000, repairEstimate:800000, medicalSettlement:0, autoPay:720000, review:0 } },
+ high:{ name:"고위험", sig:{ similarClaims6m:4, repairOutlier:true, marketRange:"600만~720만", outlierPct:"+38%", statementMismatch:true, fraudScore:92, blackboxLiability:"90:10", precedentLiability:"70:30", liabilityGap:20 },
+        amt:{ claimTotal:12000000, repairEstimate:9000000, medicalSettlement:3000000, autoPay:0, review:3600000 } }
+};
+let curPreset="default";
+function applyPreset(key){
+  curPreset=key;
+  CASE.signals=Object.assign(JSON.parse(JSON.stringify(DEFAULT_SIGNALS)), PRESETS[key].sig);
+  CASE.amounts=Object.assign(JSON.parse(JSON.stringify(DEFAULT_AMOUNTS)), PRESETS[key].amt);
+  RESULT=computeResult();
+  STATE.hitl={}; STATE.ranRuntime=false; STATE.actionsSent=false; STATE.replayed=false;
+  nav(curKey);
+}
+
+/* Tool Call 트레이스 — Agent가 실제로 호출하는 도구·입출력 (Spec B #1) */
+const TOOL_CALL_TRACE=[
+ {toolId:"TL1",toolName:"Policy API",agent:"Coverage Agent",input:"policyId = POL-AUTO-8842",
+  output:["policy.active = true","coverage = 대물·대인Ⅰ·대인Ⅱ·자차","R01 PASS"]},
+ {toolId:"TL3",toolName:"Estimate Validator",agent:"Damage Agent",input:"repairEstimate = "+CASE.amounts.repairEstimate.toLocaleString('ko-KR'),
+  output:["marketRange = "+CASE.signals.marketRange,"outlierPct = "+CASE.signals.outlierPct,"R31 ESTIMATE_REVIEW"]},
+ {toolId:"TL4",toolName:"KNIA Matcher",agent:"Liability Agent",input:"accidentType = 교차로 직진/좌회전",
+  output:["matched = 차26 교차로 직진·좌회전","base liability = 60:40","modifier = 신호위반 +25%p → 검토 시 확정"]},
+ {toolId:"TL5",toolName:"FDS Rule Engine",agent:"Fraud Agent",input:"claimHistory + evidence signals",
+  output:["similarClaims6m = "+CASE.signals.similarClaims6m,"statementMismatch = "+CASE.signals.statementMismatch,"fraudScore = "+CASE.signals.fraudScore,"R20 SIU_REVIEW"]}
+];
+/* Supervisor Merge — 여러 Agent 판단을 조정·병합 (Spec B #2) */
+const SUPERVISOR_MERGE_TRACE=[
+ "Coverage Agent: PASS → 자동 가능",
+ "Damage Agent: ESTIMATE_REVIEW → HITL",
+ "Medical Agent: INJURY_CHECK → HITL",
+ "Liability Agent: REVIEW_REQUIRED → HITL",
+ "Fraud Agent: SIU_REVIEW → SIU",
+ "Decision Agent에 split-routing 요청"
+];
+
+const LOOP=[
+ {k:"Data",ko:"수집",out:"입력 데이터 묶음"},
+ {k:"Semantic",ko:"의미화",out:"업무 맥락 패키지"},
+ {k:"Reasoning",ko:"추론·계획",out:"판단 후보"},
+ {k:"Decision",ko:"판단·분기",out:"처리 경로"},
+ {k:"Action",ko:"실행 반영",out:"시스템 반영 결과"},
+ {k:"Learning",ko:"운영 학습",out:"Decision Log · Skill"}
+];
+const CAPS=[
+ {n:"① 업무 의미화",d:"용어·정책·권한·예외를 Agent가 쓰는 업무 맥락으로 정리"},
+ {n:"② 시스템 반영",d:"판단 후보·실행 결과를 Workflow·API·ERP·결재로 연결"},
+ {n:"③ 실행 통제",d:"권한·위험도·승인 기준으로 자동/검토/보류 경로 관리"},
+ {n:"④ 운영 학습",d:"판단 근거·결과·예외·피드백을 정책·지식·Skill로 축적"}
+];
+
+const CUSTOMER_ASSETS=[
+ {name:"청구 접수 시스템",kind:"Claim",detail:"청구 1건 적재"},
+ {name:"보험계약 시스템",kind:"Policy",detail:"POL-AUTO-8842"},
+ {name:"정비 견적 (파트너)",kind:"Estimate",detail:"부품·공임 4행"},
+ {name:"진단서 OCR",kind:"Medical",detail:"진단서 1건 디지털화"},
+ {name:"과거 청구 이력 DB",kind:"History",detail:"최근 6개월 3건"},
+ {name:"약관·규정·KMS",kind:"Knowledge",detail:"담보·면책 · KNIA 401유형"}
+];
+const CONTEXT_PACKAGE=[
+ {k:"사건 요약",v:"교차로 직진/좌회전 충돌, 대물 + 대인 청구"},
+ {k:"담보 맥락",v:"POL-AUTO-8842 · 대물배상·대인배상Ⅰ·자차 · 운전자 한정 특약"},
+ {k:"증거 맥락",v:"블랙박스(0.92)·현장사진(0.81)·견적서(0.76)·진단서(0.74) · 진술(0.48 불일치)"},
+ {k:"권한 기준",v:"자동 처리 한도 100만원 / 그 외 팀장 전결·검토"},
+ {k:"예외 기준",v:"사기점수 ≥75 SIU · 과실 차이 >10%p 검토 · 견적 이상치 검토"}
+];
+const SEMANTIC_MODEL={
+ terms:[
+  {t:"담보",m:"이 청구가 보장 대상인지 가르는 계약 범위"},
+  {t:"면책",m:"음주·무보험·시효 등 지급 제외 사유"},
+  {t:"과실비율",m:"사고 책임 분담 비율 (KNIA 유형 + 수정요소)"},
+  {t:"과잉진료",m:"통상 치료기간을 넘는 진료 신호"},
+  {t:"SIU",m:"보험사기 전담 특별조사"}
+ ],
+ policies:["자동 처리 한도 100만원","사기점수 75점 이상 SIU 의뢰","과실 차이 10%p 초과 사람 검토"],
+ entities:["Claim","Policy","Coverage","Accident","Evidence","Damage","MedicalClaim","LiabilityPattern","FraudSignal","Rule","Decision","Action","Reviewer"]
+};
+const CASE_RELATIONS=[
+ {f:"Claim",r:"HAS_POLICY",t:"Policy POL-AUTO-8842",v:"covered"},
+ {f:"Accident",r:"MATCHES_PATTERN",t:"KNIA 차26 교차로",v:"60:40 기본"},
+ {f:"Accident",r:"HAS_EVIDENCE",t:"블랙박스 E01",v:"85:15 / 0.92"},
+ {f:"History",r:"TRIGGERS_RULE",t:"R20 사기신호",v:"3건 / 6개월"},
+ {f:"Gap 15%p",r:"TRIGGERS_RULE",t:"R04 과실충돌",v:"> 10%p"},
+ {f:"R04·R20·R31",r:"PRODUCES",t:"Decision REVIEW",v:"사람 검토"}
+];
+
+const TOOL_REGISTRY=[
+ {id:"TL1",name:"Policy API",use:"계약·담보 유효성 조회"},
+ {id:"TL2",name:"Claim History DB",use:"과거 청구·관계인 조회"},
+ {id:"TL3",name:"Estimate Validator",use:"수리견적 시장범위 대조"},
+ {id:"TL4",name:"KNIA Matcher",use:"사고유형·과실 기본비율 매칭"},
+ {id:"TL5",name:"FDS Rule Engine",use:"사기 위험 신호 평가"},
+ {id:"TL6",name:"Notice Generator",use:"안내문·합의서 초안 생성"}
+];
+
+const RUNTIME_STEPS=[
+ {t:"Supervisor 목표 해석",d:"청구 처리 목표를 업무 단계로 해석"},
+ {t:"Agent 분해",d:"Coverage·Damage·Medical·Liability·Fraud·Decision 6개 Agent 배정"},
+ {t:"Context Package 조회",d:"의미화된 업무 맥락(담보·증거·권한·예외) 로드"},
+ {t:"Tool 호출",d:"Policy API·History DB·Estimate Validator·KNIA Matcher·FDS 실행"},
+ {t:"규칙·정책 평가",d:"R01·R04·R11·R20·R31·R45·R46 평가",trace:true},
+ {t:"Agent 결과 취합",d:"6개 Agent 판단 후보 수집",reveal:true},
+ {t:"충돌·위험 판단",d:"과실 15%p 충돌 · 사기 78점 위험 표면화"},
+ {t:"Decision Gate 전달",d:"자동 처리 / 사람 검토 / 보류 / SIU 경로로 분기"}
+];
+
+const PLATFORM_LAYERS=[
+ {id:"L1",name:"Experience / Access",did:"손해사정사 HITL Workspace · 고객 청구 채널 제공"},
+ {id:"L2",name:"Build / Design",did:"손해사정 Agent Flow · Skill · Action Policy 구성"},
+ {id:"L3",name:"Agent Runtime",did:"Supervisor + 6개 Agent 실행 · Tool 호출 · 가드레일",accent:"core"},
+ {id:"L4",name:"Knowledge / Semantic",did:"약관·담보·과실 기준·권한을 Context Package로 조립",accent:"ds"},
+ {id:"L5",name:"Data / Integration",did:"청구·계약·견적·이력·문서 시스템 연결·정규화"},
+ {id:"L6",name:"AI Quality / Evaluation",did:"판단 근거·충돌·재현성 평가"},
+ {id:"L7",name:"Control / Governance",did:"자동/검토/보류·SIU 기준 적용 · 권한 분기",accent:"ds"},
+ {id:"L8",name:"Infra / Foundation",did:"보안·감사·폐쇄망 · Decision Log 저장"}
+];
+
+/* ===================== 1. helpers ===================== */
+function won(n){ return n.toLocaleString('ko-KR')+"원"; }
+function man(n){ return (n/10000).toLocaleString('ko-KR')+"만원"; }
+function fnv(str){ let h=0x811c9dc5; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0); }
+function hash4(obj){ return fnv(JSON.stringify(obj)).toString(16).toUpperCase().padStart(8,"0").slice(0,4); }
+function badge(cls,txt){ return '<span class="badge '+cls+'">'+txt+'</span>'; }
+
+/* ===================== 2. 결정론 엔진 (같은 입력 → 같은 판정) ===================== */
+function computeResult(){
+  const s=CASE.signals, a=CASE.amounts, p=CASE.policy;
+  const fired=["R01","R11"];
+  const ourBB=parseInt((s.blackboxLiability.split(":")[1]||"0"),10);
+  const ourPre=parseInt((s.precedentLiability.split(":")[1]||"0"),10);
+  const conflict=(s.liabilityGap>s.liabilityThreshold);
+  const hasReview=(a.review>0);
+  const medLine=a.medicalSettlement>0
+    ? (a.medicalSettlement<=p.medLimitI ? "대인 합의 "+man(a.medicalSettlement)+" → 대인Ⅰ 한도 내" : "대인 합의 "+man(a.medicalSettlement)+" → 대인Ⅰ 한도 초과·대인Ⅱ 적용")
+    : "대인 청구 없음";
+
+  const cov={agent:"Coverage Agent",verdict:"PASS",vcls:"b-green",code:"COVERED",route:"AUTO",rules:["R01"],tools:["TL1"],
+    chain:["POL-AUTO-8842 active = true","담보 대물·대인Ⅰ·대인Ⅱ·자차 포함",medLine,"claim.type ∈ coverage → COVERED"]};
+
+  let dmg;
+  if(s.repairOutlier){ fired.push("R31"); dmg={agent:"Damage Agent",verdict:"REVIEW",vcls:"b-amber",code:"ESTIMATE_REVIEW",route:"HITL",rules:["R31"],tools:["TL3"],
+    chain:["수리견적 "+man(a.repairEstimate)+" vs 시장범위 "+s.marketRange,"초과율 "+s.outlierPct+" → 이상치 판정","R31 ESTIMATE_REVIEW 발동"]}; }
+  else { dmg={agent:"Damage Agent",verdict:"PASS",vcls:"b-green",code:"ESTIMATE_OK",route:"AUTO",rules:["R31"],tools:["TL3"],
+    chain:["수리견적 "+man(a.repairEstimate)+" · 시장범위 "+s.marketRange+" 내","이상치 없음 → 자동 확정"]}; }
+
+  let med;
+  if(a.medicalSettlement>0){ fired.push("R32"); med={agent:"Medical Agent",verdict:"PARTIAL",vcls:"b-amber",code:"INJURY_CHECK",route:"HITL",rules:["R32"],tools:["TL3"],
+    chain:["대인 합의금 "+man(a.medicalSettlement)+" · "+s.injuryGrade+" (후유장해 아님)","통상 치료기간("+s.treatDays+"일) 대비 초과분 확인","R32 추가 확인"]}; }
+  else { med={agent:"Medical Agent",verdict:"SKIP",vcls:"b-gray",code:"NO_INJURY",route:"AUTO",rules:[],tools:[],chain:["대인 피해 없음 → 단계 skip"]}; }
+
+  let lia;
+  if(conflict){ fired.push("R04"); lia={agent:"Liability Agent",verdict:"REVIEW",vcls:"b-amber",code:"REVIEW_REQUIRED",route:"HITL",rules:["R11","R04"],tools:["TL4"],
+    chain:["KNIA "+s.kniaType+" 기본 "+s.kniaBase+" · "+s.kniaMod+" → 검토 시 확정","블랙박스 우리 "+ourBB+"% (trust 0.92) ↔ 판례 우리 "+ourPre+"%","gap "+s.liabilityGap+"%p > threshold "+s.liabilityThreshold+"%p","R11 고신뢰 증거 + R04 충돌 → REVIEW_REQUIRED (자동 확정 불가·보류)"]}; }
+  else { lia={agent:"Liability Agent",verdict:"PASS",vcls:"b-green",code:"LIABILITY_OK",route:"AUTO",rules:["R11"],tools:["TL4"],
+    chain:["블랙박스 우리 "+ourBB+"% ↔ 판례 우리 "+ourPre+"%","gap "+s.liabilityGap+"%p ≤ "+s.liabilityThreshold+"%p → 자동 확정"]}; }
+
+  let fr;
+  if(s.fraudScore>=s.fraudThreshold){ fired.push("R20"); fr={agent:"Fraud Agent",verdict:"SIU",vcls:"b-red",code:"SIU_REVIEW",route:"SIU",rules:["R20"],tools:["TL2","TL5"],
+    chain:["유사청구 6개월 "+s.similarClaims6m+"건",(s.statementMismatch?"운전자 진술 불일치 (E05 trust 0.48)":"운전자 진술 일치"),"FDS score "+s.fraudScore+" ≥ "+s.fraudThreshold,"R20 SIU_REVIEW 발동"]}; }
+  else if(s.fraudScore>=60){ fired.push("R20"); fr={agent:"Fraud Agent",verdict:"CHECK",vcls:"b-amber",code:"FIELD_CHECK",route:"HITL",rules:["R20"],tools:["TL2","TL5"],
+    chain:["FDS score "+s.fraudScore+" (60~"+s.fraudThreshold+") → 현장 확인 권고","R20 FIELD_CHECK"]}; }
+  else { fr={agent:"Fraud Agent",verdict:"CLEAR",vcls:"b-green",code:"FRAUD_CLEAR",route:"AUTO",rules:[],tools:["TL5"],
+    chain:["유사청구 "+s.similarClaims6m+"건 · FDS score "+s.fraudScore+" < 60 → 위험 신호 없음"]}; }
+
+  fired.push("R45","R46");
+  const dec={agent:"Decision Agent",verdict:"SPLIT",vcls:"b-blue",code:"AUTO+HITL+SIU",route:"SPLIT",rules:["R45","R46"],tools:[],
+    chain:["확실분: 위험<40 & 금액 ≤ 자동한도 "+man(a.autoLimit)+" → AUTO "+won(a.autoPay),(hasReview?"다툼·의심분: gap "+s.liabilityGap+"%p · fraud "+s.fraudScore+" → HITL "+won(a.review):"전 항목 확정 → 사람 검토 없음"),"R45 자동 분리 + R46 사람 검토 라우팅"]};
+
+  const agents=[cov,dmg,med,lia,fr,dec];
+
+  const routeParts=[];
+  if(a.autoPay>0) routeParts.push("AUTO");
+  if(agents.some(x=>x.route==="HITL")) routeParts.push("HITL");
+  if(fr.route==="SIU") routeParts.push("SIU_REVIEW");
+  if(!routeParts.length) routeParts.push("AUTO");
+  const routeStr=routeParts.join(" + ");
+
+  const order=["R01","R04","R11","R20","R31","R32","R45","R46"];
+  const firedOrder=order.filter(r=>fired.indexOf(r)>=0);
+
+  const traceLines=[];
+  traceLines.push({r:"R01_COVERAGE_VALID",res:"PASS",det:"POL-AUTO-8842 active · 담보 포함"});
+  traceLines.push({r:"R11_BLACKBOX_TRUST",res:"HIGH_CONFIDENCE",det:"trust 0.92 ≥ 0.90"});
+  if(conflict) traceLines.push({r:"R04_LIABILITY_CONFLICT",res:"REVIEW_REQUIRED",det:"우리 "+ourBB+"% vs "+ourPre+"%, gap "+s.liabilityGap+"%p > "+s.liabilityThreshold+"%p"});
+  if(s.fraudScore>=s.fraudThreshold) traceLines.push({r:"R20_FRAUD_SIGNAL",res:"SIU_REVIEW",det:"유사 "+s.similarClaims6m+"건/6m + score "+s.fraudScore+" ≥ "+s.fraudThreshold});
+  else if(s.fraudScore>=60) traceLines.push({r:"R20_FRAUD_SIGNAL",res:"FIELD_CHECK",det:"score "+s.fraudScore+" (60~"+s.fraudThreshold+")"});
+  if(s.repairOutlier) traceLines.push({r:"R31_ESTIMATE_OUTLIER",res:"ESTIMATE_REVIEW",det:man(a.repairEstimate)+" > "+s.marketRange+" ("+s.outlierPct+")"});
+  traceLines.push({r:"R45_AUTO_SPLIT",res:"AUTO_PAY",det:"위험<40 & ≤"+man(a.autoLimit)+" → "+won(a.autoPay)});
+  if(hasReview) traceLines.push({r:"R46_HITL_ROUTING",res:"HITL_REVIEW",det:"fraud "+s.fraudScore+" || gap "+s.liabilityGap+"%p → "+won(a.review)});
+
+  const rcOf=r=>r==="AUTO"?"auto":(r==="SIU"?"siu":(r==="HITL"?"review":"hold"));
+  const rtOf=r=>r==="AUTO"?"자동 처리 가능":(r==="SIU"?"SIU 검토":(r==="HITL"?"사람 검토":"추가 확인"));
+  const gLabel={"Coverage Agent":"담보 유효성","Damage Agent":"수리견적 이상치","Medical Agent":"대인 합의","Liability Agent":"과실 비율 충돌","Fraud Agent":"보험사기 위험"};
+  const gateRows=agents.filter(x=>x.agent!=="Decision Agent").map(x=>({item:gLabel[x.agent],res:x.verdict,cls:x.vcls,route:rtOf(x.route),rcls:rcOf(x.route),rules:(x.rules.join(" · ")||"—")}));
+
+  const actionPlan=[
+   {code:"AUTO_PAY",icon:"💳",label:"지급 승인 요청 생성",amt:won(a.autoPay),target:"지급 시스템 (Writeback)",statusAfterExecute:"ack",statusClass:"b-green"},
+   {code:"REVIEW_QUEUE",icon:"📋",label:"검토 큐 등록",amt:won(a.review),target:"손해사정 워크스페이스",statusAfterExecute:"ack",statusClass:"b-green"},
+   {code:"DOC_REQUEST",icon:"📨",label:"대인 합의 추가서류 요청",amt:"",target:"고객 안내 (Notice)",statusAfterExecute:"sent",statusClass:"b-blue"},
+   {code:"SIU_REFERRAL",icon:"🔎",label:"보험사기 조사 검토 후보",amt:"Fraud "+s.fraudScore+"점",target:"SIU 조사팀",statusAfterExecute:"pending approval",statusClass:"b-amber"}
+  ];
+
+  const moneyTrail={
+    claim:[
+      {k:"대물 수리견적",v:a.repairEstimate,note:"시장범위 "+s.marketRange+" 대비 "+s.outlierPct},
+      {k:"대인 합의 요구",v:a.medicalSettlement,note:s.injuryGrade+" · 적정성 검토"}
+    ],
+    steps:[
+      "담보 적용: 대물배상·대인배상Ⅰ 유효 (POL-AUTO-8842)",
+      "과실상계: 우리 과실 "+Math.min(ourBB,ourPre)+"~"+Math.max(ourBB,ourPre)+"% 다툼 → 과실비율 확정 보류",
+      "확정/미확정 분리"
+    ],
+    route:[
+      {k:"자동 처리",v:a.autoPay,why:"다툼·이상치 없는 확정 대물 기본분",cls:"auto"},
+      {k:"사람 검토",v:a.review,why:"견적 초과분 + 대인 합의 적정성 + 과실 다툼 + 사기 영향",cls:"review"}
+    ],
+    ourShare:a.autoPay+a.review, claimTotal:a.claimTotal
+  };
+
+  const liabilityCompare={
+    rows:[
+      {std:"블랙박스 (고신뢰 0.92)",fault:ourBB+"%",note:"실증 증거"},
+      {std:"유사 판례",fault:ourPre+"%",note:"사례 기반"},
+      {std:"KNIA "+s.kniaType,fault:"검토 시 확정",note:s.kniaBase+" 기본 + "+s.kniaMod+" · SME 검증"}
+    ],
+    conflict:conflict,
+    conclusion: conflict
+      ? "블랙박스 "+ourBB+"% ↔ 판례 "+ourPre+"%, 차이 "+s.liabilityGap+"%p > 임계 "+s.liabilityThreshold+"%p → 자동 확정 불가 → 사람 검토 보류"
+      : "기준 간 차이 "+s.liabilityGap+"%p ≤ 임계 "+s.liabilityThreshold+"%p → 자동 확정"
+  };
+
+  const inputHash=hash4({id:CASE.id,sig:s,amt:a,ev:CASE.evidence.map(e=>e.trust)});
+  const resultHash=hash4({rules:firedOrder,routes:agents.map(r=>r.code)});
+  return {agents,firedOrder,traceLines,gateRows,actionPlan,moneyTrail,liabilityCompare,routeStr,inputHash,resultHash,
+          runId:"RUN-"+CASE.id+"-01", logId:"DLG-2026-0417-01", runAt:"2026-06-15 14:32:10"};
+}
+let RESULT=computeResult();
+
+/* 실행 상태 */
+const STATE={ ranRuntime:false, hitl:{}, actionsSent:false, replayed:false };
+
+/* ===================== 3. 화면 정의 ===================== */
+const SCREENS=[
+ {key:"overview", label:"AAP Overview", sub:"이게 AAP다", stage:null},
+ {key:"intake",   label:"Work Intake",  sub:"업무 요청 접수", stage:"Data"},
+ {key:"context",  label:"Data & Context", sub:"맥락 패키지", stage:"Semantic"},
+ {key:"runtime",  label:"Agent Runtime", sub:"핵심 · 실행", stage:"Reasoning"},
+ {key:"gate",     label:"Decision Gate", sub:"자동/검토 분기", stage:"Decision"},
+ {key:"hitl",     label:"HITL Workspace", sub:"사람 검토", stage:"Decision"},
+ {key:"action",   label:"Action / Writeback", sub:"시스템 반영", stage:"Action"},
+ {key:"learning", label:"Learning & Ops", sub:"로그·재현·학습", stage:"Learning"},
+ {key:"platform", label:"Platform Architecture", sub:"8계층 작동", stage:null}
+];
+let curKey="overview";
+
+/* ===================== 4. 렌더 ===================== */
+function elScreen(){ return document.getElementById("screen"); }
+
+function renderOverview(){
+  const a=CASE.amounts, s=CASE.signals;
+  const kpis=[
+   {l:"청구 총액",v:man(a.claimTotal),x:"대물 "+man(a.repairEstimate)+" + 대인 "+man(a.medicalSettlement),c:""},
+   {l:"자동 처리 후보",v:won(a.autoPay),x:"확실분 · Decision Gate AUTO",c:"auto"},
+   {l:"사람 검토 대상",v:won(a.review),x:"다툼·의심분 · HITL",c:"review"},
+   {l:"보험사기 위험 점수",v:s.fraudScore+"점",x:"임계 "+s.fraudThreshold+"점 초과 → SIU",c:"risk"}
+  ];
+  const cmp=[
+   ["담당자가 문서·시스템을 오가며 직접 판단","사건이 업무 맥락 패키지로 구조화됨"],
+   ["규정 적용 근거가 담당자마다 달라짐","Agent·Rule Trace로 동일 기준 적용"],
+   ["검토 사유가 사후에 정리됨","Evidence·Decision이 판단 시점에 생성"],
+   ["결과가 개인 경험에 머묾","Decision Log·Skill로 운영 학습에 축적"]
+  ];
+  let h='<h1 class="h1">AAP Overview — 손해사정 사건이 AAP 안에서 어떻게 처리되는가</h1>';
+  h+='<p class="lead">AAP는 답변을 생성하는 단일 AI 화면이 아니라, <b>업무 요청을 데이터 수집 → 의미화 → Agent 판단 → 실행 분기 → 시스템 반영 → 운영 학습</b>으로 연결하는 운영형 플랫폼입니다. 아래 사건 1건이 6단계 Operating Loop를 실제로 통과합니다.</p>';
+
+  h+='<div class="sec">핵심 지표</div><div class="row r4">';
+  kpis.forEach(k=>{ h+='<div class="kpi '+k.c+'"><div class="kl">'+k.l+'</div><div class="kv">'+k.v+'</div><div class="kx">'+k.x+'</div></div>'; });
+  h+='</div>';
+
+  h+='<div class="sec">AAP Operating Loop — 이 사건이 도는 운영 사이클</div>';
+  h+='<div class="loopdg">';
+  LOOP.forEach((l,i)=>{ h+='<div class="ld'+(i===2?' teal':'')+'"><b>'+(i+1)+'. '+l.k+'</b><span>'+l.ko+' · '+l.out+'</span></div>'; if(i<LOOP.length-1) h+='<span class="lda">▶</span>'; });
+  h+='</div><div class="loopnote">↻ Learning 결과가 다음 주기의 의미화·정책·Skill로 환류되어 사이클이 닫힙니다 · 현재 사건은 전 단계를 1회 통과 완료</div>';
+
+  h+='<div class="sec">기존 방식 vs AAP</div>';
+  h+='<div class="cmp"><div class="ch cl">기존 방식 (담당자 · 챗봇/RAG · 단일 LLM)</div><div class="ch cr">AAP 방식 (Operating Loop)</div>';
+  cmp.forEach(r=>{ h+='<div class="cc l">'+r[0]+'</div><div class="cc r">'+r[1]+'</div>'; });
+  h+='</div>';
+
+  h+='<div class="sec">AAP 4대 역량</div><div class="row r4">';
+  CAPS.forEach(c=>{ h+='<div class="cap"><div class="cn">'+c.n+'</div><div class="cd">'+c.d+'</div></div>'; });
+  h+='</div>';
+  h+='<div class="sec">Runtime Metrics — 이 사건의 AAP 작동 결과</div><div class="metrics">';
+  h+='<span class="mt">Agents <b>'+RESULT.agents.length+'</b></span><span class="mt">Tool Calls <b>'+TOOL_CALL_TRACE.length+'</b></span><span class="mt">Rules Fired <b>'+RESULT.firedOrder.length+'</b></span><span class="mt">Action 후보 <b>'+RESULT.actionPlan.length+'</b></span><span class="mt">Decision Route <b>'+RESULT.routeStr+'</b></span><span class="mt ok">Replay <b>MATCHED</b></span>';
+  h+='</div>';
+  h+='<div class="note"><b>차이의 핵심:</b> 단일 AI는 "답"을 만들고 끝납니다. AAP는 판단을 <b>자동/검토/보류로 분기</b>하고, 실제 시스템에 <b>반영(Writeback)</b>하고, 근거를 <b>로그로 남기고</b>, 같은 입력에 <b>같은 판정(재현성)</b>을 보장하며, 검증된 패턴을 <b>Skill로 축적</b>합니다.</div>';
+  return h;
+}
+
+function renderIntake(){
+  let h='<h1 class="h1">Work Intake — 업무 요청 접수</h1>';
+  h+='<p class="lead">손해사정 사건이 <b>업무 요청</b>으로 AAP Runtime에 접수됩니다. 단순 데이터가 아니라 "처리해야 할 일"로 들어옵니다.</p>';
+  h+='<div class="row r2">';
+  h+='<div class="card"><h4>접수 사건</h4>';
+  const meta=[["사건번호",CASE.id],["사고 유형",CASE.title],["청구 종류",CASE.claimType],["요청자",CASE.requester],["담당자",CASE.owner],["처리 권한",CASE.authority],["SLA",CASE.sla],["접수 시각",CASE.receivedAt]];
+  meta.forEach(m=>{ h+='<div class="ctx"><div class="ck">'+m[0]+'</div><div class="cv">'+m[1]+'</div></div>'; });
+  h+='</div>';
+  h+='<div class="card"><h4>업무 단계 <span class="ch-sub">참고자료 5단계 워크플로우</span></h4>';
+  h+='<div class="loopdg" style="border:0;padding:0">';
+  CASE.steps.forEach((st,i)=>{ h+='<div class="ld"><b>STEP '+(i+1)+'</b><span>'+st+'</span></div>'; if(i<CASE.steps.length-1) h+='<span class="lda">▶</span>'; });
+  h+='</div>';
+  h+='<div style="margin-top:14px"><div class="ck" style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:7px">자동 처리 가능 여부</div>';
+  h+=badge("b-amber","부분 자동 — 사람 검토 동반")+' <span style="font-size:10.5px;font-weight:700;color:var(--muted)">과실 충돌·사기 신호로 일부 항목은 HITL 필요</span></div>';
+  h+='<div style="margin-top:14px"><div class="ck" style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:7px">투입 예정 Agent</div><div class="chips">';
+  ["Coverage","Damage","Medical","Liability","Fraud","Decision"].forEach(a=>{ h+='<span class="chip" style="color:var(--aap-ink);background:var(--aap-soft);border-color:#99F6E4">'+a+' Agent</span>'; });
+  h+='</div></div>';
+  h+='</div></div>';
+  h+='<div class="note">이 단계의 운영 산출물 = <b>업무 요청 패킷</b> → 다음: Data & Context에서 고객 자산을 연결해 맥락 패키지를 조립합니다.</div>';
+  return h;
+}
+
+function renderContext(){
+  let h='<h1 class="h1">Data & Context — 업무 맥락 패키지 조립</h1>';
+  h+='<p class="lead">고객의 데이터·문서·시스템을 연결하고, 업무 용어·정책·권한 기준으로 <b>의미화</b>하여 Agent가 판단할 수 있는 맥락으로 조립합니다. <b>온톨로지·지식그래프는 여기(Semantic)의 재료</b>이지 주인공이 아닙니다.</p>';
+  h+='<div class="row" style="grid-template-columns:0.95fr 1.1fr 0.95fr">';
+  // left
+  h+='<div class="card"><h4>고객 자산 연결</h4>';
+  CUSTOMER_ASSETS.forEach(s=>{ h+='<div class="asset"><span class="ad"></span><div><div class="at">'+s.name+'</div><div class="ax">'+s.detail+'</div></div><span class="ak">'+s.kind+'</span></div>'; });
+  h+='</div>';
+  // center
+  h+='<div class="card"><h4>Context Package <span class="ch-sub">업무 맥락 패키지</span></h4>';
+  CONTEXT_PACKAGE.forEach(c=>{ h+='<div class="ctx"><div class="ck">'+c.k+'</div><div class="cv">'+c.v+'</div></div>'; });
+  h+='</div>';
+  // right
+  h+='<div class="card"><h4>Semantic Mapping <span class="ch-sub">의미화 (조연)</span></h4>';
+  h+='<div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:4px">업무 용어 → 의미</div>';
+  SEMANTIC_MODEL.terms.forEach(t=>{ h+='<div class="term"><b>'+t.t+'</b> <span>— '+t.m+'</span></div>'; });
+  h+='<div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;margin:11px 0 6px">판단 정책</div><div class="chips">';
+  SEMANTIC_MODEL.policies.forEach(p=>{ h+='<span class="chip">'+p+'</span>'; });
+  h+='</div></div>';
+  h+='</div>';
+  // relations
+  h+='<div class="sec">사건 관계 (Knowledge Graph — Semantic 계층의 일부)</div><div class="card">';
+  CASE_RELATIONS.forEach(r=>{ h+='<div class="rel"><span class="rn">'+r.f+'</span><span class="rr">'+r.r+'</span><span class="rn">'+r.t+'</span><span class="rv">'+r.v+'</span></div>'; });
+  h+='</div>';
+  h+='<div class="note">운영 산출물 = <b>업무 맥락 패키지</b>. 단순 문서 검색(RAG)과 달리, 판단에 필요한 담보·증거·권한·예외 기준이 <b>구조화된 형태</b>로 Agent Runtime에 전달됩니다.</div>';
+  return h;
+}
+
+function renderRuntime(){
+  let h='<h1 class="h1">Agent Runtime — 이 프로토타입의 핵심</h1>';
+  h+='<p class="lead">Supervisor가 목표를 분해하고, 6개 Agent가 Context와 Tool을 사용해 판단 후보를 만듭니다. <b>규칙 엔진만이 아니라</b> 계획·도구 호출·근거 평가·충돌 판단까지 실제 실행 순서대로 보여줍니다.</p>';
+  h+=presetsHTML();
+  h+='<div class="rt-comp">';
+  h+='<span class="rc sup">Supervisor Agent</span>';
+  ["Coverage","Damage","Medical","Liability","Fraud"].forEach(a=>{ h+='<span class="rc">'+a+' Agent</span>'; });
+  h+='<span class="rc gate">Decision Agent</span>';
+  h+='<span class="rc">Tool Registry ('+TOOL_REGISTRY.length+')</span><span class="rc">Memory / Context</span><span class="rc">Model Gateway</span><span class="rc">Policy Guardrail</span>';
+  h+='</div>';
+  h+='<div class="runbar"><button class="btn btn-pri" id="runBtn" onclick="runRuntime()">▶ Run Agent Runtime</button><div class="prog"><i id="rtProg"></i></div><span id="rtState" style="font-size:10px;font-weight:800;color:var(--muted)">대기 중</span></div>';
+  h+='<div class="runtime">';
+  // left: steps + agent cards
+  h+='<div><div class="steps" id="rtSteps">';
+  RUNTIME_STEPS.forEach((st,i)=>{ h+='<div class="step pending" id="rtStep'+i+'"><span class="si">'+(i+1)+'</span><div><div class="st">'+st.t+'</div><div class="sd">'+st.d+'</div><div class="so" id="rtOut'+i+'"></div></div></div>'; });
+  h+='</div>';
+  h+='<div class="sec" style="margin-top:18px">Agent 판단 결과</div><div class="agrid" id="agrid">';
+  RESULT.agents.forEach((ag,i)=>{ h+=agentCardHTML(ag,i,!STATE.ranRuntime); });
+  h+='</div></div>';
+  // right: trace console
+  h+='<div class="console"><div class="conh">Runtime Trace · Tool Call · 규칙 · Supervisor Merge</div><div id="rtConsole">';
+  if(STATE.ranRuntime){ h+=toolCallHTML()+traceLinesHTML()+supervisorMergeHTML(); } else { h+='<div class="line dim">Run Agent Runtime 클릭 시 도구 호출 → 규칙 평가 → Supervisor 병합이 순차 출력됩니다.</div>'; }
+  h+='</div></div>';
+  h+='</div>';
+  return h;
+}
+function agentCardHTML(ag,i,pending){
+  let c='<div class="acard'+(pending?' pending':'')+'" id="ac'+i+'"><div class="an">'+ag.agent+'<span class="averd">'+badge(ag.vcls,ag.verdict)+'</span></div>';
+  c+='<div class="achain">'; ag.chain.forEach(x=>{ c+='<div>'+x+'</div>'; }); c+='</div>';
+  c+='<div class="ameta">'; ag.rules.forEach(r=>{ c+='<span class="tg r">'+r+'</span>'; }); ag.tools.forEach(t=>{ const tl=TOOL_REGISTRY.find(x=>x.id===t); c+='<span class="tg t">'+(tl?tl.name:t)+'</span>'; }); c+='</div></div>';
+  return c;
+}
+function traceLinesHTML(){
+  let c='<div class="line dim">— Rule Evaluation —</div>';
+  RESULT.traceLines.forEach(l=>{ c+='<div class="line"><span class="fired">'+l.r+'</span> fired → <span class="key">'+l.res+'</span>\n  '+l.det+'</div>'; });
+  c+='<div class="line"><span class="key">DECISION_GATE</span> → '+RESULT.routeStr+'\n  AUTO '+won(CASE.amounts.autoPay)+' / HITL '+won(CASE.amounts.review)+(RESULT.routeStr.indexOf("SIU")>=0?' / SIU '+CASE.signals.fraudScore+'점':'')+'</div>';
+  return c;
+}
+function toolCallHTML(){
+  let c="";
+  TOOL_CALL_TRACE.forEach(t=>{
+    c+='<div class="toolcall"><div class="tc-head">CALL '+t.toolId+' '+t.toolName+' <span class="tc-agent">· '+t.agent+'</span></div>';
+    c+='<div class="tc-line in">INPUT  '+t.input+'</div>';
+    t.output.forEach(o=>{ c+='<div class="tc-line">OUTPUT '+o+'</div>'; });
+    c+='</div>';
+  });
+  return c;
+}
+function supervisorMergeHTML(){
+  let c='<div class="mergebox"><div class="mh">SUPERVISOR MERGE</div>';
+  RESULT.agents.filter(x=>x.agent!=="Decision Agent").forEach(x=>{ const r=x.route==="AUTO"?"자동 가능":(x.route==="SIU"?"SIU":(x.route==="HITL"?"HITL":"확인")); c+='<div class="mline">'+x.agent.replace(" Agent","")+": "+x.verdict+" → "+r+'</div>'; });
+  c+='<div class="mfin">→ Decision Agent: split-routing → '+RESULT.routeStr+'</div></div>';
+  return c;
+}
+
+function moneyTrailHTML(){
+  const mt=RESULT.moneyTrail, a=CASE.amounts; const diff=mt.claimTotal-mt.ourShare;
+  let h='<div class="money">';
+  h+='<div class="mbox"><div class="ml">청구 총액</div><div class="mv">'+man(mt.claimTotal)+'</div>';
+  mt.claim.forEach(c=>{ if(c.v>0) h+='<div class="mx">'+c.k+' '+man(c.v)+'</div>'; });
+  h+='</div><div class="mar">▶</div>';
+  h+='<div class="mbox"><div class="ml">담보·과실상계 적용</div><div class="mv" style="color:var(--ink)">'+man(mt.ourShare)+'<span class="est">추정</span></div><div class="mx">우리 부담 추정 · 차액 '+man(diff)+' = 상대 과실분·미인정분</div></div><div class="mar">▶</div>';
+  h+='<div class="mbox split"><div class="ml">처리 경로 분리</div><div class="mrow auto"><span>자동 처리</span><b>'+won(a.autoPay)+'</b></div><div class="mrow review"><span>사람 검토</span><b>'+won(a.review)+'</b></div></div>';
+  h+='</div>';
+  h+='<div class="note">과실비율이 <b>보류 상태</b>이므로 우리 부담 '+man(mt.ourShare)+'은 확정이 아니라 <b>추정</b>입니다. 자동 '+won(a.autoPay)+'·검토 '+won(a.review)+'의 won 구성과 과실상계 계산은 <b>가정값 · SME 검증 대상</b>.</div>';
+  return h;
+}
+function renderGate(){
+  const a=CASE.amounts, lc=RESULT.liabilityCompare, s=CASE.signals;
+  let h='<h1 class="h1">Decision Gate — 처리 경로 분기</h1>';
+  h+='<p class="lead">AAP는 판단만 하는 시스템이 아니라 <b>처리 경로를 결정하는 운영 플랫폼</b>입니다. 위험도·확신도·권한 기준에 따라 분기합니다. 최종 경로 <b>'+RESULT.routeStr+'</b>.</p>';
+  h+='<div class="sec">금액 흐름 (Money Trail) — 청구가 어떻게 자동/검토로 갈라지는가</div>'+moneyTrailHTML();
+  h+='<div class="sec">판단 항목별 분기</div><div class="card"><table class="tbl"><thead><tr><th>판단 항목</th><th>결과</th><th>분기</th><th>발동 규칙</th></tr></thead><tbody>';
+  RESULT.gateRows.forEach(g=>{ h+='<tr><td><b>'+g.item+'</b></td><td>'+badge(g.cls,g.res)+'</td><td>'+g.route+'</td><td class="mono">'+g.rules+'</td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div class="sec">과실 비율 — 세 기준 비교 (임의 수렴 ✕, 차이가 크면 보류)</div><div class="card"><table class="tbl"><thead><tr><th>기준</th><th>우리 과실</th><th>비고</th></tr></thead><tbody>';
+  lc.rows.forEach(r=>{ h+='<tr><td><b>'+r.std+'</b></td><td><b>'+r.fault+'</b></td><td>'+r.note+'</td></tr>'; });
+  h+='</tbody></table><div class="liab-concl">결론 — '+lc.conclusion+'</div></div>';
+  h+='<div class="sec">분기 결과</div><div class="lanes">';
+  if(a.autoPay>0) h+='<div class="lane auto"><div class="lh">자동 처리</div><div class="lamt">'+won(a.autoPay)+'</div><div class="litem">담보 PASS · 위험<40 · ≤'+man(a.autoLimit)+'</div><div class="litem">'+badge("b-green","R45 AUTO_PAY")+'</div></div>';
+  if(a.review>0) h+='<div class="lane review"><div class="lh">사람 검토 (HITL)</div><div class="lamt">'+won(a.review)+'</div><div class="litem">견적 이상치 · 과실 충돌 · 대인</div><div class="litem">'+badge("b-amber","R46 HITL_REVIEW")+'</div></div>';
+  if(s.fraudScore>=s.fraudThreshold) h+='<div class="lane siu"><div class="lh">SIU 검토</div><div class="lamt">'+s.fraudScore+'점</div><div class="litem">사기 점수 ≥ '+s.fraudThreshold+(s.statementMismatch?' · 진술 불일치':'')+'</div><div class="litem">'+badge("b-red","R20 SIU_REVIEW")+'</div></div>';
+  if(a.medicalSettlement>0) h+='<div class="lane hold"><div class="lh">보류 / 추가확인</div><div class="lamt" style="color:var(--gray)">대인</div><div class="litem">통상 대비 과잉진료 확인</div><div class="litem">'+badge("b-gray","R32 PARTIAL")+'</div></div>';
+  h+='</div>';
+  h+='<div class="note"><b>왜 Rule Trace보다 중요한가:</b> 같은 사건이라도 금액·위험·권한에 따라 처리 경로가 달라집니다. AAP는 이 경로 결정을 <b>기준에 따라 일관되게</b> 수행하고, 검토 대상만 사람에게 넘깁니다. 입력 시나리오(상단 Runtime)를 바꾸면 이 분기도 달라집니다.</div>';
+  return h;
+}
+
+function renderHitl(){
+  const queue=RESULT.agents.filter(a=>a.route==="HITL"||a.route==="SIU");
+  let h='<h1 class="h1">HITL Workspace — 사람 검토</h1>';
+  h+='<p class="lead">AAP가 넘긴 <b>검토 사유</b>를 손해사정사가 처리합니다. AAP 추천 결과와 근거를 보고 승인·반려·추가서류·SIU를 결정하며, 결과는 Decision Log로 저장됩니다.</p>';
+  h+='<div class="hitl">';
+  // queue
+  h+='<div><div class="sec" style="margin-top:0">검토 큐 ('+queue.length+')</div><div class="queue">';
+  queue.forEach((q,i)=>{ const st=STATE.hitl[i]; h+='<div class="qitem'+(i===0?' sel':'')+'" onclick="selQueue('+i+')" id="q'+i+'"><div class="qn">'+q.agent.replace(" Agent","")+' '+badge(q.vcls,q.verdict)+'</div><div class="qx">'+(st?'처리: '+st.act:q.code)+'</div></div>'; });
+  h+='<div class="qitem" style="cursor:default;opacity:.7"><div class="qn">Coverage '+badge("b-green","PASS")+'</div><div class="qx">자동 처리 — 검토 불요</div></div>';
+  h+='</div></div>';
+  // center: judgment cards
+  h+='<div id="hitlMain">'+hitlMainHTML(0,queue)+'</div>';
+  // right: evidence chain + route
+  h+='<div><div class="sec" style="margin-top:0">Evidence Chain</div><div class="card tight"><div class="evchain">';
+  CASE.evidence.forEach(e=>{ const tc=e.trust>=0.8?'b-green':(e.trust>=0.6?'b-amber':'b-red'); h+='<div class="evrow"><span class="et">'+e.id+'</span>'+e.name+' '+badge(tc,e.status)+'<span class="ev">trust '+e.trust+'</span></div>'; });
+  h+='</div></div>';
+  h+='<div class="sec">Decision Route</div><div class="card tight"><div style="font-size:11px;font-weight:700;color:var(--gray);line-height:1.6">자동 '+won(CASE.amounts.autoPay)+' · 검토 '+won(CASE.amounts.review)+' · SIU 후보<br><span style="color:var(--muted);font-size:10px">검토 결과 → '+RESULT.logId+'에 저장</span></div></div>';
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
+function hitlMainHTML(sel,queue){
+  queue=queue||RESULT.agents.filter(a=>a.route==="HITL"||a.route==="SIU");
+  let h='<div class="sec" style="margin-top:0">AAP 추천 결과 · 판단 근거</div>';
+  RESULT.agents.forEach((ag,i)=>{ if(ag.route==="AUTO") return;
+    h+='<div class="jcard"><div class="jh">'+ag.agent+' '+badge(ag.vcls,ag.verdict)+'</div><div class="jbasis">'+ag.chain.map(x=>x).join(' · ')+'</div></div>';
+  });
+  const acts=["승인","반려","추가서류 요청","SIU 의뢰","지급 보류"];
+  h+='<div class="sec">검토 액션 — 선택한 큐 항목에 적용</div><div class="acts">';
+  acts.forEach(a=>{ h+='<button class="ab" onclick="hitlAct(\''+a+'\')">'+a+'</button>'; });
+  h+='</div><div id="hitlFeedback" style="font-size:10.5px;font-weight:700;color:var(--aap-ink);margin-top:9px"></div>';
+  return h;
+}
+
+function renderAction(){
+  let h='<h1 class="h1">Action / Writeback — 시스템 반영</h1>';
+  h+='<p class="lead">AAP와 단순 AI/Copilot의 결정적 차이입니다. 판단으로 끝나지 않고 <b>지급·결재·안내·조사 시스템에 실제로 반영(Writeback)</b>합니다. 실패 시 재시도·보류·수동 전환 경로도 가집니다.</p>';
+  h+='<div class="runbar"><button class="btn btn-pri" id="actBtn" onclick="executeActions()">▶ Execute Actions</button><span id="actState" style="font-size:10px;font-weight:800;color:var(--muted)">미실행</span></div>';
+  h+='<div class="sec">Action Plan</div><div class="actplan" id="actPlan">';
+  RESULT.actionPlan.forEach((ap,i)=>{ h+='<div class="aprow" id="ap'+i+'"><div class="ai">'+ap.icon+'</div><div><div class="acode">'+ap.code+'</div><div class="alabel">'+ap.label+(ap.amt?' · '+ap.amt:'')+'</div><div class="atgt">→ '+ap.target+'</div></div><div id="apb'+i+'">'+badge("b-gray","대기")+'</div></div>'; });
+  h+='</div>';
+  h+='<div class="sec">Writeback Log</div><div class="card tight"><div class="wb" id="wbLog"><div class="wbrow" style="border:0"><span style="color:var(--muted);font-weight:700">Execute Actions 실행 시 시스템 반영 결과가 기록됩니다.</span></div></div></div>';
+  h+='<div class="note">실행 결과는 <b>반영(ack) · 발송(sent) · 승인 대기(pending approval)</b>로 구분됩니다. SIU 의뢰는 자동 실행이 아니라 <b>승인 대기</b>로 남아 사람 승인을 거칩니다. 실패 시 자동 재시도 1회 → 실패 시 보류 큐 + 수동 전환으로 강등.</div>';
+  return h;
+}
+
+function humanFeedbackText(){
+  const keys=Object.keys(STATE.hitl);
+  if(!keys.length) return "검토 대기 (HITL Workspace에서 처리)";
+  return keys.map(i=>STATE.hitl[i].agent+": "+STATE.hitl[i].act).join(" · ");
+}
+function finalRouteText(){
+  const keys=Object.keys(STATE.hitl); let r=RESULT.routeStr;
+  if(keys.length){ const acts=keys.map(i=>STATE.hitl[i].act);
+    if(acts.indexOf("반려")>=0) r+=" → REJECT 포함";
+    else if(acts.every(a=>a==="승인")) r+=" → 사람 검토 후 AUTO 확정"; }
+  return r;
+}
+function renderLearning(){
+  let h='<h1 class="h1">Learning &amp; Ops — 판단 이력 · 재현성 · 학습</h1>';
+  h+='<p class="lead">모든 판단 근거·도구 호출·실행 결과가 <b>Decision Log</b>로 남고, 같은 입력을 재실행하면 <b>같은 판정</b>이 나옵니다(결정론). 검증된 패턴은 재사용 <b>Skill 후보</b>로 축적됩니다.</p>';
+  h+='<div class="row r2">';
+  h+='<div class="card"><h4>Decision Log <span class="ch-sub">'+RESULT.logId+'</span></h4>';
+  const log=[
+   ["Run ID",RESULT.runId],
+   ["Input Hash",'<b class="mono">'+CASE.id+"-"+RESULT.inputHash+'</b>'],
+   ["Agents","Coverage · Damage · Medical · Liability · Fraud · Decision"],
+   ["Tools Called","Policy API · History DB · Estimate Validator · KNIA Matcher · FDS"],
+   ["Rules Fired",'<span class="mono">'+RESULT.firedOrder.join(", ")+'</span>'],
+   ["Decision Route",finalRouteText()],
+   ["Human Feedback",humanFeedbackText()],
+   ["Result Hash",'<b class="mono">'+RESULT.logId.replace("DLG-","DLG-")+" · "+RESULT.resultHash+'</b>'],
+   ["Timestamp",RESULT.runAt]
+  ];
+  log.forEach(r=>{ h+='<div class="logrow"><div class="lk">'+r[0]+'</div><div class="lv">'+r[1]+'</div></div>'; });
+  h+='</div>';
+  h+='<div class="card"><h4>운영 학습 자산</h4>';
+  h+='<div class="ctx"><div class="ck">Skill 후보</div><div class="cv">교차로 좌회전 사고 과실 검토 Skill v0.1 '+badge("b-violet","검증 대기")+'</div></div>';
+  h+='<div class="ctx"><div class="ck">정책 후보</div><div class="cv">과실 차이 임계 10%p 검토 정책 '+badge("b-violet","검증 대기")+'</div></div>';
+  h+='<div class="ctx"><div class="ck">Evaluation</div><div class="cv">판단 근거 추적 100% · 동일 입력 재현성 '+badge("b-green","PASS")+'</div></div>';
+  h+='<div class="ctx"><div class="ck">Human Feedback</div><div class="cv">검토 결과는 다음 주기 의미화·정책으로 환류</div></div>';
+  h+='<div class="replay-box" id="replayBox"><div class="rbh">Replay 결과 <span class="matched">MATCHED</span></div>';
+  h+='<div class="logrow"><div class="lk">Input Hash</div><div class="lv mono">'+CASE.id+"-"+RESULT.inputHash+'</div></div>';
+  h+='<div class="logrow"><div class="lk">Rules Fired</div><div class="lv mono">'+RESULT.firedOrder.join(", ")+'</div></div>';
+  h+='<div class="logrow"><div class="lk">Decision Route</div><div class="lv">'+RESULT.routeStr+'</div></div>';
+  h+='<div class="logrow"><div class="lk">Result Hash</div><div class="lv mono">'+RESULT.resultHash+'</div></div>';
+  h+='<div style="font-size:10px;font-weight:700;color:var(--aap-ink);margin-top:6px">같은 입력 → 같은 규칙 발동 → 같은 판정. 해시 일치로 재현성 검증됨.</div></div>';
+  h+='<div style="margin-top:11px"><button class="btn btn-ghost" onclick="replayCase()">↻ Re-run same case (재현성 검증)</button></div>';
+  h+='</div>';
+  h+='</div>';
+  h+='<div class="note"><b>EvalOps / Audit:</b> 사후가 아니라 판단 시점에 근거가 남기 때문에, 민원·소송·감사 시 동일 기준의 판정 근거를 즉시 제시할 수 있습니다.</div>';
+  return h;
+}
+
+function getLayerStatus(id){
+  if(id==="L1") return {t:"workspace ready",c:""};
+  if(id==="L2") return {t:"flow configured",c:""};
+  if(id==="L3") return STATE.ranRuntime?{t:"executed",c:"done"}:{t:"pending",c:"pending"};
+  if(id==="L4") return {t:"context loaded",c:""};
+  if(id==="L5") return STATE.actionsSent?{t:"connected + writeback",c:"done"}:{t:"connected",c:""};
+  if(id==="L6") return STATE.replayed?{t:"replay matched",c:"done"}:{t:"log ready",c:""};
+  if(id==="L7") return {t:"HITL/SIU applied",c:"warn"};
+  if(id==="L8") return {t:"audit storage ready",c:""};
+  return {t:"ready",c:""};
+}
+function renderPlatform(){
+  let h='<h1 class="h1">Platform Architecture — 이 사건에서 8계층이 한 일</h1>';
+  h+='<p class="lead">정적 아키텍처 그림이 아니라, 이번 손해사정 사건에서 각 계층이 <b>실제로 무엇을 했는지</b>로 봅니다. 손해사정 use case는 AAP 공통 플랫폼 역량으로 일반화됩니다. (캐논: 8계층 + Operating Loop + Trust 횡단)</p>';
+  PLATFORM_LAYERS.forEach(l=>{
+    const cls=l.accent==="core"?" core":(l.accent==="ds"?" ds":"");
+    const mark=l.accent==="core"?'<span class="coremark">핵심</span>':(l.accent==="ds"?'<span class="dsmark">KT ds 차별화</span>':"");
+    const st=getLayerStatus(l.id);
+    h+='<div class="layer'+cls+'"><div class="lname">'+l.id+' '+l.name+mark+'<span class="layer-status '+st.c+'">'+st.t+'</span></div><div class="ldd">'+l.did+'</div></div>';
+  });
+  h+='<div class="sec">화면 → AAP 공통 역량 매핑</div><div class="card"><table class="tbl"><thead><tr><th>프로토타입 화면</th><th>AAP 공통 역량</th><th>Operating Loop</th></tr></thead><tbody>';
+  const map=[
+   ["Work Intake","Service Experience / Access","Data"],
+   ["Data & Context","Business Semantic Modeling","Semantic"],
+   ["Agent Runtime","Agentic Reasoning","Reasoning"],
+   ["Decision Gate","Execution Control","Decision"],
+   ["HITL Workspace","Human Review / Approval","Decision"],
+   ["Action / Writeback","System Reflection","Action"],
+   ["Learning & Ops","Operational Learning / EvalOps","Learning"],
+   ["Platform Architecture","Trust Foundation (횡단)","—"]
+  ];
+  map.forEach(m=>{ h+='<tr><td><b>'+m[0]+'</b></td><td>'+m[1]+'</td><td class="mono">'+m[2]+'</td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div class="sec">닫힌 루프</div><div class="loopdg">';
+  ["Data","Semantic","Agentic Reasoning","Action / HITL","Decision Log","Learning"].forEach((x,i,arr)=>{ h+='<div class="ld'+(i===2?' teal':'')+'"><b>'+x+'</b></div>'; if(i<arr.length-1) h+='<span class="lda">▶</span>'; });
+  h+='<span class="lda">↻</span></div><div class="loopnote">Learning → Semantic 으로 환류되어 사이클이 닫힙니다</div>';
+  return h;
+}
+
+const RENDER={overview:renderOverview,intake:renderIntake,context:renderContext,runtime:renderRuntime,gate:renderGate,hitl:renderHitl,action:renderAction,learning:renderLearning,platform:renderPlatform};
+
+/* ===================== 5. 인터랙션 ===================== */
+let rtToken=0;
+function runRuntime(){
+  const btn=document.getElementById("runBtn"); if(btn){btn.disabled=true;}
+  const stateEl=document.getElementById("rtState"); if(stateEl) stateEl.textContent="실행 중…";
+  const prog=document.getElementById("rtProg"), con=document.getElementById("rtConsole");
+  if(con) con.innerHTML="";
+  RESULT.agents.forEach((ag,i)=>{ const c=document.getElementById("ac"+i); if(c) c.classList.add("pending"); });
+  for(let i=0;i<RUNTIME_STEPS.length;i++){ const s=document.getElementById("rtStep"+i); if(s){ s.className="step pending"; } }
+  const myToken=++rtToken; let k=-1;
+  (function next(){
+    if(myToken!==rtToken) return;
+    if(k>=0){ const s=document.getElementById("rtStep"+k); if(s){ s.classList.remove("running"); s.classList.add("done"); const so=document.getElementById("rtOut"+k); if(so) so.textContent="✓ 완료"; }
+      if(prog) prog.style.width=Math.round(((k+1)/RUNTIME_STEPS.length)*100)+"%"; }
+    k++;
+    if(k>=RUNTIME_STEPS.length){ STATE.ranRuntime=true; if(btn){btn.disabled=false; btn.textContent="↻ 다시 실행";} if(stateEl) stateEl.textContent="완료 · 판단 후보 6건 생성";
+      RESULT.agents.forEach((ag,i)=>{ const c=document.getElementById("ac"+i); if(c) c.classList.remove("pending"); }); return; }
+    const s=document.getElementById("rtStep"+k); if(s){ s.classList.remove("pending"); s.classList.add("running"); }
+    const st=RUNTIME_STEPS[k];
+    if(con){
+      if(k===3) con.insertAdjacentHTML("beforeend",toolCallHTML());
+      if(st.trace) con.insertAdjacentHTML("beforeend",traceLinesHTML());
+      if(k===6) con.insertAdjacentHTML("beforeend",supervisorMergeHTML());
+      con.scrollTop=con.scrollHeight;
+    }
+    if(st.reveal){ RESULT.agents.forEach((ag,i)=>{ const c=document.getElementById("ac"+i); if(c) c.classList.remove("pending"); }); }
+    setTimeout(next,820);
+  })();
+}
+
+function selQueue(i){
+  document.querySelectorAll(".qitem").forEach(q=>q.classList.remove("sel"));
+  const el=document.getElementById("q"+i); if(el) el.classList.add("sel");
+  STATE.curQueue=i;
+}
+function hitlAct(act){
+  const i=STATE.curQueue||0;
+  const queue=RESULT.agents.filter(a=>a.route==="HITL"||a.route==="SIU");
+  const ag=queue[i]?queue[i].agent.replace(" Agent",""):"";
+  STATE.hitl[i]={act:act,agent:ag};
+  const el=document.getElementById("q"+i); if(el){ const qx=el.querySelector(".qx"); if(qx) qx.textContent="처리: "+act; }
+  const fb=document.getElementById("hitlFeedback"); if(fb) fb.innerHTML='✓ 검토 큐 #'+(i+1)+' ('+ag+') → "'+act+'" 처리 · Decision Log('+RESULT.logId+')에 기록됨 <button class="btn btn-ghost" onclick="nav(\'learning\')" style="margin-left:8px;padding:4px 10px">Decision Log 확인</button> <button class="btn btn-ghost" onclick="nav(\'action\')" style="margin-left:4px;padding:4px 10px">Action / Writeback으로 이동</button>';
+}
+
+let actToken=0;
+const ACT_STTXT={ack:"반영됨",sent:"발송됨","pending approval":"승인 대기"};
+function executeActions(){
+  const btn=document.getElementById("actBtn"); if(btn) btn.disabled=true;
+  const stateEl=document.getElementById("actState"); if(stateEl) stateEl.textContent="반영 중…";
+  const wb=document.getElementById("wbLog"); if(wb) wb.innerHTML="";
+  const myToken=++actToken; let k=0;
+  (function next(){
+    if(myToken!==actToken) return;
+    if(k>=RESULT.actionPlan.length){ if(btn){btn.disabled=false; btn.textContent="↻ 다시 실행";}
+      if(stateEl){ const ack=RESULT.actionPlan.filter(x=>x.statusAfterExecute==="ack").length, snt=RESULT.actionPlan.filter(x=>x.statusAfterExecute==="sent").length, pnd=RESULT.actionPlan.filter(x=>x.statusAfterExecute==="pending approval").length; stateEl.textContent="완료 · 반영 "+ack+" · 발송 "+snt+" · 승인대기 "+pnd; }
+      STATE.actionsSent=true; return; }
+    const ap=RESULT.actionPlan[k]; const row=document.getElementById("ap"+k), b=document.getElementById("apb"+k);
+    const txt=ACT_STTXT[ap.statusAfterExecute]||ap.statusAfterExecute;
+    if(row && ap.statusAfterExecute==="ack") row.classList.add("sent");
+    if(b) b.innerHTML=badge(ap.statusClass,txt);
+    if(wb){ const r=document.createElement("div"); r.className="wbrow"; r.innerHTML='<span class="wt">14:32:'+(10+k)+'</span>'+ap.code+' → '+ap.target+'<span class="ws">'+badge(ap.statusClass,txt)+'</span>'; wb.appendChild(r); }
+    k++; setTimeout(next,560);
+  })();
+}
+
+function replayCase(){
+  const r2=computeResult();
+  const ok=(r2.inputHash===RESULT.inputHash && r2.resultHash===RESULT.resultHash);
+  const box=document.getElementById("replayBox"); if(box){ box.classList.add("show"); if(!ok){ box.querySelector(".matched").textContent="MISMATCH"; box.querySelector(".matched").style.background="var(--danger)"; } }
+  STATE.replayed=true;
+}
+
+/* ===================== 6. 라우팅 ===================== */
+function presetsHTML(){
+  let h='<div class="presets"><span class="ph">입력 시나리오</span>';
+  Object.keys(PRESETS).forEach(k=>{ h+='<button class="pb'+(curPreset===k?" on":"")+'" onclick="applyPreset(\''+k+'\')">'+PRESETS[k].name+'</button>'; });
+  h+='<span style="font-size:9.5px;font-weight:700;color:var(--muted);margin-left:6px">같은 엔진 · 입력만 교체 → 경로가 달라집니다</span></div>';
+  return h;
+}
+function buildMenu(){
+  const m=document.getElementById("menu");
+  let h='<div class="mh">AAP Operating Loop</div>';
+  SCREENS.forEach((s,i)=>{ h+='<a id="m_'+s.key+'" onclick="nav(\''+s.key+'\')"><span class="mn">'+i+'</span><span class="ml">'+s.label+'<span>'+s.sub+'</span></span></a>'; });
+  m.innerHTML=h;
+}
+function buildLoopbar(stage){
+  const lb=document.getElementById("loopbar");
+  let h='<span class="lbh">Loop</span>';
+  LOOP.forEach((l,i)=>{ const on=(stage===l.k); h+='<span class="ls'+(on?' on':'')+'"><b>'+l.k+'</b>'+l.ko+'</span>'; if(i<LOOP.length-1) h+='<span class="la">▸</span>'; });
+  lb.innerHTML=h;
+}
+function nav(key){
+  curKey=key; const sc=SCREENS.find(s=>s.key===key);
+  document.querySelectorAll(".menu a").forEach(a=>a.classList.remove("active"));
+  const am=document.getElementById("m_"+key); if(am) am.classList.add("active");
+  document.getElementById("crumb").innerHTML="AAP <span>›</span> "+sc.label;
+  buildLoopbar(sc.stage);
+  elScreen().innerHTML=RENDER[key]();
+  window.scrollTo(0,0);
+}
+
+/* init */
+buildMenu();
+nav("overview");
+</script>
+</body>
+</html>
