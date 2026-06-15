@@ -910,6 +910,37 @@
   .ap-trace.predim{opacity:.4}
   .ap-trace.lit{border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.16)}
   .arch-loop .alh small{display:block;font-size:7.5px;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:1px}
+  /* v0.50 탭2·탭3 우측 공통 — 세로 타임라인(순서) + 해석. 탭2=구조 의미, 탭3=실행 애니메이션 */
+  .seq-flow{display:flex;flex-direction:column;margin:5px 0 4px}
+  .seq-node{display:grid;grid-template-columns:22px minmax(0,1fr);gap:9px;position:relative;padding:0 0 9px;cursor:pointer}
+  .seq-node:last-child{padding-bottom:2px}
+  .seq-node::before{content:'';position:absolute;left:10px;top:21px;bottom:-1px;width:2px;background:var(--line)}
+  .seq-node:last-child::before{display:none}
+  .seq-n{width:21px;height:21px;border-radius:50%;border:2px solid var(--border);box-sizing:border-box;background:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--muted);z-index:1;transition:background .2s,border-color .2s,color .2s,box-shadow .2s}
+  .seq-body{border:1px solid var(--border);border-radius:9px;background:var(--surf);padding:6px 9px;min-width:0;transition:opacity .25s,border-color .2s,box-shadow .2s}
+  .seq-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .seq-l{font-size:8.5px;font-weight:800;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:5px;padding:1px 5px;flex:0 0 auto}
+  .seq-el{font-size:11px;font-weight:800;color:var(--ink);line-height:1.2}
+  .seq-tag{margin-left:auto;font-size:8px;font-weight:900;border-radius:5px;padding:2px 6px;border:1px solid;flex:0 0 auto}
+  .seq-tag.t-auto{background:var(--mint-soft);color:var(--mint-ink);border-color:var(--mint-border)}
+  .seq-tag.t-hold{background:var(--amber-soft);color:var(--amber-ink);border-color:var(--amber-border)}
+  .seq-tag.t-branch{background:var(--blue-soft);color:var(--blue-ink);border-color:var(--blue-border)}
+  .seq-tag.t-log{background:#EEF2F7;color:var(--ink);border-color:#CDD6E0}
+  .seq-tag.t-learn{background:var(--violet-soft);color:var(--violet);border-color:var(--violet-border)}
+  .seq-do{display:block;font-size:9.5px;font-weight:700;color:var(--slate);margin-top:3px;line-height:1.35;overflow-wrap:anywhere}
+  .seq-role{display:block;font-size:8.5px;font-weight:600;color:var(--muted);margin-top:2px;line-height:1.35;overflow-wrap:anywhere}
+  .seq-node:hover .seq-body{border-color:var(--aap)}
+  .seq-node.predim .seq-body,.seq-node.predim .seq-n,.seq-node.pending .seq-body,.seq-node.pending .seq-n{opacity:.42}
+  .seq-node.lit .seq-n{background:var(--aap);border-color:var(--aap);color:#fff}
+  .seq-node.lit .seq-body{border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.14)}
+  .seq-node.active .seq-n{border-color:var(--aap);color:var(--aap);box-shadow:0 0 0 3px rgba(13,148,136,.18)}
+  .seq-node.active .seq-body{border-color:var(--aap)}
+  .seq-node.done .seq-n{background:var(--aap);border-color:var(--aap);color:#fff}
+  .ap-interp .api-plain{font-size:11px;font-weight:800;color:var(--amber-ink);background:rgba(255,255,255,.55);border:1px dashed var(--amber-border);border-radius:7px;padding:6px 9px;line-height:1.5;margin-bottom:7px}
+  .seq-out{font-size:10.5px;font-weight:700;color:var(--aap-ink);background:rgba(13,148,136,.07);border:1px solid var(--aap-border);border-radius:8px;padding:7px 10px;line-height:1.45;margin-bottom:7px;overflow-wrap:anywhere}
+  .seq-out b{color:var(--aap-ink)}
+  .aapx-reveal{display:none}
+  .aapx-reveal.show{display:block;animation:fade .3s ease}
 
   @media print{
     .tabbar,.keymsg .kmstep,#playBtn{display:none}
@@ -963,7 +994,7 @@
   </section>
 
   <section data-tab="1">
-    <div class="tlede"><h3>② AAP 구조 지도</h3><span class="aud">실무 리더 / IT·AI 검토자용</span><p>캐논 = <b>AAP 아키텍처 Version 0.3</b>(8계층 + Customer Environment + Trust·Security + 6단계 Execution Loop). 세부 요소를 처음부터 모두 노출하되, 상단 STEP을 넘기면 <b>그 손해사정 단계가 지나는 구성요소만 번호 + 연결선으로 강조</b>되고 나머지는 흐려집니다. <b>L3</b>가 핵심, <b>L4 / L7</b>이 KT ds 차별화 영역. 요소를 클릭하면 우측에 업무 의미가 표시됩니다.</p></div>
+    <div class="tlede"><h3>② AAP 구조 지도</h3><span class="aud">실무 리더 / IT·AI 검토자용</span><p>캐논 = <b>AAP 아키텍처 Version 0.3</b>. STEP을 넘기면 그 단계가 지나는 구성요소만 순서대로 강조되고, 우측에 <b>순서와 해석</b>이 표시됩니다.</p></div>
     <div class="arch2">
       <div class="arch-map" id="archMap"></div>
       <div class="arch-panel" id="archPanel"></div>
@@ -971,7 +1002,7 @@
   </section>
 
   <section data-tab="2">
-    <div class="tlede"><h3>③ AAP 작동 시뮬레이션</h3><span class="aud">SME / 손해사정사 업무 콘솔</span><p>실제 손해사정사 업무 콘솔입니다. 좌측 업무 네비에서 단계를 고르면 각 화면에서 <b>AI 검증·산출 결과를 확인하고 직접 판단</b>합니다(지급 PASS·검토, 견적 확정, 합의·과실 검토, 처리 시나리오 선택). 상단 STEP을 넘기거나 재생하면 같은 흐름이 단계별로 이어집니다. <b>(Simulation PoC · 수치는 가정값)</b></p></div>
+    <div class="tlede"><h3>③ AAP 작동 시뮬레이션</h3><span class="aud">SME / 손해사정사 업무 콘솔</span><p>좌측 콘솔에서 단계별로 직접 판단하고, 우측에서 <b>AAP 작동 순서와 해석</b>을 확인합니다. <b>(Simulation PoC · 수치 가정값)</b></p></div>
     <div class="sim3">
       <div id="pcConsole"></div>
       <aside class="aapx" id="aapx"></aside>
@@ -1288,13 +1319,8 @@ function renderWorkflow(i){
   // 우 — AAP (같은 업무를 구조로)
   document.getElementById('t1Aap').innerHTML=
     `<div class="t1-colh"><span class="t1-tagm">AAP</span>같은 업무를 구조로 바꾼다</div>
-     <div class="t1-aapcap">이 단계 AAP 작동 흐름 — 단계마다 구조가 다릅니다</div>
      <div class="dgm-wrap">${t1Aap(i)}</div>
-     <div class="t1-aap-row2"><span class="t1-tk2 help">작동</span><span>${a.method}</span></div>
-     <div class="t1-aap-row2"><span class="t1-tk2 help">분기 기준</span><span>${a.branchRule}</span></div>
-     <div class="t1-aap-row2"><span class="t1-tk2 help">업무 결과</span><span>${a.result}</span></div>
-     ${STEP_BASIS[i]?`<div class="t1-aap-how"><div class="t1-aap-howh">이 단계에서 AAP가 처리하는 것 · 해석</div>${STEP_BASIS[i].basis.map(x=>`<div class="t1-aap-howb">${x}</div>`).join('')}</div>`:''}
-     <div class="t1-aap-bind2">이 사건 — <span class="amt-auto">자동 처리 후보 ${won(CASE.autoAmount)}</span> · <span class="amt-rev">사람 검토 후보 ${won(CASE.reviewAmount)}</span> 분리</div>`;
+     ${STEP_BASIS[i]?`<div class="t1-aap-how"><div class="t1-aap-howh">이 단계에서 AAP가 처리하는 것 · 해석</div><div class="t1-aap-howb" style="font-weight:800;color:var(--aap-ink)">쉽게 말하면 — ${STEP_BASIS[i].plain}</div>${STEP_BASIS[i].basis.map(x=>`<div class="t1-aap-howb">${x}</div>`).join('')}</div>`:''}`;
 }
 
 /* ===== 탭② 아키텍처 포스터 (renderArchMap 정적 골격 + updateArchStep STEP 반응) =====
@@ -1438,26 +1464,31 @@ function updateArchStep(i){
   const litLoop=lp=>{ if(!lp)return; const e=map.querySelector('.arch-loop .als[data-stage="'+lp+'"]'); if(e)e.classList.add('on'); };
   const reveal=k=>{ const el=map.querySelector('[data-cell="'+ids[k]+'"]'); if(el){ el.classList.remove('dim'); el.classList.add('hlnum'); const s=el.querySelector('.hlseq'); if(s){ s.textContent=k+1; s.hidden=false; } }
     litLoop(loopOf(ids[k]));
-    const tr=document.querySelector('#archPanel .ap-trace[data-k="'+k+'"]'); if(tr){ tr.classList.remove('predim'); tr.classList.add('lit'); } };
+    const tr=document.querySelector('#archPanel .seq-node[data-k="'+k+'"]'); if(tr){ tr.classList.remove('predim'); tr.classList.add('lit'); } };
   const animate=(curTab===1 && mr.width>10);
   if(animate){
-    document.querySelectorAll('#archPanel .ap-trace').forEach(el=>el.classList.add('predim'));
+    document.querySelectorAll('#archPanel .seq-node').forEach(el=>el.classList.add('predim'));
     const myToken=++archAnimToken, beat=Math.round(660*speedMul);
     (function step(k){ if(myToken!==archAnimToken)return; if(k>=ids.length)return; reveal(k); setTimeout(()=>step(k+1),beat); })(0);
   } else { ids.forEach((id,k)=>reveal(k)); }
 }
 /* 단계별 해석(탭2 우측) + 판단 근거·설명가능성(탭3 우측) */
 const STEP_BASIS=[
- {interp:'사기 의심 점수는 지급 거절 근거가 아니라 추가 확인이 필요하다는 신호입니다. 정상 자격은 자동 통과시키고 의심분만 사람·특별조사로 보내 부당지급과 과잉심사를 함께 줄입니다.',
-  basis:['본인·운전자 검증은 통과되어 정상 자격이 확인됨','사기 점수 78점은 임계 75점 초과 — 6개월 내 2회 반복접수가 주요 신호(가정)','지급 거절이 아니라 보류 후 특별조사로 사실을 먼저 확인']},
- {interp:'AI 견적은 사람 판단을 대체하지 않고 통상가와 규칙으로 1차 산출합니다. 전손·과다 항목만 사람이 확인하면 됩니다.',
-  basis:['사진 분석으로 파손 부위·정도를 객관 수치화','인증부품 환급·외산 배율 등 규칙을 일관되게 적용','수리비가 차량가의 일정 비율을 넘으면 전손으로 검토']},
- {interp:'합의금은 액수 자체보다 통상 대비 적정한지로 읽어야 합니다. 과잉진료·과다 합의금 신호만 검토 대상으로 분리합니다.',
-  basis:['상해등급은 약관 기준으로 자동 산정','통상 치료기간 대비 초과분이 과잉진료 신호','등급 벤치마크를 넘는 합의금은 적정성 검토 대상']},
- {interp:'과실 판정이 기준마다 다르면 한 값으로 덮지 않습니다. 차이 자체가 사람이 봐야 한다는 신호입니다.',
-  basis:['블랙박스 기준과 판례 기준의 과실을 나란히 비교','차이 10%p는 단일 확정 대신 검토 기준(가정)','협상 전략으로 분쟁·민원을 사전에 관리']},
- {interp:'AI는 결론을 강요하지 않고 손실·기간·리스크가 다른 선택지를 제시합니다. 확실분은 자동으로, 다툼·의심분은 사람 검토로 나눕니다.',
-  basis:['4개 시나리오는 자사 손실 관점에서 자동 생성','확실분 90만 원은 자동 처리로 빠르게 정산','검토분 171만 원은 사람 확인 후 합의서·보고서 자동 작성']},
+ {plain:'본인·운전자·사기 확인을 한 번에 돌려, 정상 청구는 바로 통과시키고 사기 의심만 따로 빼냅니다.',
+  interp:'사기 의심 점수는 지급을 거절하는 근거가 아니라 “더 확인이 필요하다”는 신호입니다. 정상 청구는 자동으로 통과시키고 의심 건만 사람·특별조사로 보내, 부당지급과 과잉심사를 함께 줄입니다.',
+  basis:['본인·운전자 확인을 통과해 정상 청구로 판단됨','사기 점수 78점이 기준선 75점을 넘음 — 6개월 내 2회 반복 청구가 주된 이유(가정)','바로 거절하지 않고, 보류 후 특별조사(SIU=보험사기 전담 조사)로 사실을 먼저 확인']},
+ {plain:'사고 사진을 분석해 수리비를 1차로 뽑고, 너무 비싸거나 폐차가 나은 건만 사람이 확인합니다.',
+  interp:'AI 견적은 사람 판단을 대체하지 않고, 시세와 규칙으로 1차 금액만 산출합니다. 전손·과다 청구 항목만 사람이 확인하면 됩니다.',
+  basis:['사진으로 파손 부위·정도를 눈대중이 아닌 수치로 환산','정품 환급·외산차 할증 같은 규칙을 매번 같은 기준으로 적용','수리비가 차값의 일정 비율을 넘으면 전손(고쳐 쓰기보다 폐차가 나은 상태)으로 검토']},
+ {plain:'다친 정도에 맞는 등급으로 합의금을 계산하고, 치료가 과한 건만 골라 검토합니다.',
+  interp:'합의금은 액수 자체보다 “보통 수준 대비 적정한지”로 읽어야 합니다. 과잉진료·과다 합의금 신호만 검토 대상으로 분리합니다.',
+  basis:['상해 등급은 약관 기준으로 자동 산정','통상 치료기간보다 길면 과잉진료(필요 이상 치료) 신호로 봄','같은 등급의 보통 합의금보다 높으면 적정성 검토 대상']},
+ {plain:'블랙박스가 본 과실과 판례가 본 과실이 다르면, 한쪽으로 정하지 않고 사람에게 넘깁니다.',
+  interp:'과실 비율이 기준마다 다르게 나오면 한 값으로 덮지 않습니다. 그 차이 자체가 “사람이 봐야 한다”는 신호입니다.',
+  basis:['블랙박스 영상 기준과 판례(과거 비슷한 사고 판결) 기준의 과실을 나란히 비교','두 기준의 차이 10%p는 자동 확정 대신 사람 검토 기준(가정)','협상 전략을 미리 세워 분쟁·민원을 사전에 줄임']},
+ {plain:'확실한 금액은 자동으로 정산하고, 다툼·의심이 있는 금액만 사람이 합의서를 확인합니다.',
+  interp:'AI는 결론을 강요하지 않고 손실·기간·위험이 다른 선택지를 제시합니다. 확실한 부분은 자동으로, 다툼·의심 부분만 사람 검토로 나눕니다.',
+  basis:['4개 처리 시나리오를 자사 손실 관점에서 자동 생성','확실분 90만 원은 자동 처리로 빠르게 정산','검토분 171만 원은 사람 확인 후 합의서·보고서를 자동 작성']},
 ];
 /* 좌측 업무 화면 안내 툴팁(탭3) — 카드별 "사용자가 무엇을 확인하는가" */
 const PC_TIPS=[
@@ -1468,18 +1499,18 @@ const PC_TIPS=[
  ['AI 추천안입니다 — 미수선 현금정산으로 자사 비용이 가장 낮습니다.','과실 재협상·구상권으로 타사 청구를 줄이는 안입니다.','제휴센터 수리로 분쟁 리스크를 낮추는 안입니다.','특수 경로를 활용하는 전략안입니다.']
 ];
 function archPanelStep(i){
-  const t=STEP_TRACE[i], p=PHASES[i], d=PC[i], a=p.wf.aap, panel=document.getElementById('archPanel'); if(!panel||!t)return;
-  const rows=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lno=ARCH_LAYER_OF[c.id].split(' ')[0], m=ARCH_MEAN[c.id];
-    return `<div class="ap-trace" data-cell="${c.id}" data-k="${k}"><span class="apt-n">${k+1}</span><span class="apt-l">${lno}</span><span class="apt-t">${cell.t}<span class="apt-do">${c.do}</span>${m?`<span class="apt-role">${m.role}</span>`:''}</span></div>`; }).join('');
-  panel.innerHTML=`<div class="aph">${p.step} ${p.name}<span class="aptype">${d.sub.split(' · ')[0]}</span></div>`+
-    `<div class="ap-summary">${a.method}.</div>`+
-    `<div class="aph-sub">이 단계가 지나는 구성요소 · 클릭 시 업무 의미</div>`+
-    `<div class="ap-traces">${rows}</div>`+
-    `<div class="ap-diffline">AAP 분기 — ${a.branchRule}</div>`+
-    `<div class="ap-row"><div class="ap-k">이 단계 결과</div><div class="ap-v"><b>${t.result}</b></div></div>`+
-    (STEP_BASIS[i]?`<div class="ap-interp"><b>이 결과를 어떻게 읽나 · 해석</b><div class="api-txt">${STEP_BASIS[i].interp}</div>`+STEP_BASIS[i].basis.map(x=>`<div class="api-b">${x}</div>`).join('')+`</div>`:'')+
-    `<div class="arch-legend"><span class="alg"><i class="alg-core"></i>L3 핵심</span><span class="alg"><i class="alg-ds"></i>L4·L7 ds 차별화</span><span class="alg"><i class="alg-hl"></i>이 단계 경로</span><span class="alg"><i class="alg-asset"></i>KT ds 자산</span></div>`;
-  panel.querySelectorAll('.ap-trace').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
+  const t=STEP_TRACE[i], p=PHASES[i], panel=document.getElementById('archPanel'); if(!panel||!t)return;
+  const nodes=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lno=ARCH_LAYER_OF[c.id].split(' ')[0], m=ARCH_MEAN[c.id];
+    const tag=m?`<span class="seq-tag t-${m.cls}">${ARCH_IMPACT_KO[m.cls]}</span>`:'';
+    const role=m?`<span class="seq-role">${m.role}</span>`:'';
+    return `<div class="seq-node" data-cell="${c.id}" data-k="${k}"><span class="seq-n">${k+1}</span><span class="seq-body"><span class="seq-head"><span class="seq-l">${lno}</span><span class="seq-el">${cell.t}</span>${tag}</span><span class="seq-do">${c.do}</span>${role}</span></div>`; }).join('');
+  const b=STEP_BASIS[i];
+  panel.innerHTML=`<div class="aph">${p.step} ${p.name}<span class="aptype">구조 관점</span></div>`+
+    `<div class="aph-sub">이 단계가 지나는 구성요소 · 순서 (클릭 시 업무 의미)</div>`+
+    `<div class="seq-flow">${nodes}</div>`+
+    (b?`<div class="ap-interp"><b>이 단계를 어떻게 읽나 · 해석</b><div class="api-plain">쉽게 말하면 — ${b.plain}</div><div class="api-txt">${b.interp}</div>`+b.basis.map(x=>`<div class="api-b">${x}</div>`).join('')+`</div>`:'')+
+    `<div class="arch-legend"><span class="alg"><i class="alg-core"></i>L3 핵심</span><span class="alg"><i class="alg-ds"></i>L4·L7 ds 차별화</span><span class="alg"><i class="alg-hl"></i>이 단계 경로</span></div>`;
+  panel.querySelectorAll('.seq-node').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
 }
 function selectArchCell(id){
   const c=ARCH_CELL_BY_ID[id], m=ARCH_MEAN[id], panel=document.getElementById('archPanel');
@@ -1614,21 +1645,24 @@ const SCREEN_NARR=[
 /* 우측 AAP 작동 구조 — 좌측 업무 화면을 처리하는 AAP 작동이 순서대로 실제 실행(스피너→완료·진행바) */
 let aapToken=0;
 function aapxSkeleton(i){
-  const t=STEP_TRACE[i], d=PC[i], a=PHASES[i].wf.aap;
-  const stages=t.cells.map(c=>{ const cell=ARCH_CELL_BY_ID[c.id]; return {el:cell?cell.t:'',dt:c.do}; });
-  const stagesHTML=stages.map((s,k)=>`<div class="aapx-stage pending" id="aps${k}"><span class="aps-ic">${k+1}</span><span class="aps-body"><span class="aps-el">${s.el}</span><span class="aapx-do">${s.dt}</span></span></div>`).join('');
+  const t=STEP_TRACE[i], b=STEP_BASIS[i];
+  const nodes=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lno=ARCH_LAYER_OF[c.id].split(' ')[0], m=ARCH_MEAN[c.id];
+    const tag=m?`<span class="seq-tag t-${m.cls}">${ARCH_IMPACT_KO[m.cls]}</span>`:'';
+    return `<div class="seq-node pending" id="aps${k}" data-k="${k}"><span class="seq-n">${k+1}</span><span class="seq-body"><span class="seq-head"><span class="seq-l">${lno}</span><span class="seq-el">${cell?cell.t:''}</span>${tag}</span><span class="seq-do">${c.do}</span></span></div>`; }).join('');
+  const interpHTML=b?`<div class="ap-interp aapx-reveal" id="aapxResult"><b>이 작동이 만든 결과 · 해석</b><div class="seq-out">좌측 화면 결과 — <b>${t.result}</b></div><div class="api-plain">쉽게 말하면 — ${b.plain}</div>`+b.basis.map(x=>`<div class="api-b">${x}</div>`).join('')+`</div>`:'';
   const html=`<div class="aapx-h">AAP 작동 순서<button class="aapx-run" id="aapxRun" type="button">다시 실행</button></div>`+
+    `<div class="aapx-sub">단계를 차례로 거치며 좌측 콘솔 결과가 만들어집니다</div>`+
     `<div class="aapx-prog"><div class="aapx-prog-fill" id="aapxProg"></div></div>`+
-    `<div class="aapx-flow">${stagesHTML}</div>`;
-  return {n:stages.length, html:html};
+    `<div class="seq-flow">${nodes}</div>`+interpHTML;
+  return {n:t.cells.length, html:html};
 }
 function renderAapx(i){
   const el=document.getElementById('aapx'); if(!el||!STEP_TRACE[i])return;
   const sk=aapxSkeleton(i); el.innerHTML=sk.html;
   document.getElementById('aapxRun').addEventListener('click',()=>runAapxAnim(i));
   if(curTab===2){ runAapxAnim(i); }
-  else { for(let k=0;k<sk.n;k++){ const s=document.getElementById('aps'+k); s.classList.remove('pending'); s.classList.add('done'); const ic=s.querySelector('.aps-ic'); if(ic)ic.textContent='✓'; }
-         const pf=document.getElementById('aapxProg'); if(pf)pf.style.width='100%'; }
+  else { for(let k=0;k<sk.n;k++){ const s=document.getElementById('aps'+k); if(!s)continue; s.classList.remove('pending'); s.classList.add('done'); const ic=s.querySelector('.seq-n'); if(ic)ic.textContent='✓'; }
+         const pf=document.getElementById('aapxProg'); if(pf)pf.style.width='100%'; const r=document.getElementById('aapxResult'); if(r)r.classList.add('show'); }
 }
 function runAapxAnim(i){
   const el=document.getElementById('aapx'); if(!el||!STEP_TRACE[i])return;
@@ -1640,9 +1674,9 @@ function runAapxAnim(i){
   let k=-1;
   (function next(){
     if(myToken!==aapToken)return;
-    if(k>=0){ const p=document.getElementById('aps'+k); if(p){ p.classList.remove('active'); p.classList.add('done'); const ic=p.querySelector('.aps-ic'); if(ic)ic.textContent='✓'; } if(prog) prog.style.width=Math.round(((k+1)/sk.n)*100)+'%'; }
+    if(k>=0){ const p=document.getElementById('aps'+k); if(p){ p.classList.remove('active'); p.classList.add('done'); const ic=p.querySelector('.seq-n'); if(ic)ic.textContent='✓'; } if(prog) prog.style.width=Math.round(((k+1)/sk.n)*100)+'%'; }
     k++;
-    if(k>=sk.n){ if(res) res.classList.add('show'); const bb=document.getElementById('aapxBasis'); if(bb)bb.classList.add('show'); if(btn){ btn.disabled=false; btn.textContent='다시 실행'; } return; }
+    if(k>=sk.n){ if(res) res.classList.add('show'); if(btn){ btn.disabled=false; btn.textContent='다시 실행'; } return; }
     const c=document.getElementById('aps'+k); if(c){ c.classList.remove('pending'); c.classList.add('active'); }
     setTimeout(next,Math.round(700*speedMul));
   })();
