@@ -861,7 +861,8 @@
   .aapx-prog-fill{height:100%;width:0;background:linear-gradient(90deg,#0D9488,#0F766E);transition:width .45s ease}
   .aapx-sec{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:13px 0 6px}
   .aapx-flow{display:flex;flex-direction:column;gap:2px}
-  .aapx-stage{display:grid;grid-template-columns:18px 62px 1fr;gap:8px;align-items:start;padding:6px 0;transition:opacity .25s}
+  .aapx-stage{display:grid;grid-template-columns:18px 1fr;gap:9px;align-items:start;padding:6px 0;transition:opacity .25s}
+  .aps-el{display:block;font-size:10px;font-weight:800;color:var(--aap-ink);line-height:1.25;margin-bottom:1px}
   .aapx-stage .aps-ic{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted);flex:0 0 auto;transition:background .2s,border-color .2s,box-shadow .2s,color .2s}
   .aapx-stage.pending{opacity:.45}
   .aapx-stage.active{opacity:1}
@@ -1423,15 +1424,12 @@ function updateArchStep(i){
   const reveal=k=>{ const el=map.querySelector('[data-cell="'+ids[k]+'"]'); if(el){ el.classList.remove('dim'); el.classList.add('hlnum'); const s=el.querySelector('.hlseq'); if(s){ s.textContent=k+1; s.hidden=false; } }
     litLoop(loopOf(ids[k]));
     const tr=document.querySelector('#archPanel .ap-trace[data-k="'+k+'"]'); if(tr){ tr.classList.remove('predim'); tr.classList.add('lit'); } };
-  const animate=(curTab===1 && mr.width>10 && svg);
+  const animate=(curTab===1 && mr.width>10);
   if(animate){
     document.querySelectorAll('#archPanel .ap-trace').forEach(el=>el.classList.add('predim'));
-    const myToken=++archAnimToken, beat=Math.round(660*speedMul), seg=Math.round(500*speedMul);
-    (function step(k){ if(myToken!==archAnimToken)return; if(k>=ids.length)return;
-      if(k>0){ const p=archSeg(map,svg,mr,ids[k-1],ids[k]); if(p)archDraw(p,seg); }
-      reveal(k); setTimeout(()=>step(k+1),beat);
-    })(0);
-  } else { ids.forEach((id,k)=>reveal(k)); if(svg&&mr.width>10){ for(let k=1;k<ids.length;k++){ const p=archSeg(map,svg,mr,ids[k-1],ids[k]); if(p)p.style.strokeDashoffset='0'; } } }
+    const myToken=++archAnimToken, beat=Math.round(660*speedMul);
+    (function step(k){ if(myToken!==archAnimToken)return; if(k>=ids.length)return; reveal(k); setTimeout(()=>step(k+1),beat); })(0);
+  } else { ids.forEach((id,k)=>reveal(k)); }
 }
 /* 단계별 해석(탭2 우측) + 판단 근거·설명가능성(탭3 우측) */
 const STEP_BASIS=[
@@ -1489,14 +1487,8 @@ function selectArchCell(id){
   const bk=panel.querySelector('.ap-back'); if(bk) bk.addEventListener('click',()=>archPanelStep(archStepCur));
 }
 /* 연결선 — phase를 누르면 셀 경로를 따라 선이 하나씩 순서대로 그어진다(흐름 가시화) */
-/* 즉시 전체 선 그리기(리사이즈 대응) */
-function drawArchLinks(cellIds){
-  const map=document.getElementById('archMap'), svg=document.getElementById('archLinks'); if(!map||!svg)return;
-  const tr=STEP_TRACE[archStepCur], ids=cellIds||(tr?tr.cells.map(c=>c.id):[]);
-  const mr=map.getBoundingClientRect(); if(mr.width<10)return;
-  svg.innerHTML=''; svg.setAttribute('viewBox',`0 0 ${mr.width} ${mr.height}`); svg.setAttribute('width',mr.width); svg.setAttribute('height',mr.height);
-  for(let k=1;k<ids.length;k++){ const p=archSeg(map,svg,mr,ids[k-1],ids[k]); if(p)p.style.strokeDashoffset='0'; }
-}
+/* 연결선 미사용(점등 순서로 흐름 표시) — svg는 비워둠 */
+function drawArchLinks(){ const svg=document.getElementById('archLinks'); if(svg)svg.innerHTML=''; }
 
 /* ===== 탭④ Twin-View 시뮬레이션 (현업 화면 + AAP 작동 구조) ===== */
 /* ===== 탭③ 손해사정사 업무 콘솔 (실제 제품 화면 재현 · 참고자료 5단계 워크플로우) ===== */
@@ -1600,13 +1592,13 @@ function capOf(id){ const p=id.split('-')[0];
 let aapToken=0;
 function aapxSkeleton(i){
   const t=STEP_TRACE[i], d=PC[i], a=PHASES[i].wf.aap;
-  const stages=t.cells.map(c=>{ const cap=capOf(c.id), m=ARCH_MEAN[c.id]; return {cap:cap[0],cls:cap[1],dt:c.do,det:m?m.link:''}; });
-  const stagesHTML=stages.map((s,k)=>`<div class="aapx-stage pending" id="aps${k}"><span class="aps-ic">${k+1}</span><span class="cap-tag ${s.cls}">${s.cap}</span><span class="aapx-do">${s.dt}${s.det?`<span class="aapx-det">${s.det}</span>`:''}</span></div>`).join('');
+  const stages=t.cells.map(c=>{ const cell=ARCH_CELL_BY_ID[c.id], m=ARCH_MEAN[c.id]; return {el:cell?cell.t:'',dt:c.do,det:m?m.link:''}; });
+  const stagesHTML=stages.map((s,k)=>`<div class="aapx-stage pending" id="aps${k}"><span class="aps-ic">${k+1}</span><span class="aps-body"><span class="aps-el">${s.el}</span><span class="aapx-do">${s.dt}</span>${s.det?`<span class="aapx-det">${s.det}</span>`:''}</span></div>`).join('');
   const agents=`<div class="aapx-agents"><span class="aapx-agent">${a.a1.t}<span>${a.a1.sub}</span></span><span class="aapx-agent">${a.a2.t}<span>${a.a2.sub}</span></span></div>`;
   const html=`<div class="aapx-h">AAP 작동 구조<button class="aapx-run" id="aapxRun" type="button">다시 실행</button></div>`+
     `<div class="aapx-sub">좌측 업무 화면을 처리하는 AAP 작동이 순서대로 실행됩니다.</div>`+
     `<div class="aapx-prog"><div class="aapx-prog-fill" id="aapxProg"></div></div>`+
-    `<div class="aapx-sec">작동 흐름 · 계층 / 역량</div><div class="aapx-flow">${stagesHTML}</div>`+
+    `<div class="aapx-sec">AAP 작동 순서 · 어떤 요소가 무엇을 하는가</div><div class="aapx-flow">${stagesHTML}</div>`+
     `<div class="aapx-sec">핵심 에이전트</div>${agents}`+
     `<div class="aapx-sec">AAP 차별화</div><div class="aapx-diff">${d.aap}</div>`+
     `<div class="aapx-result" id="aapxResult"><span>이 단계 결과</span>${t.result}</div>`+
