@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AAP 손해사정 — Workflow · Runtime · Walkthrough (Simulation PoC)</title>
+<!--
+  v0.29 — 참고 이미지 3종의 "형상" 반영. 공통 Phase Rail(전 탭 공유 상태).
+   탭① 처리 방식별 Workflow(이미지1) / 탭② AAP Runtime View(이미지2: 입력→코어→산출물→Feedback + 보조 아키맵) / 탭③ 단계별 Walkthrough(이미지3).
+   단일 HTML · 외부 라이브러리 0 · 오프라인 · 이미지 임베드 ✕ · Simulation PoC.
+-->
+<style>
+  :root{
+    --ink:#0F172A;--bg:#FFFFFF;--surf:#F8FAFC;--border:#E5E7EB;--muted:#64748B;--line:#EEF1F4;--slate:#475569;
+    --aap:#0D9488;--aap-soft:#ECFDF5;--aap-border:#5EEAD4;--aap-ink:#0F766E;
+    --amber:#D97706;--amber-soft:#FFFBEB;--amber-border:#FDE68A;--amber-ink:#B45309;
+    --danger:#DC2626;--danger-soft:#FEF2F2;--danger-border:#FECACA;--danger-ink:#B91C1C;
+    --blue:#1D4ED8;--blue-soft:#EFF6FF;--blue-border:#BFDBFE;
+    --shadow:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);--mono:'SF Mono',ui-monospace,Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;font-size:14px}
+  .wrap{max-width:1220px;margin:0 auto;padding:18px 22px 70px}
+  .mono{font-family:var(--mono)}
+
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 0 12px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
+  .logo .dot{width:11px;height:11px;border-radius:3px;background:var(--aap)}
+  .badge-sim{margin-left:auto;background:var(--ink);color:#fff;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
+
+  /* 사건 요약 (공통) */
+  .casebox{border:1px solid var(--border);border-radius:13px;background:#fff;box-shadow:var(--shadow);padding:14px 17px;margin-bottom:12px}
+  .casebox h2{font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .casebox .cdesc{font-size:12.5px;color:var(--slate);line-height:1.65;margin-top:7px}
+  .casebox .cdesc b{color:var(--ink);font-weight:800}
+  .casebox .ckey{font-size:12.5px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:9px;padding:9px 12px;margin-top:10px;line-height:1.55}
+
+  /* 탭바 */
+  .tabbar{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px;background:#fff}
+  .tabbar button{flex:1;border:0;border-right:1px solid var(--border);background:#fff;color:var(--muted);font:inherit;font-weight:700;font-size:13px;padding:12px 8px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.25}
+  .tabbar button:last-child{border-right:0}
+  .tabbar button small{font-size:10px;font-weight:600;color:var(--muted)}
+  .tabbar button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .tabbar button[aria-pressed="true"] small{color:#94A3B8}
+
+  /* 공통 Phase Rail (셰브론) */
+  .railwrap{margin-bottom:14px}
+  .raill{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  .phase-rail{display:flex;gap:3px;flex-wrap:wrap}
+  .pchev{flex:1;min-width:128px;background:#E2E8F0;color:var(--slate);font-weight:800;font-size:12px;padding:11px 14px 11px 24px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,0 100%,13px 50%);text-align:center;transition:.18s;line-height:1.2}
+  .pchev:first-child{clip-path:polygon(0 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,0 100%);padding-left:14px}
+  .pchev .pcn{display:block;font-size:9px;font-weight:700;opacity:.7;margin-bottom:1px}
+  .pchev[aria-pressed="true"]{background:var(--aap);color:#fff}
+  .pchev[aria-pressed="true"] .pcn{opacity:.85;color:#fff}
+  .pchev.done{background:#CBD5E1}
+
+  section[data-tab]{display:none}
+  section[data-tab].on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .tlede{margin-bottom:13px}
+  .tlede h3{font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .tlede p{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.6}
+
+  /* ===== 탭① Workflow Board ===== */
+  .workflow-board{display:flex;flex-direction:column;gap:11px}
+  .pattern-row{display:grid;grid-template-columns:150px 1fr 210px;gap:14px;align-items:center;border:1px solid var(--border);border-radius:13px;background:#fff;box-shadow:var(--shadow);padding:13px 15px}
+  @media(max-width:860px){.pattern-row{grid-template-columns:1fr}}
+  .pattern-label .pli{font-size:17px}
+  .pattern-label .pln{font-size:14px;font-weight:800;color:var(--slate);margin-top:3px}
+  .pattern-label .pld{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.45}
+  .pattern-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .fnode{font-size:11px;font-weight:700;border-radius:8px;padding:6px 9px;border:1px solid var(--border);background:var(--surf);color:var(--slate);white-space:nowrap;text-align:center;line-height:1.2}
+  .fnode.llm{background:var(--blue-soft);border-color:var(--blue-border);color:var(--blue)}
+  .fnode.rag{background:#F5F3FF;border-color:#DDD6FE;color:#6D28D9}
+  .fnode.agent{background:var(--blue-soft);border-color:var(--blue-border);color:var(--blue)}
+  .fnode.aap{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink)}
+  .fnode.compare{background:var(--danger-soft);border-color:var(--danger-border);color:var(--danger-ink)}
+  .fnode.log{background:#EEF2F7;border-color:var(--border);color:var(--ink)}
+  .fnode.multi{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink);display:flex;flex-direction:column;gap:3px;align-items:flex-start;white-space:normal;max-width:160px}
+  .fnode.multi b{font-size:9.5px;font-weight:800}
+  .fnode.multi .mlist{font-size:9px;font-weight:700;color:var(--aap-ink);opacity:.9;line-height:1.3}
+  .fbranch{display:inline-flex;flex-direction:column;gap:4px;padding:4px 6px;border:1px dashed var(--aap-border);border-radius:9px}
+  .fbranch .fnode.auto{background:var(--aap);color:#fff;border-color:var(--aap)}
+  .fbranch .fnode.review{background:var(--amber-soft);color:var(--amber-ink);border-color:var(--amber-border)}
+  .farr{color:#CBD5E1;font-weight:800;font-size:12px}
+  .pattern-outcome{font-size:11.5px;line-height:1.5;border-left:1px dashed var(--border);padding-left:14px}
+  .pattern-outcome .por{font-weight:700;color:var(--slate)}
+  .pattern-outcome .pol{color:var(--amber-ink);font-weight:600;margin-top:5px;display:block}
+  .pattern-outcome .poc{color:var(--muted);font-weight:600;margin-top:5px;display:block;font-style:italic}
+  .pattern-row.aap-row{border:2px solid var(--aap);background:linear-gradient(180deg,#F0FDFA,#FBFFFE 60%);box-shadow:0 2px 16px rgba(13,148,136,.1);padding:16px}
+  .pattern-row.aap-row .pln{color:var(--aap-ink)}
+  .pattern-row.aap-row .pattern-outcome{border-left-color:var(--aap-border)}
+  .aap-out{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+  .aap-out span{font-size:10.5px;font-weight:800;border-radius:7px;padding:4px 8px;border:1px solid}
+  .aap-out .auto{background:var(--aap);color:#fff;border-color:var(--aap)}
+  .aap-out .review{background:var(--amber-soft);color:var(--amber-ink);border-color:var(--amber-border)}
+  .aap-out .default{background:#fff;color:var(--aap-ink);border-color:var(--aap-border)}
+  .aap-out .log{background:#EEF2F7;color:var(--ink);border-color:var(--border)}
+  .aap-key{font-size:12px;font-weight:700;color:var(--aap-ink);line-height:1.5}
+
+  /* ===== 탭② Runtime View ===== */
+  .runtime-view{display:grid;grid-template-columns:0.78fr 22px 1.18fr 22px 0.92fr;gap:8px;align-items:stretch;border:1px solid var(--border);border-radius:14px;background:var(--surf);padding:14px;box-shadow:var(--shadow)}
+  @media(max-width:980px){.runtime-view{grid-template-columns:1fr}.rt-arrow{transform:rotate(90deg);height:14px}}
+  .rt-col-l{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
+  .rt-inputs,.rt-outputs{display:flex;flex-direction:column}
+  .rt-ent{font-size:10.5px;font-weight:700;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 9px;margin-bottom:5px;color:var(--slate);line-height:1.3}
+  .rt-outputs .rt-ent.auto{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink);font-weight:800}
+  .rt-outputs .rt-ent.review{background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber-ink);font-weight:800}
+  .rt-arrow{display:flex;align-items:center;justify-content:center;color:var(--aap);font-weight:800;font-size:15px}
+  .rt-core{border:2.5px solid var(--aap);border-radius:14px;background:#fff;box-shadow:0 0 0 3px rgba(13,148,136,.08);padding:12px;display:flex;flex-direction:column}
+  .rt-core .rcl{font-size:12.5px;font-weight:800;color:var(--aap-ink);text-align:center;margin-bottom:9px}
+  .rt-node{border:1px solid var(--aap-border);border-radius:10px;background:var(--aap-soft);padding:8px 11px;text-align:center}
+  .rt-node .rnt{font-size:11.5px;font-weight:800;color:var(--aap-ink)}
+  .rt-node .rnd{font-size:9.5px;color:var(--slate);font-weight:600;margin-top:2px;line-height:1.35}
+  .rt-node.compare{background:var(--danger-soft);border-color:var(--danger-border)} .rt-node.compare .rnt{color:var(--danger-ink)}
+  .rt-node.policy{background:var(--amber-soft);border-color:var(--amber-border)} .rt-node.policy .rnt{color:var(--amber-ink)}
+  .rt-node.log{background:#EEF2F7;border-color:var(--border)} .rt-node.log .rnt{color:var(--ink)}
+  .rt-node .ragents{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:5px}
+  .rt-node .ragents span{font-size:9px;font-weight:800;background:#fff;border:1px solid var(--aap-border);color:var(--aap-ink);border-radius:6px;padding:2px 6px}
+  .rt-down{text-align:center;color:var(--aap);font-weight:800;font-size:12px;margin:3px 0}
+  .runtime-loop{margin-top:11px;border:1px dashed var(--aap);border-radius:12px;background:#F0FDFA;padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .runtime-loop .rll{font-size:11px;font-weight:800;color:var(--aap-ink);display:flex;align-items:center;gap:6px}
+  .runtime-loop .rlf{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:700;color:var(--slate)}
+  .runtime-loop .rlf .rfn{background:#fff;border:1px solid var(--aap-border);border-radius:7px;padding:4px 8px;color:var(--aap-ink)}
+  .runtime-loop .rlf .ra{color:var(--aap)}
+  .mini-arch-map{margin-top:14px;border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow);padding:13px 15px}
+  .mini-arch-map .mml{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:9px}
+  .mlayer{display:grid;grid-template-columns:120px 1fr;gap:9px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+  .mlayer:first-of-type{border-top:0}
+  .mlayer .mln{font-size:11px;font-weight:800;color:var(--slate)}
+  .mlayer .mlc{display:flex;flex-wrap:wrap;gap:4px}
+  .mlc .mcomp{font-size:9.5px;font-weight:700;background:var(--surf);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 7px;transition:.2s}
+  .mlc .mcomp.use{background:var(--aap);color:#fff;border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.18)}
+
+  /* ===== 탭③ Walkthrough ===== */
+  .walkthrough{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:13px;align-items:start}
+  @media(max-width:960px){.walkthrough{grid-template-columns:1fr}}
+  .wz{border:1px solid var(--border);border-radius:13px;background:#fff;box-shadow:var(--shadow);padding:14px 15px}
+  .wz .wzl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+  .wz .wzl .wzi{font-size:13px}
+  .question-panel{grid-column:1/-1;border:2px solid var(--aap);border-radius:13px;background:linear-gradient(180deg,#F0FDFA,#fff);padding:14px 16px;box-shadow:0 0 0 3px rgba(13,148,136,.06)}
+  .question-panel .qpl{font-size:10px;font-weight:800;color:var(--aap-ink);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+  .question-panel .qpt{font-size:15px;font-weight:800;color:var(--ink);line-height:1.5}
+  .wchip{font-size:11.5px;font-weight:700;border-radius:8px;padding:6px 10px;border:1px solid;line-height:1.3;display:inline-block;margin:0 5px 6px 0}
+  .entity-zone .wchip{background:var(--surf);border-color:var(--border);color:var(--slate)}
+  .entity-zone .wchip.tool{background:#F5F3FF;border-color:#DDD6FE;color:#6D28D9}
+  .agent-zone .wchip{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink);font-weight:800}
+  .agent-zone .wchip.compare{background:var(--danger-soft);border-color:var(--danger-border);color:var(--danger-ink)}
+  .agent-zone .wchip.hitl{background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber-ink)}
+  .output-zone .wchip{font-weight:800}
+  .output-zone .wchip.default{background:#fff;border-color:var(--aap-border);color:var(--aap-ink)}
+  .output-zone .wchip.auto{background:var(--aap);border-color:var(--aap);color:#fff}
+  .output-zone .wchip.review{background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber-ink)}
+  .output-zone .wchip.warning{background:var(--danger-soft);border-color:var(--danger-border);color:var(--danger-ink)}
+  .output-zone .wchip.log{background:#EEF2F7;border-color:var(--border);color:var(--ink)}
+  .wsubl{font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase;margin:9px 0 6px}
+
+  .footnote{margin-top:20px;font-size:12px;color:var(--muted);text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"></span> AAP 손해사정</div>
+    <span class="badge-sim">Simulation PoC</span>
+  </header>
+
+  <div class="casebox">
+    <h2>사건 CL-2026-0417 — 자동 처리와 사람 검토를 나눠야 하는 이유</h2>
+    <p class="cdesc">차로변경 접촉사고입니다. 대물 수리견적은 <b>480만 원</b>, 대인 합의금 요구는 <b>300만 원</b>입니다. 블랙박스 기준 과실은 <b>20:80</b>, 유사 판례 기준은 <b>30:70</b>으로 엇갈리며, 최근 6개월 내 유사청구 2건과 사기 의심점수 <b>78점</b>이 확인됩니다.</p>
+    <div class="ckey">이 사건의 쟁점은 총액 산정이 아니라, 확실한 항목은 자동 처리하고 다툼·의심이 있는 항목은 사람 검토로 분리하는 것입니다.</div>
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <button data-tab="0" aria-pressed="true">① 처리 방식별 Workflow<small>수기 · 챗봇 · RAG · 단일 Agent · AAP</small></button>
+    <button data-tab="1" aria-pressed="false">② AAP Runtime View<small>데이터가 판단·분기·실행되는 구조</small></button>
+    <button data-tab="2" aria-pressed="false">③ 단계별 AAP 작동<small>단계별 구성요소·판단 흐름</small></button>
+  </div>
+
+  <div class="railwrap">
+    <div class="raill">손해사정 업무 프로세스 — 단계를 선택하면 ②③ 화면이 함께 바뀝니다</div>
+    <div class="phase-rail" id="phaseRail"></div>
+  </div>
+
+  <!-- ===== 탭① ===== -->
+  <section data-tab="0" class="on">
+    <div class="tlede"><h3>처리 방식별 Workflow</h3><p>같은 손해사정 사건을 5가지 방식이 각각 어떤 흐름으로 처리하는지 봅니다. <b>AAP만</b> 업무를 나누고 판단을 비교해 자동 처리와 사람 검토로 분기합니다.</p></div>
+    <div class="workflow-board" id="workflowBoard"></div>
+  </section>
+
+  <!-- ===== 탭② ===== -->
+  <section data-tab="1">
+    <div class="tlede"><h3>AAP Runtime View</h3><p>손해사정 입력이 <b>AAP Core Runtime</b>을 거쳐 업무 산출물이 되고, 결과가 다시 기준·스킬 개선으로 환류됩니다. 아래 아키텍처 맵은 위 Phase Rail의 선택 단계에 맞춰 핵심 구성요소를 강조합니다.</p></div>
+    <div class="runtime-view">
+      <div class="rt-inputs"><div class="rt-col-l">손해사정 입력</div><div id="rtInputs"></div></div>
+      <div class="rt-arrow">→</div>
+      <div class="rt-core"><div class="rcl">AAP Core Runtime</div><div id="rtCore"></div></div>
+      <div class="rt-arrow">→</div>
+      <div class="rt-outputs"><div class="rt-col-l">업무 산출물</div><div id="rtOutputs"></div></div>
+    </div>
+    <div class="runtime-loop">
+      <div class="rll">↻ Feedback Loop</div>
+      <div class="rlf" id="rtLoop"></div>
+    </div>
+    <div class="mini-arch-map">
+      <div class="mml" id="archMapL">AAP Architecture Map — 보조 뷰</div>
+      <div id="archMap"></div>
+    </div>
+  </section>
+
+  <!-- ===== 탭③ ===== -->
+  <section data-tab="2">
+    <div class="tlede"><h3>단계별 AAP 작동</h3><p>선택한 손해사정 단계에서 AAP가 <b>어떤 데이터·도구로, 어떤 Agent가 판단하고, 무엇을 산출</b>하는지 봅니다. 위 Phase Rail에서 단계를 바꿔보세요.</p></div>
+    <div class="walkthrough">
+      <div class="question-panel"><div class="qpl">업무 질문 · STEP <span id="wkStepNo"></span> <span id="wkStepName"></span></div><div class="qpt" id="wkQuestion"></div></div>
+      <div class="wz entity-zone"><div class="wzl"><span class="wzi">📂</span>사용 데이터 / 도구</div><div id="wkInputs"></div><div class="wsubl">도구</div><div id="wkTools"></div></div>
+      <div class="wz agent-zone"><div class="wzl"><span class="wzi">🤖</span>작동 Agent</div><div id="wkAgents"></div></div>
+      <div class="wz output-zone"><div class="wzl"><span class="wzi">📤</span>생성 결과</div><div id="wkOutputs"></div></div>
+    </div>
+  </section>
+
+  <div class="footnote">Simulation PoC — 본 화면은 설명용 시나리오이며, 금액 · 라우팅 기준 · 자산 적용 범위는 SME 및 제품 기준 검증이 필요합니다.</div>
+</div>
+
+<script>
+"use strict";
+
+/* ===== 공통 Phase 데이터 (탭②③ 공유) ===== */
+const PHASES=[
+ { step:'STEP 1', name:'접수·계약 확인',
+   question:'이 사고는 어떤 담보와 한도 안에서 처리 가능한가?',
+   inputs:['사고 접수 정보','계약 정보','담보/한도/면책 기준','필요서류 기준','청구 시스템'],
+   tools:['계약 조회','약관 검색','자료 정합성 점검'],
+   agents:[{t:'계약/담보 Agent'},{t:'자료 확인 Agent'},{t:'Case/Claim Model'}],
+   outputs:[{t:'담보·한도·면책 확인표',k:'default'},{t:'필요서류 체크리스트',k:'default'},{t:'자료 누락 표시',k:'warning'},{t:'추가자료 요청 후보',k:'review'}],
+   archComps:['보험 청구 데이터','계약/담보','Case/Claim Model','커넥터','Data Quality'] },
+ { step:'STEP 2', name:'사고조사',
+   question:'사고 경위와 과거 청구이력에서 조사 필요 신호가 있는가?',
+   inputs:['블랙박스','사고 경위서','진단서','과거 청구이력 DB','사기 점검 기준'],
+   tools:['블박 분석','문서 인식·구조화','과거 청구이력 조회'],
+   agents:[{t:'사고조사 Agent'},{t:'사기 점검 Agent'},{t:'Agent 간 판단 비교',k:'compare'},{t:'Policy'}],
+   outputs:[{t:'사고경위 확인 결과',k:'default'},{t:'유사청구 2건',k:'warning'},{t:'조사 필요 신호',k:'warning'},{t:'SIU 후보',k:'review'}],
+   archComps:['과거 청구이력 DB','문서 인식·구조화','Case/Claim Model','Domain Agents','Policy'] },
+ { step:'STEP 3', name:'과실 판단',
+   question:'블랙박스와 유사 판례 기준의 과실 판단이 일치하는가?',
+   inputs:['블랙박스','사고유형 기준','유사 판례','분쟁심의 기준'],
+   tools:['과실 기준표 검색','유사 판례 검색(RAG)','사고 유형 매핑'],
+   agents:[{t:'과실 Agent'},{t:'유사사례 Agent'},{t:'Agent 간 판단 비교',k:'compare'},{t:'사람 검토 기준(HITL)',k:'hitl'}],
+   outputs:[{t:'과실 20:80',k:'default'},{t:'유사사례 30:70',k:'default'},{t:'판단 불일치',k:'warning'},{t:'상급 손해사정사 검토 후보',k:'review'},{t:'판단 근거 기록',k:'log'}],
+   archComps:['Case/Claim Model','RAG','Domain Agents','Agent 간 판단 비교(A2A)','사람 검토 기준(HITL)','Audit Trail'] },
+ { step:'STEP 4', name:'손해액 산정',
+   question:'대물 손해와 대인 합의금 요구를 어떻게 구분해 산정할 것인가?',
+   inputs:['수리 견적서','진단서','치료 기간','합의금 요구','산정 기준','사기 의심 신호'],
+   tools:['수리비 기준 조회','진단서 검토','유사 지급사례(RAG)'],
+   agents:[{t:'손해액 Agent'},{t:'사기 점검 Agent'},{t:'Agent 간 판단 비교',k:'compare'},{t:'산정 근거 기록',k:'log'}],
+   outputs:[{t:'대물 손해액 후보 480만',k:'default'},{t:'합의금 300만 검토',k:'warning'},{t:'산정 근거',k:'log'},{t:'합의금 검토 사유',k:'review'}],
+   archComps:['문서 인식·구조화','Domain Agents','Agent 간 판단 비교(A2A)','판단 근거 기록(Decision Log)'] },
+ { step:'STEP 5', name:'보험금 산정',
+   question:'보장 가능 금액과 검토 보류 사유를 어떻게 분리할 것인가?',
+   inputs:['약관','담보/면책 기준','과실상계 기준','손해액 산정 결과','사기 리스크 78점'],
+   tools:['지급 산식','공제/한도 계산','사기 점수 조회'],
+   agents:[{t:'약관 Agent'},{t:'손해액 Agent'},{t:'사기 점검 Agent'},{t:'사람 검토 기준(HITL)',k:'hitl'},{t:'Policy'}],
+   outputs:[{t:'보장 확인 결과',k:'default'},{t:'과실상계 반영 금액',k:'default'},{t:'사기 리스크 78점',k:'warning'},{t:'SIU 검토 후보',k:'review'},{t:'보류 사유',k:'review'}],
+   archComps:['Domain Agents','Policy','사람 검토 기준(HITL)','Audit Trail','RAG'] },
+ { step:'STEP 6', name:'손해사정서·지급',
+   question:'어떤 금액은 자동 처리하고, 어떤 금액은 사람 검토로 보낼 것인가?',
+   inputs:['과실 판단 결과','손해액 산정 결과','보장 확인 결과','사기 리스크','지급 시스템','검토 큐'],
+   tools:['손해사정서 생성','지급·결재 시스템 연계','Audit Trail 저장'],
+   agents:[{t:'Reconciler Agent'},{t:'사람 검토 게이트',k:'hitl'},{t:'업무 자동 실행'},{t:'Decision Log / Audit Trail',k:'log'}],
+   outputs:[{t:'자동 처리 900,000원',k:'auto'},{t:'사람 검토 1,710,000원',k:'review'},{t:'손해사정서 초안',k:'default'},{t:'손해사정사 검토 큐',k:'review'},{t:'SIU 검토 큐',k:'review'},{t:'판단 근거 기록',k:'log'}],
+   archComps:['Supervisor','사람 검토 기준(HITL)','업무 자동 실행','판단 근거 기록(Decision Log)','Audit Trail','에이전트 포털'] },
+];
+
+/* ===== 탭① Workflow 데이터 (방식별 전체 흐름) ===== */
+const METHODS=[
+ {icon:'🖐',name:'수기',desc:'담당자가 자료 확인부터 판단까지 수행',
+  flow:[{t:'사고 접수'},{t:'자료 확인'},{t:'담당자 판단'},{t:'금액 산정'},{t:'손해사정서 작성'}],
+  result:'담당자 판단 기반 지급 권고',limit:'담당자별 편차 · 자료 누락 · 사후 근거 재구성 부담',
+  caseIssue:'과실 20:80과 30:70의 차이가 별도 검토 항목으로 남기 어렵다'},
+ {icon:'💬',name:'챗봇',desc:'질문에 답하거나 문서를 요약',
+  flow:[{t:'사용자 질문'},{t:'문서/사고 요약',k:'llm'},{t:'답변 생성',k:'llm'},{t:'담당자 재판단'}],
+  result:'설명문 · 요약 · 기본 질의응답',limit:'지급 판단 · 권한 분기 · 검토 큐 생성 불가',
+  caseIssue:'합의금 300만 원이 적정한지 업무적으로 판단·분기하지 못한다'},
+ {icon:'🔎',name:'RAG',desc:'근거 문서를 찾아 답을 구성',
+  flow:[{t:'질문 입력'},{t:'약관/판례 검색',k:'rag'},{t:'근거 문서 제시',k:'rag'},{t:'답변 생성',k:'llm'},{t:'담당자 해석'}],
+  result:'약관 · 판례 · 산정 기준 등 근거 제시',limit:'근거는 찾지만 자동/검토 운영 분기는 약함',
+  caseIssue:'블박 20:80과 판례 30:70이 함께 나와도 검토 이벤트로 분리하지 못한다'},
+ {icon:'⚙',name:'단일 Agent',desc:'규칙/모델로 하나의 결론 생성',
+  flow:[{t:'사고 데이터 입력'},{t:'규칙/FDS 적용',k:'agent'},{t:'손해액·과실 산정',k:'agent'},{t:'단일 지급권고',k:'agent'}],
+  result:'빠른 산정 · 단일 결론',limit:'여러 판단 신호가 하나의 결과 안에 흡수됨',
+  caseIssue:'사기 78점과 합의금 300만 원이 별도 검토 대상으로 분리되지 않는다'},
+];
+const AAP_METHOD={
+  flow:[{t:'사건 맥락 정리',k:'aap'},{t:'업무별 Agent 분리',k:'aap'},
+        {t:'Agent별 판단',k:'multi',sub:['계약/담보','사고조사','과실','유사사례','손해액','사기']},
+        {t:'Agent 간 판단 비교',k:'compare'},{t:'분기',k:'branch'},{t:'판단 근거 기록',k:'log'}],
+  outputs:[{t:'자동 처리 900,000원',k:'auto'},{t:'사람 검토 1,710,000원',k:'review'},{t:'상급 손해사정사 검토',k:'review'},{t:'SIU 검토',k:'review'},{t:'손해사정서 초안',k:'default'},{t:'판단 근거 기록',k:'log'}],
+  key:'AAP는 하나의 답을 만드는 것이 아니라, 자동 처리할 항목과 사람이 검토할 항목을 분리해 업무 결과로 만든다.'};
+
+/* ===== 탭② Runtime 구조 (정적) ===== */
+const RT_INPUTS=['보험 청구 데이터','사고 접수','계약/담보','진단서·견적','블박/사고자료','약관·판례·기준','과거 청구이력 DB','지급/심사 시스템'];
+const RT_CORE=[
+ {t:'Case/Claim Model',d:'사건 맥락 정리 · 계약·담보·사고·청구 연결'},
+ {t:'Supervisor / Task Routing',d:'업무 Agent 배정 · 판단 흐름 조율'},
+ {t:'Domain Agents',d:'계약 · 사고조사 · 과실 · 유사사례 · 손해액 · 사기 · 약관',agents:['계약','사고조사','과실','유사사례','손해액','사기','약관']},
+ {t:'Agent 간 판단 비교(A2A)',d:'과실 20:80↔30:70 · 합의금 300만↔사기 78점',k:'compare'},
+ {t:'Policy / HITL',d:'자동 처리 / 사람 검토 분기 · 권한·승인',k:'policy'},
+ {t:'Decision Log / Audit Trail',d:'판단 근거 · 자동/보류 사유 기록',k:'log'},
+];
+const RT_OUTPUTS=[
+ {t:'담보·한도 확인표'},{t:'사고경위 결과'},{t:'과실 판단'},{t:'대물 손해액'},{t:'합의금 검토'},
+ {t:'자동 처리 90만',k:'auto'},{t:'사람 검토 171만',k:'review'},{t:'손해사정서 초안'},{t:'검토 큐'},{t:'판단 근거 기록'}];
+const RT_LOOP=['처리 결과','사람 검토 결과','기준 보정','Agent Skill / Policy 개선','다음 사건 반영'];
+const ARCH=[
+ {n:'고객 자산',comps:['보험 청구 데이터','계약/담보','과거 청구이력 DB','약관·문서']},
+ {n:'경험 / 접근',comps:['에이전트 포털','관리자 콘솔','업무 시스템 연계']},
+ {n:'데이터 / 연동',comps:['커넥터','문서 인식·구조화','업무 자동 실행','Data Quality']},
+ {n:'지식 / 시멘틱',comps:['Case/Claim Model','온톨로지','RAG']},
+ {n:'에이전트 실행환경',comps:['Supervisor','Task Routing','Domain Agents','Agent 간 판단 비교(A2A)']},
+ {n:'컨트롤 / 거버넌스',comps:['Policy','사람 검토 기준(HITL)','권한·승인','Audit Trail']},
+ {n:'AI 품질 / 평가',comps:['판단 근거 기록(Decision Log)','Skill 개선','품질 평가']},
+];
+
+/* ===== 상태 ===== */
+let curPhase=2, curTab=0;
+
+/* 탭 전환 */
+const tabs=document.querySelectorAll('#tabbar button');
+const sections=document.querySelectorAll('section[data-tab]');
+function setTab(i){ curTab=i; tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i))); sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i)); }
+tabs.forEach(b=>b.addEventListener('click',()=>setTab(+b.dataset.tab)));
+
+/* Phase Rail */
+const phaseRail=document.getElementById('phaseRail');
+phaseRail.innerHTML=PHASES.map((p,i)=>`<div class="pchev" data-ph="${i}" role="button" aria-pressed="${i===curPhase}"><span class="pcn">${p.step}</span>${p.name}</div>`).join('');
+function setPhase(i){
+  curPhase=i;
+  document.querySelectorAll('#phaseRail .pchev').forEach((b,bi)=>{ b.setAttribute('aria-pressed',String(bi===i)); b.classList.toggle('done',bi<i); });
+  renderWalkthrough(i); highlightArch(i);
+}
+document.querySelectorAll('#phaseRail .pchev').forEach(b=>b.addEventListener('click',()=>setPhase(+b.dataset.ph)));
+
+/* ===== 탭① 렌더 ===== */
+function flowHTML(flow){
+  return flow.map((n,idx)=>{
+    let node;
+    if(n.k==='multi'){ node=`<div class="fnode multi"><b>${n.t}</b><span class="mlist">${n.sub.join(' · ')}</span></div>`; }
+    else if(n.k==='branch'){ node=`<div class="fbranch"><span class="fnode auto">자동 처리</span><span class="fnode review">사람 검토</span></div>`; }
+    else { node=`<span class="fnode ${n.k||''}">${n.t}</span>`; }
+    return node+(idx<flow.length-1?`<span class="farr">→</span>`:'');
+  }).join('');
+}
+function renderWorkflow(){
+  let html=METHODS.map(m=>
+    `<div class="pattern-row">
+       <div class="pattern-label"><div class="pli">${m.icon}</div><div class="pln">${m.name}</div><div class="pld">${m.desc}</div></div>
+       <div class="pattern-flow">${flowHTML(m.flow)}</div>
+       <div class="pattern-outcome"><div class="por">결과 — ${m.result}</div><span class="pol">⚠ 한계 — ${m.limit}</span><span class="poc">이 사건: ${m.caseIssue}</span></div>
+     </div>`).join('');
+  html+=`<div class="pattern-row aap-row">
+       <div class="pattern-label"><div class="pli">★</div><div class="pln">AAP</div><div class="pld">업무를 나누고 판단을 비교해 자동/검토로 분기하고 근거를 남김</div></div>
+       <div class="pattern-flow">${flowHTML(AAP_METHOD.flow)}</div>
+       <div class="pattern-outcome">
+         <div class="aap-out">${AAP_METHOD.outputs.map(o=>`<span class="${o.k}">${o.t}</span>`).join('')}</div>
+         <div class="aap-key">${AAP_METHOD.key}</div>
+       </div>
+     </div>`;
+  document.getElementById('workflowBoard').innerHTML=html;
+}
+
+/* ===== 탭② 렌더 ===== */
+function renderRuntime(){
+  document.getElementById('rtInputs').innerHTML=RT_INPUTS.map(t=>`<div class="rt-ent">${t}</div>`).join('');
+  document.getElementById('rtCore').innerHTML=RT_CORE.map((n,idx)=>{
+    const ag=n.agents?`<div class="ragents">${n.agents.map(a=>`<span>${a}</span>`).join('')}</div>`:'';
+    return `<div class="rt-node ${n.k||''}"><div class="rnt">${n.t}</div><div class="rnd">${n.d}</div>${ag}</div>`+(idx<RT_CORE.length-1?`<div class="rt-down">↓</div>`:'');
+  }).join('');
+  document.getElementById('rtOutputs').innerHTML=RT_OUTPUTS.map(o=>`<div class="rt-ent ${o.k||''}">${o.t}</div>`).join('');
+  document.getElementById('rtLoop').innerHTML=RT_LOOP.map((t,idx)=>`<span class="rfn">${t}</span>`+(idx<RT_LOOP.length-1?`<span class="ra">→</span>`:'')).join('')+`<span class="ra">↻ Core Runtime</span>`;
+  document.getElementById('archMap').innerHTML=ARCH.map(L=>
+    `<div class="mlayer"><div class="mln">${L.n}</div><div class="mlc">${L.comps.map(c=>`<span class="mcomp" data-c="${c}">${c}</span>`).join('')}</div></div>`).join('');
+}
+function highlightArch(i){
+  const set=PHASES[i].archComps;
+  document.getElementById('archMapL').textContent='AAP Architecture Map — '+PHASES[i].step+' '+PHASES[i].name+' 핵심 구성요소 강조';
+  document.querySelectorAll('#archMap .mcomp').forEach(c=>c.classList.toggle('use', set.includes(c.dataset.c)));
+}
+
+/* ===== 탭③ 렌더 ===== */
+function renderWalkthrough(i){
+  const p=PHASES[i];
+  document.getElementById('wkStepNo').textContent=i+1;
+  document.getElementById('wkStepName').textContent='· '+p.name;
+  document.getElementById('wkQuestion').textContent='“'+p.question+'”';
+  document.getElementById('wkInputs').innerHTML=p.inputs.map(t=>`<span class="wchip">${t}</span>`).join('');
+  document.getElementById('wkTools').innerHTML=p.tools.map(t=>`<span class="wchip tool">${t}</span>`).join('');
+  document.getElementById('wkAgents').innerHTML=p.agents.map(a=>`<span class="wchip ${a.k||''}">${a.t}</span>`).join('');
+  document.getElementById('wkOutputs').innerHTML=p.outputs.map(o=>`<span class="wchip ${o.k||''}">${o.t}</span>`).join('');
+}
+
+/* init */
+renderWorkflow(); renderRuntime(); setPhase(curPhase); setTab(0);
+</script>
+</body>
+</html>
