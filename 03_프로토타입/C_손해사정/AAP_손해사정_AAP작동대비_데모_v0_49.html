@@ -736,6 +736,10 @@
   .ap-impact.branch{background:var(--blue-soft);color:var(--blue-ink);border-color:var(--blue-border)}
   .ap-impact.log{background:#EEF2F7;color:var(--ink);border-color:#CDD6E0}
   .ap-impact.learn{background:var(--violet-soft);color:var(--violet);border-color:var(--violet-border)}
+  .ap-summary{font-size:10.5px;font-weight:600;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-left:3px solid var(--aap);border-radius:9px;padding:9px 11px;line-height:1.55;margin:2px 0 4px;overflow-wrap:anywhere}
+  .aph-sub{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:12px 0 6px}
+  .ap-trace .apt-l em{display:block;font-style:normal;font-size:7px;font-weight:700;color:var(--muted);margin-top:1px;line-height:1.1}
+  .ap-diffline{font-size:10.5px;font-weight:700;color:var(--aap-ink);background:rgba(13,148,136,.07);border:1px solid var(--aap-border);border-radius:8px;padding:8px 10px;line-height:1.45;margin-top:9px;overflow-wrap:anywhere}
   .arch-hint{font-size:10.5px;font-weight:700;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:9px 11px;line-height:1.5;margin-bottom:9px}
   .arch-hint b{color:var(--aap-ink)}
   .arch-legend{display:flex;flex-wrap:wrap;gap:9px;margin-top:11px;font-size:9.5px;font-weight:700;color:var(--slate)}
@@ -844,19 +848,29 @@
   .aapx{border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,#FCFEFE,#F6FAFB);box-shadow:var(--shadow);padding:13px 14px;min-height:638px}
   .aapx-h{font-size:12.5px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px}
   .aapx-h::before{content:'';width:9px;height:9px;border-radius:2px;background:var(--aap)}
-  .aapx-sub{font-size:9.5px;font-weight:600;color:var(--muted);margin:3px 0 11px;line-height:1.4}
+  .aapx-run{margin-left:auto;font:inherit;font-size:9.5px;font-weight:800;color:#fff;background:var(--aap);border:1px solid var(--aap);border-radius:999px;padding:3px 12px;cursor:pointer;transition:opacity .15s}
+  .aapx-run:disabled{opacity:.55;cursor:default}
+  .aapx-sub{font-size:9.5px;font-weight:600;color:var(--muted);margin:3px 0 9px;line-height:1.4}
+  .aapx-prog{height:5px;border-radius:3px;background:var(--surf);border:1px solid var(--border);overflow:hidden;margin-bottom:4px}
+  .aapx-prog-fill{height:100%;width:0;background:linear-gradient(90deg,#0D9488,#0F766E);transition:width .45s ease}
   .aapx-sec{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:13px 0 6px}
-  .aapx-flow{display:flex;flex-direction:column;gap:0}
-  .aapx-stage{display:grid;grid-template-columns:62px 1fr;gap:9px;align-items:start;padding:5px 0;position:relative}
-  .aapx-stage:not(:last-child)::after{content:'';position:absolute;left:31px;top:23px;height:14px;width:1.5px;background:var(--aap-border)}
+  .aapx-flow{display:flex;flex-direction:column;gap:2px}
+  .aapx-stage{display:grid;grid-template-columns:16px 62px 1fr;gap:8px;align-items:center;padding:5px 0;transition:opacity .25s}
+  .aapx-stage .aps-ic{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);box-sizing:border-box;position:relative;flex:0 0 auto}
+  .aapx-stage.pending{opacity:.4}
+  .aapx-stage.active .aps-ic{border-color:var(--aap-border);border-top-color:var(--aap);animation:apsspin .7s linear infinite}
+  @keyframes apsspin{to{transform:rotate(360deg)}}
+  .aapx-stage.done .aps-ic{border-color:var(--aap);background:var(--aap)}
+  .aapx-stage.done .aps-ic::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800}
   .aapx-stage .cap-tag{justify-content:center;width:100%}
-  .aapx-do{font-size:10.5px;font-weight:700;color:var(--slate);line-height:1.35;overflow-wrap:anywhere}
+  .aapx-do{font-size:10.5px;font-weight:700;color:var(--slate);line-height:1.3;overflow-wrap:anywhere}
   .aapx-agents{display:flex;flex-wrap:wrap;gap:6px}
   .aapx-agent{font-size:10px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:7px;padding:5px 9px;line-height:1.3}
   .aapx-agent span{display:block;font-size:8px;font-weight:600;color:var(--muted);margin-top:1px}
   .aapx-diff{font-size:11px;font-weight:700;color:var(--aap-ink);background:rgba(13,148,136,.08);border:1px solid var(--aap-border);border-left:3px solid var(--aap);border-radius:8px;padding:9px 11px;line-height:1.5;overflow-wrap:anywhere}
   .aapx-diff b{color:var(--aap-ink)}
-  .aapx-result{font-size:11px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:8px;padding:8px 10px;line-height:1.5;margin-top:9px}
+  .aapx-result{display:none;font-size:11px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:8px;padding:8px 10px;line-height:1.5;margin-top:9px}
+  .aapx-result.show{display:block;animation:fade .3s ease}
   .aapx-result span{display:block;font-size:8.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
 
   @media print{
@@ -1021,7 +1035,7 @@ const PHASES=[
      aap:{a1:{t:'상해 산정 Agent',sub:CASE.injuryGrade}, a2:{t:'과잉진료 탐지 Agent',sub:'치료 '+CASE.treatDays+'일'}, cmp:'등급·합의금 벤치마크',
        auto:'상해등급 산정', rev:'합의금 적정성·과잉진료 검토', method:'약관 등급 자동 계산 + 통상 치료기간 대비 탐지', branchRule:'합의 확정 / 적정성 검토', result:'상해 '+CASE.injuryGrade+' 산정 + 합의금 '+man(CASE.settlementDemand)+' 검토'} } },
 
- { step:'STEP 4', name:'과실 산정', icon:'⚖️', keyMsg:'증거(경찰>블박>CCTV>목격) 기반 KNIA 사고유형 매칭과 수정요소로 과실을 판정합니다. 블박 '+CASE.liabilityByBlackbox+' ↔ 판례 '+CASE.liabilityByPrecedent+' 차이('+CASE.liabilityGap+')는 단일 확정 대신 사람 검토로 올립니다.',
+ { step:'STEP 4', name:'과실 산정', icon:'⚖️', keyMsg:'증거(경찰>블랙박스>CCTV>목격) 기반 KNIA 사고유형 매칭과 수정요소로 과실을 판정합니다. 블랙박스 '+CASE.liabilityByBlackbox+' ↔ 판례 '+CASE.liabilityByPrecedent+' 차이('+CASE.liabilityGap+')는 단일 확정 대신 사람 검토로 올립니다.',
    wf:{ manual:{nodes:['증거 검토','사고유형 분류','과실비율 수기 판단','협상']},
      aap:{a1:{t:'과실 판정 Agent',sub:CASE.liabilityByBlackbox}, a2:{t:'유사판례 Agent',sub:CASE.liabilityByPrecedent}, cmp:CASE.liabilityByBlackbox+' ↔ '+CASE.liabilityByPrecedent,
        auto:'증거 명확 시 과실 확정', rev:'판단 불일치 사람 검토', method:'KNIA 401유형 매칭 + 수정요소, 판정 차이 표면화', branchRule:'증거 명확 / 판단 불일치('+CASE.liabilityGap+')', result:'과실 후보 비교 + 차이 '+CASE.liabilityGap+' 검토 + 협상 전략'} } },
@@ -1054,7 +1068,7 @@ const METHOD_CMP=[
  { chatbot:'진단서 내용을 정리할 수는 있지만, 상해등급·합의금을 약관 기준으로 산정하지 못합니다.',
    rag:'합의금 벤치마크는 찾지만, 통상 치료기간 대비 과잉진료를 탐지하지 못합니다.',
    single:'합의금 하나는 제시하지만, 적정성·과잉진료를 검토 대상으로 분리하기 어렵습니다.' },
- { chatbot:'사고 설명을 정리할 수는 있지만, 블박 기준과 판례 기준의 차이를 비교하지 못합니다.',
+ { chatbot:'사고 설명을 정리할 수는 있지만, 블랙박스 기준과 판례 기준의 차이를 비교하지 못합니다.',
    rag:'판례·사고유형 기준은 찾지만, 판정이 충돌할 때 사람 검토로 분리하지 못합니다.',
    single:'과실비율 하나를 제시하지만, '+CASE.liabilityByBlackbox+'와 '+CASE.liabilityByPrecedent+'처럼 갈릴 때 차이를 검증 대상으로 만들기 어렵습니다.' },
  { chatbot:'처리 의견을 설명할 수는 있지만, 자사 손실 관점의 처리 시나리오를 만들지 못합니다.',
@@ -1110,7 +1124,7 @@ document.getElementById('casebox').innerHTML=
 
 const tabs=document.querySelectorAll('#tabbar button');
 const sections=document.querySelectorAll('section[data-tab]');
-function setTab(i){ curTab=i; tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i))); sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i)); if(i===1) requestAnimationFrame(()=>updateArchStep(curPhase)); }
+function setTab(i){ curTab=i; tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i))); sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i)); if(i===1) requestAnimationFrame(()=>updateArchStep(curPhase)); if(i===2) requestAnimationFrame(()=>runAapxAnim(curPhase)); }
 tabs.forEach(b=>b.addEventListener('click',()=>setTab(+b.dataset.tab)));
 
 const phaseRail=document.getElementById('phaseRail');
@@ -1129,7 +1143,7 @@ let playTimer=null;
 function setPlayUI(on){ const b=document.getElementById('playBtn'); if(!b)return; b.classList.toggle('playing',on); b.textContent=on?'⏸ 정지':'▶ 재생'; }
 function stopPlay(){ if(playTimer){clearInterval(playTimer);playTimer=null;} setPlayUI(false); }
 function startPlay(){ stopPlay(); if(curPhase>=PHASES.length-1) setPhase(0); setPlayUI(true);
-  playTimer=setInterval(()=>{ if(curPhase>=PHASES.length-1){ stopPlay(); return; } setPhase(curPhase+1); },1700); }
+  playTimer=setInterval(()=>{ if(curPhase>=PHASES.length-1){ stopPlay(); return; } setPhase(curPhase+1); },4000); }
 document.getElementById('playBtn').addEventListener('click',()=>{ playTimer?stopPlay():startPlay(); });
 window.addEventListener('resize',()=>{ if(curTab===1) drawArchLinks(); });
 
@@ -1257,7 +1271,7 @@ const STEP_TRACE=[
  {cust:2,trust:2,loop:['Data','Semantic','Reasoning','Decision'],result:'상해 '+CASE.injuryGrade+' + 합의금 '+man(CASE.settlementDemand)+' 검토',cells:[
    {id:'l5-conn',do:'진단서·치료내역 수집'},{id:'l4-onto',do:'상해등급 의미화'},{id:'l3-core',do:'상해·과잉진료 Agent'},{id:'l6-eval',do:'통상 대비 과잉진료 검증'},{id:'l7-hitl',do:'합의금 적정성 검토'}]},
  {cust:2,trust:1,loop:['Data','Semantic','Reasoning','Decision'],result:'과실 비교 + 차이 '+CASE.liabilityGap+' 검토',cells:[
-   {id:'l5-conn',do:'경찰·블박·CCTV 수집'},{id:'l4-kg',do:'KNIA·판례 연결'},{id:'l3-core',do:'과실·판례 Agent A2A 비교'},{id:'l6-eval',do:'판정 차이 검증'},{id:'l7-hitl',do:'판단 불일치 사람 검토'},{id:'l1-hitl',do:'검토 큐 표시'}]},
+   {id:'l5-conn',do:'경찰·블랙박스·CCTV 수집'},{id:'l4-kg',do:'KNIA·판례 연결'},{id:'l3-core',do:'과실·판례 Agent A2A 비교'},{id:'l6-eval',do:'판정 차이 검증'},{id:'l7-hitl',do:'판단 불일치 사람 검토'},{id:'l1-hitl',do:'검토 큐 표시'}]},
  {cust:1,trust:1,loop:['Data','Reasoning','Decision','Action','Learning'],result:'자동 '+won(CASE.autoAmount)+' / 검토 '+won(CASE.reviewAmount)+' + 결재',cells:[
    {id:'l5-conn',do:'최종 결과·지급정보 결합'},{id:'l3-core',do:'시나리오·문서 Agent'},{id:'l7-policy',do:'자동/사람검토 분기'},{id:'l1-copilot',do:'합의서·보고서 제시'},{id:'l8-store',do:'지급·결재·로그 저장'},{id:'l7-improve',do:'운영 학습 자산화'}]},
 ];
@@ -1323,12 +1337,14 @@ function updateArchStep(i){
   requestAnimationFrame(()=>drawArchLinks(t.cells.map(c=>c.id)));
 }
 function archPanelStep(i){
-  const t=STEP_TRACE[i], p=PHASES[i], panel=document.getElementById('archPanel'); if(!panel||!t)return;
-  const rows=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lid=ARCH_LAYER_OF[c.id].split(' ')[0];
-    return `<div class="ap-trace" data-cell="${c.id}"><span class="apt-n">${k+1}</span><span class="apt-l">${lid}</span><span class="apt-t">${cell.t}<span class="apt-do">${c.do}</span></span></div>`; }).join('');
-  panel.innerHTML=`<div class="aph">${p.step} ${p.name}<span class="aptype">이 단계 경로</span></div>`+
-    `<div class="arch-hint">STEP을 넘기면 이 단계가 지나는 구성요소만 강조됩니다. 항목을 <b>클릭</b>하면 업무 의미가 표시됩니다.</div>`+
+  const t=STEP_TRACE[i], p=PHASES[i], d=PC[i], a=p.wf.aap, panel=document.getElementById('archPanel'); if(!panel||!t)return;
+  const rows=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lno=ARCH_LAYER_OF[c.id].split(' ')[0];
+    return `<div class="ap-trace" data-cell="${c.id}"><span class="apt-n">${k+1}</span><span class="apt-l">${lno}</span><span class="apt-t">${cell.t}<span class="apt-do">${c.do}</span></span></div>`; }).join('');
+  panel.innerHTML=`<div class="aph">${p.step} ${p.name}<span class="aptype">${d.sub.split(' · ')[0]}</span></div>`+
+    `<div class="ap-summary">${a.method}.</div>`+
+    `<div class="aph-sub">이 단계가 지나는 구성요소 · 클릭 시 업무 의미</div>`+
     `<div class="ap-traces">${rows}</div>`+
+    `<div class="ap-diffline">AAP 분기 — ${a.branchRule}</div>`+
     `<div class="ap-row"><div class="ap-k">이 단계 결과</div><div class="ap-v"><b>${t.result}</b></div></div>`+
     `<div class="arch-legend"><span class="alg"><i class="alg-core"></i>L3 핵심</span><span class="alg"><i class="alg-ds"></i>L4·L7 ds 차별화</span><span class="alg"><i class="alg-hl"></i>이 단계 경로</span><span class="alg"><i class="alg-asset"></i>KT ds 자산</span></div>`;
   panel.querySelectorAll('.ap-trace').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
@@ -1403,12 +1419,12 @@ const PC=[
 
  { step:'STEP 4', name:'과실 산정', sub:'Fault · 증거 기반 과실비율', aiStatus:'KNIA 매칭 · A2A 판정 비교 완료',
    cards:[
-     {h:'증거 (우선순위)', verdict:'ok', steps:['📋 경찰 보고서 (최고 증거력)','📹 블랙박스 영상','🎥 주변 CCTV','👁️ 목격자 진술'], src:'우선순위: 경찰 > 블박 > CCTV > 목격'},
-     {h:'AI 과실 판정', verdict:'review', rows:[{k:'KNIA 사고유형',v:'차로변경 접촉'},{rule:'블박',k:'과실 후보',v:CASE.liabilityByBlackbox},{rule:'판례',k:'과실 후보',v:CASE.liabilityByPrecedent}], flag:'⚠ 판정 불일치 '+CASE.liabilityGap+' — 단일 확정 보류'},
+     {h:'증거 (우선순위)', verdict:'ok', steps:['📋 경찰 보고서 (최고 증거력)','📹 블랙박스 영상','🎥 주변 CCTV','👁️ 목격자 진술'], src:'우선순위: 경찰 > 블랙박스 > CCTV > 목격'},
+     {h:'AI 과실 판정', verdict:'review', rows:[{k:'KNIA 사고유형',v:'차로변경 접촉'},{rule:'블랙박스',k:'과실 후보',v:CASE.liabilityByBlackbox},{rule:'판례',k:'과실 후보',v:CASE.liabilityByPrecedent}], flag:'⚠ 판정 불일치 '+CASE.liabilityGap+' — 단일 확정 보류'},
      {h:'협상 전략 3단계', verdict:'ok', steps:['타사 최초 주장 분석','손보협회 기준 중재안 제시','증거 상충점 대조']} ],
    decision:{ q:'과실비율을 어떻게 처리하시겠습니까?',
      actions:[{l:'과실 확정',k:'confirm',cls:'primary'},{l:'판단 불일치 · 사람 검토',k:'hold',cls:'warn'}],
-     outcome:{confirm:'✅ 증거 명확 — 과실비율을 확정합니다.', hold:'⏸ 블박 '+CASE.liabilityByBlackbox+' ↔ 판례 '+CASE.liabilityByPrecedent+' 차이 '+CASE.liabilityGap+' — 상급 손해사정사 검토 큐에 등록(협의 중 상태 유지).'} },
+     outcome:{confirm:'✅ 증거 명확 — 과실비율을 확정합니다.', hold:'⏸ 블랙박스 '+CASE.liabilityByBlackbox+' ↔ 판례 '+CASE.liabilityByPrecedent+' 차이 '+CASE.liabilityGap+' — 상급 손해사정사 검토 큐에 등록(협의 중 상태 유지).'} },
    aap:'<b>AAP 충돌 표면화(A2A)</b> — 서로 다른 기준의 과실 판정을 합치지 않고 나란히 비교해, 차이가 크면 자동 확정 대신 사람 검토로 올립니다.' },
 
  { step:'STEP 5', name:'처리 방법', sub:'Method · AI 4개 시나리오 중 선택', aiStatus:'AI 처리 시나리오 4종 생성 완료',
@@ -1463,16 +1479,53 @@ function renderPC(i){
 function capOf(id){ const p=id.split('-')[0];
   return ({l5:['DATA','cap-DATA'],l4:['SEMANTIC','cap-SEMANTIC'],l3:['AGENT','cap-AGENT'],l6:['EVAL','cap-EVAL'],l7:['CONTROL','cap-CONTROL'],l1:['ACTION','cap-ACTION'],l8:['LOG','cap-LOG']})[p]||['',''];
 }
-function renderAapx(i){
-  const el=document.getElementById('aapx'), t=STEP_TRACE[i], a=PHASES[i].wf.aap, d=PC[i];
-  if(!el||!t)return;
-  const flow=t.cells.map(c=>{ const cap=capOf(c.id); return `<div class="aapx-stage"><span class="cap-tag ${cap[1]}">${cap[0]}</span><span class="aapx-do">${c.do}</span></div>`; }).join('');
+/* 우측 AAP 작동 구조 — 좌측 업무 화면을 처리하는 AAP 작동이 순서대로 실제 실행(스피너→완료·진행바), 완료 후 좌측에 결과 반영 */
+let aapToken=0;
+function aapxSkeleton(i){
+  const t=STEP_TRACE[i], d=PC[i], a=PHASES[i].wf.aap;
+  const stages=t.cells.map(c=>{ const cap=capOf(c.id); return {cap:cap[0],cls:cap[1],dt:c.do}; });
+  const stagesHTML=stages.map((s,k)=>`<div class="aapx-stage pending" id="aps${k}"><span class="aps-ic"></span><span class="cap-tag ${s.cls}">${s.cap}</span><span class="aapx-do">${s.dt}</span></div>`).join('');
   const agents=`<div class="aapx-agents"><span class="aapx-agent">${a.a1.t}<span>${a.a1.sub}</span></span><span class="aapx-agent">${a.a2.t}<span>${a.a2.sub}</span></span></div>`;
-  el.innerHTML=`<div class="aapx-h">AAP 작동 구조</div><div class="aapx-sub">왼쪽 업무 화면 뒤에서 AAP가 이 단계를 처리하는 방식입니다.</div>`+
-    `<div class="aapx-sec">작동 흐름 · 계층 / 역량</div><div class="aapx-flow">${flow}</div>`+
-    `<div class="aapx-sec">핵심 Agent</div>${agents}`+
+  const html=`<div class="aapx-h">AAP 작동 구조<button class="aapx-run" id="aapxRun" type="button">다시 실행</button></div>`+
+    `<div class="aapx-sub">좌측 업무 화면을 처리하는 AAP 작동이 순서대로 실행됩니다.</div>`+
+    `<div class="aapx-prog"><div class="aapx-prog-fill" id="aapxProg"></div></div>`+
+    `<div class="aapx-sec">작동 흐름 · 계층 / 역량</div><div class="aapx-flow">${stagesHTML}</div>`+
+    `<div class="aapx-sec">핵심 에이전트</div>${agents}`+
     `<div class="aapx-sec">AAP 차별화</div><div class="aapx-diff">${d.aap}</div>`+
-    `<div class="aapx-result"><span>이 단계 결과</span>${t.result}</div>`;
+    `<div class="aapx-result" id="aapxResult"><span>이 단계 결과</span>${t.result}</div>`;
+  return {n:stages.length, html:html};
+}
+function renderAapx(i){
+  const el=document.getElementById('aapx'); if(!el||!STEP_TRACE[i])return;
+  const sk=aapxSkeleton(i); el.innerHTML=sk.html;
+  document.getElementById('aapxRun').addEventListener('click',()=>runAapxAnim(i));
+  if(curTab===2){ runAapxAnim(i); }
+  else { for(let k=0;k<sk.n;k++){ const s=document.getElementById('aps'+k); s.classList.remove('pending'); s.classList.add('done'); }
+         document.getElementById('aapxProg').style.width='100%'; document.getElementById('aapxResult').classList.add('show'); }
+}
+function runAapxAnim(i){
+  const el=document.getElementById('aapx'); if(!el||!STEP_TRACE[i])return;
+  const sk=aapxSkeleton(i); el.innerHTML=sk.html;
+  document.getElementById('aapxRun').addEventListener('click',()=>runAapxAnim(i));
+  const myToken=++aapToken;
+  const prog=document.getElementById('aapxProg'), res=document.getElementById('aapxResult'), btn=document.getElementById('aapxRun');
+  btn.disabled=true; btn.textContent='실행 중';
+  let k=-1;
+  (function next(){
+    if(myToken!==aapToken)return;
+    if(k>=0){ const p=document.getElementById('aps'+k); if(p){ p.classList.remove('active'); p.classList.add('done'); } if(prog) prog.style.width=Math.round(((k+1)/sk.n)*100)+'%'; }
+    k++;
+    if(k>=sk.n){ if(res) res.classList.add('show'); if(btn){ btn.disabled=false; btn.textContent='다시 실행'; } applyAiResult(i); return; }
+    const c=document.getElementById('aps'+k); if(c){ c.classList.remove('pending'); c.classList.add('active'); }
+    setTimeout(next,650);
+  })();
+}
+/* 작동 완료 → 좌측 업무 화면에 AI 결과 반영 (사용자가 이미 선택했으면 유지) */
+const AAP_VERDICT={0:'review',1:'confirm',2:'hold',3:'hold'};
+function applyAiResult(i){
+  if(PC[i].scenarios){ if(pcSel[i]==null){ pcSel[i]=0; pcDone[i]='sel'; renderPC(i); } return; }
+  const v=AAP_VERDICT[i];
+  if(v && pcDone[i]==null){ pcDone[i]=v; renderPC(i); }
 }
 /* init */
 renderArchMap(); setPhase(curPhase); setTab(0);
