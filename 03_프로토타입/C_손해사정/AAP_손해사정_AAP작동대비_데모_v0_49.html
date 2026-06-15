@@ -567,6 +567,10 @@
   .t1-aapcol{border:2px solid var(--aap);background:linear-gradient(180deg,#F0FDFA,#FBFFFE 60%);box-shadow:0 3px 18px rgba(13,148,136,.13)}
   .t1-aapcol .t1-colh{color:var(--aap-ink)} .t1-aapcol .t1-colh .t1-tagm{background:var(--aap)}
   .t1-aapcap{font-size:10px;font-weight:700;color:var(--muted);margin:2px 0 7px}
+  .t1-aap-how{margin-top:9px;border:1px solid var(--aap-border);border-left:4px solid var(--aap);border-radius:10px;background:rgba(13,148,136,.06);padding:9px 12px}
+  .t1-aap-howh{font-size:10px;font-weight:800;color:var(--aap-ink);margin-bottom:5px}
+  .t1-aap-howb{font-size:11px;font-weight:600;color:var(--slate);line-height:1.5;padding-left:14px;position:relative;margin-top:4px;overflow-wrap:anywhere}
+  .t1-aap-howb::before{content:'▸';position:absolute;left:0;color:var(--aap);font-weight:900;font-size:9px;top:1px}
   .t1-steps4{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px}
   .t1-steps4 span{font-size:9.5px;font-weight:800;color:var(--aap-ink);background:#fff;border:1px solid var(--aap-border);border-radius:6px;padding:3px 8px}
   .t1-steps4 i{font-style:normal;color:var(--aap);font-weight:900;align-self:center}
@@ -887,8 +891,11 @@
   .aapx-basis span{color:var(--muted)}
   .aapx-bl{font-size:10px;font-weight:600;color:var(--slate);line-height:1.5;padding-left:13px;position:relative;margin-top:5px;overflow-wrap:anywhere}
   .aapx-bl::before{content:'·';position:absolute;left:3px;color:var(--aap);font-weight:900}
-  .ap-interp{font-size:10.5px;font-weight:600;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:9px;padding:9px 11px;line-height:1.55;margin-top:9px;overflow-wrap:anywhere}
-  .ap-interp b{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+  .ap-interp{background:var(--amber-soft);border:1px solid var(--amber-border);border-left:4px solid var(--amber);border-radius:10px;padding:10px 12px;margin-top:11px;overflow-wrap:anywhere}
+  .ap-interp b{display:block;font-size:10px;font-weight:800;color:var(--amber-ink);margin-bottom:5px}
+  .ap-interp .api-txt{font-size:11px;font-weight:700;color:var(--amber-ink);line-height:1.55;margin-bottom:6px}
+  .ap-interp .api-b{font-size:10px;font-weight:600;color:var(--amber-ink);line-height:1.45;padding-left:13px;position:relative;margin-top:3px;opacity:.92}
+  .ap-interp .api-b::before{content:'·';position:absolute;left:3px;font-weight:900}
   .pc{position:relative}
   .pc-cursor{position:absolute;width:20px;height:20px;z-index:30;pointer-events:none;opacity:0;transition:left .55s cubic-bezier(.4,.1,.3,1),top .55s cubic-bezier(.4,.1,.3,1),opacity .3s;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 2l15 8-6.5 1.8L9 21z' fill='%230F172A' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E");filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
   .pc-cursor.show{opacity:1}
@@ -1286,6 +1293,7 @@ function renderWorkflow(i){
      <div class="t1-aap-row2"><span class="t1-tk2 help">작동</span><span>${a.method}</span></div>
      <div class="t1-aap-row2"><span class="t1-tk2 help">분기 기준</span><span>${a.branchRule}</span></div>
      <div class="t1-aap-row2"><span class="t1-tk2 help">업무 결과</span><span>${a.result}</span></div>
+     ${STEP_BASIS[i]?`<div class="t1-aap-how"><div class="t1-aap-howh">이 단계에서 AAP가 처리하는 것 · 해석</div>${STEP_BASIS[i].basis.map(x=>`<div class="t1-aap-howb">${x}</div>`).join('')}</div>`:''}
      <div class="t1-aap-bind2">이 사건 — <span class="amt-auto">자동 처리 후보 ${won(CASE.autoAmount)}</span> · <span class="amt-rev">사람 검토 후보 ${won(CASE.reviewAmount)}</span> 분리</div>`;
 }
 
@@ -1307,16 +1315,18 @@ const ARCH_LAYERS=[
  {id:'L1',ko:'경험 / 접근',cells:[
    {id:'l1-portal',t:'에이전트 포털'},
    {id:'l1-copilot',t:'코파일럿 / 챗 UI'},
-   {id:'l1-hitl',t:'검토·승인 워크스페이스',tag:'HITL'},
-   {id:'l1-admin',t:'관리자 콘솔'}]},
+   {id:'l1-admin',t:'관리자 콘솔'},
+   {id:'l1-api',t:'API Gateway / SDK'}]},
  {id:'L2',ko:'설계 / 개발',cells:[
-   {id:'l2-studio',t:'에이전트 스튜디오'},
-   {id:'l2-wf',t:'워크플로우 디자이너'},
-   {id:'l2-toolreg',t:'도구 레지스트리'},
-   {id:'l2-agentreg',t:'에이전트 레지스트리',badge:'자사 검증 Agent'}]},
- {id:'L3',ko:'에이전트 실행환경',accent:'core',mini:['입력 처리','계획·추론','행동 실행','응답 생성'],cells:[
-   {id:'l3-access',t:'접근',s:'REST · WebSocket · gRPC · Event'},
-   {id:'l3-core',t:'코어',s:'메모리 · 모델 게이트웨이 · 도구 실행 · 가드레일 · 에이전트 관리'}]},
+   {id:'l2-studio',t:'에이전트 설계',s:'Low-Code · UX'},
+   {id:'l2-wf',t:'프롬프트·워크플로우 설계'},
+   {id:'l2-toolreg',t:'Tool Registry',s:'API·함수·플러그인'},
+   {id:'l2-agentreg',t:'Agent Registry',s:'카탈로그·버전·배포',badge:'자사 검증 Agent'}]},
+ {id:'L3',ko:'에이전트 실행환경',accent:'core',mini:['입력 처리','계획','행동 실행','응답 생성'],cells:[
+   {id:'l3-access',t:'접근',s:'REST · GraphQL · WebSocket · gRPC · Event'},
+   {id:'l3-core',t:'코어 · 실행 엔진',s:'메모리 · 모델 게이트웨이 · 도구 실행 · 가드레일 · 에이전트 관리'},
+   {id:'l3-orch',t:'오케스트레이션·멀티에이전트',s:'Supervisor · Task Routing · A2A · 협업'},
+   {id:'l3-hitl',t:'HITL 런타임 게이트',s:'Runtime Review / Approval'}]},
  {id:'L4',ko:'지식 / 시멘틱',accent:'ds',mark:'★ ds 차별화',cells:[
    {id:'l4-onto',t:'온톨로지·시멘틱 모델'},
    {id:'l4-kg',t:'도메인 지식그래프'},
@@ -1324,6 +1334,7 @@ const ARCH_LAYERS=[
    {id:'l4-ctx',t:'컨텍스트 조합·근거'}]},
  {id:'L5',ko:'데이터 / 연동',mini:['수집','정제','정규화','변환'],cells:[
    {id:'l5-conn',t:'연결·수집',s:'DB · API · SaaS · 파일/이벤트 커넥터',badge:'AI:ON-U (OCR)'},
+   {id:'l5-proc',t:'데이터 처리·파이프라인',s:'정제 · 정규화 · 변환'},
    {id:'l5-mgmt',t:'데이터 관리',s:'스키마 · 품질'}]},
  {id:'L6',ko:'AI 품질 / 평가',cells:[
    {id:'l6-trace',t:'실행 추적',s:'Decision Log'},
@@ -1334,7 +1345,7 @@ const ARCH_LAYERS=[
  {id:'L7',ko:'컨트롤 / 거버넌스',accent:'ds',mark:'★ ds 차별화',cells:[
    {id:'l7-policy',t:'정책 관리·통제'},
    {id:'l7-perm',t:'에이전트 권한'},
-   {id:'l7-hitl',t:'HITL 승인'},
+   {id:'l7-hitl',t:'HITL 승인 기준'},
    {id:'l7-improve',t:'Self-Improving',s:'운영 학습 자산화'},
    {id:'l7-guard',t:'사용량·비용 가드레일'}]},
  {id:'L8',ko:'인프라',cells:[
@@ -1350,11 +1361,11 @@ const STEP_TRACE=[
  {cust:1,trust:2,loop:['Data','Semantic','Reasoning','Decision'],result:'지급 대상 PASS + 사기 '+CASE.fraudScore+'점 REVIEW·SIU',cells:[
    {id:'l5-conn',do:'신분증·계약·청구이력 수집'},{id:'l4-kg',do:'관계인·반복청구 연결'},{id:'l3-core',do:'자격·사기 탐지 Agent'},{id:'l6-eval',do:'FDS 사기점수 검증'},{id:'l7-policy',do:'PASS/DENY/REVIEW 분기'}]},
  {cust:0,trust:1,loop:['Data','Semantic','Reasoning','Action'],result:'대물 견적 '+man(CASE.repairEstimate)+' + 미수선 옵션',cells:[
-   {id:'l5-conn',do:'사고사진·차량정보 수집'},{id:'l4-onto',do:'파손·부품·공임 의미화'},{id:'l3-core',do:'사진분석·견적 Agent'},{id:'l6-eval',do:'전손·과다 검증'},{id:'l1-hitl',do:'견적·현금정산 표시'}]},
+   {id:'l5-conn',do:'사고사진·차량정보 수집'},{id:'l4-onto',do:'파손·부품·공임 의미화'},{id:'l3-core',do:'사진분석·견적 Agent'},{id:'l6-eval',do:'전손·과다 검증'},{id:'l1-portal',do:'견적·현금정산 표시'}]},
  {cust:2,trust:2,loop:['Data','Semantic','Reasoning','Decision'],result:'상해 '+CASE.injuryGrade+' + 합의금 '+man(CASE.settlementDemand)+' 검토',cells:[
    {id:'l5-conn',do:'진단서·치료내역 수집'},{id:'l4-onto',do:'상해등급 의미화'},{id:'l3-core',do:'상해·과잉진료 Agent'},{id:'l6-eval',do:'통상 대비 과잉진료 검증'},{id:'l7-hitl',do:'합의금 적정성 검토'}]},
  {cust:2,trust:1,loop:['Data','Semantic','Reasoning','Decision'],result:'과실 비교 + 차이 '+CASE.liabilityGap+' 검토',cells:[
-   {id:'l5-conn',do:'경찰·블랙박스·CCTV 수집'},{id:'l4-kg',do:'KNIA·판례 연결'},{id:'l3-core',do:'과실·판례 Agent A2A 비교'},{id:'l6-eval',do:'판정 차이 검증'},{id:'l7-hitl',do:'판단 불일치 사람 검토'},{id:'l1-hitl',do:'검토 큐 표시'}]},
+   {id:'l5-conn',do:'경찰·블랙박스·CCTV 수집'},{id:'l4-kg',do:'KNIA·판례 연결'},{id:'l3-core',do:'과실·판례 Agent A2A 비교'},{id:'l6-eval',do:'판정 차이 검증'},{id:'l7-hitl',do:'판단 불일치 사람 검토'},{id:'l1-portal',do:'검토 큐 표시'}]},
  {cust:1,trust:1,loop:['Data','Reasoning','Decision','Action','Learning'],result:'자동 '+won(CASE.autoAmount)+' / 검토 '+won(CASE.reviewAmount)+' + 결재',cells:[
    {id:'l5-conn',do:'최종 결과·지급정보 결합'},{id:'l3-core',do:'시나리오·문서 Agent'},{id:'l7-policy',do:'자동/사람검토 분기'},{id:'l1-copilot',do:'합의서·보고서 제시'},{id:'l8-store',do:'지급·결재·로그 저장'},{id:'l7-improve',do:'운영 학습 자산화'}]},
 ];
@@ -1372,7 +1383,9 @@ const ARCH_MEAN={
  'l7-policy':{entity:'자동/검토 분기·보류·SIU',link:'정책·임계값·권한 기준 적용',role:'L7 정책·통제가 자동/검토/특별조사 경로를 분기 (ds 차별화)',impact:'처리 경로 결정',cls:'branch'},
  'l7-hitl':{entity:'사람 검토 승인 게이트',link:'HITL 승인 경계',role:'검토 대상을 사람 승인 경계로 전달',impact:'사람 검토 후 반영',cls:'hold'},
  'l7-improve':{entity:'검토 결과·SME 피드백',link:'Self-Improving',role:'반복 검토 결과를 운영 학습으로 자산화 (ds 차별화)',impact:'기준 개선',cls:'learn'},
- 'l1-hitl':{entity:'검토 큐·자동 지급 알림·손해사정서',link:'검토·승인 워크스페이스(HITL)',role:'L1이 검토 대상·산출물을 손해사정사 화면에 표시',impact:'자동 '+won(CASE.autoAmount)+' / 검토 '+won(CASE.reviewAmount)+' 표시',cls:'branch'},
+ 'l1-portal':{entity:'검토 큐·자동 지급 알림·손해사정서',link:'에이전트 포털(손해사정사 워크스페이스)',role:'L1이 검토 대상·산출물을 손해사정사 화면에 표시',impact:'자동 '+won(CASE.autoAmount)+' / 검토 '+won(CASE.reviewAmount)+' 표시',cls:'branch'},
+ 'l3-orch':{entity:'복수 Agent 조율',link:'Supervisor · Task Routing · A2A · 멀티에이전트 협업',role:'L3 오케스트레이션이 Agent를 나눠 실행하고 판정을 교차 비교(A2A)',impact:'판단 비교·충돌 표면화',cls:'auto'},
+ 'l3-hitl':{entity:'런타임 검토 게이트',link:'Runtime Review / Approval Gate',role:'실행 중 사람 검토가 필요한 건을 멈춰 세우는 경계',impact:'사람 검토로 보류',cls:'hold'},
  'l1-copilot':{entity:'손해사정서 초안·근거 요약',link:'코파일럿 / 챗 UI',role:'초안·근거 요약을 담당자에게 제시',impact:'담당자 확인 대기',cls:'hold'},
  'l8-store':{entity:'지급·결재·로그',link:'스토리지·DB 인프라',role:'지급 실행과 감사 이력을 저장',impact:'기록',cls:'log'}
 };
@@ -1464,7 +1477,7 @@ function archPanelStep(i){
     `<div class="ap-traces">${rows}</div>`+
     `<div class="ap-diffline">AAP 분기 — ${a.branchRule}</div>`+
     `<div class="ap-row"><div class="ap-k">이 단계 결과</div><div class="ap-v"><b>${t.result}</b></div></div>`+
-    (STEP_BASIS[i]?`<div class="ap-interp"><b>해석</b>${STEP_BASIS[i].interp}</div>`:'')+
+    (STEP_BASIS[i]?`<div class="ap-interp"><b>이 결과를 어떻게 읽나 · 해석</b><div class="api-txt">${STEP_BASIS[i].interp}</div>`+STEP_BASIS[i].basis.map(x=>`<div class="api-b">${x}</div>`).join('')+`</div>`:'')+
     `<div class="arch-legend"><span class="alg"><i class="alg-core"></i>L3 핵심</span><span class="alg"><i class="alg-ds"></i>L4·L7 ds 차별화</span><span class="alg"><i class="alg-hl"></i>이 단계 경로</span><span class="alg"><i class="alg-asset"></i>KT ds 자산</span></div>`;
   panel.querySelectorAll('.ap-trace').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
 }
