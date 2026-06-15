@@ -6,7 +6,7 @@
 <title>AAP 손해사정 — Workflow · AAP 구조 지도 · 작동 시뮬레이션 (Simulation PoC)</title>
 <!--
   v0.48 — 탭② 아키텍처 세부요소 '기본 노출' 전면 교체 + 탭③ 손해사정사 화면+STEP 시나리오 + 디자인 안정성 규칙 신설.
-   · 공유 Phase Rail(+재생)이 setPhase로 탭①③ 구동. 탭②는 정적 포스터(STEP 무반응). CASE/PHASES/SIM 데이터 보존, buildDiagram은 미니 서브그래프 전용으로 유지.
+   · 공유 Phase Rail(+재생)이 setPhase로 탭①②③ 모두 구동. 탭②는 정적 골격(renderArchMap) 위에 STEP별 강조(updateArchStep/STEP_TRACE). CASE/PHASES/SIM 데이터 보존, buildDiagram은 미니 서브그래프 전용으로 유지.
    · 탭1 처리 방식별 Workflow(유지·정비) — 기준선 밴드 + 도구 vs AAP 2분할(#t1Base·#t1Tools·#t1Aap).
    · 탭2 AAP 구조 지도(전면 교체, renderArchMap) — 6단계 Execution Loop(캐논 정합: Data→Semantic→Reasoning→Decision→Action→Learning, 계층번호 병기) 띠 + Customer Env / 8계층 세부요소 셀 기본 노출(L3 핵심·L4/L7 ds 차별화 accent) / Trust·Security 횡단. KT ds 자산 배지(AI:ON-U·BEAST·Antbot·자사 검증 Agent). 이 사건 경로만 번호+연결선 오버레이. 셀 클릭→우 30% 의미 패널 4행(업무개체/연결관계/AAP역할/결과영향).
    · 탭3 AAP 작동 시뮬레이션(renderConsole+renderScenario) — 좌 57% 손해사정사 업무 화면(베젤로 구분된 표면, STEP마다 실제 갱신) / 우 43% 시나리오 동작(활성 기능·확인 항목·화면 변화 + 미니 서브그래프). 동작 하나·확인 하나로 절제.
@@ -669,9 +669,11 @@
   .arch-map{position:relative;border:1px solid var(--border);border-radius:13px;background:linear-gradient(180deg,#FCFEFE,#F6FAFB);box-shadow:var(--shadow);padding:11px 12px;min-height:600px}
   .arch-loop{display:flex;align-items:stretch;gap:3px;border:1px solid var(--border);border-radius:10px;background:#fff;padding:7px 9px;margin-bottom:10px}
   .arch-loop .alh{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;align-self:center;margin-right:5px;white-space:nowrap}
-  .arch-loop .als{flex:1;min-width:0;text-align:center;border-radius:7px;background:linear-gradient(135deg,#0D9488,#0F766E);border:1px solid #0F766E;padding:5px 3px}
-  .arch-loop .als b{display:block;font-size:10.5px;font-weight:800;color:#fff;line-height:1.2}
-  .arch-loop .als span{display:block;font-size:8px;font-weight:700;color:#CCFBF1;margin-top:1px}
+  .arch-loop .als{flex:1;min-width:0;text-align:center;border-radius:7px;background:var(--surf);border:1px solid var(--border);padding:5px 3px;transition:background .2s,border-color .2s}
+  .arch-loop .als b{display:block;font-size:10.5px;font-weight:800;color:var(--muted);line-height:1.2}
+  .arch-loop .als span{display:block;font-size:8px;font-weight:700;color:var(--muted);margin-top:1px}
+  .arch-loop .als.on{background:linear-gradient(135deg,#0D9488,#0F766E);border-color:#0F766E}
+  .arch-loop .als.on b{color:#fff}.arch-loop .als.on span{color:#CCFBF1}
   .arch-loop .ala{align-self:center;color:var(--aap);font-weight:900;font-size:11px}
   .arch-board{display:grid;grid-template-columns:130px minmax(0,1fr) 142px;gap:8px;align-items:stretch}
   @media(max-width:760px){.arch-board{grid-template-columns:1fr}}
@@ -740,6 +742,23 @@
   .alg-ds{background:linear-gradient(135deg,#F5F3FF,#fff);border-color:var(--violet)!important}
   .alg-hl{background:#ECFDF5;border-color:var(--aap)!important}
   .alg-asset{background:var(--violet);border-color:var(--violet)!important}
+  /* v0.48b 탭② STEP 반응: 활성 경로 강조 · 비활성 dim · 양옆 균형 */
+  .arch-cell .hlseq[hidden]{display:none}
+  .arch-cell.dim{opacity:.34;filter:saturate(.5)}
+  .arch-railitems{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .arch-railitem{transition:background .2s,border-color .2s,box-shadow .2s}
+  .arch-railitem.on{border-color:var(--aap);background:var(--aap-soft);box-shadow:0 0 0 2px rgba(13,148,136,.2)}
+  .arch-railitem.on span{color:var(--aap-ink)}
+  .arch-rail.trust .arch-railitem.on{border-color:var(--aap);background:rgba(13,148,136,.32)}
+  .ap-traces{display:flex;flex-direction:column;gap:5px;margin:4px 0 9px}
+  .ap-trace{display:grid;grid-template-columns:18px 28px 1fr;gap:7px;align-items:center;border:1px solid var(--border);border-radius:8px;background:var(--surf);padding:6px 8px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .ap-trace:hover{border-color:var(--aap);box-shadow:0 0 0 2px rgba(13,148,136,.16)}
+  .ap-trace .apt-n{width:18px;height:18px;border-radius:50%;background:var(--aap);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .ap-trace .apt-l{font-size:8.5px;font-weight:800;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:5px;padding:2px 0;text-align:center}
+  .ap-trace .apt-t{font-size:11px;font-weight:800;color:var(--ink);line-height:1.2}
+  .ap-trace .apt-do{display:block;font-size:9px;font-weight:600;color:var(--muted);margin-top:1px}
+  .ap-back{font:inherit;font-size:10px;font-weight:800;color:var(--aap-ink);background:#fff;border:1px solid var(--aap-border);border-radius:7px;padding:4px 10px;cursor:pointer;margin-bottom:9px}
+  .ap-back:hover{background:var(--aap-soft)}
 
   /* ===== v0.48 탭③ 손해사정사 화면(좌 57%) + 시나리오 동작(우 43%) ===== */
   .sim48{display:grid;grid-template-columns:minmax(0,1.33fr) minmax(0,1fr);gap:13px;align-items:start}
@@ -852,7 +871,7 @@
   </section>
 
   <section data-tab="1">
-    <div class="tlede"><h3>② AAP 구조 지도</h3><span class="aud">실무 리더 / IT·AI 검토자용</span><p>캐논 = <b>AAP 아키텍처 Version 0.3</b>(8계층 + Customer Environment + Trust·Security + Execution Loop). 세부 요소를 처음부터 모두 노출합니다. <b>L3 에이전트 실행환경</b>이 핵심, <b>L4 지식·시멘틱 / L7 컨트롤·거버넌스</b>가 KT ds 차별화 영역입니다. 이 손해사정 사건이 실제로 지나는 요소만 <b>번호 + 연결선</b>으로 강조되며, 요소를 클릭하면 우측에 업무 의미가 표시됩니다.</p></div>
+    <div class="tlede"><h3>② AAP 구조 지도</h3><span class="aud">실무 리더 / IT·AI 검토자용</span><p>캐논 = <b>AAP 아키텍처 Version 0.3</b>(8계층 + Customer Environment + Trust·Security + 6단계 Execution Loop). 세부 요소를 처음부터 모두 노출하되, 상단 STEP을 넘기면 <b>그 손해사정 단계가 지나는 구성요소만 번호 + 연결선으로 강조</b>되고 나머지는 흐려집니다. <b>L3</b>가 핵심, <b>L4 / L7</b>이 KT ds 차별화 영역. 요소를 클릭하면 우측에 업무 의미가 표시됩니다.</p></div>
     <div class="arch2">
       <div class="arch-map" id="archMap"></div>
       <div class="arch-panel" id="archPanel"></div>
@@ -1188,7 +1207,7 @@ document.getElementById('casebox').innerHTML=
 
 const tabs=document.querySelectorAll('#tabbar button');
 const sections=document.querySelectorAll('section[data-tab]');
-function setTab(i){ curTab=i; tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i))); sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i)); if(i===1) requestAnimationFrame(drawArchLinks); }
+function setTab(i){ curTab=i; tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i))); sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i)); if(i===1) requestAnimationFrame(()=>updateArchStep(curPhase)); }
 tabs.forEach(b=>b.addEventListener('click',()=>setTab(+b.dataset.tab)));
 
 const phaseRail=document.getElementById('phaseRail');
@@ -1198,7 +1217,7 @@ function setPhase(i){
   document.querySelectorAll('#phaseRail .pchev').forEach((b,bi)=>{ b.setAttribute('aria-pressed',String(bi===i)); b.classList.toggle('done',bi<i); });
   const p=PHASES[i];
   document.getElementById('keyMsg').innerHTML=`<span class="kmstep">${p.step} ${p.name}</span><span class="kmtxt">핵심: ${p.keyMsg}</span>`;
-  renderWorkflow(i); renderConsole(i); renderScenario(i);
+  renderWorkflow(i); renderConsole(i); renderScenario(i); updateArchStep(i);
 }
 document.querySelectorAll('#phaseRail .pchev').forEach(b=>b.addEventListener('click',()=>{ stopPlay(); setPhase(+b.dataset.ph); }));
 
@@ -1269,8 +1288,8 @@ function renderWorkflow(i){
      <div class="t1-aap-bind2">이 사건 — <span class="amt-auto">자동 처리 후보 ${won(CASE.autoAmount)}</span> · <span class="amt-rev">사람 검토 후보 ${won(CASE.reviewAmount)}</span> 분리</div>`;
 }
 
-/* ===== 탭② 아키텍처 포스터 (renderArchMap) — 정적. 세부 요소 기본 노출 + 사건 경로 하이라이트 =====
-   캐논 = AAP 아키텍처 Version 0.3. STEP에 반응하지 않음(작동은 탭③). */
+/* ===== 탭② 아키텍처 포스터 (renderArchMap 정적 골격 + updateArchStep STEP 반응) =====
+   캐논 = AAP 아키텍처 Version 0.3. 세부 요소는 항상 노출, STEP별로 지나는 구성요소만 강조·나머지 dim. */
 const ARCH_LOOP=[
  {s:'Data',l:'L5'},{s:'Semantic',l:'L4'},{s:'Reasoning',l:'L3'},{s:'Decision',l:'L6·L7'},{s:'Action',l:'L1·L8'},{s:'Learning',l:'L7'}
 ];
@@ -1324,9 +1343,22 @@ const ARCH_LAYERS=[
    {id:'l8-store',t:'스토리지·DB'},
    {id:'l8-cloud',t:'온프레/클라우드'}]},
 ];
-/* 이 사건이 지나는 경로(번호) */
-const ARCH_PATH=['l5-conn','l4-onto','l3-core','l6-eval','l7-policy','l1-hitl'];
-const ARCH_SEQ={}; ARCH_PATH.forEach((id,k)=>ARCH_SEQ[id]=k+1);
+/* STEP별 트레이스 — 이 단계가 지나는 구성요소(순서)·고객자산(cust)·통제(trust)·Loop 단계. 탭②가 STEP에 반응 */
+let archStepCur=0;
+const STEP_TRACE=[
+ {cust:1,trust:1,loop:['Data','Semantic','Reasoning','Decision','Action'],result:'담보·한도 확인표 + 추가자료 요청 후보',cells:[
+   {id:'l5-conn',do:'사고·계약·증빙 수집'},{id:'l4-onto',do:'담보·면책 의미화'},{id:'l3-core',do:'보장 가능성 판단'},{id:'l7-policy',do:'누락 서류·권한 확인'},{id:'l1-hitl',do:'접수 결과·추가서류 표시'}]},
+ {cust:2,trust:2,loop:['Data','Semantic','Reasoning','Decision'],result:'사고경위 확인 + 유사청구·SIU 검토 후보',cells:[
+   {id:'l5-conn',do:'사고자료·청구이력 수집'},{id:'l4-kg',do:'반복 패턴 연결'},{id:'l3-core',do:'이상징후 탐지 Agent'},{id:'l6-eval',do:'사기 점수 검증'},{id:'l7-policy',do:'일반/추가조사/SIU 분기'}]},
+ {cust:2,trust:1,loop:['Data','Semantic','Reasoning','Decision'],result:'상급 손해사정사 검토 후보 + 근거 기록',cells:[
+   {id:'l5-conn',do:'블박·경위·판례 수집'},{id:'l4-kg',do:'판례·사고유형 연결'},{id:'l3-core',do:'과실 Agent A2A 비교'},{id:'l6-eval',do:'판단 차이 검증'},{id:'l7-hitl',do:'사람 검토 게이트'},{id:'l1-hitl',do:'상급 검토 큐 표시'}]},
+ {cust:1,trust:1,loop:['Data','Semantic','Reasoning','Decision'],result:'대물 후보 + 대인 손해 검토',cells:[
+   {id:'l5-conn',do:'견적·진단·치료비 수집'},{id:'l4-onto',do:'대물/대인 분리 의미화'},{id:'l3-core',do:'대물·대인 분리 산정'},{id:'l6-eval',do:'과다청구·이상값 검증'},{id:'l7-policy',do:'검토 항목 분리'},{id:'l1-hitl',do:'산정 후보·검토 표시'}]},
+ {cust:2,trust:1,loop:['Data','Semantic','Reasoning','Decision'],result:'지급보험금 후보 + 보류·SIU 검토 후보',cells:[
+   {id:'l5-conn',do:'손해액·약관·한도 결합'},{id:'l4-onto',do:'과실상계·면책 의미화'},{id:'l3-core',do:'지급 후보 산정 Agent'},{id:'l7-policy',do:'보장/감액/보류/SIU 분기'},{id:'l1-hitl',do:'지급 후보·보류 표시'}]},
+ {cust:1,trust:1,loop:['Data','Reasoning','Decision','Action','Learning'],result:'자동 '+won(CASE.autoAmount)+' + 검토 '+won(CASE.reviewAmount)+' + 손해사정서 교부',cells:[
+   {id:'l5-conn',do:'최종 결과·지급정보 결합'},{id:'l3-core',do:'문서작성·지급 Agent'},{id:'l7-policy',do:'자동/사람검토 분기'},{id:'l1-copilot',do:'손해사정서 초안 제시'},{id:'l8-store',do:'지급·결재·로그 저장'},{id:'l7-improve',do:'운영 학습 자산화'}]},
+];
 /* 하이라이트 요소의 업무 의미 4행 (cls = 결과 영향 색) */
 const ARCH_MEAN={
  'l5-conn':{entity:'사고 접수·계약·증빙·블랙박스',link:'청구시스템·계약DB → OCR(AI:ON-U)로 디지털화',role:'L5 커넥터가 흩어진 자료를 한 사건으로 수집·정규화',impact:'입력 자료 정규화',cls:'auto'},
@@ -1348,19 +1380,16 @@ const ARCH_CELL_BY_ID={}, ARCH_LAYER_OF={};
 ARCH_LAYERS.forEach(L=>L.cells.forEach(c=>{ARCH_CELL_BY_ID[c.id]=c; ARCH_LAYER_OF[c.id]=L.id+' '+L.ko;}));
 
 function archCellHTML(c){
-  const seq=ARCH_SEQ[c.id], inMean=ARCH_MEAN[c.id]!=null;
-  const cls='arch-cell'+(seq?' hlnum':(inMean?' hl':''));
-  const seqB=seq?`<span class="hlseq">${seq}</span>`:'';
   const sub=c.s?`<span class="acs clamp2">${c.s}</span>`:'';
   const badge=c.badge?`<span class="arch-badge">${c.badge}</span>`:'';
-  return `<div class="${cls}" data-cell="${c.id}">${seqB}<span class="act">${c.t}${c.tag?' · '+c.tag:''}</span>${sub}${badge}</div>`;
+  return `<div class="arch-cell" data-cell="${c.id}"><span class="hlseq" hidden></span><span class="act">${c.t}${c.tag?' · '+c.tag:''}</span>${sub}${badge}</div>`;
 }
 function renderArchMap(){
   const map=document.getElementById('archMap'); if(!map)return;
   const loop=`<div class="arch-loop"><span class="alh">Execution Loop</span>`+
-    ARCH_LOOP.map((x,k)=>`<span class="als"><b>${x.s}</b><span>${x.l}</span></span>`+(k<ARCH_LOOP.length-1?'<span class="ala">▶</span>':'')).join('')+`</div>`;
-  const railHTML=(D,extra)=>`<aside class="arch-rail${extra||''}"><div class="arh">${D.h}</div><div class="ars">${D.s}</div>`+
-    D.items.map(x=>`<div class="arch-railitem">${x.t}<span>${x.s}</span></div>`).join('')+`</aside>`;
+    ARCH_LOOP.map((x,k)=>`<span class="als" data-stage="${x.s}"><b>${x.s}</b><span>${x.l}</span></span>`+(k<ARCH_LOOP.length-1?'<span class="ala">▶</span>':'')).join('')+`</div>`;
+  const railHTML=(D,type,extra)=>`<aside class="arch-rail${extra||''}"><div class="arh">${D.h}</div><div class="ars">${D.s}</div><div class="arch-railitems">`+
+    D.items.map((x,k)=>`<div class="arch-railitem" data-rail="${type}" data-idx="${k}">${x.t}<span>${x.s}</span></div>`).join('')+`</div></aside>`;
   const stack=`<div class="arch-stack">`+ARCH_LAYERS.map(L=>{
     const rc='arch-row'+(L.accent==='core'?' core':(L.accent==='ds'?' ds':''));
     const mark=L.mark?`<span class="armark">${L.mark}</span>`:'';
@@ -1368,42 +1397,64 @@ function renderArchMap(){
     return `<div class="${rc}"><div class="arrowhead"><div class="arl"><span class="arn">${L.id.replace('L','')}</span><span class="arnm">${L.ko}</span></div>${mark}</div>`+
       `<div class="arch-cells">${L.cells.map(archCellHTML).join('')}${mini}</div></div>`;
   }).join('')+`</div>`;
-  map.innerHTML=loop+`<div class="arch-board">${railHTML(ARCH_CUST)}${stack}${railHTML(ARCH_TRUST,' trust')}</div><svg class="arch-links" id="archLinks"></svg>`;
+  map.innerHTML=loop+`<div class="arch-board">${railHTML(ARCH_CUST,'cust')}${stack}${railHTML(ARCH_TRUST,'trust',' trust')}</div><svg class="arch-links" id="archLinks"></svg>`;
   map.querySelectorAll('.arch-cell').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
-  archPanelDefault();
-  requestAnimationFrame(drawArchLinks);
 }
-function archPanelDefault(){
-  const panel=document.getElementById('archPanel'); if(!panel)return;
-  document.querySelectorAll('#archMap .arch-cell.sel').forEach(el=>el.classList.remove('sel'));
-  panel.innerHTML=`<div class="aph">아키텍처 구조 지도<span class="aptype">정적 포스터</span></div>`+
-    `<div class="arch-hint">8계층 세부 요소가 처음부터 모두 노출됩니다. 이 손해사정 사건이 지나는 요소는 <b>번호 + 연결선</b>으로 강조됩니다 — ①수집 → ②의미화 → ③Agent 실행 → ④검증 → ⑤통제·분기 → ⑥검토·산출. 요소를 <b>클릭</b>하면 업무 의미가 여기에 표시됩니다.</div>`+
-    `<div class="ap-row"><div class="ap-k">우리가 직접 설계</div><div class="ap-v"><b>L4 의미화</b> + <b>L7 운영학습</b> — 도메인 차별화 영역</div></div>`+
-    `<div class="ap-row"><div class="ap-k">자산 + 외부 조합</div><div class="ap-v">나머지 계층은 KT ds 자산(AI:ON-U · BEAST · Antbot · 자사 검증 Agent)과 표준 구성요소 조합</div></div>`+
-    `<div class="arch-legend"><span class="alg"><i class="alg-core"></i>L3 핵심</span><span class="alg"><i class="alg-ds"></i>L4·L7 ds 차별화</span><span class="alg"><i class="alg-hl"></i>이 사건 경로</span><span class="alg"><i class="alg-asset"></i>KT ds 자산</span></div>`;
+/* STEP 반응: 이 단계 경로만 강조 + 비활성 dim + Loop/레일 점등 + 우측 트레이스 패널 + 연결선 */
+function updateArchStep(i){
+  const map=document.getElementById('archMap'); const t=STEP_TRACE[i]; if(!map||!t)return;
+  archStepCur=i;
+  const order={}; t.cells.forEach((c,k)=>order[c.id]=k+1);
+  map.querySelectorAll('.arch-cell').forEach(el=>{
+    const n=order[el.dataset.cell], seq=el.querySelector('.hlseq');
+    el.classList.toggle('hlnum',!!n); el.classList.toggle('dim',!n); el.classList.remove('sel');
+    if(seq){ if(n){ seq.textContent=n; seq.hidden=false; } else { seq.hidden=true; } }
+  });
+  map.querySelectorAll('.arch-loop .als').forEach(el=>el.classList.toggle('on',t.loop.indexOf(el.dataset.stage)>=0));
+  map.querySelectorAll('.arch-railitem').forEach(el=>{
+    const on=(el.dataset.rail==='cust'&&+el.dataset.idx===t.cust)||(el.dataset.rail==='trust'&&+el.dataset.idx===t.trust);
+    el.classList.toggle('on',on);
+  });
+  archPanelStep(i);
+  requestAnimationFrame(()=>drawArchLinks(t.cells.map(c=>c.id)));
+}
+function archPanelStep(i){
+  const t=STEP_TRACE[i], p=PHASES[i], panel=document.getElementById('archPanel'); if(!panel||!t)return;
+  const rows=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lid=ARCH_LAYER_OF[c.id].split(' ')[0];
+    return `<div class="ap-trace" data-cell="${c.id}"><span class="apt-n">${k+1}</span><span class="apt-l">${lid}</span><span class="apt-t">${cell.t}<span class="apt-do">${c.do}</span></span></div>`; }).join('');
+  panel.innerHTML=`<div class="aph">${p.step} ${p.name}<span class="aptype">이 단계 경로</span></div>`+
+    `<div class="arch-hint">STEP을 넘기면 이 단계가 지나는 구성요소만 강조됩니다. 항목을 <b>클릭</b>하면 업무 의미가 표시됩니다.</div>`+
+    `<div class="ap-traces">${rows}</div>`+
+    `<div class="ap-row"><div class="ap-k">이 단계 결과</div><div class="ap-v"><b>${t.result}</b></div></div>`+
+    `<div class="arch-legend"><span class="alg"><i class="alg-core"></i>L3 핵심</span><span class="alg"><i class="alg-ds"></i>L4·L7 ds 차별화</span><span class="alg"><i class="alg-hl"></i>이 단계 경로</span><span class="alg"><i class="alg-asset"></i>KT ds 자산</span></div>`;
+  panel.querySelectorAll('.ap-trace').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
 }
 function selectArchCell(id){
   const c=ARCH_CELL_BY_ID[id], m=ARCH_MEAN[id], panel=document.getElementById('archPanel');
   if(!c||!panel)return;
   document.querySelectorAll('#archMap .arch-cell').forEach(el=>el.classList.toggle('sel',el.dataset.cell===id));
+  const tr=STEP_TRACE[archStepCur], seqInStep=tr?tr.cells.findIndex(x=>x.id===id)+1:0;
+  const back=`<button class="ap-back" type="button">← 이 단계 경로</button>`;
   if(m){
-    panel.innerHTML=`<div class="aph">${c.t}<span class="aptype">사건 경로${ARCH_SEQ[id]?' · '+ARCH_SEQ[id]:''}</span><span class="aplayer">${ARCH_LAYER_OF[id]}</span></div>`+
+    panel.innerHTML=`<div class="aph">${c.t}<span class="aptype">${seqInStep?'이 단계 · '+seqInStep:'구성요소'}</span><span class="aplayer">${ARCH_LAYER_OF[id]}</span></div>`+back+
       `<div class="ap-row"><div class="ap-k">업무 개체</div><div class="ap-v">${m.entity}</div></div>`+
       `<div class="ap-row"><div class="ap-k">연결 관계</div><div class="ap-v">${m.link}</div></div>`+
       `<div class="ap-row"><div class="ap-k">AAP 역할</div><div class="ap-v">${m.role}</div></div>`+
       `<div class="ap-row"><div class="ap-k">결과 영향</div><div class="ap-v"><span class="ap-impact ${m.cls}">${m.impact} (${ARCH_IMPACT_KO[m.cls]})</span></div></div>`;
   } else {
-    panel.innerHTML=`<div class="aph">${c.t}<span class="aptype" style="background:var(--surf);color:var(--slate);border-color:var(--border)">구조 요소</span><span class="aplayer">${ARCH_LAYER_OF[id]}</span></div>`+
+    panel.innerHTML=`<div class="aph">${c.t}<span class="aptype" style="background:var(--surf);color:var(--slate);border-color:var(--border)">구조 요소</span><span class="aplayer">${ARCH_LAYER_OF[id]}</span></div>`+back+
       `<div class="ap-row"><div class="ap-k">구성 요소</div><div class="ap-v">${c.s||c.t}${c.badge?' · <b>'+c.badge+'</b>':''}</div></div>`+
       `<div class="ap-row"><div class="ap-k">역할</div><div class="ap-v">AAP 표준 아키텍처 구성요소입니다.</div></div>`+
-      `<div class="ap-row"><div class="ap-k">이 사건</div><div class="ap-v">이 손해사정 사건의 직접 경로는 아니지만, 같은 플랫폼 위에서 함께 동작합니다.</div></div>`;
+      `<div class="ap-row"><div class="ap-k">이 단계</div><div class="ap-v">이 단계의 직접 경로는 아니지만, 같은 플랫폼 위에서 함께 동작합니다.</div></div>`;
   }
+  const bk=panel.querySelector('.ap-back'); if(bk) bk.addEventListener('click',()=>archPanelStep(archStepCur));
 }
-function drawArchLinks(){
+function drawArchLinks(cellIds){
   const map=document.getElementById('archMap'), svg=document.getElementById('archLinks');
   if(!map||!svg)return;
+  const tr=STEP_TRACE[archStepCur], ids=cellIds||(tr?tr.cells.map(c=>c.id):[]);
   const mr=map.getBoundingClientRect(); if(mr.width<10)return;
-  const pts=ARCH_PATH.map(id=>{ const el=map.querySelector('[data-cell="'+id+'"]'); if(!el)return null;
+  const pts=ids.map(id=>{ const el=map.querySelector('[data-cell="'+id+'"]'); if(!el)return null;
     const r=el.getBoundingClientRect(); return {x:r.left-mr.left+r.width/2,y:r.top-mr.top+r.height/2}; }).filter(Boolean);
   svg.setAttribute('viewBox',`0 0 ${mr.width} ${mr.height}`); svg.setAttribute('width',mr.width); svg.setAttribute('height',mr.height);
   let d=''; for(let k=0;k<pts.length-1;k++){ const a=pts[k],b=pts[k+1],my=(a.y+b.y)/2; d+=`M${a.x} ${a.y} C ${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y} `; }
