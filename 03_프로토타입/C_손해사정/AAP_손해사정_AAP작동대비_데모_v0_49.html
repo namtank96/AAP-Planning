@@ -863,6 +863,8 @@
   .aapx-flow{display:flex;flex-direction:column;gap:2px}
   .aapx-stage{display:grid;grid-template-columns:18px 1fr;gap:9px;align-items:start;padding:6px 0;transition:opacity .25s}
   .aps-el{display:block;font-size:10px;font-weight:800;color:var(--aap-ink);line-height:1.25;margin-bottom:1px}
+  .aapx-screen{font-size:10.5px;font-weight:600;color:var(--slate);background:#fff;border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:9px;padding:9px 11px;line-height:1.55;margin-bottom:9px;overflow-wrap:anywhere}
+  .aapx-screen .aapx-screen-k{display:block;font-size:9px;font-weight:800;color:var(--amber-ink);margin-bottom:3px}
   .aapx-stage .aps-ic{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted);flex:0 0 auto;transition:background .2s,border-color .2s,box-shadow .2s,color .2s}
   .aapx-stage.pending{opacity:.45}
   .aapx-stage.active{opacity:1}
@@ -1588,7 +1590,15 @@ function renderPC(i){
 function capOf(id){ const p=id.split('-')[0];
   return ({l5:['DATA','cap-DATA'],l4:['SEMANTIC','cap-SEMANTIC'],l3:['AGENT','cap-AGENT'],l6:['EVAL','cap-EVAL'],l7:['CONTROL','cap-CONTROL'],l1:['ACTION','cap-ACTION'],l8:['LOG','cap-LOG']})[p]||['',''];
 }
-/* 우측 AAP 작동 구조 — 좌측 업무 화면을 처리하는 AAP 작동이 순서대로 실제 실행(스피너→완료·진행바), 완료 후 좌측에 결과 반영 */
+/* 우측 상단 — 좌측 화면에서 손해사정사가 실제로 보는 것 + 핵심 발견(화면 설명) */
+const SCREEN_NARR=[
+ {find:'보험사기 의심 신호', txt:'화면의 3개 검증 카드 중 본인 확인·운전자 적합성은 통과(초록)지만, 보험사기 패턴 카드에 6개월 내 '+CASE.similarClaims+'회 반복접수·'+CASE.fraudScore+'점이 잡혀 REVIEW(노랑)로 표시됩니다. 이 한 카드 때문에 자동 통과 대신 검토·SIU로 보냅니다.'},
+ {find:'대물 견적 '+man(CASE.repairEstimate), txt:'차량 특정 → AI 사진분석(파손 부위·정도) → 부품·공임 산출 카드가 차례로 채워져 대물 견적 '+man(CASE.repairEstimate)+'이 나옵니다. 전손·과다 신호가 없어 견적 확정으로 진행할 수 있습니다.'},
+ {find:'과잉진료·합의금 적정성', txt:'상해등급(경추염좌 14급)·치료기간 '+CASE.treatDays+'일이 표시되고, 통상 10일 대비 초과가 과잉진료 신호로 뜹니다. 합의금 '+man(CASE.settlementDemand)+'은 등급 벤치마크를 상회해 적정성 검토 대상입니다.'},
+ {find:'과실 판정 '+CASE.liabilityGap+' 불일치', txt:'증거(경찰·블랙박스 우선)와 AI 과실 판정 카드에 블랙박스 '+CASE.liabilityByBlackbox+'과 판례 '+CASE.liabilityByPrecedent+'이 나란히 떠 '+CASE.liabilityGap+' 차이가 강조됩니다. 한 값으로 확정하지 않고 사람 검토로 보냅니다.'},
+ {find:'자동 '+won(CASE.autoAmount)+' / 검토 '+won(CASE.reviewAmount), txt:'AI가 4개 처리 시나리오 카드를 제시하고 최적안(미수선 현금정산)을 추천합니다. 선택하면 자동 '+won(CASE.autoAmount)+'/검토 '+won(CASE.reviewAmount)+'으로 나뉘어 합의서·손해사정 보고서가 자동 생성·결재됩니다.'},
+];
+/* 우측 AAP 작동 구조 — 좌측 업무 화면을 처리하는 AAP 작동이 순서대로 실제 실행(스피너→완료·진행바) */
 let aapToken=0;
 function aapxSkeleton(i){
   const t=STEP_TRACE[i], d=PC[i], a=PHASES[i].wf.aap;
@@ -1596,7 +1606,8 @@ function aapxSkeleton(i){
   const stagesHTML=stages.map((s,k)=>`<div class="aapx-stage pending" id="aps${k}"><span class="aps-ic">${k+1}</span><span class="aps-body"><span class="aps-el">${s.el}</span><span class="aapx-do">${s.dt}</span>${s.det?`<span class="aapx-det">${s.det}</span>`:''}</span></div>`).join('');
   const agents=`<div class="aapx-agents"><span class="aapx-agent">${a.a1.t}<span>${a.a1.sub}</span></span><span class="aapx-agent">${a.a2.t}<span>${a.a2.sub}</span></span></div>`;
   const html=`<div class="aapx-h">AAP 작동 구조<button class="aapx-run" id="aapxRun" type="button">다시 실행</button></div>`+
-    `<div class="aapx-sub">좌측 업무 화면을 처리하는 AAP 작동이 순서대로 실행됩니다.</div>`+
+    `<div class="aapx-sub">좌측 업무 화면에서 손해사정사가 보는 것과, 그 화면을 만들어내는 AAP 작동입니다.</div>`+
+    `<div class="aapx-screen"><span class="aapx-screen-k">이 화면에서 — 핵심: ${SCREEN_NARR[i].find}</span>${SCREEN_NARR[i].txt}</div>`+
     `<div class="aapx-prog"><div class="aapx-prog-fill" id="aapxProg"></div></div>`+
     `<div class="aapx-sec">AAP 작동 순서 · 어떤 요소가 무엇을 하는가</div><div class="aapx-flow">${stagesHTML}</div>`+
     `<div class="aapx-sec">핵심 에이전트</div>${agents}`+
