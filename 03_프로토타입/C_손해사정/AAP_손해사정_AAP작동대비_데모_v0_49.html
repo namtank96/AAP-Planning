@@ -720,7 +720,7 @@
   .arch-cell .hlseq{position:absolute;top:-8px;left:-7px;width:17px;height:17px;border-radius:50%;background:var(--aap);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(13,148,136,.5);z-index:5}
   .arch-cell.sel{border-color:var(--ink);box-shadow:0 0 0 2px rgba(15,23,42,.32)}
   .arch-links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible}
-  .arch-links path{fill:none;stroke:var(--aap);stroke-width:2;stroke-dasharray:6 5;opacity:.5;animation:dashflow 1.6s linear infinite}
+  .arch-links .arch-seg{fill:none;stroke:var(--aap);stroke-width:2.6;stroke-linecap:round;opacity:.9;filter:drop-shadow(0 1px 2px rgba(13,148,136,.35))}
   .arch-panel{position:sticky;top:8px;border:1px solid var(--border);border-radius:13px;background:#fff;box-shadow:var(--shadow);padding:13px 15px;min-height:820px}
   .arch-panel .aph{font-size:12.5px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:9px;border-bottom:1px solid var(--line);margin-bottom:10px}
   .arch-panel .aptype{font-size:9px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:6px;padding:2px 8px}
@@ -872,12 +872,27 @@
   .aapx-result{display:none;font-size:11px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:8px;padding:8px 10px;line-height:1.5;margin-top:9px}
   .aapx-result.show{display:block;animation:fade .3s ease}
   .aapx-result span{display:block;font-size:8.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+  /* v0.49c 설명가능성(탭3 근거) · 해석(탭2) · 좌측 안내(커서·툴팁) */
+  .aapx-basis{background:var(--surf);border-color:var(--border)}
+  .aapx-basis span{color:var(--muted)}
+  .aapx-bl{font-size:10px;font-weight:600;color:var(--slate);line-height:1.5;padding-left:13px;position:relative;margin-top:5px;overflow-wrap:anywhere}
+  .aapx-bl::before{content:'·';position:absolute;left:3px;color:var(--aap);font-weight:900}
+  .ap-interp{font-size:10.5px;font-weight:600;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:9px;padding:9px 11px;line-height:1.55;margin-top:9px;overflow-wrap:anywhere}
+  .ap-interp b{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+  .pc{position:relative}
+  .pc-cursor{position:absolute;width:20px;height:20px;z-index:30;pointer-events:none;opacity:0;transition:left .55s cubic-bezier(.4,.1,.3,1),top .55s cubic-bezier(.4,.1,.3,1),opacity .3s;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 2l15 8-6.5 1.8L9 21z' fill='%230F172A' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E");filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+  .pc-cursor.show{opacity:1}
+  .pc-tip{position:absolute;z-index:31;max-width:228px;background:#0F172A;color:#fff;font-size:10.5px;font-weight:700;line-height:1.45;padding:7px 11px;border-radius:9px;box-shadow:0 6px 16px rgba(0,0,0,.28);opacity:0;transform:translateY(-100%);transition:opacity .25s,left .45s ease,top .45s ease;pointer-events:none}
+  .pc-tip.show{opacity:1}
+  .pc-tip::after{content:'';position:absolute;left:18px;bottom:-5px;width:9px;height:9px;background:#0F172A;transform:rotate(45deg)}
+  .pc-card.focus,.pc-scn.focus{border-color:var(--aap)!important;box-shadow:0 0 0 3px rgba(13,148,136,.3)!important}
 
   @media print{
     .tabbar,.keymsg .kmstep,#playBtn{display:none}
     section[data-tab]{display:block!important;break-inside:avoid;margin-bottom:14px;min-height:0}
     .dgm-wrap{overflow:visible}
-    .dedge.flow,.arch-links path{animation:none}
+    .dedge.flow,.arch-links .arch-seg{animation:none}
+    .pc-cursor,.pc-tip{display:none}
     .arch-panel{position:static}
   }
 </style>
@@ -1124,7 +1139,7 @@ document.getElementById('casebox').innerHTML=
 
 const tabs=document.querySelectorAll('#tabbar button');
 const sections=document.querySelectorAll('section[data-tab]');
-function setTab(i){ curTab=i; tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i))); sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i)); if(i===1) requestAnimationFrame(()=>updateArchStep(curPhase)); if(i===2) requestAnimationFrame(()=>runAapxAnim(curPhase)); }
+function setTab(i){ curTab=i; tabs.forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.tab===i))); sections.forEach(s=>s.classList.toggle('on',+s.dataset.tab===i)); if(i===1) requestAnimationFrame(()=>updateArchStep(curPhase)); if(i===2) requestAnimationFrame(()=>{ runAapxAnim(curPhase); pcWalk(curPhase); }); }
 tabs.forEach(b=>b.addEventListener('click',()=>setTab(+b.dataset.tab)));
 
 const phaseRail=document.getElementById('phaseRail');
@@ -1134,7 +1149,7 @@ function setPhase(i){
   document.querySelectorAll('#phaseRail .pchev').forEach((b,bi)=>{ b.setAttribute('aria-pressed',String(bi===i)); b.classList.toggle('done',bi<i); });
   const p=PHASES[i];
   document.getElementById('keyMsg').innerHTML=`<span class="kmstep">${p.step} ${p.name}</span><span class="kmtxt">핵심: ${p.keyMsg}</span>`;
-  renderWorkflow(i); renderPC(i); renderAapx(i); updateArchStep(i);
+  renderWorkflow(i); renderPC(i); renderAapx(i); updateArchStep(i); if(curTab===2) requestAnimationFrame(()=>pcWalk(i));
 }
 document.querySelectorAll('#phaseRail .pchev').forEach(b=>b.addEventListener('click',()=>{ stopPlay(); setPhase(+b.dataset.ph); }));
 
@@ -1336,6 +1351,27 @@ function updateArchStep(i){
   archPanelStep(i);
   requestAnimationFrame(()=>drawArchLinks(t.cells.map(c=>c.id)));
 }
+/* 단계별 해석(탭2 우측) + 판단 근거·설명가능성(탭3 우측) */
+const STEP_BASIS=[
+ {interp:'사기 의심 점수는 지급 거절 근거가 아니라 추가 확인이 필요하다는 신호입니다. 정상 자격은 자동 통과시키고 의심분만 사람·특별조사로 보내 부당지급과 과잉심사를 함께 줄입니다.',
+  basis:['본인·운전자 검증은 통과되어 정상 자격이 확인됨','사기 점수 78점은 임계 75점 초과 — 6개월 내 2회 반복접수가 주요 신호(가정)','지급 거절이 아니라 보류 후 특별조사로 사실을 먼저 확인']},
+ {interp:'AI 견적은 사람 판단을 대체하지 않고 통상가와 규칙으로 1차 산출합니다. 전손·과다 항목만 사람이 확인하면 됩니다.',
+  basis:['사진 분석으로 파손 부위·정도를 객관 수치화','인증부품 환급·외산 배율 등 규칙을 일관되게 적용','수리비가 차량가의 일정 비율을 넘으면 전손으로 검토']},
+ {interp:'합의금은 액수 자체보다 통상 대비 적정한지로 읽어야 합니다. 과잉진료·과다 합의금 신호만 검토 대상으로 분리합니다.',
+  basis:['상해등급은 약관 기준으로 자동 산정','통상 치료기간 대비 초과분이 과잉진료 신호','등급 벤치마크를 넘는 합의금은 적정성 검토 대상']},
+ {interp:'과실 판정이 기준마다 다르면 한 값으로 덮지 않습니다. 차이 자체가 사람이 봐야 한다는 신호입니다.',
+  basis:['블랙박스 기준과 판례 기준의 과실을 나란히 비교','차이 10%p는 단일 확정 대신 검토 기준(가정)','협상 전략으로 분쟁·민원을 사전에 관리']},
+ {interp:'AI는 결론을 강요하지 않고 손실·기간·리스크가 다른 선택지를 제시합니다. 확실분은 자동으로, 다툼·의심분은 사람 검토로 나눕니다.',
+  basis:['4개 시나리오는 자사 손실 관점에서 자동 생성','확실분 90만 원은 자동 처리로 빠르게 정산','검토분 171만 원은 사람 확인 후 합의서·보고서 자동 작성']},
+];
+/* 좌측 업무 화면 안내 툴팁(탭3) — 카드별 "사용자가 무엇을 확인하는가" */
+const PC_TIPS=[
+ ['신분증과 계약 정보를 대조해 본인 여부를 확인합니다.','가족한정 특약 범위에 운전자가 포함되는지 봅니다.','청구이력과 사기 규칙으로 의심 패턴을 점검합니다.'],
+ ['원산지·연식·주행거리로 차량을 특정합니다.','사고 사진으로 파손 부위와 정도를 판정합니다.','부품·공임·도장을 통상가로 산출합니다.'],
+ ['진단서 기준으로 상해등급과 치료기간을 확인합니다.','통상 치료기간과 비교해 과잉진료를 점검합니다.','등급 벤치마크와 요구 합의금을 비교합니다.'],
+ ['경찰·블랙박스·CCTV 순으로 증거를 검토합니다.','기준별 과실을 비교합니다 — 판정이 갈립니다.','타사 주장·중재안·증거로 협상 전략을 세웁니다.'],
+ ['AI 추천안입니다 — 미수선 현금정산으로 자사 비용이 가장 낮습니다.','과실 재협상·구상권으로 타사 청구를 줄이는 안입니다.','제휴센터 수리로 분쟁 리스크를 낮추는 안입니다.','특수 경로를 활용하는 전략안입니다.']
+];
 function archPanelStep(i){
   const t=STEP_TRACE[i], p=PHASES[i], d=PC[i], a=p.wf.aap, panel=document.getElementById('archPanel'); if(!panel||!t)return;
   const rows=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lno=ARCH_LAYER_OF[c.id].split(' ')[0];
@@ -1346,6 +1382,7 @@ function archPanelStep(i){
     `<div class="ap-traces">${rows}</div>`+
     `<div class="ap-diffline">AAP 분기 — ${a.branchRule}</div>`+
     `<div class="ap-row"><div class="ap-k">이 단계 결과</div><div class="ap-v"><b>${t.result}</b></div></div>`+
+    (STEP_BASIS[i]?`<div class="ap-interp"><b>해석</b>${STEP_BASIS[i].interp}</div>`:'')+
     `<div class="arch-legend"><span class="alg"><i class="alg-core"></i>L3 핵심</span><span class="alg"><i class="alg-ds"></i>L4·L7 ds 차별화</span><span class="alg"><i class="alg-hl"></i>이 단계 경로</span><span class="alg"><i class="alg-asset"></i>KT ds 자산</span></div>`;
   panel.querySelectorAll('.ap-trace').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
 }
@@ -1369,6 +1406,7 @@ function selectArchCell(id){
   }
   const bk=panel.querySelector('.ap-back'); if(bk) bk.addEventListener('click',()=>archPanelStep(archStepCur));
 }
+/* 연결선 — phase를 누르면 셀 경로를 따라 선이 하나씩 순서대로 그어진다(흐름 가시화) */
 function drawArchLinks(cellIds){
   const map=document.getElementById('archMap'), svg=document.getElementById('archLinks');
   if(!map||!svg)return;
@@ -1377,8 +1415,13 @@ function drawArchLinks(cellIds){
   const pts=ids.map(id=>{ const el=map.querySelector('[data-cell="'+id+'"]'); if(!el)return null;
     const r=el.getBoundingClientRect(); return {x:r.left-mr.left+r.width/2,y:r.top-mr.top+r.height/2}; }).filter(Boolean);
   svg.setAttribute('viewBox',`0 0 ${mr.width} ${mr.height}`); svg.setAttribute('width',mr.width); svg.setAttribute('height',mr.height);
-  let d=''; for(let k=0;k<pts.length-1;k++){ const a=pts[k],b=pts[k+1],my=(a.y+b.y)/2; d+=`M${a.x} ${a.y} C ${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y} `; }
-  svg.innerHTML=d?`<path d="${d}"/>`:'';
+  let segs='';
+  for(let k=0;k<pts.length-1;k++){ const a=pts[k],b=pts[k+1],my=(a.y+b.y)/2;
+    segs+=`<path class="arch-seg" d="M${a.x} ${a.y} C ${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}"/>`; }
+  svg.innerHTML=segs;
+  const paths=svg.querySelectorAll('.arch-seg');
+  paths.forEach((p,k)=>{ const L=p.getTotalLength(); p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
+    setTimeout(()=>{ p.style.transition='stroke-dashoffset .5s ease'; p.style.strokeDashoffset='0'; p.classList.add('on'); }, 90+k*230); });
 }
 
 /* ===== 탭④ Twin-View 시뮬레이션 (현업 화면 + AAP 작동 구조) ===== */
@@ -1492,7 +1535,8 @@ function aapxSkeleton(i){
     `<div class="aapx-sec">작동 흐름 · 계층 / 역량</div><div class="aapx-flow">${stagesHTML}</div>`+
     `<div class="aapx-sec">핵심 에이전트</div>${agents}`+
     `<div class="aapx-sec">AAP 차별화</div><div class="aapx-diff">${d.aap}</div>`+
-    `<div class="aapx-result" id="aapxResult"><span>이 단계 결과</span>${t.result}</div>`;
+    `<div class="aapx-result" id="aapxResult"><span>이 단계 결과</span>${t.result}</div>`+
+    (STEP_BASIS[i]?`<div class="aapx-result aapx-basis" id="aapxBasis"><span>판단 근거 · 설명가능성</span>`+STEP_BASIS[i].basis.map(b=>`<div class="aapx-bl">${b}</div>`).join('')+`</div>`:'');
   return {n:stages.length, html:html};
 }
 function renderAapx(i){
@@ -1501,7 +1545,7 @@ function renderAapx(i){
   document.getElementById('aapxRun').addEventListener('click',()=>runAapxAnim(i));
   if(curTab===2){ runAapxAnim(i); }
   else { for(let k=0;k<sk.n;k++){ const s=document.getElementById('aps'+k); s.classList.remove('pending'); s.classList.add('done'); }
-         document.getElementById('aapxProg').style.width='100%'; document.getElementById('aapxResult').classList.add('show'); }
+         document.getElementById('aapxProg').style.width='100%'; document.getElementById('aapxResult').classList.add('show'); const bb=document.getElementById('aapxBasis'); if(bb)bb.classList.add('show'); }
 }
 function runAapxAnim(i){
   const el=document.getElementById('aapx'); if(!el||!STEP_TRACE[i])return;
@@ -1515,10 +1559,32 @@ function runAapxAnim(i){
     if(myToken!==aapToken)return;
     if(k>=0){ const p=document.getElementById('aps'+k); if(p){ p.classList.remove('active'); p.classList.add('done'); } if(prog) prog.style.width=Math.round(((k+1)/sk.n)*100)+'%'; }
     k++;
-    if(k>=sk.n){ if(res) res.classList.add('show'); if(btn){ btn.disabled=false; btn.textContent='다시 실행'; } applyAiResult(i); return; }
+    if(k>=sk.n){ if(res) res.classList.add('show'); const bb=document.getElementById('aapxBasis'); if(bb)bb.classList.add('show'); if(btn){ btn.disabled=false; btn.textContent='다시 실행'; } applyAiResult(i); return; }
     const c=document.getElementById('aps'+k); if(c){ c.classList.remove('pending'); c.classList.add('active'); }
     setTimeout(next,650);
   })();
+}
+/* 좌측 업무 화면 안내 — 커서가 카드로 이동하며 말풍선으로 "무엇을 확인하는지" 설명(순차) */
+let pcWalkToken=0;
+function pcWalk(i){
+  const pc=document.querySelector('#pcConsole .pc'); if(!pc)return;
+  const cards=pc.querySelectorAll(PC[i].scenarios?'.pc-scn':'.pc-card'), tips=PC_TIPS[i]||[];
+  let cursor=pc.querySelector('.pc-cursor'); if(!cursor){ cursor=document.createElement('div'); cursor.className='pc-cursor'; pc.appendChild(cursor); }
+  let tip=pc.querySelector('.pc-tip'); if(!tip){ tip=document.createElement('div'); tip.className='pc-tip'; pc.appendChild(tip); }
+  const myToken=++pcWalkToken;
+  const rel=el=>{ const r=el.getBoundingClientRect(), pr=pc.getBoundingClientRect(); return {x:r.left-pr.left,y:r.top-pr.top,w:r.width,h:r.height}; };
+  function step(k){
+    if(myToken!==pcWalkToken||!pc.isConnected)return;
+    if(k>=cards.length){ const dec=pc.querySelector('.pc-decision'); if(dec){ const p=rel(dec); cursor.style.left=(p.x+26)+'px'; cursor.style.top=(p.y+18)+'px'; }
+      tip.classList.remove('show'); setTimeout(()=>{ if(myToken===pcWalkToken) cursor.classList.remove('show'); },1500); return; }
+    const el=cards[k]; if(!el){ step(k+1); return; }
+    const p=rel(el);
+    cursor.classList.add('show'); cursor.style.left=(p.x+p.w-26)+'px'; cursor.style.top=(p.y+20)+'px';
+    el.classList.add('focus');
+    if(tips[k]){ tip.textContent=tips[k]; tip.style.left=Math.max(6,p.x)+'px'; tip.style.top=(p.y-6)+'px'; tip.classList.add('show'); } else { tip.classList.remove('show'); }
+    setTimeout(()=>{ if(myToken!==pcWalkToken)return; el.classList.remove('focus'); step(k+1); },1150);
+  }
+  setTimeout(()=>step(0),350);
 }
 /* 작동 완료 → 좌측 업무 화면에 AI 결과 반영 (사용자가 이미 선택했으면 유지) */
 const AAP_VERDICT={0:'review',1:'confirm',2:'hold',3:'hold'};
