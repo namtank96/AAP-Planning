@@ -74,6 +74,11 @@
   #playBtn{margin-left:auto;font:inherit;font-size:10px;font-weight:800;color:var(--aap-ink);background:#fff;border:1px solid var(--aap-border);border-radius:999px;padding:3px 12px;cursor:pointer;text-transform:none;letter-spacing:0;transition:background .15s,color .15s,border-color .15s}
   #playBtn:hover{background:var(--aap-soft)}
   #playBtn.playing{background:var(--aap);color:#fff;border-color:var(--aap)}
+  #spdCtl{margin-left:auto;display:inline-flex;align-items:center;gap:3px}
+  #spdCtl b{font-size:9px;font-weight:800;color:var(--muted);margin-right:2px;text-transform:none;letter-spacing:0}
+  #spdCtl button{font:inherit;font-size:9.5px;font-weight:700;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:999px;padding:3px 9px;cursor:pointer;text-transform:none;letter-spacing:0}
+  #spdCtl button.on{background:var(--aap);color:#fff;border-color:var(--aap)}
+  #playBtn{margin-left:8px}
   .tlede{margin-bottom:10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   .tlede h3{font-size:15px;font-weight:800;letter-spacing:-.01em}
   .tlede .aud{font-size:10px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:999px;padding:3px 10px}
@@ -886,6 +891,9 @@
   .pc-tip.show{opacity:1}
   .pc-tip::after{content:'';position:absolute;left:18px;bottom:-5px;width:9px;height:9px;background:#0F172A;transform:rotate(45deg)}
   .pc-card.focus,.pc-scn.focus{border-color:var(--aap)!important;box-shadow:0 0 0 3px rgba(13,148,136,.3)!important}
+  .pc-dbtn.pc-click,.pc-scn.pc-click{box-shadow:0 0 0 5px rgba(13,148,136,.45)!important}
+  .ap-trace{align-items:start}
+  .ap-trace .apt-role{display:block;font-size:8.5px;font-weight:600;color:var(--muted);line-height:1.35;margin-top:2px;overflow-wrap:anywhere}
 
   @media print{
     .tabbar,.keymsg .kmstep,#playBtn{display:none}
@@ -915,7 +923,7 @@
   </div>
 
   <div class="railwrap">
-    <div class="raill"><span class="rdot"></span>손해사정 업무 프로세스<button id="playBtn" type="button">▶ 재생</button></div>
+    <div class="raill"><span class="rdot"></span>손해사정 업무 프로세스<span id="spdCtl"><b>속도</b><button data-spd="slow" type="button">느리게</button><button data-spd="normal" type="button">보통</button><button data-spd="fast" type="button">빠르게</button></span><button id="playBtn" type="button">▶ 재생</button></div>
     <div class="phase-rail" id="phaseRail"></div>
   </div>
   <div class="keymsg" id="keyMsg"></div>
@@ -1131,6 +1139,10 @@ const NARR=[
 ];
 
 let curPhase=0, curTab=0;
+/* 애니메이션 속도 — 느리게 / 보통 / 빠르게 (mul=지연 배수, play=재생 간격) */
+const SPEEDS={slow:{mul:1.7,play:8500},normal:{mul:1.0,play:5200},fast:{mul:0.55,play:3000}};
+let speedKey='slow', speedMul=SPEEDS.slow.mul;
+let archAnimToken=0;
 
 document.getElementById('casebox').innerHTML=
   `<h2>사건 ${CASE.id} — 자동 처리와 사람 검토를 나눠야 하는 이유</h2>
@@ -1158,9 +1170,17 @@ let playTimer=null;
 function setPlayUI(on){ const b=document.getElementById('playBtn'); if(!b)return; b.classList.toggle('playing',on); b.textContent=on?'⏸ 정지':'▶ 재생'; }
 function stopPlay(){ if(playTimer){clearInterval(playTimer);playTimer=null;} setPlayUI(false); }
 function startPlay(){ stopPlay(); if(curPhase>=PHASES.length-1) setPhase(0); setPlayUI(true);
-  playTimer=setInterval(()=>{ if(curPhase>=PHASES.length-1){ stopPlay(); return; } setPhase(curPhase+1); },4000); }
+  playTimer=setInterval(()=>{ if(curPhase>=PHASES.length-1){ stopPlay(); return; } setPhase(curPhase+1); },SPEEDS[speedKey].play); }
 document.getElementById('playBtn').addEventListener('click',()=>{ playTimer?stopPlay():startPlay(); });
 window.addEventListener('resize',()=>{ if(curTab===1) drawArchLinks(); });
+
+/* 속도 조절 — 현재 탭 애니메이션을 새 속도로 다시 실행 */
+function setSpeed(k){ if(!SPEEDS[k])return; speedKey=k; speedMul=SPEEDS[k].mul;
+  document.querySelectorAll('#spdCtl button').forEach(b=>b.classList.toggle('on',b.dataset.spd===k));
+  if(playTimer) startPlay();
+  if(curTab===1) updateArchStep(curPhase); else if(curTab===2){ runAapxAnim(curPhase); pcWalk(curPhase); } }
+document.querySelectorAll('#spdCtl button').forEach(b=>b.addEventListener('click',()=>setSpeed(b.dataset.spd)));
+setSpeed('slow');
 
 /* ===== 탭① ===== */
 /* 각 STEP에서 사람이 하는 수기 처리의 한계(Pain) — NARR.why / 수기 업무 기반 */
@@ -1334,22 +1354,31 @@ function renderArchMap(){
   map.querySelectorAll('.arch-cell').forEach(el=>el.addEventListener('click',()=>selectArchCell(el.dataset.cell)));
 }
 /* STEP 반응: 이 단계 경로만 강조 + 비활성 dim + Loop/레일 점등 + 우측 트레이스 패널 + 연결선 */
+function cellCenter(map,mr,id){ const el=map.querySelector('[data-cell="'+id+'"]'); if(!el)return null; const r=el.getBoundingClientRect(); return {x:r.left-mr.left+r.width/2,y:r.top-mr.top+r.height/2}; }
+function archSeg(map,svg,mr,idA,idB){ const a=cellCenter(map,mr,idA), b=cellCenter(map,mr,idB); if(!a||!b)return null;
+  const my=(a.y+b.y)/2, p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('class','arch-seg'); p.setAttribute('d',`M${a.x} ${a.y} C ${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}`); svg.appendChild(p); return p; }
+function archDraw(p,dur){ const L=p.getTotalLength(); p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
+  requestAnimationFrame(()=>{ p.style.transition=`stroke-dashoffset ${dur}ms ease`; p.style.strokeDashoffset='0'; }); }
+/* STEP 반응 — 첫 셀부터 하나씩 점등되고, 그 다음 셀로 선이 순서대로 그어진다(속도 연동) */
 function updateArchStep(i){
   const map=document.getElementById('archMap'); const t=STEP_TRACE[i]; if(!map||!t)return;
   archStepCur=i;
-  const order={}; t.cells.forEach((c,k)=>order[c.id]=k+1);
-  map.querySelectorAll('.arch-cell').forEach(el=>{
-    const n=order[el.dataset.cell], seq=el.querySelector('.hlseq');
-    el.classList.toggle('hlnum',!!n); el.classList.toggle('dim',!n); el.classList.remove('sel');
-    if(seq){ if(n){ seq.textContent=n; seq.hidden=false; } else { seq.hidden=true; } }
-  });
+  const ids=t.cells.map(c=>c.id);
+  map.querySelectorAll('.arch-cell').forEach(el=>{ el.classList.remove('hlnum','sel'); el.classList.add('dim'); const s=el.querySelector('.hlseq'); if(s)s.hidden=true; });
   map.querySelectorAll('.arch-loop .als').forEach(el=>el.classList.toggle('on',t.loop.indexOf(el.dataset.stage)>=0));
-  map.querySelectorAll('.arch-bandcell').forEach(el=>{
-    const on=(el.dataset.rail==='cust'&&+el.dataset.idx===t.cust)||(el.dataset.rail==='trust'&&+el.dataset.idx===t.trust);
-    el.classList.toggle('on',on);
-  });
+  map.querySelectorAll('.arch-bandcell').forEach(el=>{ const on=(el.dataset.rail==='cust'&&+el.dataset.idx===t.cust)||(el.dataset.rail==='trust'&&+el.dataset.idx===t.trust); el.classList.toggle('on',on); });
   archPanelStep(i);
-  requestAnimationFrame(()=>drawArchLinks(t.cells.map(c=>c.id)));
+  const svg=document.getElementById('archLinks'), mr=map.getBoundingClientRect();
+  if(svg){ svg.innerHTML=''; if(mr.width>10){ svg.setAttribute('viewBox',`0 0 ${mr.width} ${mr.height}`); svg.setAttribute('width',mr.width); svg.setAttribute('height',mr.height); } }
+  const reveal=k=>{ const el=map.querySelector('[data-cell="'+ids[k]+'"]'); if(el){ el.classList.remove('dim'); el.classList.add('hlnum'); const s=el.querySelector('.hlseq'); if(s){ s.textContent=k+1; s.hidden=false; } } };
+  if(curTab===1 && mr.width>10 && svg){
+    const myToken=++archAnimToken, beat=Math.round(600*speedMul), seg=Math.round(460*speedMul);
+    (function step(k){ if(myToken!==archAnimToken)return; if(k>=ids.length)return;
+      if(k>0){ const p=archSeg(map,svg,mr,ids[k-1],ids[k]); if(p)archDraw(p,seg); }
+      reveal(k); setTimeout(()=>step(k+1),beat);
+    })(0);
+  } else { ids.forEach((id,k)=>reveal(k)); if(svg&&mr.width>10){ for(let k=1;k<ids.length;k++){ const p=archSeg(map,svg,mr,ids[k-1],ids[k]); if(p)p.style.strokeDashoffset='0'; } } }
 }
 /* 단계별 해석(탭2 우측) + 판단 근거·설명가능성(탭3 우측) */
 const STEP_BASIS=[
@@ -1374,8 +1403,8 @@ const PC_TIPS=[
 ];
 function archPanelStep(i){
   const t=STEP_TRACE[i], p=PHASES[i], d=PC[i], a=p.wf.aap, panel=document.getElementById('archPanel'); if(!panel||!t)return;
-  const rows=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lno=ARCH_LAYER_OF[c.id].split(' ')[0];
-    return `<div class="ap-trace" data-cell="${c.id}"><span class="apt-n">${k+1}</span><span class="apt-l">${lno}</span><span class="apt-t">${cell.t}<span class="apt-do">${c.do}</span></span></div>`; }).join('');
+  const rows=t.cells.map((c,k)=>{ const cell=ARCH_CELL_BY_ID[c.id], lno=ARCH_LAYER_OF[c.id].split(' ')[0], m=ARCH_MEAN[c.id];
+    return `<div class="ap-trace" data-cell="${c.id}"><span class="apt-n">${k+1}</span><span class="apt-l">${lno}</span><span class="apt-t">${cell.t}<span class="apt-do">${c.do}</span>${m?`<span class="apt-role">${m.role}</span>`:''}</span></div>`; }).join('');
   panel.innerHTML=`<div class="aph">${p.step} ${p.name}<span class="aptype">${d.sub.split(' · ')[0]}</span></div>`+
     `<div class="ap-summary">${a.method}.</div>`+
     `<div class="aph-sub">이 단계가 지나는 구성요소 · 클릭 시 업무 의미</div>`+
@@ -1407,21 +1436,13 @@ function selectArchCell(id){
   const bk=panel.querySelector('.ap-back'); if(bk) bk.addEventListener('click',()=>archPanelStep(archStepCur));
 }
 /* 연결선 — phase를 누르면 셀 경로를 따라 선이 하나씩 순서대로 그어진다(흐름 가시화) */
+/* 즉시 전체 선 그리기(리사이즈 대응) */
 function drawArchLinks(cellIds){
-  const map=document.getElementById('archMap'), svg=document.getElementById('archLinks');
-  if(!map||!svg)return;
+  const map=document.getElementById('archMap'), svg=document.getElementById('archLinks'); if(!map||!svg)return;
   const tr=STEP_TRACE[archStepCur], ids=cellIds||(tr?tr.cells.map(c=>c.id):[]);
   const mr=map.getBoundingClientRect(); if(mr.width<10)return;
-  const pts=ids.map(id=>{ const el=map.querySelector('[data-cell="'+id+'"]'); if(!el)return null;
-    const r=el.getBoundingClientRect(); return {x:r.left-mr.left+r.width/2,y:r.top-mr.top+r.height/2}; }).filter(Boolean);
-  svg.setAttribute('viewBox',`0 0 ${mr.width} ${mr.height}`); svg.setAttribute('width',mr.width); svg.setAttribute('height',mr.height);
-  let segs='';
-  for(let k=0;k<pts.length-1;k++){ const a=pts[k],b=pts[k+1],my=(a.y+b.y)/2;
-    segs+=`<path class="arch-seg" d="M${a.x} ${a.y} C ${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}"/>`; }
-  svg.innerHTML=segs;
-  const paths=svg.querySelectorAll('.arch-seg');
-  paths.forEach((p,k)=>{ const L=p.getTotalLength(); p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
-    setTimeout(()=>{ p.style.transition='stroke-dashoffset .5s ease'; p.style.strokeDashoffset='0'; p.classList.add('on'); }, 90+k*230); });
+  svg.innerHTML=''; svg.setAttribute('viewBox',`0 0 ${mr.width} ${mr.height}`); svg.setAttribute('width',mr.width); svg.setAttribute('height',mr.height);
+  for(let k=1;k<ids.length;k++){ const p=archSeg(map,svg,mr,ids[k-1],ids[k]); if(p)p.style.strokeDashoffset='0'; }
 }
 
 /* ===== 탭④ Twin-View 시뮬레이션 (현업 화면 + AAP 작동 구조) ===== */
@@ -1559,32 +1580,45 @@ function runAapxAnim(i){
     if(myToken!==aapToken)return;
     if(k>=0){ const p=document.getElementById('aps'+k); if(p){ p.classList.remove('active'); p.classList.add('done'); } if(prog) prog.style.width=Math.round(((k+1)/sk.n)*100)+'%'; }
     k++;
-    if(k>=sk.n){ if(res) res.classList.add('show'); const bb=document.getElementById('aapxBasis'); if(bb)bb.classList.add('show'); if(btn){ btn.disabled=false; btn.textContent='다시 실행'; } applyAiResult(i); return; }
+    if(k>=sk.n){ if(res) res.classList.add('show'); const bb=document.getElementById('aapxBasis'); if(bb)bb.classList.add('show'); if(btn){ btn.disabled=false; btn.textContent='다시 실행'; } return; }
     const c=document.getElementById('aps'+k); if(c){ c.classList.remove('pending'); c.classList.add('active'); }
-    setTimeout(next,650);
+    setTimeout(next,Math.round(700*speedMul));
   })();
 }
 /* 좌측 업무 화면 안내 — 커서가 카드로 이동하며 말풍선으로 "무엇을 확인하는지" 설명(순차) */
 let pcWalkToken=0;
+/* 실제 업무 순서 시연 — 손해사정사가 항목을 차례로 확인하고, 마지막에 권고 버튼을 클릭한다 */
 function pcWalk(i){
   const pc=document.querySelector('#pcConsole .pc'); if(!pc)return;
-  const cards=pc.querySelectorAll(PC[i].scenarios?'.pc-scn':'.pc-card'), tips=PC_TIPS[i]||[];
+  const isScn=!!PC[i].scenarios;
+  const cards=pc.querySelectorAll(isScn?'.pc-scn':'.pc-card'), tips=PC_TIPS[i]||[];
   let cursor=pc.querySelector('.pc-cursor'); if(!cursor){ cursor=document.createElement('div'); cursor.className='pc-cursor'; pc.appendChild(cursor); }
   let tip=pc.querySelector('.pc-tip'); if(!tip){ tip=document.createElement('div'); tip.className='pc-tip'; pc.appendChild(tip); }
   const myToken=++pcWalkToken;
   const rel=el=>{ const r=el.getBoundingClientRect(), pr=pc.getBoundingClientRect(); return {x:r.left-pr.left,y:r.top-pr.top,w:r.width,h:r.height}; };
-  function step(k){
+  const moveTo=(el,offx,offy)=>{ const p=rel(el); cursor.classList.add('show'); cursor.style.left=(p.x+(offx==null?p.w-26:offx))+'px'; cursor.style.top=(p.y+(offy==null?20:offy))+'px'; return p; };
+  const showTip=(el,text)=>{ const p=rel(el); tip.textContent=text; tip.style.left=Math.max(6,p.x)+'px'; tip.style.top=(p.y-6)+'px'; tip.classList.add('show'); };
+  const beat=Math.round(1250*speedMul);
+  function check(k){
     if(myToken!==pcWalkToken||!pc.isConnected)return;
-    if(k>=cards.length){ const dec=pc.querySelector('.pc-decision'); if(dec){ const p=rel(dec); cursor.style.left=(p.x+26)+'px'; cursor.style.top=(p.y+18)+'px'; }
-      tip.classList.remove('show'); setTimeout(()=>{ if(myToken===pcWalkToken) cursor.classList.remove('show'); },1500); return; }
-    const el=cards[k]; if(!el){ step(k+1); return; }
-    const p=rel(el);
-    cursor.classList.add('show'); cursor.style.left=(p.x+p.w-26)+'px'; cursor.style.top=(p.y+20)+'px';
-    el.classList.add('focus');
-    if(tips[k]){ tip.textContent=tips[k]; tip.style.left=Math.max(6,p.x)+'px'; tip.style.top=(p.y-6)+'px'; tip.classList.add('show'); } else { tip.classList.remove('show'); }
-    setTimeout(()=>{ if(myToken!==pcWalkToken)return; el.classList.remove('focus'); step(k+1); },1150);
+    if(k>=cards.length){ clickDecision(); return; }
+    const el=cards[k]; if(!el){ check(k+1); return; }
+    moveTo(el); el.classList.add('focus'); if(tips[k]) showTip(el,tips[k]); else tip.classList.remove('show');
+    setTimeout(()=>{ if(myToken!==pcWalkToken)return; el.classList.remove('focus'); check(k+1); },beat);
   }
-  setTimeout(()=>step(0),350);
+  function clickDecision(){
+    if(myToken!==pcWalkToken||!pc.isConnected)return;
+    let target, label, apply;
+    if(isScn){ target=pc.querySelector('.pc-scn.reco')||cards[0]; label='이 방안으로 진행'; apply=()=>{ pcSel[i]=0; pcDone[i]='sel'; }; }
+    else { const v=AAP_VERDICT[i]; target=pc.querySelector('.pc-dbtn[data-act="'+v+'"]'); label=target?target.textContent:''; apply=()=>{ pcDone[i]=v; }; }
+    if(!target){ tip.classList.remove('show'); cursor.classList.remove('show'); return; }
+    moveTo(target, 18, 16); showTip(target, '확인을 마치고 선택: '+label);
+    setTimeout(()=>{ if(myToken!==pcWalkToken||!pc.isConnected)return;
+      target.classList.add('pc-click');
+      setTimeout(()=>{ if(myToken!==pcWalkToken)return; apply(); renderPC(i); },Math.round(420*speedMul));
+    },beat);
+  }
+  setTimeout(()=>check(0),Math.round(400*speedMul));
 }
 /* 작동 완료 → 좌측 업무 화면에 AI 결과 반영 (사용자가 이미 선택했으면 유지) */
 const AAP_VERDICT={0:'review',1:'confirm',2:'hold',3:'hold'};
