@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP 손해사정 업무 콘솔</title>
+<!--
+  AAP 손해사정 업무 콘솔 v8 — 손해사정 도메인 전문성 강화 + 단일 '판단 가이드' 패널.
+  · 청구 심사 상단 4단계 프로세스 레일(접수·보장→손해액→과실·위험→지급·종결).
+  · 우측 = 하나의 '판단 가이드'(현재 판단→담당자 확인 포인트→AAP 근거→권장 액션→상세 보기[접힘]).
+  · 쟁점/항목/단계 옆 '?' 클릭 = 판단 가이드 주제만 변경(패널 구조 고정).
+  · AAP 처리 경로는 기본 노출 ✕ → 상세 보기 안 짧은 경로 + [전체 처리 경로 보기] = Trace Drawer.
+  · 현업 화면은 현업 용어, 운영 설정은 기술 용어. 결정론 compute() 유지. 단일 HTML · 외부 의존성 0.
+-->
+<style>
+:root{
+  --bg-base:#F4F6FB; --bg-card:#FFFFFF; --text-primary:#111111; --text-secondary:#666666; --text-tertiary:#999999;
+  --border:#E8ECF1; --accent:#E60012; --accent-light:rgba(230,0,18,.06);
+  --shadow:0 1px 3px rgba(0,0,0,.08); --shadow-lg:0 4px 12px rgba(0,0,0,.08);
+  --radius:12px; --radius-sm:8px; --sidebar-width:240px; --header-height:48px;
+  --mono:'JetBrains Mono','Fira Code',ui-monospace,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Pretendard',-apple-system,system-ui,'Malgun Gothic',sans-serif;background:var(--bg-base);color:var(--text-primary);line-height:1.6;font-size:14px;display:flex}
+
+/* sidebar */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-width);background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:200;overflow-y:auto}
+.sidebar-logo{padding:20px 20px 8px;display:flex;align-items:center;gap:10px}
+.sidebar-logo-fallback{width:32px;height:32px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px}
+.sidebar-logo .lt{font-size:15px;font-weight:800}
+.sidebar-subtitle{padding:0 20px 16px;font-size:12px;color:var(--text-tertiary);font-weight:500;border-bottom:1px solid var(--border)}
+.sidebar-section-label{padding:16px 20px 6px;font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px}
+.menu-item{display:flex;align-items:center;gap:10px;padding:10px 20px;margin:1px 8px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;transition:all .15s;border:none;background:none;width:calc(100% - 16px);text-align:left;font-family:inherit}
+.menu-item .mi{width:18px;height:18px;flex-shrink:0;color:var(--text-tertiary);display:flex}
+.menu-item .mc{margin-left:auto;font-size:10px;font-weight:700;background:var(--accent);color:#fff;border-radius:9px;padding:1px 6px}
+.menu-item:hover{background:#F8F9FA;color:var(--text-primary)}
+.menu-item.active{background:#F0F2F5;font-weight:600;color:var(--text-primary);border-left:3px solid var(--accent);padding-left:17px}
+.menu-item.active .mi{color:var(--accent)}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--text-tertiary);line-height:1.6}
+.sidebar-footer .ver{font-weight:600;color:var(--text-secondary)}
+
+/* main */
+.main-area{margin-left:var(--sidebar-width);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.header-bar{height:var(--header-height);background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:100}
+.header-breadcrumb{font-size:13px;color:var(--text-secondary)}
+.header-breadcrumb .bc-root{color:var(--text-tertiary)}
+.header-breadcrumb .bc-sep{margin:0 6px;color:var(--text-tertiary)}
+.header-breadcrumb .bc-current{color:var(--text-primary);font-weight:600}
+.header-right{display:flex;align-items:center;gap:12px}
+.scenario-badge{padding:4px 10px;border-radius:4px;background:var(--accent-light);color:var(--accent);font-weight:600;font-size:11px}
+.hr-user{font-size:12px;color:var(--text-secondary);font-weight:600}
+
+.page{display:block;padding:24px 30px 56px;max-width:1480px;width:100%}
+.section-header{margin-bottom:20px}
+.section-header h2{font-size:20px;font-weight:700;margin-bottom:4px}
+.section-header p{font-size:13px;color:var(--text-secondary)}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.kpi-card{background:var(--bg-card);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.kpi-card .kpi-label{font-size:12px;color:var(--text-secondary);font-weight:500;margin-bottom:6px}
+.kpi-card .kpi-value{font-size:25px;font-weight:700}
+.kpi-card .kpi-sub{font-size:11px;color:var(--text-tertiary);margin-top:2px}
+.kpi-card.accent{border-color:#F3C0C5;background:var(--accent-light)}
+.kpi-card.accent .kpi-value{color:var(--accent)}
+
+.card{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border)}
+.card.pad{padding:18px 20px}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table thead th{padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:var(--text-secondary);border-bottom:2px solid var(--border);background:#FAFBFD;white-space:nowrap}
+.data-table tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.data-table tbody tr:hover{background:#F8F9FC}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table tbody tr.clk{cursor:pointer}
+.data-table tbody tr.on{background:var(--accent-light)}
+.mono{font-family:var(--mono)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-green{background:#E8F5E9;color:#2E7D32}.badge-amber{background:#FFF3E0;color:#E65100}.badge-gray{background:#F5F5F5;color:#757575}.badge-red{background:#FFEBEE;color:#D32F2F}.badge-purple{background:#F3E5F5;color:#7B1FA2}.badge-blue{background:#E3F2FD;color:#1565C0}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.dot-green{background:#4CAF50}.dot-amber{background:#FF9800}.dot-red{background:#E53935}.dot-gray{background:#BDBDBD}
+
+.section-title{font-size:15px;font-weight:700;margin:24px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px}
+.section-title:first-child{margin-top:0}
+.section-title .st-badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:var(--accent-light);color:var(--accent)}
+
+.notice{font-size:12px;color:var(--text-secondary);background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:11px 14px;line-height:1.6;margin-top:16px}
+.sim{font-size:10px;font-weight:700;color:#E65100;background:#FFF3E0;border-radius:4px;padding:2px 7px;margin-left:6px}
+
+/* buttons */
+.btn-accent{padding:10px 18px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit;transition:background .2s;white-space:nowrap}
+.btn-accent:hover{background:#C7000F}
+.btn-outline{padding:8px 14px;border-radius:7px;border:1px solid var(--border);background:var(--bg-card);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-secondary)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+
+/* 내 업무함 */
+.inbox-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start;margin-top:4px}
+@media(max-width:1100px){.inbox-grid{grid-template-columns:1fr}}
+.pri-tag{display:inline-block;width:42px;text-align:center;font-size:11px;font-weight:700;border-radius:5px;padding:2px 0}
+.aap-help{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px}
+.aap-help h3{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.aap-help h3 .hd{width:7px;height:7px;border-radius:50%}
+.help-item{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--border);line-height:1.5}
+.help-item:last-child{border-bottom:none}
+.help-item .hi-ck{color:#2E7D32;font-weight:800;flex-shrink:0}
+.help-item .hi-todo{color:var(--accent);font-weight:800;flex-shrink:0}
+
+/* 청구 심사 — 3열 + 프로세스 레일 */
+.review3{display:grid;grid-template-columns:230px minmax(0,1fr) 340px;gap:14px;align-items:start}
+@media(max-width:1200px){.review3{grid-template-columns:1fr}}
+.rv-queue{display:flex;flex-direction:column;max-height:calc(100vh - 150px);position:sticky;top:62px}
+.rv-queue .list-header{padding:13px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700}
+.rv-qlist{overflow-y:auto;padding:8px}
+.rv-qcard{padding:11px 13px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:all .15s}
+.rv-qcard:hover{background:#F8F9FA}
+.rv-qcard.active{border-color:var(--accent);background:var(--accent-light)}
+.rv-qcard .lc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.rv-qcard .lc-id{font-size:12px;font-weight:700}
+.rv-qcard .rv-qmeta{font-size:11px;color:var(--text-secondary)}
+.rv-center{min-width:0}
+.rv-block{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px}
+.rv-block h3{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:760px){.sum-grid{grid-template-columns:repeat(2,1fr)}}
+.sum-f .sf-l{font-size:11px;color:var(--text-tertiary);font-weight:600;margin-bottom:2px}
+.sum-f .sf-v{font-size:13px;font-weight:600;line-height:1.4}
+.group-summary{font-size:12.5px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6}
+.issue-card{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;background:var(--bg-base)}
+.issue-card .ic-t{font-size:13px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.issue-card .ic-row{font-size:12px;color:var(--text-secondary);line-height:1.6}
+.issue-card .ic-reco{font-size:12px;font-weight:600;color:var(--accent);margin-top:5px}
+
+/* 프로세스 레일 */
+.process-rail{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.process-step{flex:1;min-width:128px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:11px 30px 11px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;position:relative;font-family:inherit;text-align:left;transition:all .15s}
+.process-step:hover{background:#F8F9FA}
+.process-step.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.process-step .step-title{font-size:13px;font-weight:700;color:var(--text-primary)}
+.process-step .step-status{font-size:11px;font-weight:700;color:var(--text-tertiary)}
+.process-step.done .step-status{color:#2E7D32}
+.process-step.warn .step-status{color:#E65100}
+.process-step.hold .step-status{color:#7B1FA2}
+.process-step.blocked .step-status{color:#D32F2F}
+.process-step .qmark{position:absolute;top:9px;right:9px}
+
+/* 프로세스 항목 */
+.process-items{display:flex;flex-direction:column;gap:8px}
+.process-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 13px;border:1px solid var(--border);border-radius:var(--radius-sm);border-left:3px solid var(--border)}
+.process-item.st-done{border-left-color:#4CAF50}
+.process-item.st-warn{border-left-color:#FF9800}
+.process-item.st-hold{border-left-color:#9C27B0}
+.process-item.st-blocked{border-left-color:#E53935}
+.process-item.st-wait{border-left-color:#BDBDBD}
+.process-item.st-check{border-left-color:#1565C0}
+.process-item-label{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.process-item-value{font-size:12px;color:var(--text-secondary);margin-top:2px}
+
+/* ? 버튼 */
+.qmark{width:18px;height:18px;min-width:18px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--text-tertiary);font-size:11px;font-weight:700;cursor:pointer;line-height:1;padding:0;font-family:inherit;display:inline-flex;align-items:center;justify-content:center}
+.qmark:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+
+/* 판단 가이드 */
+.rv-right{position:sticky;top:62px}
+.guide-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.guide-head{padding:12px 16px;background:#1E1E2E;color:#fff}
+.guide-title{font-size:12px;font-weight:700;color:#A6ADC8}
+.guide-topic{font-size:14px;font-weight:700;margin-top:2px}
+.guide-body{padding:14px 16px}
+.guide-section{margin-bottom:14px}
+.guide-label{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.guide-section p,.guide-section li{font-size:12.5px;line-height:1.65;color:var(--text-secondary)}
+.guide-section ul{padding-left:16px}
+.guide-actions{display:flex;flex-direction:column;gap:6px}
+.guide-actions button{padding:8px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg-card);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;color:var(--text-primary)}
+.guide-actions button:hover{border-color:var(--accent)}
+.guide-actions button:first-child{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.guide-detail{border-top:1px solid var(--border);padding-top:10px}
+.guide-detail summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-secondary)}
+.guide-detail summary:hover{color:var(--accent)}
+.guide-detail-block{font-size:12px;color:var(--text-secondary);line-height:1.6;margin-top:8px}
+.guide-detail-block b{display:block;font-size:11px;color:var(--text-primary);margin-top:10px;margin-bottom:3px}
+.guide-detail-block ul,.guide-detail-block ol{padding-left:16px}
+.guide-detail-block li{font-size:12px;line-height:1.6}
+
+/* 지급·합의 / 조사 */
+.mini-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:760px){.mini-cards{grid-template-columns:repeat(2,1fr)}}
+.mini-card{padding:13px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-base)}
+.mini-card .mc-label{font-size:11px;color:var(--text-tertiary);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.mini-card .mc-value{font-size:19px;font-weight:700}
+.mini-card.hl{border-color:#F3C0C5;background:var(--accent-light)}.mini-card.hl .mc-value{color:var(--accent)}
+.reason-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.reason-cols{grid-template-columns:1fr}}
+.reason-box{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.reason-box .rb-h{font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.reason-box ul{padding-left:16px;font-size:12.5px;line-height:1.7;color:var(--text-secondary)}
+.reason-box li{display:list-item}
+.reason-box li .qmark{margin-left:4px}
+.draft-box{background:var(--bg-base);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-line}
+.draft-meta{font-size:11px;color:var(--text-tertiary);margin-bottom:8px;font-weight:600}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+/* graph (trace drawer) */
+#traceGraph{width:100%;height:240px;background:#FCFDFF;border:1px solid var(--border);border-radius:var(--radius-sm)}
+#traceGraph svg{width:100%;height:100%;display:block}
+.gnode rect{transition:filter .15s}
+
+/* 기준·정책 */
+.split-layout{display:grid;grid-template-columns:36% 64%;min-height:calc(100vh - 180px);background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
+@media(max-width:1100px){.split-layout{grid-template-columns:1fr}}
+.list-panel{border-right:1px solid var(--border);display:flex;flex-direction:column}
+.list-header{padding:14px 18px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700}
+.list-items{overflow-y:auto;flex:1;padding:8px}
+.list-card{padding:12px 15px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:all .15s}
+.list-card:hover{background:#F8F9FA}
+.list-card.active{border-color:var(--accent);background:var(--accent-light)}
+.list-card .lc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.list-card .lc-id{font-size:13px;font-weight:700}
+.list-card .lc-q{font-size:11.5px;color:var(--text-secondary);line-height:1.5}
+.detail-scroll{overflow-y:auto;padding:22px}
+.dp-header{padding:11px 15px;border-radius:var(--radius-sm);margin-bottom:14px;color:#fff;font-weight:700;font-size:15px;background:#34495E}
+.dp-section-title{font-size:12px;font-weight:700;color:var(--accent);margin-top:15px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.dp-value{font-size:13px;font-weight:500;line-height:1.55}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.stat-grid .sg{border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text-tertiary)}
+.stat-grid .sg b{display:block;font-size:15px;color:var(--text-primary);margin-top:2px}
+.sim-tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+.sim-tbl th,.sim-tbl td{padding:7px 9px;border-bottom:1px solid var(--border);text-align:left}
+.sim-tbl th{font-size:11px;color:var(--text-secondary);background:#FAFBFD}
+.sim-tbl td:last-child,.sim-tbl th:last-child{text-align:right;font-family:var(--mono);font-weight:600}
+
+/* 운영 설정 (admin) */
+.admin-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:18px;flex-wrap:wrap}
+.admin-tab{padding:9px 16px;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;border:none;background:none;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px}
+.admin-tab:hover{color:var(--text-primary)}
+.admin-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.ws{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:0;min-height:480px;background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
+@media(max-width:1100px){.ws{grid-template-columns:1fr}}
+.ws-main{padding:16px;overflow-x:auto;border-right:1px solid var(--border)}
+.detail-panel{padding:18px;overflow-y:auto;background:#FAFBFD}
+.cap-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.cap-grid{grid-template-columns:1fr}}
+.cap-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 15px;cursor:pointer;transition:all .15s;border-left:3px solid var(--border)}
+.cap-card:hover{background:#F8F9FA}
+.cap-card.active{background:var(--accent-light)}
+.cap-card .cc-t{font-size:13px;font-weight:700;margin-bottom:6px}
+.cap-card .cc-items{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.cap-card .cc-i{font-size:10px;color:var(--text-secondary);background:var(--bg-base);border:1px solid var(--border);border-radius:4px;padding:2px 6px}
+.cap-card .cc-m{font-size:11px;font-weight:600;color:var(--text-tertiary)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{padding:3px 9px;border-radius:5px;font-size:11px;font-weight:500;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border)}
+.dp-tag-acc{color:var(--accent);border-color:#F3C0C5}
+.replay-ok{border-color:#C8E6C9;background:#FAFFF9}
+
+/* Trace Drawer */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .25s;z-index:250}
+.drawer-overlay.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:540px;max-width:94vw;background:var(--bg-card);box-shadow:-6px 0 24px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .3s;z-index:260;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+.drawer-head h3{font-size:15px;font-weight:700}
+.drawer-head .dh-sub{font-size:11px;color:var(--text-tertiary);margin-top:3px}
+.drawer-close{border:none;background:none;font-size:22px;cursor:pointer;color:var(--text-tertiary);line-height:1;padding:0 4px}
+.drawer-body{overflow-y:auto;padding:18px 22px;flex:1}
+.trace-step{display:grid;grid-template-columns:26px 1fr;gap:13px;padding-bottom:15px;position:relative}
+.trace-step::before{content:'';position:absolute;left:12.5px;top:27px;bottom:0;width:1.5px;background:var(--border)}
+.trace-step:last-child::before{display:none}
+.trace-num{width:26px;height:26px;border-radius:50%;background:#E8F5E9;color:#2E7D32;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:1}
+.trace-num.blk{background:#FFEBEE;color:#D32F2F}
+.trace-t{font-size:13px;font-weight:700;margin-bottom:3px}
+.trace-r{font-size:12px;color:var(--text-secondary);line-height:1.6}
+.trace-r .bk{color:#D32F2F;font-weight:600}
+.trace-r .gd{color:#2E7D32;font-weight:600}
+.trace-r .mono{font-size:11px}
+
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:#111;color:#fff;font-size:12px;font-weight:600;padding:10px 16px;border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:300}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-logo"><span class="sidebar-logo-fallback">AAP</span><span class="lt">손해사정 업무</span></div>
+  <div class="sidebar-subtitle">자동차보험 청구 처리 콘솔 · Simulation</div>
+  <div id="menu"></div>
+  <div class="sidebar-footer"><span class="ver">v8 · 업무 콘솔 PoC</span><br>수치는 가정값 · SME 검증 대상<br>단일 HTML · 외부 의존성 0</div>
+</nav>
+<div class="main-area">
+  <div class="header-bar">
+    <div class="header-breadcrumb"><span class="bc-root">AAP 손해사정</span><span class="bc-sep">›</span><span class="bc-current" id="crumb">내 업무함</span></div>
+    <div class="header-right"><span class="scenario-badge" id="hbadge">담당 사건 6건</span><span class="hr-user">김민준 손해사정사 · 1팀</span></div>
+  </div>
+  <div id="pages"></div>
+</div>
+
+<!-- Drawer (판단 가이드 / 전체 처리 경로) -->
+<div class="drawer-overlay" id="drawerOv" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div><h3 id="drawerTitle">AAP 처리 경로</h3><div class="dh-sub" id="drawerSub">이 사건에 대해 AAP가 실제로 수행한 처리 경로</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ===================== 엔진 (결정론 compute) ===================== */
+const CASE={ id:"CLM-2026-0417", title:"교차로 직진/좌회전 충돌", type:"자동차보험 대물·대인 복합 청구",
+  policy:{id:"POL-AUTO-8842"}, mileage:"1.2만 km", year:"2023년식", injury:"경추염좌 · 상해 14급 · 14일" };
+const DEFAULTS={ repair:4800000, marketCap:4100000, medical:3000000, medicalNorm:2600000,
+  faultBB:15, faultPre:30, faultThr:10, fraud:78, fraudThr:75, similar:3, stmtMatch:false, autoLimit:1000000 };
+let INPUTS=Object.assign({},DEFAULTS);
+function hash(o){ const s=JSON.stringify(o); let h=0x811c9dc5; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);} return (h>>>0).toString(16).toUpperCase().padStart(8,"0").slice(0,4); }
+function compute(inp){
+  const repairAccepted=Math.min(inp.repair,inp.marketCap), repairExcess=Math.max(0,inp.repair-inp.marketCap);
+  const medicalAccepted=Math.min(inp.medical,inp.medicalNorm), medicalExcess=Math.max(0,inp.medical-inp.medicalNorm);
+  const acceptedLoss=repairAccepted+medicalAccepted;
+  const faultGap=Math.abs(inp.faultBB-inp.faultPre), faultDisputed=faultGap>inp.faultThr;
+  const faultLow=Math.min(inp.faultBB,inp.faultPre), faultHigh=Math.max(inp.faultBB,inp.faultPre);
+  const ourLiabHigh=Math.round(acceptedLoss*faultHigh/100);
+  let fraudEff=inp.fraud+(inp.similar>=3?5:0)+(!inp.stmtMatch?5:0);
+  const fraudRoute=fraudEff>=inp.fraudThr?"SIU":(fraudEff>=60?"REVIEW":"CLEAR");
+  const blockAuto=(fraudRoute==="SIU");
+  const autoLiab=Math.round(acceptedLoss*(faultDisputed?faultLow:faultHigh)/100);
+  const autoPay=blockAuto?0:Math.min(autoLiab,inp.autoLimit);
+  const review=Math.max(0,ourLiabHigh-autoPay);
+  const routes=[]; if(autoPay>0)routes.push("자동 지급"); if(review>0)routes.push("사람 검토"); if(fraudRoute==="SIU")routes.push("SIU 조사");
+  return {repairAccepted,repairExcess,medicalAccepted,medicalExcess,acceptedLoss,faultGap,faultDisputed,faultLow,faultHigh,
+    ourLiabHigh,fraudEff,fraudRoute,blockAuto,autoPay,review,routes,inputHash:hash(inp),resultHash:hash({autoPay,review,routes})};
+}
+let R=compute(INPUTS);
+function won(n){ return "₩"+n.toLocaleString("ko-KR"); }
+function man(n){ return Math.round(n/10000).toLocaleString("ko-KR")+"만 원"; }
+function el(id){ return document.getElementById(id); }
+const MONEY={ totalClaim:INPUTS.repair+INPUTS.medical, acceptedLoss:R.acceptedLoss, autoPay:R.autoPay,
+  reviewAmt:2220000, siuHold:4480000, extraCheck:R.repairExcess };
+
+/* ===================== 업무 큐 / 사건 데이터 ===================== */
+const TASK_QUEUE=[
+ {pri:"높음",prb:"badge-red",id:"CLM-2026-0417",type:"대물·대인",status:"SIU Gate",aap:"SIU 위험 임계 초과",todo:"SIU 의뢰 승인",sla:"D-1",risk:"높음",rb:"badge-red"},
+ {pri:"높음",prb:"badge-red",id:"CLM-2026-0377",type:"대물·대인",status:"SIU 조사중",aap:"반복 청구 패턴",todo:"조사 착수 검토",sla:"D-1",risk:"높음",rb:"badge-red"},
+ {pri:"중간",prb:"badge-amber",id:"CLM-2026-0402",type:"대인",status:"서류 요청",aap:"합의금 통상 초과",todo:"추가서류 요청",sla:"D-2",risk:"중간",rb:"badge-amber"},
+ {pri:"중간",prb:"badge-amber",id:"CLM-2026-0381",type:"대물",status:"견적 검토",aap:"수리비 시장가 초과",todo:"초과분 검토",sla:"D-3",risk:"중간",rb:"badge-amber"},
+ {pri:"낮음",prb:"badge-gray",id:"CLM-2026-0398",type:"대물",status:"자동 지급",aap:"자동 지급 가능",todo:"확인 불필요",sla:"완료",risk:"낮음",rb:"badge-green"},
+ {pri:"낮음",prb:"badge-gray",id:"CLM-2026-0395",type:"자차",status:"자동 지급",aap:"자동 지급 가능",todo:"확인 불필요",sla:"완료",risk:"낮음",rb:"badge-green"}
+];
+const INBOX_KPI=[
+ ["오늘 접수","128건","신규 청구"],
+ ["AAP 사전 처리 완료","76건","계약·서류·손해액 자동 정리"],
+ ["내 검토 필요","31건","쟁점만 확인",true],
+ ["SIU 판단 필요","8건","위험 신호 사건"],
+ ["지급 승인 대기","11건","결재 대기"],
+ ["추가서류 요청 필요","2건","고객 안내"],
+ ["SLA 임박","5건","D-1 이내"],
+ ["자동 처리 완료","45건","확인 불필요"]
+];
+const CASE_LITE={
+ "CLM-2026-0377":{acc:"교차로 충돌 (반복 청구)",cov:"대물·대인",claim:"1,340만 원",inj:"경추염좌",risk:"높음",rb:"badge-red",aap:"반복 청구 패턴",note:"동일 정비업체 반복 청구 4건과 진술 일부 불일치로 SIU 조사가 진행 중입니다.",issues:["동일 정비업체 반복 청구 4건","사고 진술 일부 불일치"]},
+ "CLM-2026-0402":{acc:"후방 추돌",cov:"대인",claim:"450만 원",inj:"요추염좌 · 상해 12급",risk:"중간",rb:"badge-amber",aap:"대인 합의금 통상 초과",note:"대인 합의금이 통상 범위를 초과해 추가 서류 확인이 필요합니다.",issues:["대인 합의금 통상 범위 초과 60만 원"]},
+ "CLM-2026-0381":{acc:"측면 접촉",cov:"대물",claim:"260만 원",inj:"없음",risk:"중간",rb:"badge-amber",aap:"수리비 시장가 초과",note:"수리견적이 시장 인정 상한을 초과해 초과분 검토가 필요합니다.",issues:["수리비 시장가 초과 45만 원"]},
+ "CLM-2026-0398":{acc:"주차장 접촉",cov:"대물",claim:"120만 원",inj:"없음",risk:"낮음",rb:"badge-green",aap:"자동 지급 가능",note:"계약·담보·서류·손해액이 모두 자동 확인되어 담당자 확인이 필요하지 않습니다.",issues:[]},
+ "CLM-2026-0395":{acc:"자차 단독 사고",cov:"자차",claim:"88만 원",inj:"없음",risk:"낮음",rb:"badge-green",aap:"자동 지급 가능",note:"자차 단독 사고로 손해액이 자동 확인되었습니다.",issues:[]}
+};
+const LITE_GUIDE={ "CLM-2026-0377":"similar_claim_pattern","CLM-2026-0402":"medical_settlement_over_norm","CLM-2026-0381":"repair_over_cap","CLM-2026-0398":"coverage_check","CLM-2026-0395":"coverage_check" };
+
+/* ===================== 청구 심사 — 4단계 프로세스 묶음 ===================== */
+const PROCESS_GROUPS=[
+ {key:"coverage",title:"접수·보장",status:"완료",summary:"서류·계약·담보·운전자·면책 조건을 확인했습니다. 추가 확인이 필요한 항목은 없습니다.",
+  items:[
+   {label:"서류 완결성",value:"5/5 제출 · OCR 신뢰도 0.94",status:"완료",guide:"document_missing"},
+   {label:"계약 유효성",value:"POL-AUTO-8842 · 사고일 계약기간 내",status:"완료",guide:"coverage_check"},
+   {label:"담보 범위",value:"대물·대인Ⅰ·Ⅱ·자차 보장",status:"완료",guide:"coverage_check"},
+   {label:"운전자 범위",value:"가족한정 범위 내",status:"완료"},
+   {label:"면책 조건",value:"음주·무면허·고의 정황 없음",status:"완료",guide:"exclusion_check"},
+   {label:"자기부담금",value:"20만 원",status:"확인"}
+  ],
+  issues:[]},
+ {key:"damage",title:"손해액",status:"검토필요",summary:"대물 수리비와 대인 합의금 일부가 통상 범위를 초과했습니다. 초과분은 자동 지급하지 않고 검토 대상으로 분리됩니다.",
+  items:[
+   {label:"대물 수리견적",value:"480만 원",status:"검토필요",guide:"repair_over_cap"},
+   {label:"시장 인정 상한",value:"410만 원",status:"확인"},
+   {label:"수리비 초과분",value:"70만 원",status:"검토필요",guide:"repair_over_cap"},
+   {label:"차량 기준가액",value:"1,850만 원",status:"확인"},
+   {label:"전손/분손",value:"분손 가능성 높음",status:"확인",guide:"total_loss_check"},
+   {label:"대인 청구 합의금",value:"300만 원",status:"검토필요",guide:"medical_settlement_over_norm"},
+   {label:"대인 통상 범위",value:"260만 원",status:"확인"},
+   {label:"상해 등급 · 치료 기간",value:"14급 · 14일",status:"확인"}
+  ],
+  issues:[
+   {title:"수리비 시장가 초과",guide:"repair_over_cap",row:"청구 480만 원 / 상한 410만 원 · 초과분 70만 원",reco:"권고 · 초과분 검토"},
+   {title:"대인 합의금 통상 초과",guide:"medical_settlement_over_norm",row:"청구 300만 원 / 통상 260만 원 · 초과분 40만 원",reco:"권고 · 추가서류 요청"},
+   {title:"전손/분손 가능성",guide:"total_loss_check",row:"수리비/차량가액 약 26% · 분손 가능성 높음",reco:"권고 · 분손 처리 확인"}
+  ]},
+ {key:"risk",title:"과실·위험",status:"승인대기",summary:"과실 기준 간 편차와 SIU 위험 점수가 임계를 초과했습니다. 자동 확정하지 않고 검토·승인 경로로 보냅니다.",
+  items:[
+   {label:"사고 유형",value:"교차로 직진/좌회전 충돌",status:"확인"},
+   {label:"과실비율 (블박/판례)",value:"15% vs 30%",status:"검토필요",guide:"fault_gap"},
+   {label:"과실 편차",value:"15%p (사내 임계 10%p)",status:"검토필요",guide:"fault_gap"},
+   {label:"SIU 위험 점수",value:"88점 / 임계 75점",status:"승인대기",guide:"fraud_score"},
+   {label:"유사 청구",value:"최근 6개월 3건",status:"확인",guide:"similar_claim_pattern"},
+   {label:"진술 일치",value:"블랙박스와 일부 불일치",status:"확인",guide:"fraud_score"}
+  ],
+  issues:[
+   {title:"과실비율 편차",guide:"fault_gap",row:"블랙박스 15% / 판례 30% · 편차 15%p",reco:"권고 · 담당자 검토"},
+   {title:"SIU 위험 점수",guide:"fraud_score",row:"기본 78점 + 유사 5 + 진술 5 = 88점",reco:"권고 · SIU 의뢰 승인"},
+   {title:"유사 청구 패턴",guide:"similar_claim_pattern",row:"최근 6개월 유사 청구 3건 · 업체 일부 중복",reco:"권고 · 유사 사건 확인"}
+  ]},
+ {key:"settlement",title:"지급·종결",status:"보류",summary:"자동 지급은 보류되었고, SIU 의뢰와 담당자 검토가 필요합니다. 확정분·검토분·보류분이 금액으로 분리됩니다.",
+  items:[
+   {label:"자동 지급 가능액",value:"0원 (SIU 보류)",status:"차단",guide:"auto_payment_blocked"},
+   {label:"담당자 검토 금액",value:"222만 원",status:"검토필요",guide:"payment_hold"},
+   {label:"SIU 보류 금액",value:"448만 원",status:"보류",guide:"payment_hold"},
+   {label:"추가 확인 필요",value:"70만 원",status:"검토필요"},
+   {label:"고객 안내",value:"안내문 초안 생성 가능",status:"대기",guide:"customer_notice"}
+  ],
+  issues:[
+   {title:"자동 지급 불가",guide:"auto_payment_blocked",row:"SIU 위험 임계 초과 · 지급 기준 자동 차단",reco:"권고 · SIU 의뢰 승인"},
+   {title:"지급 보류",guide:"payment_hold",row:"다툼·초과·의심분 검토 222만 / 보류 448만 원",reco:"권고 · 검토 큐 등록"},
+   {title:"고객 안내문 생성",guide:"customer_notice",row:"서류 확인 완료 · 추가 검토 안내 필요",reco:"권고 · 안내문 초안 확인"}
+  ]}
+];
+
+/* ===================== 판단 가이드 콘텐츠 ===================== */
+const GUIDE_TOPICS={
+ document_missing:{title:"서류 완결성",current:["제출 서류 5종이 모두 확인되었습니다.","문서 누락 없이 다음 단계로 진행할 수 있습니다."],
+  checklist:["진단서·견적서·사고확인서가 모두 있는지","추출 값이 원본과 일치하는지","서류 발급일이 사고일 이후인지"],
+  evidence:["제출 서류 5/5","문서 추출 신뢰도 0.94","진단서·수리견적서·사고확인서·청구서·신분서류"],
+  actions:["다음 단계 진행","서류 원본 확인"],
+  detail:{data:["제출 서류 추출 결과","문서 보관함","청구 접수 정보"],rules:["필수 서류 체크리스트","서류 발급일 검증"],flow:["문서 수집","문서 정보 추출","필수 서류 대조","완결성 확인"]}},
+ coverage_check:{title:"계약·담보",current:["사고 시점에 계약이 유효하고, 청구 유형이 가입 담보에 포함됩니다.","담보 범위·운전자 범위 모두 보장 대상입니다."],
+  checklist:["사고일이 계약 유효기간 내인지","청구 유형이 가입 담보에 포함되는지","사고 운전자가 한정 범위에 드는지","보험료 정상 납입 여부"],
+  evidence:["계약 POL-AUTO-8842 유효","담보: 대물·대인Ⅰ·Ⅱ·자차","운전자: 가족한정 범위 내","사고일 계약기간 내"],
+  actions:["보장 확인 완료","계약 원문 확인"],
+  detail:{data:["계약 정보","약관","운전자 한정 특약","사고 접수 정보"],rules:["계약 유효성 기준","담보 범위 기준","운전자 범위 기준"],flow:["계약 조회","사고일·계약기간 대조","담보 범위 매칭","운전자 범위 확인"]}},
+ exclusion_check:{title:"면책 조건",current:["음주·무면허·고의 등 지급 제외 사유가 확인되지 않았습니다.","면책 사유 없음으로 보장 가능합니다."],
+  checklist:["음주·무면허 정황이 있는지","사고가 고의·중과실인지","보험금 청구 시효 내인지"],
+  evidence:["음주·무면허 정황 없음","사고 경위 정상","청구 시효 내"],
+  actions:["면책 해당 없음 확인","사고 경위 재확인"],
+  detail:{data:["사고 정황","경찰 사고사실확인원","면책 기준"],rules:["면책 사유 기준","청구 시효 기준"],flow:["사고 정황 정리","면책 사유 대조","면책 해당 없음 판정"]}},
+ repair_over_cap:{title:"수리비 시장가 초과",current:["청구 수리비가 시장 인정 상한을 70만 원 초과했습니다.","초과분은 자동 지급하지 않고 담당자 검토 대상으로 분리됩니다."],
+  checklist:["사고 부위와 수리 항목이 일치하는지","교환 필요성이 있는 부품인지","공임 단가가 기준을 벗어나는지","전손/분손 판단이 필요한지"],
+  evidence:["수리견적 480만 원","시장 인정 상한 410만 원","초과분 70만 원","차량 연식 2023년식","주행거리 1.2만 km"],
+  actions:["초과분 검토","견적 재확인","일부 지급 + 초과분 보류"],
+  detail:{data:["수리견적서 추출","차량 연식/주행거리","부품·공임 기준","차량 기준가액","동일 정비업체 과거 견적"],rules:["수리비 시장가 상한 기준","차량가액 대비 수리비 비율","정비업체 반복 초과 패턴"],flow:["문서 추출","수리견적 정보 생성","차량 기준가액 조회","수리비 기준 대조","초과분 검토 분기"]}},
+ total_loss_check:{title:"전손/분손 가능성",current:["수리비와 차량 기준가액 비율로 분손/전손 판단이 필요합니다.","현재는 분손 가능성이 높게 추정됩니다."],
+  checklist:["수리비가 차량가액을 초과하는지","경제적 전손 기준에 해당하는지","잔존물 가치를 반영했는지"],
+  evidence:["수리견적 480만 원","차량 기준가액 1,850만 원","수리비/차량가액 약 26%","분손 가능성 높음"],
+  actions:["분손으로 처리","전손 기준 재검토"],
+  detail:{data:["수리견적","차량 기준가액","잔존물 가치"],rules:["경제적 전손 기준","수리비 대비 차량가액 비율"],flow:["차량 기준가액 조회","수리비 비율 산정","전손/분손 기준 대조","분손 판정"]}},
+ medical_settlement_over_norm:{title:"대인 합의금 통상 초과",current:["대인 합의금이 상해 등급별 통상 범위를 40만 원 초과했습니다.","초과분은 추가 확인 후 검토 대상입니다."],
+  checklist:["상해 등급과 치료 내용이 일치하는지","치료 기간이 통상 범위인지","향후치료비·휴업손해가 과다한지","위자료 산정 기준이 맞는지"],
+  evidence:["청구 합의금 300만 원","통상 범위 260만 원","초과분 40만 원","상해 14급 · 14일"],
+  actions:["추가서류 요청","합의금 재산정","통상 범위로 조정 제안"],
+  detail:{data:["진단서","치료비 내역","상해등급 통상 범위","휴업손해 자료"],rules:["상해등급별 통상 범위","치료 기간 이상치","합의금 산정 기준"],flow:["진단서 정보 정리","상해등급 매칭","통상 범위 대조","초과분 검토 분기"]}},
+ fault_gap:{title:"과실비율 편차",current:["블랙박스 기준과 판례 기준의 과실비율이 15%p 차이가 납니다.","사내 임계(10%p)를 넘어 자동 확정하지 않고 담당자 검토로 보냅니다."],
+  checklist:["블랙박스 영상이 사고 경위와 일치하는지","적용한 사고 유형이 맞는지","수정 요소(신호·차선)가 반영됐는지","상대측 주장과 차이가 무엇인지"],
+  evidence:["블랙박스 기준 15%","판례 기준 30%","편차 15%p","사내 임계 10%p","사고 유형: 교차로 직진/좌회전"],
+  actions:["담당자 검토","사고 유형 재확인","상급 검토 요청"],
+  detail:{data:["블랙박스 영상","사고 유형 인정기준","판례·분쟁 기준","사고 접수 정보"],rules:["과실비율 인정기준","기준 간 편차 임계","수정 요소 적용 기준"],flow:["사고 유형 매칭","기준별 과실비율 조회","편차 산정","임계 초과 → 검토 분기"]}},
+ fraud_score:{title:"SIU 위험 점수",current:["가중 위험 점수가 88점으로 SIU 전환 임계(75점)를 초과했습니다.","자동 지급을 멈추고 SIU 의뢰 승인이 필요합니다."],
+  checklist:["반복 청구가 실제 별개 사고인지","진술과 객관 증거의 차이가 무엇인지","동일 병원/정비업체 연계가 있는지","즉시 SIU 의뢰가 적절한지"],
+  evidence:["기본 점수 78점","유사 청구 +5점","진술 불일치 +5점","가중 점수 88점","임계 75점"],
+  actions:["SIU 의뢰 승인","현장 확인 요청","지급 보류 유지"],
+  detail:{data:["과거 청구 이력","사고 진술","위험 점수 자료","동일 업체 청구 이력"],rules:["SIU 전환 점수 기준","가중치 산정 기준","반복 청구 패턴"],flow:["과거 청구 이력 조회","위험 신호 가중","점수 산정","임계 초과 → SIU 분기"]}},
+ similar_claim_pattern:{title:"유사 청구 패턴",current:["최근 6개월 내 유사 청구가 3건 확인됩니다.","반복 청구·동일 업체 연계 여부를 함께 봐야 합니다."],
+  checklist:["각 청구가 별개 사고인지","동일 관계자/업체가 반복되는지","청구 금액대가 유사한지"],
+  evidence:["최근 6개월 유사 청구 3건","유사 사고 유형","동일 정비업체 일부 중복"],
+  actions:["유사 사건 묶어 보기","SIU 의뢰 검토"],
+  detail:{data:["과거 청구 이력","사고 유형","관계자·업체 정보"],rules:["유사 사건 묶음 기준","반복 청구 패턴"],flow:["과거 청구 조회","유사도 산정","유사 사건 묶음","위험 신호 반영"]}},
+ auto_payment_blocked:{title:"자동 지급 불가",current:["이 사건은 SIU 위험 임계 초과로 자동 지급이 보류되었습니다.","지급은 승인·조사 결과 확인 후 진행됩니다."],
+  checklist:["보류 사유가 해소될 수 있는지","우선 일부 지급이 가능한 확정분이 있는지","고객 안내가 필요한지"],
+  evidence:["자동 지급 가능액 0원","SIU 위험 점수 88점","지급 기준 자동 차단"],
+  actions:["SIU 의뢰 승인","지급 보류 유지","확정분 일부 지급 검토"],
+  detail:{data:["처리 경로 분기 결과","위험 점수","지급 기준"],rules:["자동 지급 한도 기준","SIU 시 지급 차단 기준"],flow:["처리 경로 분기","위험 신호 확인","지급 차단 적용","승인 대기"]}},
+ payment_hold:{title:"지급 보류 · 검토 금액",current:["인정 손해액 670만 원 중 222만 원이 담당자 검토 금액으로 분리되었습니다.","과실 편차·견적 초과 등 다툼분은 검토 후 지급됩니다."],
+  checklist:["검토 금액의 산정 근거가 맞는지","추가 확인이 필요한 항목인지","합의 가능 범위인지"],
+  evidence:["인정 손해액 670만 원","담당자 검토 222만 원","SIU 보류 448만 원","추가 확인 70만 원"],
+  actions:["검토 큐 등록","일부 지급 승인","합의안 작성"],
+  detail:{data:["손해액 산정 결과","과실비율","위험 점수"],rules:["자동/검토 분리 기준","SIU 보류 기준"],flow:["손해액 산정","다툼·초과분 식별","검토/보류 분리","검토 큐 등록"]}},
+ customer_notice:{title:"고객 안내문",current:["서류 확인이 완료되었고, 수리비·과실 관련 추가 검토가 필요한 상태입니다.","현재 상황을 알리는 고객 안내문 초안이 준비됩니다."],
+  checklist:["안내 문구가 사실과 일치하는지","지급 예정·추가 확인 사항이 명확한지","외부 발송 승인이 필요한지"],
+  evidence:["서류 확인 완료","추가 검토 항목: 수리비·과실","외부 발송 = 승인 필요"],
+  actions:["문안 확인","발송 승인 요청","추가서류 요청 문안 생성"],
+  detail:{data:["사건 처리 상태","합의·안내 템플릿"],rules:["외부 발송 사전 승인 기준","고객 안내 문구 기준"],flow:["처리 상태 정리","안내문 초안 생성","발송 승인 대기"]}},
+ siu_hold:{title:"SIU 보류 금액",current:["SIU 조사 대상 금액 448만 원은 조사 결과 확인 전까지 보류됩니다."],
+  checklist:["보류 범위가 적정한지","조사 우선순위가 맞는지","고객 안내가 필요한지"],
+  evidence:["SIU 보류 금액 448만 원","위험 점수 88점","임계 75점"],
+  actions:["SIU 의뢰 승인","보류 유지"],
+  detail:{data:["위험 점수","손해액 분리 결과"],rules:["SIU 보류 기준"],flow:["위험 평가","SIU 보류 분리","조사 대기"]}},
+ stmt_mismatch:{title:"진술 불일치",current:["사고 진술과 블랙박스 등 객관 증거가 일부 일치하지 않습니다.","위험 신호로 반영되어 추가 확인이 필요합니다."],
+  checklist:["불일치 항목이 무엇인지","증거의 신뢰도가 충분한지","추가 진술 확인이 필요한지"],
+  evidence:["진술-블랙박스 일부 불일치","위험 가중 +5점"],
+  actions:["추가 진술 확인","SIU 의뢰 검토"],
+  detail:{data:["사고 진술","블랙박스 영상","사고 접수 정보"],rules:["진술-증거 일치 기준"],flow:["진술 정리","증거 대조","불일치 신호 반영"]}},
+ shop_repeat:{title:"동일 정비업체 반복",current:["동일 정비업체에서 반복 청구·견적 초과 패턴이 확인됩니다."],
+  checklist:["반복이 우연인지 패턴인지","견적 초과가 반복되는지","업체 모니터링이 필요한지"],
+  evidence:["동일 정비업체 반복 청구 4건","견적 시장가 초과 반복"],
+  actions:["업체 패턴 확인","기준 개선 후보 등록"],
+  detail:{data:["정비업체 청구 이력","과거 견적"],rules:["정비업체 반복 초과 패턴"],flow:["업체 이력 조회","반복 패턴 산정","위험 신호 반영"]}},
+ siu_request:{title:"조사 요청서 초안",current:["위험 점수가 임계를 초과해 SIU 조사 요청서 초안이 생성되었습니다.","승인 시 SIU 조사팀에 의뢰됩니다."],
+  checklist:["조사 사유가 충분한지","첨부 근거가 정확한지","즉시 의뢰가 적절한지"],
+  evidence:["가중 점수 88점","임계 75점","유사 청구 3건","진술 불일치"],
+  actions:["SIU 의뢰 승인","요청서 수정","담당자 검토로 전환"],
+  detail:{data:["위험 점수","유사 청구","진술 자료"],rules:["SIU 전환 기준"],flow:["위험 평가","조사 사유 정리","요청서 초안 생성","승인 대기"]}},
+ siu_approval:{title:"SIU 의뢰 승인",current:["SIU 의뢰는 위험 점수 88점으로 임계를 초과한 건입니다.","승인 시 SIU 조사팀 의뢰와 지급 보류가 함께 적용됩니다."],
+  checklist:["조사 사유가 타당한지","지급 보류가 함께 필요한지","고객 영향이 적절히 안내되는지"],
+  evidence:["요청 액션: SIU 의뢰","위험 점수 88점","적용 기준: SIU 임계값 75점"],
+  actions:["승인","반려","담당자 재검토 요청"],
+  detail:{data:["위험 점수","과거 청구 이력","진술"],rules:["SIU 임계값 기준","고위험 승인 기준"],flow:["위험 평가","승인 요청 생성","승인 검토"]}},
+ block_criteria:{title:"차단 기준",current:["고위험 액션(지급·SIU·외부 발송)은 승인 전까지 업무 시스템 반영이 차단됩니다.","차단은 통제 정책에 따른 정상 동작입니다."],
+  checklist:["차단 사유가 정책에 부합하는지","승인 조건이 충족됐는지","차단 해제가 적절한지"],
+  evidence:["지급 처리: 승인 필요","외부 발송: 사전 승인","SIU 임계 초과 시 지급 차단"],
+  actions:["승인 기준 확인","승인 처리"],
+  detail:{data:["통제 정책","승인 요청 내역"],rules:["고위험 승인 기준","외부 발송 사전 승인","자동 지급 한도"],flow:["액션 요청","정책 대조","승인 필요 → 차단","승인 대기"]}}
+};
+
+/* ===================== 조사·승인·정책 데이터 ===================== */
+const SIU_QUEUE=[
+ {id:"CLM-2026-0417",score:R.fraudEff,sig:"반복 청구 + 진술 불일치",sim:"3건",stmt:"불일치",reco:"SIU 의뢰",st:"승인 대기",sb:"badge-amber"},
+ {id:"CLM-2026-0377",score:91,sig:"동일 정비업체 반복",sim:"4건",stmt:"일부 불일치",reco:"조사 착수",st:"진행중",sb:"badge-blue"},
+ {id:"CLM-2026-0356",score:79,sig:"단기 다발 청구",sim:"2건",stmt:"일치",reco:"현장 확인",st:"대기",sb:"badge-gray"}
+];
+const SIU_SIGNALS=[["최근 6개월 유사 청구 3건","similar_claim_pattern"],["사고 진술과 블랙박스 일부 불일치","stmt_mismatch"],["수리견적 시장가 초과","repair_over_cap"],["동일 정비업체 반복 청구 패턴","shop_repeat"]];
+const SIU_SIMILAR=["유사 사고 유형 (교차로 직진/좌회전)","동일 지역","동일 정비업체","동일 관계자(피보험자/운전자)","유사 청구 금액대"];
+const APPROVAL_QUEUE=[
+ {type:"SIU 의뢰 승인",guide:"siu_approval",id:"CLM-2026-0417",act:"SIU 의뢰",reason:"위험점수 "+R.fraudEff+"점",by:"SIU 위험 평가",sla:"D-1",st:"대기",
+  policy:"SIU 임계값 75점",data:"위험 점수 · 과거 청구 이력 · 진술",opinion:"위험 신호 다수, 조사 필요",sys:"SIU 시스템",result:"SIU 조사팀 의뢰 + 지급 보류"},
+ {type:"지급 보류 승인",guide:"payment_hold",id:"CLM-2026-0417",act:"지급 보류",reason:"SIU 임계 초과",by:"시스템 반영",sla:"D-1",st:"대기",
+  policy:"고위험 승인 필수",data:"처리 경로 분기 결과",opinion:"조사 완료 전 지급 정지",sys:"지급 시스템",result:"지급 처리 차단 유지"},
+ {type:"고객 안내문 승인",guide:"customer_notice",id:"CLM-2026-0402",act:"안내문 발송",reason:"외부 발송 승인 필요",by:"고객 안내",sla:"D-2",st:"대기",
+  policy:"외부 발송 사전 승인",data:"합의·안내 템플릿",opinion:"추가서류 안내 발송",sys:"고객 알림",result:"안내문 외부 발송"}
+];
+const POLICY_LIST=[
+ {n:"담보 기준",desc:"청구가 가입 담보로 보장되는지 확인합니다.",thr:"청구 유형 ∈ 가입 담보",applied:124,auto:120,review:4,block:0,issue:0,cand:"없음",rule:"R-002"},
+ {n:"운전자 범위 기준",desc:"사고 운전자가 약관상 보장 범위인지 확인합니다.",thr:"운전자 ∈ 한정 범위",applied:124,auto:121,review:3,block:0,issue:0,cand:"없음",rule:"R-003"},
+ {n:"면책 기준",desc:"음주·무면허·시효 등 지급 제외 사유를 검증합니다.",thr:"면책 사유 해당 시 보류",applied:124,auto:122,review:2,block:1,issue:0,cand:"없음",rule:"R-004"},
+ {n:"수리비 시장가 상한",desc:"수리견적이 시장 인정 범위를 초과하는지 확인합니다.",thr:"수리견적 ≤ 시장 인정 상한",applied:87,auto:69,review:18,block:0,issue:1,cand:"동일 정비업체 반복 초과 패턴 4건",rule:"R-005"},
+ {n:"대인 합의금 기준",desc:"대인 합의금이 통상 범위인지 확인합니다.",thr:"합의금 ≤ 통상 한도",applied:54,auto:40,review:14,block:0,issue:0,cand:"상해등급별 통상 범위 재산정 후보",rule:"R-005"},
+ {n:"과실 편차 기준",desc:"기준별 과실 판정 차이가 임계를 넘는지 확인합니다.",thr:"|블랙박스 − 판례| ≤ 10%p",applied:73,auto:62,review:11,block:0,issue:0,cand:"교차로 좌회전 편차 반복 패턴",rule:"R-006"},
+ {n:"SIU 전환 기준",desc:"보험사기 의심 신호를 점수화해 조사 전환을 판단합니다.",thr:"가중 위험점수 ≥ 75점",applied:128,auto:107,review:8,block:13,issue:0,cand:"반복 청구+진술 불일치 가중치 후보",rule:"R-007"},
+ {n:"자동 지급 한도",desc:"자동 지급이 허용되는 금액 상한을 정의합니다.",thr:"자동 지급 ≤ 100만 원",applied:76,auto:49,review:27,block:0,issue:0,cand:"없음",rule:"정책"},
+ {n:"고객 안내문 승인 기준",desc:"외부 고객 메시지의 사전 승인 여부를 정의합니다.",thr:"외부 발송 = 승인 필요",applied:33,auto:0,review:33,block:1,issue:0,cand:"없음",rule:"정책"}
+];
+const POLICY_SIM={ title:"SIU 임계값 75점 → 80점 조정 시", rows:[["SIU 전환","13건","9건"],["사람 검토","39건","43건"],["자동 처리","76건","76건"],["오탐 가능성","기준선","감소"],["미탐 가능성","기준선","증가"]] };
+
+/* ===================== Trace (전체 처리 경로) ===================== */
+const TRACE_FULL=[
+ {t:"청구 접수",r:"CLM-2026-0417 접수 · 대물/대인 복합 청구"},
+ {t:"자료 연결·수집",r:"계약 정보 · 약관 · 문서 추출 · 수리비 기준 · 위험 점수 조회 <span class='gd'>완료</span>"},
+ {t:"사건 정보 정리",r:"청구·계약·사고·서류·수리견적·진료·위험신호를 업무 정보로 구조화"},
+ {t:"사건 관계 구성",r:"청구–계약–사고–서류–견적–위험신호 관계 구성"},
+ {t:"단계별 자동 확인",r:"보장 → 손해액 → 대인 → 과실 → 위험 → 처리 경로 순서 확인"},
+ {t:"기준 조회·대조",r:"계약/담보 조회 <span class='gd'>완료</span> · 수리비 기준 대조 <span class='gd'>완료</span> · 위험 점수 <span class='gd'>완료</span> · 지급 처리 <span class='bk'>승인 기준에 의해 차단</span>",blk:true},
+ {t:"업무 기준 적용",r:"계약 유효성 통과 · 담보 통과 · <span class='bk'>수리비 상한 초과</span> · <span class='bk'>과실 편차 초과</span> · <span class='bk'>SIU 임계 초과</span>"},
+ {t:"처리 경로 분기",r:"자동 지급 0원 · 담당자 검토 "+man(MONEY.reviewAmt)+" · SIU 보류 "+man(MONEY.siuHold)},
+ {t:"업무 액션 생성",r:"검토 큐 등록 · SIU 의뢰 후보 생성 · 고객 안내문 초안 생성"},
+ {t:"승인 기준 통제",r:"지급 처리 <span class='bk'>차단</span> · SIU 의뢰 <span class='bk'>승인 대기</span> · 외부 안내문 발송 <span class='bk'>승인 필요</span>",blk:true},
+ {t:"처리 기록",r:"입력 기준 <span class='mono'>"+CASE.id+"-"+R.inputHash+"</span> · 결과 기준 <span class='mono'>"+R.resultHash+"</span> · 적용 기준·담당자 선택 기록"},
+ {t:"기준 개선 후보",r:"교차로 과실 편차 패턴 · 수리견적 초과 패턴 · SIU 가중치 후보 (SME 검증 대기)"}
+];
+const GNODES=[
+ {id:"clm",t:"Claim",label:"청구\nCLM-2026-0417",x:70,y:120,c:"#E60012"},
+ {id:"pol",t:"Policy",label:"계약\nPOL-AUTO-8842",x:70,y:30,c:"#34495E"},
+ {id:"acc",t:"Accident",label:"사고\n교차로",x:250,y:120,c:"#FF9F0A"},
+ {id:"doc",t:"Document",label:"증빙 5종",x:250,y:30,c:"#7B68EE"},
+ {id:"rep",t:"RepairEstimate",label:"수리견적\n480만",x:430,y:55,c:"#8B6914"},
+ {id:"med",t:"MedicalBill",label:"진료·합의\n300만",x:430,y:125,c:"#E74C3C"},
+ {id:"fraud",t:"FraudSignal",label:"위험 신호\n88점",x:430,y:195,c:"#9B59B6"},
+ {id:"dec",t:"PaymentDecision",label:"처리 경로\n자동/검토/SIU",x:620,y:125,c:"#E60012"}
+];
+const GEDGES=[["clm","pol"],["clm","acc"],["clm","doc"],["acc","fraud"],["doc","rep"],["doc","med"],["rep","dec"],["med","dec"],["fraud","dec"]];
+
+/* ===================== 운영 설정(admin) 데이터 — 기술 용어 사용 ===================== */
+const AGENTS=[
+ {id:"coverage",name:"Coverage Agent",role:"담보 확인",status:"Active",sb:"badge-green",runs:128,success:"99.2%",hitl:3,blocked:0,risk:"Low",rb:"badge-green",owner:"심사기획팀",data:["Policy","Claim","Customer"],tools:["Policy DB Lookup"],actions:["coverage_check"],approval:[],recent:"담보 가능 124 · 검토 4",fail:"—",gov:"Access Control · Audit Log"},
+ {id:"damage",name:"Damage Agent",role:"손해액 산정",status:"Active",sb:"badge-green",runs:87,success:"94.5%",hitl:21,blocked:2,risk:"Medium",rb:"badge-amber",owner:"손해사정팀",data:["RepairEstimate","Vehicle"],tools:["Repair Benchmark API"],actions:["estimate_assess"],approval:[],recent:"시장가 초과 18건 검토",fail:"Benchmark API 지연 2건",gov:"Audit Log"},
+ {id:"medical",name:"Medical Agent",role:"대인 적정성",status:"Active",sb:"badge-green",runs:54,success:"93.1%",hitl:14,blocked:0,risk:"Medium",rb:"badge-amber",owner:"손해사정팀",data:["MedicalBill"],tools:["Repair Benchmark API"],actions:["injury_assess"],approval:["합의금 한도 초과"],recent:"과잉진료 신호 9건",fail:"—",gov:"PII Masking · Audit Log"},
+ {id:"liability",name:"Liability Agent",role:"과실 검토",status:"Active",sb:"badge-green",runs:73,success:"96.0%",hitl:11,blocked:0,risk:"Medium",rb:"badge-amber",owner:"손해사정팀",data:["Accident","CoverageRule"],tools:["KNIA Matcher"],actions:["fault_assess"],approval:["편차 임계 초과 시 상급 검토"],recent:"편차 검토 11건",fail:"—",gov:"HITL Policy"},
+ {id:"fraud",name:"Fraud Agent",role:"SIU 위험 평가",status:"Active",sb:"badge-green",runs:41,success:"88.0%",hitl:9,blocked:4,risk:"High",rb:"badge-red",owner:"SIU팀",data:["FraudSignal","History"],tools:["FDS Risk Scoring","Claim History DB"],actions:["fraud_score"],approval:["SIU 의뢰"],recent:"SIU 전환 13건",fail:"임계 경계 재검토 4건",gov:"Approval Policy · Audit Log"},
+ {id:"decision",name:"Decision Agent",role:"경로 분기",status:"Active",sb:"badge-green",runs:118,success:"97.6%",hitl:0,blocked:0,risk:"Medium",rb:"badge-amber",owner:"운영관리자",data:["전 단계 판정"],tools:["Review Queue API"],actions:["route_split"],approval:["자동 지급 한도 초과"],recent:"자동/검토/SIU 분기 118건",fail:"—",gov:"Approval Policy"},
+ {id:"writeback",name:"Writeback Agent",role:"시스템 반영",status:"Guarded",sb:"badge-amber",runs:62,success:"91.3%",hitl:0,blocked:8,risk:"High",rb:"badge-red",owner:"운영관리자",data:["Action Plan"],tools:["Payment API","SIU Referral API"],actions:["payment","siu_referral"],approval:["지급·SIU·고객 알림 전부 승인 필요"],recent:"반영 54 · 차단 8",fail:"Payment API 차단 8건(정책)",gov:"Writeback Guard · Approval Policy"},
+ {id:"notify",name:"Notification Agent",role:"고객 안내",status:"Guarded",sb:"badge-amber",runs:33,success:"100%",hitl:0,blocked:1,risk:"High",rb:"badge-red",owner:"운영관리자",data:["합의·안내 템플릿"],tools:["Customer Notification API"],actions:["notify_draft"],approval:["외부 발송 전 승인 필요"],recent:"초안 33 · 발송 0(승인 대기)",fail:"발송 승인 대기 1건",gov:"Approval Policy · PII Masking"},
+ {id:"learning",name:"Learning Agent",role:"학습 후보 생성",status:"Review",sb:"badge-purple",runs:17,success:"—",hitl:0,blocked:0,risk:"Medium",rb:"badge-amber",owner:"SME",data:["Decision Log"],tools:["Log Store"],actions:["candidate_gen"],approval:["배포 전 SME 승인"],recent:"후보 17건 생성",fail:"—",gov:"Audit Log"}
+];
+const TOOLS=[
+ {n:"Policy DB Lookup",by:"Coverage Agent",perm:"read",mode:"auto",st:"connected",stb:"badge-green",last:"82ms",gov:"logged"},
+ {n:"Repair Benchmark API",by:"Damage·Medical Agent",perm:"read",mode:"auto",st:"connected",stb:"badge-green",last:"140ms",gov:"logged"},
+ {n:"FDS Risk Scoring",by:"Fraud Agent",perm:"read",mode:"auto",st:"connected",stb:"badge-green",last:"210ms",gov:"logged"},
+ {n:"KNIA Matcher",by:"Liability Agent",perm:"read",mode:"auto",st:"connected",stb:"badge-green",last:"96ms",gov:"logged"},
+ {n:"Review Queue API",by:"Decision Agent",perm:"create",mode:"auto",st:"connected",stb:"badge-green",last:"96ms",gov:"logged"},
+ {n:"Payment API",by:"Writeback Agent",perm:"write",mode:"guarded",st:"blocked",stb:"badge-red",last:"—",gov:"approval required"},
+ {n:"SIU Referral API",by:"Fraud Agent",perm:"create",mode:"guarded",st:"pending",stb:"badge-amber",last:"—",gov:"approval required"},
+ {n:"Customer Notification API",by:"Notification Agent",perm:"draft/send",mode:"guarded",st:"draft only",stb:"badge-amber",last:"—",gov:"approval required"}
+];
+const POLICIES=[
+ {n:"자동 지급 한도 100만 원",to:"Decision Agent",cond:"auto_pay > 1,000,000",act:"승인 필요",st:"Active",last:"27건",owner:"운영관리자"},
+ {n:"SIU 임계값 75점",to:"Fraud Agent",cond:"fraud_score ≥ 75",act:"지급 차단 + SIU 의뢰",st:"Active",last:"13건",owner:"SIU팀"},
+ {n:"Writeback 고위험 승인 필수",to:"Writeback Agent",cond:"지급 · SIU · 고객 알림",act:"승인 필요",st:"Active",last:"8건",owner:"운영관리자"},
+ {n:"외부 발송 사전 승인",to:"Notification Agent",cond:"고객 외부 메시지",act:"발송 차단(승인 대기)",st:"Active",last:"1건",owner:"운영관리자"},
+ {n:"PII 마스킹",to:"전 Agent",cond:"개인정보 필드 출력",act:"마스킹",st:"Active",last:"상시",owner:"정보보호"}
+];
+const BLOCKED=[
+ {caseId:"CLM-2026-0417",act:"Payment API 차단",reason:"SIU 위험 임계 초과 — 조사 우선"},
+ {caseId:"CLM-2026-0377",act:"고객 알림 발송 차단",reason:"외부 메시지 사전 승인 필요"},
+ {caseId:"CLM-2026-0402",act:"대인 합의 자동 승인 차단",reason:"합의금이 자동 한도 초과"}
+];
+const CAPABILITIES=[
+ {layer:"Customer Environment",c:"#3498DB",items:["청구 접수","계약/담보","약관/KMS","문서/OCR","부품 시세 DB","의료비 기준","FDS/SIU","지급 시스템"],metric:"8 연결 · 2 guarded · 1 degraded",role:"AAP가 읽고 쓰는 고객 자산·시스템",systems:["청구 시스템","계약 시스템","지급 시스템"],agents:["Coverage Agent","Writeback Agent"],tools:["Policy DB Lookup","Payment API"],gov:["Access Control","Audit Log"],status:"8 연결",issue:"지급 시스템 1건 degraded"},
+ {layer:"Business Semantic Layer",c:"#7B68EE",items:["Claim Ontology","Policy Ontology","Accident Ontology","Damage Ontology","Medical Ontology","Fraud Signal Ontology"],metric:"6 온톨로지 · 52 필드 · 148 관계",role:"고객 데이터·문서를 업무 개체·관계·규칙으로 구조화(판단의 입력)",systems:["KMS","문서 OCR"],agents:["전 도메인 Agent"],tools:["—"],gov:["PII Masking"],status:"6 ontologies",issue:"없음"},
+ {layer:"Agentic Reasoning Layer",c:"#E60012",items:["Coverage Agent","Damage Agent","Medical Agent","Liability Agent","Fraud Agent","Decision Agent"],metric:"9 agents · 4 guarded · 2 승인 필요",role:"단계별 판단·분기 — 담보·손해액·과실·위험·결정",systems:["—"],agents:["9개 운영 Agent"],tools:["Benchmark·FDS·KNIA"],gov:["HITL Policy","Approval Policy"],status:"9 agents",issue:"Fraud Agent 임계 경계 재검토 4건"},
+ {layer:"Action & Integration Layer",c:"#1ABC9C",items:["Payment API","Review Queue API","SIU Referral API","Document Request API","Notification API"],metric:"5 tools · 3 승인 필요 · 1 차단",role:"AAP 판단 결과를 업무 시스템에 실제 반영(Writeback)",systems:["지급","워크스페이스","SIU"],agents:["Writeback Agent","Decision Agent"],tools:["Payment API","Review Queue API","SIU Referral API"],gov:["Writeback Guard","Approval Policy"],status:"5 tools",issue:"Payment API 차단 3건"},
+ {layer:"Operational Learning Layer",c:"#9B59B6",items:["Decision Log","Replay","Pattern Mining","Rule Candidate","Skill Candidate","Guardrail Candidate"],metric:"17 후보 · 4 승인 · 3 배포",role:"판단 이력·반복 패턴을 룰·스킬·가드레일 후보로 축적",systems:["Log Store"],agents:["Learning Agent"],tools:["Log Store"],gov:["Audit Log"],status:"17 candidates",issue:"SME 검토 9건 대기"},
+ {layer:"Trust / Governance Layer",c:"#34495E",items:["Access Control","HITL Policy","Approval Policy","Audit Policy","PII Masking","Writeback Guard"],metric:"6 정책 · 3 차단 · 0 사고",role:"권한·승인·차단·감사로 자동화를 통제",systems:["IAM","감사"],agents:["전 Agent 횡단"],tools:["전 Tool 횡단"],gov:["6 active policies"],status:"6 active",issue:"차단 3건(정상 작동)"}
+];
+const LEARNING_CANDIDATES=[
+ {title:"교차로 직진/좌회전 과실 편차 패턴",type:"Rule Candidate",tb:"badge-purple",source:"R-006 반복 발동 32건",impact:"자동화율 +3.2%",risk:"오판 위험 +0.4%",status:"SME Review",sb:"badge-amber",owner:"손해사정팀",rule:"R-006",agent:"Liability Agent",rollback:"가능"},
+ {title:"특정 정비업체 견적 초과 패턴",type:"Guardrail Candidate",tb:"badge-purple",source:"R-005 반복 초과 18건",impact:"검토 정확도 +5.1%",risk:"민원 위험 낮음",status:"Draft",sb:"badge-gray",owner:"운영관리자",rule:"R-005",agent:"Damage Agent",rollback:"가능"},
+ {title:"반복 청구 + 진술 불일치 SIU 가중치",type:"Skill Candidate",tb:"badge-purple",source:"SIU 적중 9건",impact:"SIU 적중률 +2.8%",risk:"오탐 위험 중간",status:"SME Review",sb:"badge-amber",owner:"SIU팀",rule:"R-007",agent:"Fraud Agent",rollback:"가능"}
+];
+function buildLogs(){
+  return [
+   {tm:"14:03:11",step:"접수 정리",agent:"Intake Agent",rule:"—",out:"document_complete=true",route:"NEXT"},
+   {tm:"14:03:13",step:"담보 확인",agent:"Coverage Agent",rule:"R-001·002",out:"coverage_status=COVERED",route:"NEXT"},
+   {tm:"14:03:15",step:"손해액 산정",agent:"Damage Agent",rule:"R-005",out:"repair_excess="+R.repairExcess,route:R.repairExcess>0?"HUMAN_REVIEW":"NEXT"},
+   {tm:"14:03:17",step:"과실 검토",agent:"Liability Agent",rule:"R-006",out:"fault_gap="+R.faultGap,route:R.faultDisputed?"HUMAN_REVIEW":"NEXT"},
+   {tm:"14:03:19",step:"위험 평가",agent:"Fraud Agent",rule:"R-007",out:"fraud_score="+R.fraudEff,route:R.fraudRoute==="SIU"?"SIU":(R.fraudRoute==="REVIEW"?"FIELD_CHECK":"NEXT")},
+   {tm:"14:03:21",step:"분기",agent:"Decision Agent",rule:"—",out:"route="+(R.routes.join("+")||"AUTO"),route:"WRITEBACK"}
+  ];
+}
+
+/* ===================== 상태 ===================== */
+const STATE={ rcase:CASE.id, processGroup:"damage", guide:"repair_over_cap", siu:0, appr:0, pol:0, polSim:false, admin:"agent", cap:0, agent:0, cand:0, replayed:false };
+let toastTok=0;
+function toast(m){ const t=el("toast"); t.textContent=m; t.classList.add("show"); const k=++toastTok; setTimeout(()=>{if(k===toastTok)t.classList.remove("show");},2400); }
+function statusMeta(s){
+  if(s==="완료")return{c:"st-done",b:"badge-green",step:"done"};
+  if(s==="검토필요")return{c:"st-warn",b:"badge-amber",step:"warn"};
+  if(s==="승인대기")return{c:"st-hold",b:"badge-purple",step:"hold"};
+  if(s==="차단")return{c:"st-blocked",b:"badge-red",step:"blocked"};
+  if(s==="보류")return{c:"st-warn",b:"badge-amber",step:"blocked"};
+  if(s==="확인")return{c:"st-check",b:"badge-blue",step:"done"};
+  return{c:"st-wait",b:"badge-gray",step:"done"};
+}
+function qm(topic){ return '<button class="qmark" onclick="guideClick(event,\''+topic+'\')">?</button>'; }
+
+/* ===================== 메뉴/네비 ===================== */
+const MENU=[
+ {sec:"MAIN", items:[
+   {k:"inbox",t:"내 업무함",ic:"M4 5h16M4 12h16M4 19h10",mc:"31"},
+   {k:"review",t:"청구 심사",ic:"M9 11l3 3 8-8M5 12a7 7 0 1014 0",mc:""},
+   {k:"payment",t:"지급·합의",ic:"M3 7h18v10H3zM3 11h18M7 15h4",mc:"11"},
+   {k:"siu",t:"조사·이상징후",ic:"M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3",mc:"8"},
+   {k:"approval",t:"승인 대기",ic:"M5 13l4 4L19 7",mc:"3"} ]},
+ {sec:"POLICY", items:[
+   {k:"policy",t:"기준·정책",ic:"M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z",mc:""} ]},
+ {sec:"ADMIN", items:[
+   {k:"admin",t:"운영 설정",ic:"M10.3 3.2a1 1 0 011.4 0l1 1a1 1 0 001 .3l1.4-.3a1 1 0 011.2.8l.3 1.4a1 1 0 00.6.7l1.3.5a1 1 0 01.6 1.3l-.5 1.3a1 1 0 000 .9l.5 1.3a1 1 0 01-.6 1.3l-1.3.5a1 1 0 00-.6.7l-.3 1.4a1 1 0 01-1.2.8l-1.4-.3a1 1 0 00-1 .3l-1 1a1 1 0 01-1.4 0M12 9a3 3 0 100 6 3 3 0 000-6z",mc:""} ]}
+];
+const TITLES={inbox:"내 업무함",review:"청구 심사",payment:"지급·합의",siu:"조사·이상징후",approval:"승인 대기",policy:"기준·정책",admin:"운영 설정"};
+let PAGE="inbox";
+function buildMenu(){
+  let h="";
+  MENU.forEach(g=>{ h+='<div class="sidebar-section-label">'+g.sec+'</div>';
+    g.items.forEach(it=>{ h+='<button class="menu-item'+(PAGE===it.k?" active":"")+'" onclick="go(\''+it.k+'\')"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="'+it.ic+'"/></svg></span>'+it.t+(it.mc?'<span class="mc">'+it.mc+'</span>':'')+'</button>'; });
+  });
+  el("menu").innerHTML=h;
+}
+function go(k){ PAGE=k; buildMenu(); el("crumb").textContent=TITLES[k]||k; el("pages").innerHTML='<div class="page">'+RENDER[k]()+'</div>'; window.scrollTo(0,0); }
+
+/* ===================== 화면 1 · 내 업무함 ===================== */
+function pInbox(){
+  let h='<div class="section-header"><h2>내 업무함</h2><p>오늘 처리해야 할 손해사정 업무입니다. AAP가 사전 처리한 사건은 검토가 필요한 쟁점만 남겨 둡니다.</p></div>';
+  h+='<div class="kpi-row">'; INBOX_KPI.slice(0,4).forEach(k=>{ h+='<div class="kpi-card'+(k[3]?" accent":"")+'"><div class="kpi-label">'+k[0]+'</div><div class="kpi-value">'+k[1]+'</div><div class="kpi-sub">'+k[2]+'</div></div>'; }); h+='</div>';
+  h+='<div class="kpi-row">'; INBOX_KPI.slice(4).forEach(k=>{ h+='<div class="kpi-card"><div class="kpi-label">'+k[0]+'</div><div class="kpi-value">'+k[1]+'</div><div class="kpi-sub">'+k[2]+'</div></div>'; }); h+='</div>';
+  h+='<div class="inbox-grid"><div class="card pad" style="overflow-x:auto"><div style="font-size:14px;font-weight:700;margin-bottom:12px">오늘의 업무 큐</div><table class="data-table"><thead><tr><th>우선</th><th>사건번호</th><th>업무 유형</th><th>현재 상태</th><th>AAP 사전 판단</th><th>내가 해야 할 일</th><th>SLA</th><th>위험도</th></tr></thead><tbody>';
+  TASK_QUEUE.forEach(t=>{ const pc=t.pri==="높음"?"badge-red":(t.pri==="중간"?"badge-amber":"badge-gray"); h+='<tr class="clk" onclick="openCase(\''+t.id+'\')"><td><span class="pri-tag '+pc+'">'+t.pri+'</span></td><td class="mono" style="font-weight:700">'+t.id+'</td><td>'+t.type+'</td><td>'+t.status+'</td><td>'+t.aap+'</td><td style="font-weight:600">'+t.todo+'</td><td class="mono">'+t.sla+'</td><td><span class="badge '+t.rb+'">'+t.risk+'</span></td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div><div class="aap-help"><h3><span class="hd" style="background:#2E7D32"></span>AAP가 먼저 처리한 일</h3>';
+  ["계약/담보 자동 확인","서류 완결성 확인","수리견적 시장가 비교","대인 합의 통상 범위 비교","과실 기준 편차 탐지","SIU 위험 신호 산정"].forEach(x=>{ h+='<div class="help-item"><span class="hi-ck">✓</span><span>'+x+'</span></div>'; });
+  h+='</div><div class="aap-help"><h3><span class="hd" style="background:#E60012"></span>담당자에게 남긴 일</h3>';
+  ["과실 편차 판단","수리비 초과분 검토","SIU 의뢰 승인","고객 안내문 확인"].forEach(x=>{ h+='<div class="help-item"><span class="hi-todo">!</span><span>'+x+'</span></div>'; });
+  h+='</div></div></div>';
+  h+='<div class="notice">손해사정사는 모든 청구를 처음부터 확인하지 않습니다. AAP가 계약·담보·서류·손해액·과실·위험 신호를 정리하고, <b>자동 처리 가능한 부분과 사람이 판단할 부분을 나눕니다</b>. 사건 행을 누르면 청구 심사 화면으로 이동합니다.</div>';
+  return h;
+}
+function openCase(id){ STATE.rcase=id; if(id===CASE.id){STATE.processGroup="damage";STATE.guide="repair_over_cap";}else{STATE.guide=LITE_GUIDE[id]||"coverage_check";} go("review"); }
+
+/* ===================== 화면 2 · 청구 심사 (중심) ===================== */
+function pReview(){
+  const id=STATE.rcase||CASE.id;
+  let h='<div class="section-header"><h2>청구 심사</h2><p>상단 단계에서 업무 묶음을 선택하고, 쟁점·항목 옆 <b>?</b>를 누르면 우측 판단 가이드가 해당 주제로 바뀝니다.</p></div>';
+  h+='<div class="review3">';
+  h+='<div class="rv-queue card"><div class="list-header">내 사건 큐 ('+TASK_QUEUE.length+')</div><div class="rv-qlist">';
+  TASK_QUEUE.forEach(t=>{ h+='<div class="rv-qcard'+(t.id===id?" active":"")+'" data-id="'+t.id+'" onclick="selReviewCase(\''+t.id+'\')"><div class="lc-head"><span class="lc-id mono">'+t.id+'</span><span class="badge '+t.rb+'">'+t.risk+'</span></div><div class="rv-qmeta">'+t.type+' · '+t.status+' · '+t.sla+'</div></div>'; });
+  h+='</div></div>';
+  h+='<div class="rv-center" id="reviewCenter">'+reviewCenterHTML(id)+'</div>';
+  h+='<div class="rv-right"><div id="guidePanel">'+renderGuide(STATE.guide)+'</div></div>';
+  h+='</div>';
+  return h;
+}
+function reviewCenterHTML(id){ return id===CASE.id ? processRailHTML()+renderProcessGroup(STATE.processGroup) : liteCenter(id); }
+function selReviewCase(id){
+  STATE.rcase=id;
+  if(id===CASE.id){ STATE.processGroup="damage"; STATE.guide="repair_over_cap"; }
+  else { STATE.guide=LITE_GUIDE[id]||"coverage_check"; }
+  el("reviewCenter").innerHTML=reviewCenterHTML(id);
+  showGuide(STATE.guide);
+  el("pages").querySelectorAll(".rv-qcard").forEach(c=>c.classList.toggle("active", c.getAttribute("data-id")===id));
+}
+function processRailHTML(){
+  let h='<div class="process-rail">';
+  PROCESS_GROUPS.forEach(g=>{ const m=statusMeta(g.status); h+='<button class="process-step '+m.step+(STATE.processGroup===g.key?" active":"")+'" onclick="selProcessGroup(\''+g.key+'\')"><span class="step-title">'+g.title+'</span><span class="step-status">'+g.status+'</span>'+qm(leadGuide(g))+'</button>'; });
+  h+='</div>';
+  return h;
+}
+function leadGuide(grp){ if(grp.issues&&grp.issues.length)return grp.issues[0].guide; for(let i=0;i<grp.items.length;i++){ if(grp.items[i].guide)return grp.items[i].guide; } return "coverage_check"; }
+function renderProcessGroup(groupKey){
+  const grp=PROCESS_GROUPS.find(g=>g.key===groupKey);
+  let h='<div class="rv-block"><h3>'+grp.title+'</h3><p class="group-summary">'+grp.summary+'</p><div class="process-items">';
+  grp.items.forEach(it=>{ const m=statusMeta(it.status); h+='<div class="process-item '+m.c+'"><div><div class="process-item-label">'+it.label+(it.guide?qm(it.guide):'')+'</div><div class="process-item-value">'+it.value+'</div></div><span class="badge '+m.b+'">'+it.status+'</span></div>'; });
+  h+='</div></div>';
+  if(grp.issues&&grp.issues.length){ h+='<div class="rv-block"><h3>주요 쟁점 <span style="font-size:11px;color:var(--text-tertiary);font-weight:500">'+grp.issues.length+'건</span></h3>';
+    grp.issues.forEach(s=>{ h+='<div class="issue-card"><div class="ic-t">'+s.title+qm(s.guide)+'</div><div class="ic-row">'+s.row+'</div><div class="ic-reco">'+s.reco+'</div></div>'; }); h+='</div>'; }
+  return h;
+}
+function selProcessGroup(key){
+  STATE.processGroup=key;
+  const grp=PROCESS_GROUPS.find(g=>g.key===key); STATE.guide=leadGuide(grp);
+  el("reviewCenter").innerHTML=processRailHTML()+renderProcessGroup(key);
+  showGuide(STATE.guide);
+}
+function liteCenter(id){
+  const c=CASE_LITE[id]; if(!c) return '<div class="rv-block">사건 정보를 불러올 수 없습니다.</div>';
+  let h='<div class="rv-block"><h3>사건 요약 <span class="mono" style="font-size:12px;color:var(--text-tertiary);font-weight:500">'+id+'</span></h3><div class="sum-grid">';
+  [["사고 유형",c.acc],["담보",c.cov],["청구 금액",c.claim],["상해 정보",c.inj],["AAP 사전 판단",c.aap],["위험도",c.risk]].forEach(f=>{ h+='<div class="sum-f"><div class="sf-l">'+f[0]+'</div><div class="sf-v">'+f[1]+'</div></div>'; });
+  h+='</div></div>';
+  h+='<div class="rv-block"><h3>AAP 사전 심사 결과</h3><div style="font-size:13px;line-height:1.7;color:var(--text-secondary)">'+c.note+'</div>';
+  if(c.issues.length){ h+='<div style="margin-top:12px">'; c.issues.forEach(x=>{ h+='<div class="issue-card" style="margin-bottom:8px"><div class="ic-row">'+x+'</div></div>'; }); h+='</div>'; }
+  h+='</div>';
+  return h;
+}
+
+/* ===================== 판단 가이드 ===================== */
+function renderGuide(topicKey,bare){
+  const g=GUIDE_TOPICS[topicKey]||GUIDE_TOPICS.repair_over_cap;
+  let h = bare ? '<div class="guide-body">' : '<div class="guide-panel"><div class="guide-head"><div class="guide-title">판단 가이드</div><div class="guide-topic">'+g.title+'</div></div><div class="guide-body">';
+  h+='<div class="guide-section"><div class="guide-label">현재 판단</div>'+g.current.map(x=>'<p>'+x+'</p>').join("")+'</div>';
+  h+='<div class="guide-section"><div class="guide-label">담당자 확인 포인트</div><ul>'+g.checklist.map(x=>'<li>'+x+'</li>').join("")+'</ul></div>';
+  h+='<div class="guide-section"><div class="guide-label">AAP가 확인한 근거</div><ul>'+g.evidence.map(x=>'<li>'+x+'</li>').join("")+'</ul></div>';
+  h+='<div class="guide-section"><div class="guide-label">권장 액션</div><div class="guide-actions">'+g.actions.map(x=>'<button onclick="toast(\'액션: '+x+'\')">'+x+'</button>').join("")+'</div></div>';
+  h+='<details class="guide-detail"><summary>상세 근거 보기</summary><div class="guide-detail-block">';
+  h+='<b>사용 데이터</b><ul>'+g.detail.data.map(x=>'<li>'+x+'</li>').join("")+'</ul>';
+  h+='<b>적용 기준</b><ul>'+g.detail.rules.map(x=>'<li>'+x+'</li>').join("")+'</ul>';
+  h+='<b>AAP 처리 경로</b><ol>'+g.detail.flow.map(x=>'<li>'+x+'</li>').join("")+'</ol>';
+  h+='<button class="btn-outline" style="margin-top:10px" onclick="openTrace()">전체 처리 경로 보기</button>';
+  h+='</div></details></div>'+(bare?'':'</div>');
+  return h;
+}
+function showGuide(topicKey){ STATE.guide=topicKey; const p=el("guidePanel"); if(p)p.innerHTML=renderGuide(topicKey); }
+function guideClick(ev,topicKey){ if(ev)ev.stopPropagation(); if(PAGE==="review"&&el("guidePanel")){ showGuide(topicKey); } else { openGuideDrawer(topicKey); } }
+function openGuideDrawer(topicKey){
+  const g=GUIDE_TOPICS[topicKey]||GUIDE_TOPICS.repair_over_cap;
+  el("drawerTitle").textContent="판단 가이드"; el("drawerSub").textContent=g.title;
+  el("drawerBody").innerHTML=renderGuide(topicKey,true);
+  el("drawerOv").classList.add("open"); el("drawer").classList.add("open");
+}
+
+/* ===================== Trace Drawer (전체 처리 경로) ===================== */
+function openTrace(){
+  el("drawerTitle").textContent="AAP 처리 경로"; el("drawerSub").textContent="이 사건에 대해 AAP가 실제로 수행한 처리 경로";
+  let h='<div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;padding:10px 12px;background:var(--bg-base);border-radius:8px">사건 <b class="mono">'+CASE.id+'</b> · '+CASE.title+'<br>현업 화면에 보이지 않는 자동 처리 단계까지 펼쳐 봅니다.</div>';
+  TRACE_FULL.forEach((s,i)=>{ h+='<div class="trace-step"><div class="trace-num'+(s.blk?" blk":"")+'">'+(i+1)+'</div><div><div class="trace-t">'+s.t+'</div><div class="trace-r">'+s.r+'</div></div></div>'; });
+  h+='<div style="font-size:12px;font-weight:700;margin:6px 0 8px">구성된 사건 관계</div><div id="traceGraph"></div>';
+  el("drawerBody").innerHTML=h;
+  el("drawerOv").classList.add("open"); el("drawer").classList.add("open");
+  drawGraph("traceGraph");
+}
+function closeDrawer(){ el("drawerOv").classList.remove("open"); el("drawer").classList.remove("open"); }
+function drawGraph(targetId){
+  const box=el(targetId||"traceGraph"); if(!box)return;
+  const W=760,H=240; const pos={}; GNODES.forEach(n=>pos[n.id]={x:n.x+72,y:n.y+18});
+  let s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">';
+  GEDGES.forEach(e=>{ const a=pos[e[0]],b=pos[e[1]]; s+='<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="#CBD5E1" stroke-width="1.5"/>'; });
+  GNODES.forEach(n=>{ const lines=n.label.split("\n"); const w=144,h=36;
+    s+='<g class="gnode"><rect x="'+n.x+'" y="'+n.y+'" rx="8" width="'+w+'" height="'+h+'" fill="'+n.c+'" opacity="0.92"/>';
+    lines.forEach((ln,k)=>{ s+='<text x="'+(n.x+w/2)+'" y="'+(n.y+(lines.length>1?14:23)+k*13)+'" fill="#fff" font-size="'+(k===0?11:9.5)+'" font-weight="'+(k===0?700:500)+'" text-anchor="middle">'+ln+'</text>'; });
+    s+='</g>';
+  });
+  s+='</svg>'; box.innerHTML=s;
+}
+
+/* ===================== 화면 3 · 지급·합의 ===================== */
+function pPayment(){
+  let h='<div class="section-header"><h2>지급·합의</h2><p>'+CASE.id+' · '+CASE.title+'. 지급 가능액·검토 금액·보류 금액을 분리하고, 고객 안내문 초안을 생성합니다.</p></div>';
+  h+='<div class="section-title"><span class="st-badge">A</span> 금액 분리 <span class="sim">SME 검증</span></div><div class="mini-cards">';
+  [["총 청구금액",man(MONEY.totalClaim),false,""],["인정 손해액",man(MONEY.acceptedLoss),false,""],["자동 지급 가능액",won(MONEY.autoPay),false,"auto_payment_blocked"],["담당자 검토 금액",man(MONEY.reviewAmt),true,"payment_hold"],["SIU 보류 금액",man(MONEY.siuHold),true,"siu_hold"],["추가 확인 필요 금액",man(MONEY.extraCheck),false,""]].forEach(c=>{ h+='<div class="mini-card'+(c[2]?" hl":"")+'"><div class="mc-label">'+c[0]+(c[3]?qm(c[3]):'')+'</div><div class="mc-value">'+c[1]+'</div></div>'; });
+  h+='</div>';
+  h+='<div class="section-title"><span class="st-badge">B</span> 지급 / 보류 사유</div><div class="reason-cols">';
+  h+='<div class="reason-box"><div class="rb-h" style="color:var(--accent)">자동 지급 불가 사유</div><ul><li>SIU 위험 점수 임계 초과 ('+R.fraudEff+'점 ≥ '+INPUTS.fraudThr+'점)</li><li>지급 처리 승인 기준에 의해 차단</li><li>담당자·결재 승인 필요</li></ul></div>';
+  h+='<div class="reason-box"><div class="rb-h" style="color:#E65100">검토 필요 사유</div><ul><li>수리비 초과분 '+man(R.repairExcess)+'</li><li>과실 기준 편차 '+R.faultGap+'%p</li><li>대인 합의금 통상 범위 초과</li></ul></div>';
+  h+='</div>';
+  h+='<div class="section-title"><span class="st-badge">C</span> 고객 안내문 초안 '+qm("customer_notice")+'</div><div class="card pad"><div class="draft-meta">AAP 생성 초안 · 발송 전 담당자 확인 및 승인 필요</div><div class="draft-box">고객님께서 접수하신 '+CASE.id+' 사고 건은 현재 제출 서류 확인이 완료되었으며, 수리비 일부와 과실비율 관련 추가 검토가 필요한 상태입니다. 담당자 검토 후 지급 가능 금액과 추가 확인 사항을 안내드리겠습니다.</div><div class="btn-row"><button class="btn-outline" onclick="toast(\'문안 편집 모드\')">문안 수정</button><button class="btn-outline" onclick="go(\'approval\')">발송 승인 요청</button><button class="btn-outline" onclick="toast(\'추가서류 요청 문안 생성\')">추가서류 요청 문안 생성</button></div></div>';
+  h+='<div class="section-title"><span class="st-badge">D</span> 담당자 액션</div><div class="btn-row">';
+  ["일부 지급 승인","지급 보류","합의안 저장","추가서류 요청","SIU 의뢰"].forEach(b=>{ h+='<button class="btn-accent" style="background:'+(b==="SIU 의뢰"||b==="지급 보류"?"var(--accent)":"#555")+'" onclick="payAction(\''+b+'\')">'+b+'</button>'; });
+  h+='</div>';
+  h+='<div class="notice">전체 청구를 한 번에 승인/거절하지 않고 <b>확실한 금액·검토 금액·보류 금액</b>을 분리합니다. 각 금액 옆 <b>?</b>로 판단 가이드를 열 수 있습니다. 자동 지급은 SIU 조사 결과 확인 전까지 보류됩니다.</div>';
+  return h;
+}
+function payAction(b){ if(b==="SIU 의뢰"){ go("siu"); } else { toast("처리: "+b); } }
+
+/* ===================== 화면 4 · 조사·이상징후 ===================== */
+function pSIU(){
+  let h='<div class="section-header"><h2>조사·이상징후</h2><p>위험 신호가 임계를 넘은 사건을 확인하고 SIU 조사 요청서를 작성합니다.</p></div>';
+  h+='<div class="section-title"><span class="st-badge">A</span> 조사 대상 큐</div><div class="card pad" style="overflow-x:auto"><table class="data-table"><thead><tr><th>사건번호</th><th>위험 점수</th><th>주요 신호</th><th>유사 청구</th><th>진술 일치</th><th>추천 조치</th><th>상태</th></tr></thead><tbody>';
+  SIU_QUEUE.forEach((s,i)=>{ h+='<tr class="clk'+(STATE.siu===i?" on":"")+'" onclick="selSiu('+i+')"><td class="mono" style="font-weight:700">'+s.id+'</td><td><span class="badge '+(s.score>=85?"badge-red":(s.score>=75?"badge-amber":"badge-gray"))+'">'+s.score+'점</span></td><td>'+s.sig+'</td><td class="mono">'+s.sim+'</td><td>'+s.stmt+'</td><td style="font-weight:600">'+s.reco+'</td><td><span class="badge '+s.sb+'">'+s.st+'</span></td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div id="siuDetail">'+siuDetail(STATE.siu)+'</div>';
+  return h;
+}
+function siuDetail(i){
+  const s=SIU_QUEUE[i];
+  let h='<div class="section-title"><span class="st-badge">B</span> 위험 신호 상세 '+qm("fraud_score")+' <span class="mono" style="font-size:12px;color:var(--text-tertiary);font-weight:500">'+s.id+' · '+s.score+'점</span></div>';
+  h+='<div class="reason-cols"><div class="reason-box"><div class="rb-h">위험 신호</div><ul>'+SIU_SIGNALS.map(x=>'<li>'+x[0]+qm(x[1])+'</li>').join("")+'</ul></div>';
+  h+='<div class="reason-box"><div class="rb-h">유사 사건 '+qm("similar_claim_pattern")+'</div><div class="tags" style="margin-top:4px">'+SIU_SIMILAR.map(x=>'<span class="tag">'+x+'</span>').join("")+'</div></div></div>';
+  h+='<div class="section-title"><span class="st-badge">C</span> SIU 조사 요청서 초안 '+qm("siu_request")+'</div><div class="card pad"><div class="draft-meta">AAP 생성 초안 · 승인 시 SIU 조사팀에 의뢰</div><div class="draft-box">조사 요청 사유:\n본 건은 가중 위험점수 '+s.score+'점으로 SIU 전환 기준 '+INPUTS.fraudThr+'점을 초과하였으며, 최근 6개월 내 유사 청구 '+s.sim+'과 사고 진술 '+s.stmt+'이 확인되었습니다. 수리견적 또한 시장 인정 상한을 초과하여 조사 필요성이 있습니다.</div><div class="btn-row"><button class="btn-accent" onclick="go(\'approval\')">SIU 의뢰 승인</button><button class="btn-outline" onclick="toast(\'요청서 편집 모드\')">조사 요청서 수정</button><button class="btn-outline" onclick="toast(\'보류 처리\')">보류</button><button class="btn-outline" onclick="toast(\'담당자 검토로 전환\')">담당자 검토로 전환</button></div></div>';
+  h+='<div class="notice">위험 신호가 있는 사건은 자동화를 멈추고 <b>조사·보류·승인 통제 경로</b>로 전환합니다. 각 신호 옆 <b>?</b>로 판단 가이드를 열 수 있습니다.</div>';
+  return h;
+}
+function selSiu(i){ STATE.siu=i; el("pages").querySelectorAll("#siuDetail")[0].innerHTML=siuDetail(i); el("pages").querySelectorAll(".data-table tbody tr").forEach((r,k)=>r.classList.toggle("on",k===i)); }
+
+/* ===================== 화면 5 · 승인 대기 ===================== */
+function pApproval(){
+  let h='<div class="section-header"><h2>승인 대기</h2><p>지급·SIU·고객 안내문 등 통제 대상 액션의 승인 업무입니다. 행을 누르면 차단/승인 사유와 반영 결과를 확인합니다.</p></div>';
+  h+='<div class="section-title"><span class="st-badge">A</span> 승인 큐 <span style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-left:4px">차단 기준 '+qm("block_criteria")+'</span></div><div class="card pad" style="overflow-x:auto"><table class="data-table"><thead><tr><th>승인 유형</th><th>사건번호</th><th>요청 액션</th><th>차단/승인 사유</th><th>요청자</th><th>SLA</th><th>상태</th></tr></thead><tbody>';
+  APPROVAL_QUEUE.forEach((a,i)=>{ h+='<tr class="clk'+(STATE.appr===i?" on":"")+'" onclick="selAppr('+i+')"><td style="font-weight:600">'+a.type+qm(a.guide)+'</td><td class="mono">'+a.id+'</td><td><span class="badge badge-blue">'+a.act+'</span></td><td>'+a.reason+'</td><td>'+a.by+'</td><td class="mono">'+a.sla+'</td><td><span class="badge badge-amber">'+a.st+'</span></td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div id="apprDetail">'+apprDetail(STATE.appr)+'</div>';
+  return h;
+}
+function apprDetail(i){
+  const a=APPROVAL_QUEUE[i];
+  let h='<div class="section-title"><span class="st-badge">B</span> 승인 상세 · '+a.type+' '+qm(a.guide)+'</div><div class="card pad"><table class="data-table"><tbody>';
+  [["요청 액션",a.act],["차단/승인 사유",a.reason],["적용 정책",a.policy],["사용 데이터",a.data],["담당자 검토 의견",a.opinion],["실행 시 반영 시스템",a.sys],["승인 후 예상 결과",a.result]].forEach(r=>{ h+='<tr><td style="font-weight:600;width:160px;color:var(--text-secondary)">'+r[0]+'</td><td>'+r[1]+'</td></tr>'; });
+  h+='</tbody></table><div class="btn-row"><button class="btn-accent" onclick="toast(\'승인 완료: '+a.type+'\')">승인</button><button class="btn-outline" onclick="toast(\'반려 처리\')">반려</button><button class="btn-outline" onclick="toast(\'담당자 재검토 요청\')">담당자 재검토 요청</button><button class="btn-outline" onclick="guideClick(event,\''+a.guide+'\')">근거 보기</button></div></div>';
+  h+='<div class="notice">승인 기준(Governance)은 별도 기술 설정이 아니라 <b>실제 승인 업무</b>로 동작합니다. 지급·SIU·외부 발송 등 고위험 액션은 승인 전까지 시스템 반영이 차단됩니다.</div>';
+  return h;
+}
+function selAppr(i){ STATE.appr=i; el("pages").querySelectorAll("#apprDetail")[0].innerHTML=apprDetail(i); el("pages").querySelectorAll(".data-table tbody tr").forEach((r,k)=>r.classList.toggle("on",k===i)); }
+
+/* ===================== 화면 6 · 기준·정책 ===================== */
+function pPolicy(){
+  let h='<div class="section-header"><h2>기준·정책</h2><p>AAP가 적용하는 업무 기준과 임계값입니다. 기준을 선택하면 적용 현황과 조정 후보, 영향 시뮬레이션을 확인합니다.</p></div>';
+  h+='<div class="split-layout"><div class="list-panel"><div class="list-header">업무 기준 ('+POLICY_LIST.length+')</div><div class="list-items">';
+  POLICY_LIST.forEach((p,i)=>{ h+='<div class="list-card'+(STATE.pol===i?" active":"")+'" onclick="selPol('+i+')"><div class="lc-head"><span class="lc-id">'+p.n+'</span><span class="badge '+(p.issue>0?"badge-amber":"badge-green")+'">'+(p.issue>0?"조정 후보":"정상")+'</span></div><div class="lc-q">'+p.desc+'</div></div>'; });
+  h+='</div></div><div class="detail-scroll" id="polDetail">'+polDetail(STATE.pol)+'</div></div>';
+  return h;
+}
+function polDetail(i){
+  const p=POLICY_LIST[i];
+  let h='<div class="dp-header">'+p.n+' <span class="mono" style="font-size:12px;opacity:.8">'+p.rule+'</span></div>';
+  h+='<div class="dp-section-title">업무 설명</div><div class="dp-value">'+p.desc+'</div>';
+  h+='<div class="dp-section-title">현재 기준</div><div class="dp-value mono">'+p.thr+'</div>';
+  h+='<div class="dp-section-title">최근 30일 적용 현황</div><div class="stat-grid"><div class="sg">적용<b>'+p.applied+'건</b></div><div class="sg">자동 통과<b style="color:#2E7D32">'+p.auto+'건</b></div><div class="sg">사람 검토 전환<b style="color:#E65100">'+p.review+'건</b></div><div class="sg">차단/보류<b style="color:#D32F2F">'+p.block+'건</b></div><div class="sg">민원/오류<b>'+p.issue+'건</b></div><div class="sg">조정 후보<b style="font-size:11px;color:'+(p.cand==="없음"?"var(--text-tertiary)":"#7B1FA2")+'">'+(p.cand==="없음"?"없음":"있음")+'</b></div></div>';
+  if(p.cand!=="없음") h+='<div class="dp-section-title">조정 후보</div><div class="dp-value">'+p.cand+' <span class="badge badge-purple" style="margin-left:4px">SME 검토</span></div>';
+  if(p.rule==="R-007"){
+    h+='<div class="dp-section-title">영향 시뮬레이션</div><button class="btn-outline" onclick="toggleSim()">'+(STATE.polSim?"시뮬레이션 닫기":POLICY_SIM.title+" 실행")+'</button>';
+    if(STATE.polSim){ h+='<table class="sim-tbl"><thead><tr><th>지표</th><th>현재</th><th>조정 후</th></tr></thead><tbody>'+POLICY_SIM.rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>').join("")+'</tbody></table><div style="font-size:11px;color:var(--text-tertiary);margin-top:6px">시뮬레이션 가정값 · 실제 반영은 SME 승인 후 적용</div>'; }
+  } else {
+    h+='<div class="dp-section-title">관련 사건</div><div class="dp-value"><span class="mono" style="cursor:pointer;color:var(--accent)" onclick="openCase(\''+CASE.id+'\')">'+CASE.id+' →</span></div>';
+  }
+  return h;
+}
+function selPol(i){ STATE.pol=i; STATE.polSim=false; el("polDetail").innerHTML=polDetail(i); el("pages").querySelectorAll(".list-card").forEach((c,k)=>c.classList.toggle("active",k===i)); }
+function toggleSim(){ STATE.polSim=!STATE.polSim; el("polDetail").innerHTML=polDetail(STATE.pol); }
+
+/* ===================== 화면 7 · 운영 설정 (admin · 기술 용어) ===================== */
+const ADMIN_TABS=[["agent","Agent"],["tool","Tool/API"],["capability","Capability"],["log","Decision Log"],["learning","Learning"],["perm","권한"]];
+function pAdmin(){
+  let h='<div class="section-header"><h2>운영 설정</h2><p>현업 화면 뒤에서 동작하는 Agent · Tool · Capability · Decision Log · Learning · 권한을 관리합니다. (관리자 영역)</p></div>';
+  h+='<div class="admin-tabs">'; ADMIN_TABS.forEach(t=>{ h+='<button class="admin-tab'+(STATE.admin===t[0]?" active":"")+'" onclick="selAdmin(\''+t[0]+'\')">'+t[1]+'</button>'; }); h+='</div>';
+  h+='<div id="adminBody">'+adminBody(STATE.admin)+'</div>';
+  return h;
+}
+function selAdmin(t){ STATE.admin=t; el("adminBody").innerHTML=adminBody(t); el("pages").querySelectorAll(".admin-tab").forEach(b=>b.classList.toggle("active", b.textContent===ADMIN_TABS.find(x=>x[0]===t)[1])); }
+function adminBody(t){
+  if(t==="agent") return adminAgent();
+  if(t==="tool") return adminTool();
+  if(t==="capability") return adminCapability();
+  if(t==="log") return adminLog();
+  if(t==="learning") return adminLearning();
+  if(t==="perm") return adminPerm();
+  return "";
+}
+function adminAgent(){
+  let h='<div class="ws"><div class="ws-main"><table class="data-table"><thead><tr><th>Agent</th><th>역할</th><th>Status</th><th>Runs</th><th>성공률</th><th>HITL</th><th>Blocked</th><th>Risk</th><th>Owner</th></tr></thead><tbody>';
+  AGENTS.forEach((a,i)=>{ h+='<tr class="clk'+(STATE.agent===i?" on":"")+'" onclick="selAgent('+i+')"><td style="font-weight:700">'+a.name+'</td><td>'+a.role+'</td><td><span class="badge '+a.sb+'">'+a.status+'</span></td><td class="mono">'+a.runs+'</td><td class="mono">'+a.success+'</td><td class="mono">'+a.hitl+'</td><td class="mono">'+a.blocked+'</td><td><span class="badge '+a.rb+'">'+a.risk+'</span></td><td>'+a.owner+'</td></tr>'; });
+  h+='</tbody></table></div><div class="detail-panel" id="agentDetail">'+agentDetail(STATE.agent)+'</div></div>';
+  return h;
+}
+function agentDetail(i){ const a=AGENTS[i];
+  let h='<div class="dp-header" style="background:'+(a.risk==="High"?"#D32F2F":(a.risk==="Medium"?"#E65100":"#2E7D32"))+'">'+a.name+'</div>';
+  h+='<div class="dp-section-title">Role · Status</div><div class="dp-value">'+a.role+' · <span class="badge '+a.sb+'">'+a.status+'</span></div>';
+  h+='<div class="dp-section-title">Allowed Data</div><div class="tags">'+a.data.map(x=>'<span class="tag">'+x+'</span>').join("")+'</div>';
+  h+='<div class="dp-section-title">Allowed Tools</div><div class="tags">'+a.tools.map(x=>'<span class="tag">'+x+'</span>').join("")+'</div>';
+  h+='<div class="dp-section-title">Allowed Actions</div><div class="tags">'+a.actions.map(x=>'<span class="tag">'+x+'</span>').join("")+'</div>';
+  h+='<div class="dp-section-title">Approval Required</div><div class="dp-value">'+(a.approval.length?a.approval.join(" · "):'<span style="color:var(--text-tertiary)">없음</span>')+'</div>';
+  h+='<div class="dp-section-title">Recent Runs</div><div class="dp-value">'+a.recent+'</div>';
+  h+='<div class="dp-section-title">Failure / Block</div><div class="dp-value">'+a.fail+'</div>';
+  h+='<div class="dp-section-title">Owner · Governance</div><div class="dp-value">'+a.owner+' · '+a.gov+'</div>';
+  return h;
+}
+function selAgent(i){ STATE.agent=i; el("pages").querySelectorAll(".ws-main tbody tr").forEach((c,k)=>c.classList.toggle("on",k===i)); el("agentDetail").innerHTML=agentDetail(i); }
+function adminTool(){
+  let h='<div class="section-title" style="margin-top:0">Policy Guard</div><div class="card pad" style="overflow-x:auto;margin-bottom:18px"><table class="data-table"><thead><tr><th>Policy</th><th>Applies To</th><th>Condition</th><th>Action</th><th>Status</th><th>Last</th><th>Owner</th></tr></thead><tbody>';
+  POLICIES.forEach(p=>{ h+='<tr><td style="font-weight:600">'+p.n+'</td><td>'+p.to+'</td><td class="mono" style="font-size:11px">'+p.cond+'</td><td><span class="badge '+(p.act.indexOf("차단")>=0?"badge-red":"badge-amber")+'">'+p.act+'</span></td><td><span class="badge badge-green">'+p.st+'</span></td><td class="mono">'+p.last+'</td><td>'+p.owner+'</td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div class="section-title">Tool / API Registry</div><div class="card pad" style="overflow-x:auto;margin-bottom:18px"><table class="data-table"><thead><tr><th>Tool/API</th><th>Used By</th><th>Permission</th><th>Mode</th><th>Status</th><th>Last Call</th><th>Governance</th></tr></thead><tbody>';
+  TOOLS.forEach(t=>{ h+='<tr><td style="font-weight:600">'+t.n+'</td><td>'+t.by+'</td><td class="mono">'+t.perm+'</td><td>'+t.mode+'</td><td><span class="badge '+t.stb+'">'+t.st+'</span></td><td class="mono">'+t.last+'</td><td>'+t.gov+'</td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div class="section-title">Blocked Actions</div><div class="card pad">';
+  BLOCKED.forEach(b=>{ h+='<div style="padding:9px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span class="mono" style="font-weight:700;color:var(--accent)">'+b.caseId+'</span> · <b>'+b.act+'</b><div style="font-size:11.5px;color:var(--text-tertiary)">Reason: '+b.reason+'</div></div>'; }); h+='</div>';
+  return h;
+}
+function adminCapability(){
+  let h='<div class="ws"><div class="ws-main"><div class="cap-grid">';
+  CAPABILITIES.forEach((c,i)=>{ h+='<div class="cap-card'+(STATE.cap===i?" active":"")+'" style="border-left-color:'+c.c+'" onclick="selCap('+i+')"><div class="cc-t">'+c.layer+'</div><div class="cc-items">'+c.items.slice(0,6).map(x=>'<span class="cc-i">'+x+'</span>').join("")+'</div><div class="cc-m">'+c.metric+'</div></div>'; });
+  h+='</div></div><div class="detail-panel" id="capDetail">'+capDetail(STATE.cap)+'</div></div>';
+  return h;
+}
+function capDetail(i){ const c=CAPABILITIES[i];
+  let h='<div class="dp-header" style="background:'+c.c+'">'+c.layer+'</div>';
+  h+='<div class="dp-section-title">역할</div><div class="dp-value">'+c.role+'</div>';
+  h+='<div class="dp-section-title">연결 시스템</div><div class="tags">'+c.systems.map(x=>'<span class="tag">'+x+'</span>').join("")+'</div>';
+  h+='<div class="dp-section-title">사용 Agent</div><div class="tags">'+c.agents.map(x=>'<span class="tag dp-tag-acc">'+x+'</span>').join("")+'</div>';
+  h+='<div class="dp-section-title">관련 Tool/API</div><div class="tags">'+c.tools.map(x=>'<span class="tag">'+x+'</span>').join("")+'</div>';
+  h+='<div class="dp-section-title">Governance 정책</div><div class="tags">'+c.gov.map(x=>'<span class="tag">'+x+'</span>').join("")+'</div>';
+  h+='<div class="dp-section-title">현재 운영 상태 · 이슈</div><div class="dp-value">'+c.status+' · '+c.issue+'</div>';
+  return h;
+}
+function selCap(i){ STATE.cap=i; el("pages").querySelectorAll(".cap-card").forEach((c,k)=>c.classList.toggle("active",k===i)); el("capDetail").innerHTML=capDetail(i); }
+function adminLog(){
+  let h='<div class="section-title" style="margin-top:0">Decision Log · '+CASE.id+'</div><div class="card pad" style="margin-bottom:16px;overflow-x:auto"><table class="data-table"><tbody>';
+  [["Decision ID","DLG-2026-0417-01"],["Input Hash",CASE.id+"-"+R.inputHash],["Result Hash",R.resultHash],["사용 Rule","R-001 · R-002 · R-005 · R-006 · R-007"],["사용 Agent","Intake · Coverage · Damage · Liability · Fraud · Decision"],["Decision Route",(R.routes.join(" + ")||"자동 지급")],["Writeback","자동 "+won(R.autoPay)+" · 검토 "+man(MONEY.reviewAmt)+" · SIU 보류 "+man(MONEY.siuHold)]].forEach(r=>{ h+='<tr><td style="font-weight:600;width:150px;color:var(--text-secondary)">'+r[0]+'</td><td class="mono">'+r[1]+'</td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<div class="section-title">로그 타임라인</div><div class="card pad" style="margin-bottom:16px;overflow-x:auto"><table class="data-table"><thead><tr><th>시간</th><th>단계</th><th>Agent</th><th>Rule</th><th>Output</th><th>Route</th></tr></thead><tbody>';
+  buildLogs().forEach(r=>{ const rc=r.route==="HUMAN_REVIEW"?"badge-amber":(r.route==="SIU"?"badge-purple":(r.route==="WRITEBACK"?"badge-red":"badge-gray")); h+='<tr><td class="mono">'+r.tm+'</td><td>'+r.step+'</td><td>'+r.agent+'</td><td class="mono">'+r.rule+'</td><td class="mono" style="font-size:11px">'+r.out+'</td><td><span class="badge '+rc+'">'+r.route+'</span></td></tr>'; });
+  h+='</tbody></table></div>';
+  h+='<button class="btn-accent" onclick="runReplay()">재현 실행 (같은 입력 재계산)</button><div id="replayBox" style="margin-top:14px">'+(STATE.replayed?replayHTML():"")+'</div>';
+  h+='<div class="notice">같은 입력은 같은 규칙·경로·금액·해시로 재현됩니다. 감사·민원 시 동일한 근거를 그대로 제시합니다.</div>';
+  return h;
+}
+function replayHTML(){
+  const r='AUTO '+won(R.autoPay)+' / REVIEW '+man(MONEY.reviewAmt)+' / SIU '+(R.fraudRoute==="SIU"?"ON":"OFF");
+  let h='<div class="card pad replay-ok"><div style="margin-bottom:8px"><span class="badge badge-green">REPLAY MATCHED</span></div><table class="data-table"><tbody>';
+  [["Input Hash",CASE.id+"-"+R.inputHash],["Previous Result",r],["Replay Result",r],["Status","<b style=\"color:#2E7D32\">MATCHED</b>"]].forEach(x=>{ h+='<tr><td style="width:150px;font-weight:600;color:var(--text-secondary)">'+x[0]+'</td><td class="mono">'+x[1]+'</td></tr>'; });
+  h+='</tbody></table></div>';
+  return h;
+}
+function runReplay(){ STATE.replayed=true; el("replayBox").innerHTML=replayHTML(); toast("재현 실행 — 결과 해시 일치(MATCHED)"); }
+function adminLearning(){
+  let h='<div class="ws"><div class="ws-main"><table class="data-table"><thead><tr><th>Candidate</th><th>Type</th><th>Source</th><th>Expected Impact</th><th>Status</th><th>Owner</th></tr></thead><tbody>';
+  LEARNING_CANDIDATES.forEach((c,i)=>{ h+='<tr class="clk'+(STATE.cand===i?" on":"")+'" onclick="selCand('+i+')"><td style="font-weight:600">'+c.title+'</td><td><span class="badge '+c.tb+'">'+c.type+'</span></td><td style="font-size:11px">'+c.source+'</td><td>'+c.impact+'</td><td><span class="badge '+c.sb+'">'+c.status+'</span></td><td>'+c.owner+'</td></tr>'; });
+  h+='</tbody></table></div><div class="detail-panel" id="candDetail">'+candDetail(STATE.cand)+'</div></div>';
+  h+='<div class="notice">학습 후보는 Detected → Draft → SME Review → Approved → Deployed → Monitored 흐름으로 운영됩니다.</div>';
+  return h;
+}
+function candDetail(i){ const c=LEARNING_CANDIDATES[i];
+  let h='<div class="dp-header" style="background:#9B59B6">'+c.type+'</div>';
+  h+='<div class="dp-section-title">후보명</div><div class="dp-value">'+c.title+'</div>';
+  h+='<div class="dp-section-title">근거 로그</div><div class="dp-value">'+c.source+'</div>';
+  h+='<div class="dp-section-title">관련 Rule / Agent</div><div class="tags"><span class="tag">'+c.rule+'</span><span class="tag dp-tag-acc">'+c.agent+'</span></div>';
+  h+='<div class="dp-section-title">예상 효과 · 위험</div><div class="dp-value">'+c.impact+' · '+c.risk+'</div>';
+  h+='<div class="dp-section-title">상태 · 승인 필요자</div><div class="dp-value"><span class="badge '+c.sb+'">'+c.status+'</span> · '+c.owner+'</div>';
+  h+='<div class="dp-section-title">Rollback</div><div class="dp-value">'+c.rollback+'</div>';
+  h+='<div class="btn-row" style="margin-top:14px"><button class="btn-outline" onclick="toast(\'승인 요청 전송(SME)\')">Approve</button><button class="btn-outline" onclick="toast(\'시뮬레이션 실행\')">Simulate</button><button class="btn-outline" onclick="toast(\'반려 처리\')">Reject</button></div>';
+  return h;
+}
+function selCand(i){ STATE.cand=i; el("pages").querySelectorAll(".ws-main tbody tr").forEach((c,k)=>c.classList.toggle("on",k===i)); el("candDetail").innerHTML=candDetail(i); }
+function adminPerm(){
+  let h='<div class="card pad" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Agent</th><th>Allowed Data</th><th>Allowed Tools</th><th>Allowed Actions</th><th>Approval Required</th><th>Owner</th></tr></thead><tbody>';
+  AGENTS.forEach(a=>{ h+='<tr><td style="font-weight:700">'+a.name+'</td><td>'+a.data.join(", ")+'</td><td>'+a.tools.join(", ")+'</td><td class="mono" style="font-size:11px">'+a.actions.join(", ")+'</td><td>'+(a.approval.length?'<span class="badge badge-amber">'+a.approval.length+'개</span> '+a.approval.join(" · "):'<span style="color:var(--text-tertiary)">없음</span>')+'</td><td>'+a.owner+'</td></tr>'; });
+  h+='</tbody></table></div><div class="notice">각 Agent는 허용된 데이터·Tool·액션 범위 안에서만 동작하며, 고위험 액션은 승인 정책을 통과해야 시스템에 반영됩니다.</div>';
+  return h;
+}
+
+/* ===================== 라우팅 ===================== */
+const RENDER={ inbox:pInbox, review:pReview, payment:pPayment, siu:pSIU, approval:pApproval, policy:pPolicy, admin:pAdmin };
+
+/* init */
+buildMenu(); go("inbox");
+</script>
+</body>
+</html>
