@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>4-1 시안 — Operating Loop (단계 설명 + 미니플로우) + Customer Env</title>
+<!-- 시안(260616): 4-1을 이미지2처럼. 6단계 각각 [단계명 + 한 줄 설명 + 내부 미니플로우 3스텝]. 하단 Customer Environment 유형 구분 밴드. -->
+<style>
+  :root{--ink:#17191c;--sub:#4f5660;--muted:#6f7782;--line:#d7dbe1;--soft:#f3f4f6;--teal:#00a39b;--teal-strong:#007f7f;--teal2:#eefafa;--gray-50:#fafafa;--gray-100:#eef0f3;--gray-900:#17191c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f3f4f6;color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;line-height:1.4}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 28px;background:#fff}
+  h3{font-size:16px;font-weight:900;letter-spacing:-.01em;margin-bottom:12px}
+
+  .oloop{border:1px solid var(--ink);border-radius:11px;overflow:hidden;background:#fff}
+  .oloop-h{display:flex;align-items:center;gap:10px;background:var(--gray-900);color:#fff;padding:8px 14px;font-size:12px;font-weight:900}
+  .oloop-h small{font-weight:600;color:#9aa3af;font-size:10px}
+  .ostage{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:center;padding:9px 14px;border-top:1px solid var(--gray-100)}
+  .ostage.core{background:var(--teal2)}
+  .os-l{display:flex;gap:9px;align-items:flex-start}
+  .os-n{width:21px;height:21px;border-radius:6px;background:#e2e8f0;color:#475569;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px}
+  .ostage.core .os-n{background:var(--teal-strong);color:#fff}
+  .os-tt b{font-size:12.5px;font-weight:900;color:var(--ink)}
+  .os-tt b .kr{color:var(--teal-strong);margin-left:5px;font-size:11px}
+  .ostage.core .os-tt b{color:var(--teal-strong)}
+  .os-tt p{font-size:10.5px;color:var(--sub);font-weight:600;line-height:1.4;margin-top:3px}
+  .os-mini{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+  .os-mini span{font-size:10px;font-weight:800;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px 9px}
+  .ostage.core .os-mini span{color:var(--teal-strong);border-color:#cfe7e5}
+  .os-mini i{color:var(--gray-300,#b8bec8);font-weight:900;font-size:11px;font-style:normal}
+  .oloop-fb{border-top:1px dashed var(--line);background:#fcfefe;padding:7px 14px;font-size:10px;font-weight:700;color:var(--teal-strong);text-align:center}
+
+  .conn{text-align:center;font-size:9.5px;font-weight:800;color:var(--muted);letter-spacing:.05em;margin:8px 0;text-transform:uppercase}
+  .cust{border:1px dashed #b8bec8;border-radius:11px;background:var(--gray-50);padding:11px 15px;display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center}
+  .cust-h{font-size:12.5px;font-weight:900;color:#334155}
+  .cust-h small{display:block;font-size:9px;font-weight:600;color:var(--muted);margin-top:2px}
+  .cust-rows{display:flex;flex-direction:column;gap:6px}
+  .cust-row{display:grid;grid-template-columns:140px 1fr;gap:10px;align-items:center}
+  .cust-row .ck{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .cust-row .cv{display:flex;flex-wrap:wrap;gap:5px}
+  .cust-row .cv span{font-size:10px;font-weight:800;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 9px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h3>4-1. AAP Operating Loop <span style="font-size:12px;font-weight:700;color:var(--teal-strong)">· 단계 설명 + 미니플로우 시안</span></h3>
+
+  <div class="oloop">
+    <div class="oloop-h">AAP Operating Loop <small>업무 한 건이 도는 운영 흐름 · 각 단계의 내부 처리</small></div>
+
+    <div class="ostage">
+      <div class="os-l"><span class="os-n">1</span><div class="os-tt"><b>Data<span class="kr">데이터 수집</span></b><p>고객 데이터·문서·업무 시스템에서 필요한 입력을 수집합니다.</p></div></div>
+      <div class="os-mini"><span>연결·수집</span><i>›</i><span>정제·정규화</span><i>›</i><span>업무 맥락 적재</span></div>
+    </div>
+
+    <div class="ostage">
+      <div class="os-l"><span class="os-n">2</span><div class="os-tt"><b>Semantic<span class="kr">의미화</span></b><p>입력 자료를 업무 용어·정책·관계 기준으로 해석합니다.</p></div></div>
+      <div class="os-mini"><span>용어·개념 매핑</span><i>›</i><span>정책·권한 해석</span><i>›</i><span>업무 맥락 구성</span></div>
+    </div>
+
+    <div class="ostage">
+      <div class="os-l"><span class="os-n">3</span><div class="os-tt"><b>Reasoning<span class="kr">추론·계획</span></b><p>업무를 단계로 나누고 도구를 호출해 판단 후보를 만듭니다.</p></div></div>
+      <div class="os-mini"><span>작업 분해</span><i>›</i><span>도구 호출</span><i>›</i><span>판단 후보 생성</span></div>
+    </div>
+
+    <div class="ostage">
+      <div class="os-l"><span class="os-n">4</span><div class="os-tt"><b>Decision<span class="kr">판단·분기</span></b><p>근거·위험도를 검증하고 자동 처리 / 사람 검토 / 보류로 분기합니다.</p></div></div>
+      <div class="os-mini"><span>판단 후보 검증</span><i>›</i><span>근거·위험도 평가</span><i>›</i><span>승인/보류 분기</span></div>
+    </div>
+
+    <div class="ostage">
+      <div class="os-l"><span class="os-n">5</span><div class="os-tt"><b>Action<span class="kr">실행 반영</span></b><p>승인된 결과를 실제 업무 시스템에 안전하게 반영합니다.</p></div></div>
+      <div class="os-mini"><span>Workflow 실행</span><i>›</i><span>시스템 반영</span><i>›</i><span>안전 처리</span></div>
+    </div>
+
+    <div class="ostage core">
+      <div class="os-l"><span class="os-n">6</span><div class="os-tt"><b>Learning<span class="kr">학습·환류</span></b><p>실행 이력·평가·피드백을 재사용 스킬과 개선 후보로 축적합니다.</p></div></div>
+      <div class="os-mini"><span>실행 이력</span><i>›</i><span>품질 평가</span><i>›</i><span>개선 환류</span></div>
+    </div>
+
+    <div class="oloop-fb">↻ Learning 결과가 의미화·정책·재사용 스킬로 환류되어 다음 주기에 반영됩니다</div>
+  </div>
+
+  <div class="conn">▲ 연결 · 호출 · 반영 · 이력 수집 ▼</div>
+
+  <div class="cust">
+    <div class="cust-h">Customer Environment<small>고객 보유 자산 · 연결 대상</small></div>
+    <div class="cust-rows">
+      <div class="cust-row"><span class="ck">Data · Analytics</span><span class="cv"><span>Data Platform</span><span>Lakehouse · BI · Catalog</span><span>분석 자산</span></span></div>
+      <div class="cust-row"><span class="ck">Business Systems</span><span class="cv"><span>ERP / CRM / SCM</span><span>Groupware · 결재</span><span>Internal API</span></span></div>
+      <div class="cust-row"><span class="ck">Knowledge Assets</span><span class="cv"><span>Document / KMS / FAQ</span><span>업무 매뉴얼</span><span>VOC · 상담 이력</span></span></div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;font-size:11px;color:var(--sub);border-top:1px solid var(--line);padding-top:9px;line-height:1.6">
+    시안 포인트 · ① 6단계 각각 <b>한 줄 설명 + 내부 미니플로우 3스텝</b>(이미지2) · ② Learning 강조 + 하단 환류 한 줄 · ③ <b>Customer Environment를 4-1로</b> 가져와 유형(Data·Analytics / Business Systems / Knowledge Assets)으로 구분 · ④ 이러면 <b>4-2는 8계층 + Trust만</b> 남아 PNG 아키텍처 형태로 굳어짐.
+  </div>
+</div>
+</body>
+</html>

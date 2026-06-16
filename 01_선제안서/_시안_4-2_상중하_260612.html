@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>4-2 시안 — 상중하 (경량)</title>
+<!-- 시안(260612): 4-2를 좌-중-우 → 상(Customer Env 밴드)-중(8계층 스택)-하(Trust 밴드)로. 경량 칩. L3만 확장. canon 정합. -->
+<style>
+  :root{--ink:#17191c;--sub:#4f5660;--muted:#6f7782;--line:#d7dbe1;--soft:#f3f4f6;--teal:#00a39b;--teal-strong:#007f7f;--teal2:#eefafa;--red:#e0282f;--gray-50:#fafafa;--gray-100:#eef0f3;--gray-300:#b8bec8;--gray-900:#17191c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f3f4f6;color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;line-height:1.4}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 28px;background:#fff}
+  h3{font-size:16.5px;font-weight:900;letter-spacing:-.01em;margin-bottom:12px}
+
+  /* Loop 띠 */
+  .loopbar{display:flex;align-items:center;gap:6px;border-radius:8px;background:var(--gray-900);padding:6px 12px;margin-bottom:7px}
+  .loopbar .all{font-size:9px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.05em;margin-right:5px}
+  .loopbar .st{font-size:11px;font-weight:800;color:#fff} .loopbar .ar{color:#5f6670;font-weight:900;font-size:10px}
+  .loopbar .st.core{color:var(--teal)}
+  .loopbar .tail{margin-left:auto;font-size:9px;color:#9aa3af;font-weight:700}
+
+  /* 상/하 프레임 밴드 (전폭) */
+  .fb{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;border:1px solid #cbd5e1;background:#f6f8fa;border-radius:9px;padding:8px 13px}
+  .fb-t{font-size:11px;font-weight:900;color:#334155;white-space:nowrap}
+  .fb-t small{font-weight:700;color:var(--muted);font-size:9px}
+  .fb-g{display:flex;align-items:center;gap:5px}
+  .fb-g b{font-size:9px;font-weight:800;color:var(--sub);white-space:nowrap}
+  .cust{margin-bottom:8px} .trust{margin-top:8px}
+
+  /* 칩 (경량) */
+  .chips{display:flex;flex-wrap:wrap;gap:3px}
+  .chips span{font-size:8.5px;font-weight:700;color:#5f6670;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:5px;padding:2px 6px;line-height:1.3}
+
+  /* 중: 8계층 스택 (하나의 박스, 행 구분선 — 경량) */
+  .stack{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .lyr{display:grid;grid-template-columns:118px 1fr;gap:9px;align-items:center;padding:6px 11px;border-top:1px solid var(--gray-100)}
+  .lyr:first-child{border-top:0}
+  .lyr .ln{width:19px;height:19px;border-radius:5px;background:#e2e8f0;color:#475569;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .lyr .lh{display:flex;align-items:center;gap:7px}
+  .lyr .lname{font-size:10.5px;font-weight:800;color:var(--sub);line-height:1.15}
+  .lyr .lname small{display:block;font-size:7.5px;font-weight:600;color:var(--muted)}
+  .lyr .chips span.ff{color:var(--teal-strong);border-color:#cfe7e5;background:#fff;font-weight:800}
+  .lyr .chips span.fa{border:0;background:none;padding:0 1px;color:var(--teal);font-weight:900}
+  .lyr .chips span.flbl{border:0;background:none;padding:0;font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase}
+  .lyr-link{font-size:8px;font-weight:800;color:var(--teal-strong);padding:2px 11px 2px 127px;border-top:1px solid var(--gray-100);background:#fcfefe}
+  .lyr-link .ll-ar{font-size:11px;font-weight:900;margin-right:3px}
+
+  /* L3 확장 블록 (★핵심) */
+  .l3row{border-top:1px solid var(--gray-100);background:var(--teal2);padding:8px 11px}
+  .l3-head{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .l3-head .ln{width:19px;height:19px;border-radius:5px;background:var(--teal-strong);color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .l3-head .l3-t{font-size:11.5px;font-weight:900;color:var(--teal-strong)} .l3-head .l3-t small{font-size:8.5px;font-weight:700;color:var(--muted);margin-left:3px}
+  .l3-iface{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:6px}
+  .l3-iface b{font-size:7.5px;font-weight:800;color:var(--muted);text-transform:uppercase}
+  .l3-iface span{font-size:8.5px;font-weight:700;color:var(--sub);background:#fff;border:1px solid #cfe7e5;border-radius:5px;padding:2px 6px}
+  .agentcore{border:1px solid #cfe7e5;background:#fff;border-radius:8px;padding:8px}
+  .ac-h{font-size:8px;font-weight:800;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  .ac-main{display:grid;grid-template-columns:1.05fr 1fr 1.5fr;gap:6px;align-items:start}
+  @media(max-width:980px){.ac-main{grid-template-columns:1fr}}
+  .ac-box{border:1px solid var(--gray-100);border-radius:6px;background:var(--gray-50);padding:5px 7px}
+  .acb-h{font-size:9px;font-weight:800;color:var(--sub);margin-bottom:4px}
+  .ac-flow{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+  .ac-flow span{font-size:8.5px;font-weight:700;color:var(--teal-strong);background:#fff;border:1px solid #cfe7e5;border-radius:5px;padding:2px 5px}
+  .ac-flow i{color:var(--teal);font-weight:900;font-style:normal;font-size:8px}
+  .ac-flow .ac-loop{color:var(--teal);font-weight:900;border:0;background:none;font-size:10px}
+  .ac-col{display:flex;flex-direction:column;gap:5px}
+  .ac-chips{display:flex;flex-wrap:wrap;gap:3px}
+  .ac-chips span{font-size:8.5px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--gray-100);border-radius:5px;padding:2px 5px}
+  .ac-sub{font-size:8px;font-weight:700;color:var(--muted);margin-top:3px}
+  .ac-hitl{border:1.5px solid var(--teal);background:var(--teal2);border-radius:6px;padding:5px 7px;font-size:9.5px;font-weight:800;color:var(--teal-strong);text-align:center}
+  .ac-hitl small{display:block;font-size:7.5px;font-weight:600;color:var(--muted)}
+  .ac-cluster{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .ac-mini{border:1px solid var(--gray-100);border-radius:5px;background:var(--gray-50);padding:4px 6px}
+  .ac-mini.wide{grid-column:1/-1}
+  .ac-mini b{display:block;font-size:9px;font-weight:800;color:var(--sub)}
+  .ac-mini span{font-size:8px;font-weight:600;color:var(--muted)}
+  .ac-mgmt{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:6px;border-top:1px dashed #cfe7e5;padding-top:5px}
+  .ac-mgmt b{font-size:7.5px;font-weight:800;color:var(--muted);text-transform:uppercase}
+  .ac-mgmt span{font-size:8.5px;font-weight:700;color:var(--sub);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:5px;padding:2px 6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h3>4-2. 통합 아키텍처 — 8계층 (작동 무대) <span style="font-size:12px;font-weight:700;color:var(--teal-strong)">· 상중하 시안</span></h3>
+
+  <div class="loopbar"><span class="all">Execution Loop</span><span class="st">Data</span><span class="ar">▶</span><span class="st">Semantic</span><span class="ar">▶</span><span class="st core">Reasoning</span><span class="ar">▶</span><span class="st">Decision</span><span class="ar">▶</span><span class="st">Action</span><span class="ar">▶</span><span class="st">Learning</span><span class="tail">계층을 가로지르며 작동</span></div>
+
+  <!-- 상: 고객 자산 밴드 -->
+  <div class="fb cust">
+    <span class="fb-t">Customer Environment<small> · 고객 자산(입력 기반)</small></span>
+    <span class="fb-g"><b>Data Platform</b><span class="chips"><span>Lakehouse</span><span>BI</span><span>Catalog</span></span></span>
+    <span class="fb-g"><b>Business Systems</b><span class="chips"><span>ERP</span><span>CRM</span><span>SCM</span><span>결재</span><span>그룹웨어</span></span></span>
+    <span class="fb-g"><b>Knowledge Assets</b><span class="chips"><span>문서</span><span>KMS</span><span>FAQ</span><span>매뉴얼</span><span>상담 이력</span></span></span>
+  </div>
+
+  <!-- 중: 8계층 스택 -->
+  <div class="stack">
+    <div class="lyr"><div class="lh"><span class="ln">1</span><span class="lname">경험·접근<small>Experience</small></span></div><div class="chips"><span>에이전트 포털</span><span>코파일럿/챗 UI</span><span>관리자 콘솔</span><span>API Gateway/SDK</span><span>Channels(Portal·Teams·Slack·Voice·Email·API)</span></div></div>
+    <div class="lyr"><div class="lh"><span class="ln">2</span><span class="lname">설계·개발<small>Build</small></span></div><div class="chips"><span>에이전트 설계·저코드</span><span>프롬프트/워크플로우 설계</span><span>Tool Registry</span><span>Agent Registry</span></div></div>
+    <div class="lyr-link"><span class="ll-ar">↕</span> 설계·등록된 도구·Agent를 런타임이 호출</div>
+    <!-- L3 확장 -->
+    <div class="l3row">
+      <div class="l3-head"><span class="ln">3</span><span class="l3-t">에이전트 실행환경 <small>Agent Runtime · ★핵심</small></span></div>
+      <div class="l3-iface"><b>Interface</b><span>REST/GraphQL</span><span>WebSocket</span><span>gRPC</span><span>Event Trigger</span></div>
+      <div class="agentcore">
+        <div class="ac-h">에이전트 코어 · Agent Core</div>
+        <div class="ac-main">
+          <div class="ac-box"><div class="acb-h">실행 엔진</div><div class="ac-flow"><span>입력 처리</span><i>▶</i><span>계획·추론</span><i>▶</i><span>행동 실행</span><i>▶</i><span>응답 생성</span><span class="ac-loop">↺</span></div></div>
+          <div class="ac-col">
+            <div class="ac-box"><div class="acb-h">오케스트레이션 · 멀티에이전트</div><div class="ac-chips"><span>Supervisor</span><span>Task Routing</span><span>Agent Coordination(A2A)</span></div><div class="ac-sub">Protocol: MCP · A2A · 멀티에이전트 협업</div></div>
+            <div class="ac-hitl">HITL 런타임 검토 게이트<small>Runtime Review / Approval Gate</small></div>
+          </div>
+          <div class="ac-cluster">
+            <div class="ac-mini"><b>메모리</b><span>대화 히스토리·단기·장기</span></div>
+            <div class="ac-mini"><b>모델 게이트웨이</b><span>내부 라우팅/선택·LLM Provider</span></div>
+            <div class="ac-mini"><b>도구 실행</b><span>도구 선택/호출·결과 파싱/검증</span></div>
+            <div class="ac-mini"><b>안전·가드레일</b><span>정책/권한/안정성 검사·I/O 필터</span></div>
+            <div class="ac-mini wide"><b>에이전트 관리</b><span>라이프사이클 · 권한/역할(RBAC) · 버전 관리 · 모니터링</span></div>
+          </div>
+        </div>
+        <div class="ac-mgmt"><b>관리</b><span>세션·상태</span><span>능력·스킬</span><span>프롬프트·정책</span><span>버전</span><span>관측성</span></div>
+      </div>
+    </div>
+    <div class="lyr"><div class="lh"><span class="ln">4</span><span class="lname">지식·시맨틱<small>Knowledge</small></span></div><div class="chips"><span>온톨로지·시맨틱 모델</span><span>지식그래프</span><span>하이브리드 지식 스토어(Graph·Vector DB)</span><span>컨텍스트 조합·RAG</span></div></div>
+    <div class="lyr"><div class="lh"><span class="ln">5</span><span class="lname">데이터·연동<small>Data/Integration</small></span></div><div class="chips"><span class="flbl">파이프라인</span><span class="ff">수집</span><span class="fa">▶</span><span class="ff">정제</span><span class="fa">▶</span><span class="ff">정규화</span><span class="fa">▶</span><span class="ff">변환</span><span>커넥터(DB·API·SaaS·파일/이벤트)</span><span>데이터 관리</span></div></div>
+    <div class="lyr"><div class="lh"><span class="ln">6</span><span class="lname">AI 품질·평가<small>Evaluation</small></span></div><div class="chips"><span>실험·실행 추적</span><span>품질/근거 평가</span><span>RAI/편향성 평가</span><span>성능/비용 모니터링</span><span>사용자 피드백</span></div></div>
+    <div class="lyr"><div class="lh"><span class="ln">7</span><span class="lname">컨트롤·거버넌스<small>Governance</small></span></div><div class="chips"><span>정책 관리/통제</span><span>에이전트 권한 관리</span><span>HITL 승인 기준</span><span>개인정보 관리</span><span>사용량/배포 거버넌스</span></div></div>
+    <div class="lyr"><div class="lh"><span class="ln">8</span><span class="lname">플랫폼 인프라<small>Infra</small></span></div><div class="chips"><span>컴퓨팅/GPU</span><span>컨테이너/K8s</span><span>네트워크/보안</span><span>RDB/스토리지</span><span>GraphDB/VectorDB</span><span>온프레미스/클라우드</span></div></div>
+  </div>
+
+  <!-- 하: Trust 밴드 -->
+  <div class="fb trust">
+    <span class="fb-t">Trust · Security<small> · 전 영역 횡단 통제</small></span>
+    <span class="fb-g"><b>Identity·Access</b><span class="chips"><span>IAM</span><span>SSO</span><span>RBAC</span><span>ABAC</span></span></span>
+    <span class="fb-g"><b>Audit·Explainability</b><span class="chips"><span>감사</span><span>근거</span><span>실행 이력</span></span></span>
+    <span class="fb-g"><b>Security Guardrails</b><span class="chips"><span>PII</span><span>DLP</span><span>Prompt Injection</span></span></span>
+    <span class="fb-g"><b>Private / Closed</b><span class="chips"><span>폐쇄망</span><span>Private 배포</span></span></span>
+  </div>
+
+  <div style="margin-top:14px;font-size:10.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px">
+    시안 포인트 · ① 좌-중-우 → <b>상(고객자산)-중(8계층)-하(Trust) 전폭 밴드</b> → 빈 사이드바 없음 ·
+    ② 칩·행 경량화(얇은 구분선, 작은 칩) · ③ L3만 확장(★핵심 도드라짐) · ④ 라벨 canon 정합·중복 제거.
+  </div>
+</div>
+</body>
+</html>

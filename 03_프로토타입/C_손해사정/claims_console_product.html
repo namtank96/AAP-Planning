@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLAIO · 자동차보험 손해사정 처리 콘솔</title>
+<!--
+  CLAIO — 자동차보험 손해사정 처리 워크벤치(제품 목업).
+  업무 도구지만, 그 처리 프로세스가 AAP 운영모델로 돌아간다. (전시·라벨·아키텍처·비교 없음 — 작동으로만 증명)
+  · 다중 분석·충돌 표면화 · 자동/검토/SIU 분기 · 검토→시스템 반영 · 판단 이력
+  · analyze(c,ov) 결정론 엔진(상수 금지) · 단일 HTML · 외부 의존성 0 · 더미 데이터
+-->
+<style>
+:root{
+  --bg:#F3F5F9; --panel:#FFFFFF; --ink:#14181F; --ink2:#5A6473; --ink3:#9099A8;
+  --line:#E4E8EF; --line2:#EEF1F6; --accent:#2563EB; --accent-soft:#EFF4FF;
+  --ok:#1E8E50; --okbg:#E7F5EC; --warn:#C2660B; --warnbg:#FBF0E2; --risk:#D1394A; --riskbg:#FCEBED; --mute:#6B7585; --mutebg:#EEF1F6;
+  --shadow:0 1px 2px rgba(20,30,55,.06),0 1px 3px rgba(20,30,55,.05);
+  --mono:'JetBrains Mono','Fira Code',ui-monospace,Consolas,monospace; --topbar:52px; --nav:208px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Pretendard',-apple-system,system-ui,'Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+
+/* topbar */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar);background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 20px;z-index:50}
+.wm{display:flex;align-items:center;gap:9px}
+.wm-mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#1E40AF);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;letter-spacing:-.5px}
+.wm-name{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.wm-sub{font-size:11px;color:var(--ink3);font-weight:600;border-left:1px solid var(--line);padding-left:11px;margin-left:2px}
+.search{flex:1;max-width:420px}
+.search input{width:100%;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:0 12px;font-size:12.5px;font-family:inherit;color:var(--ink)}
+.search input:focus{outline:none;border-color:var(--accent);background:#fff}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.tb-bell{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.tb-user{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600}
+.tb-ava{width:28px;height:28px;border-radius:50%;background:#DDE4F0;color:#3A4A66;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:11px}
+
+/* nav */
+.nav{position:fixed;top:var(--topbar);left:0;bottom:0;width:var(--nav);background:var(--panel);border-right:1px solid var(--line);padding:14px 10px;overflow-y:auto}
+.nav-sec{font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;padding:6px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;margin-bottom:1px}
+.nav-item:hover{background:var(--bg)}
+.nav-item.on{background:var(--accent-soft);color:var(--accent)}
+.nav-item .ni-ic{width:16px;height:16px;flex-shrink:0;display:flex}
+.nav-item .ni-ct{margin-left:auto;font-size:11px;font-weight:700;color:var(--ink3);background:var(--mutebg);border-radius:9px;padding:0 7px;min-width:20px;text-align:center}
+.nav-item.on .ni-ct{background:#fff;color:var(--accent)}
+.nav-foot{position:absolute;bottom:12px;left:10px;right:10px;font-size:10.5px;color:var(--ink3);line-height:1.6;padding:0 10px}
+
+/* main */
+.main{margin-left:var(--nav);margin-top:var(--topbar);padding:18px 24px 48px;min-height:calc(100vh - var(--topbar))}
+.crumb{font-size:12px;color:var(--ink3);margin-bottom:12px}
+.crumb a{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none}
+.h1{font-size:18px;font-weight:800;letter-spacing:-.3px}
+.sub{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.mono{font-family:var(--mono)}
+
+/* badges / dots */
+.bdg{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:5px;padding:2px 8px;white-space:nowrap}
+.bdg .dot{width:6px;height:6px;border-radius:50%}
+.b-ok{background:var(--okbg);color:var(--ok)}.b-ok .dot{background:var(--ok)}
+.b-warn{background:var(--warnbg);color:var(--warn)}.b-warn .dot{background:var(--warn)}
+.b-risk{background:var(--riskbg);color:var(--risk)}.b-risk .dot{background:var(--risk)}
+.b-mute{background:var(--mutebg);color:var(--mute)}.b-mute .dot{background:var(--mute)}
+.b-acc{background:var(--accent-soft);color:var(--accent)}.b-acc .dot{background:var(--accent)}
+
+/* queue table */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow)}
+.qt{width:100%;border-collapse:collapse;font-size:12.5px}
+.qt thead th{text-align:left;font-size:11px;font-weight:700;color:var(--ink3);padding:11px 14px;border-bottom:1px solid var(--line);background:#FAFBFD;white-space:nowrap}
+.qt tbody td{padding:11px 14px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.qt tbody tr{cursor:pointer}
+.qt tbody tr:hover{background:#FAFBFE}
+.qt tbody tr:last-child td{border-bottom:none}
+.qt .cid{font-weight:700;font-size:12px}
+.split-mini{display:flex;gap:3px;align-items:center}
+.sm-seg{height:7px;border-radius:2px}
+.sm-auto{background:var(--ok)}.sm-rev{background:var(--warn)}.sm-siu{background:var(--risk)}
+.sm-lbl{font-size:10.5px;color:var(--ink2);margin-left:5px;font-family:var(--mono)}
+
+/* detail */
+.det-head{padding:16px 18px}
+.dh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.dh-id{font-size:16px;font-weight:800}
+.dh-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink2);margin-top:5px}
+.dh-meta b{color:var(--ink);font-weight:700}
+.dh-amt{text-align:right}
+.dh-amt .a-lab{font-size:11px;color:var(--ink3);font-weight:600}
+.dh-amt .a-val{font-size:20px;font-weight:800;font-family:var(--mono);letter-spacing:-.5px}
+.dh-amt .a-split{font-size:11px;color:var(--ink2);margin-top:1px}
+
+/* stage tracker */
+.tracker{display:flex;align-items:center;gap:0;margin-top:16px;padding-top:14px;border-top:1px solid var(--line2)}
+.trk{display:flex;align-items:center;gap:8px;flex:1}
+.trk:last-child{flex:0}
+.trk-node{display:flex;align-items:center;gap:7px}
+.trk-dot{width:22px;height:22px;border-radius:50%;background:var(--mutebg);color:var(--ink3);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.trk-lab{font-size:11.5px;font-weight:700;color:var(--ink3);white-space:nowrap}
+.trk-line{flex:1;height:2px;background:var(--line);border-radius:1px;min-width:18px}
+.trk.done .trk-dot{background:var(--ok);color:#fff}.trk.done .trk-lab{color:var(--ink)}.trk.done .trk-line{background:var(--ok)}
+.trk.cur .trk-dot{background:var(--accent);color:#fff;box-shadow:0 0 0 3px var(--accent-soft)}.trk.cur .trk-lab{color:var(--accent)}
+.prog{margin-top:13px}
+.prog-bar{height:6px;background:var(--line2);border-radius:3px;overflow:hidden}
+.prog-bar>i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .35s ease}
+.prog-lab{font-size:11px;color:var(--ink2);margin-top:5px;font-weight:600}
+
+/* section */
+.sec{margin-top:16px}
+.sec-h{font-size:13px;font-weight:800;margin-bottom:9px;display:flex;align-items:center;gap:8px}
+.sec-h .sc-tag{font-size:10.5px;font-weight:700;color:var(--ink2);background:var(--mutebg);border-radius:5px;padding:1px 7px}
+
+/* analysis rows */
+.ana{display:flex;flex-direction:column}
+.ana-row{display:grid;grid-template-columns:96px 92px 1fr 70px;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line2)}
+.ana-row:last-child{border-bottom:none}
+.ana-name{font-weight:700;font-size:12.5px}
+.ana-why{font-size:12px;color:var(--ink2);line-height:1.5}
+.ana-why .num{font-family:var(--mono);color:var(--ink);font-weight:600}
+.ana-conf{text-align:right;font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.conflict{margin-top:4px;display:inline-flex;align-items:center;gap:8px;background:var(--warnbg);border:1px solid #F1D5AE;border-radius:6px;padding:4px 9px;font-size:11.5px;color:var(--warn);font-weight:600}
+.conflict .vs{color:var(--ink3);font-weight:700}
+.conflict .arr{color:var(--warn);font-weight:800}
+
+/* split (분기) */
+.split{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px}
+.sp-card{border:1px solid var(--line);border-radius:9px;padding:12px 14px;position:relative}
+.sp-card .sp-lab{font-size:11px;font-weight:700;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.sp-card .sp-val{font-size:20px;font-weight:800;font-family:var(--mono);letter-spacing:-.5px;margin-top:4px}
+.sp-auto{background:var(--okbg);border-color:#BFE3CC}.sp-auto .sp-val{color:var(--ok)}
+.sp-rev{background:var(--warnbg);border-color:#F1D5AE}.sp-rev .sp-val{color:var(--warn)}
+.sp-siu{background:var(--riskbg);border-color:#F3C2C8}.sp-siu .sp-val{color:var(--risk)}
+.split-note{font-size:11px;color:var(--ink2);padding:0 16px 13px}
+
+/* review items */
+.ri{display:flex;flex-direction:column;gap:10px;padding:14px 16px}
+.ri-card{border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:9px;padding:12px 14px;background:#FFFDFA}
+.ri-card.resolved{border-left-color:var(--ok);background:var(--okbg);opacity:.92}
+.ri-card.siu{border-left-color:var(--risk);background:#FFFAFB}
+.ri-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ri-name{font-weight:700;font-size:12.5px}
+.ri-detail{font-size:12px;color:var(--ink2);margin-top:3px;line-height:1.55}
+.ri-detail .num{font-family:var(--mono);color:var(--ink);font-weight:600}
+.ri-ev{font-size:11px;color:var(--accent);font-weight:600;cursor:pointer;margin-top:5px;display:inline-block}
+.ri-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.ri-resolved-tag{font-size:11.5px;color:var(--ok);font-weight:700;display:flex;align-items:center;gap:6px;margin-top:8px}
+.btn{font-family:inherit;font-size:12px;font-weight:600;border-radius:7px;padding:6px 12px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);transition:all .12s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1D4ED8;color:#fff}
+.btn.danger{border-color:#F3C2C8;color:var(--risk)}.btn.danger:hover{background:var(--riskbg)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* evidence */
+.ev{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px;padding:14px 16px}
+.ev-card{border:1px solid var(--line);border-radius:9px;padding:11px 13px;cursor:pointer;background:#fff}
+.ev-card:hover{border-color:var(--accent)}
+.ev-card .ev-ic{width:30px;height:30px;border-radius:7px;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--ink2);margin-bottom:7px}
+.ev-card .ev-n{font-weight:700;font-size:12px}
+.ev-card .ev-t{font-size:11px;color:var(--ink3);margin-top:1px}
+.ev-meta{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:11px;color:var(--ink2);line-height:1.55;display:none}
+.ev-card.open .ev-meta{display:block}
+.ev-meta .num{font-family:var(--mono);color:var(--ink);font-weight:600}
+
+/* confirm bar */
+.confirm-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;flex-wrap:wrap}
+.cb-info{font-size:12px;color:var(--ink2)}
+.cb-info b{color:var(--ink)}
+.done-banner{display:flex;align-items:flex-start;gap:11px;padding:13px 16px;background:var(--okbg);border:1px solid #BFE3CC;border-radius:9px;margin:14px 16px}
+.done-banner .db-ic{width:26px;height:26px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+.done-banner .db-t{font-weight:700;font-size:13px}
+.done-banner .db-d{font-size:12px;color:var(--ink2);margin-top:2px}
+
+/* history */
+.hist{padding:8px 16px 16px}
+.hist-row{display:grid;grid-template-columns:62px 1fr;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line2)}
+.hist-row:last-child{border-bottom:none}
+.hist-t{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.hist-main{font-size:12px;line-height:1.5}
+.hist-main b{font-weight:700}
+.hist-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.hist-tags span{font-size:10.5px;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--ink2)}
+.hash{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+
+.col2{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start}
+@media(max-width:1120px){.col2{grid-template-columns:1fr}}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);background:#111722;color:#fff;font-size:12px;font-weight:600;padding:10px 16px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:80}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wm"><div class="wm-mark">C</div><div class="wm-name">CLAIO</div><div class="wm-sub">자동차보험 손해사정 처리 콘솔</div></div>
+  <div class="search"><input type="text" placeholder="케이스 번호 · 청구인 · 계약 검색"></div>
+  <div class="tb-right">
+    <div class="tb-bell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+    <div class="tb-user"><span class="tb-ava">김민</span>김민준 손해사정사</div>
+  </div>
+</div>
+<nav class="nav">
+  <div class="nav-sec">업무함</div>
+  <div id="navItems"></div>
+  <div class="nav-foot">CLAIO · Simulation 데이터<br>금액은 가정값 · 단일 처리 콘솔</div>
+</nav>
+<main class="main" id="main"></main>
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ===================== 더미 데이터 ===================== */
+const CASES=[
+ { id:"CLM-2026-0417", claimant:"이정환", type:"교차로 직진/좌회전 충돌", policy:"POL-AUTO-8842",
+   repair:4800000, marketCap:4100000, medical:3000000, medicalNorm:2600000,
+   faultBB:15, faultPre:30, faultThr:10, fraud:78, fraudThr:75, similar:3, stmtMatch:false, autoLimit:1000000,
+   receivedAt:"2026-06-15", slaDays:6 },
+ { id:"CLM-2026-0431", claimant:"박서연", type:"후방 추돌(경미)", policy:"POL-AUTO-9120",
+   repair:1200000, marketCap:1400000, medical:0, medicalNorm:0,
+   faultBB:0, faultPre:0, faultThr:10, fraud:18, fraudThr:75, similar:0, stmtMatch:true, autoLimit:1000000,
+   receivedAt:"2026-06-16", slaDays:9 },
+ { id:"CLM-2026-0429", claimant:"최동훈", type:"주차 중 손상 주장", policy:"POL-AUTO-7745",
+   repair:5200000, marketCap:3800000, medical:1500000, medicalNorm:1200000,
+   faultBB:10, faultPre:35, faultThr:10, fraud:91, fraudThr:75, similar:4, stmtMatch:false, autoLimit:1000000,
+   receivedAt:"2026-06-14", slaDays:3 },
+ { id:"CLM-2026-0425", claimant:"정하늘", type:"신호위반 측면 충돌", policy:"POL-AUTO-8810",
+   repair:3100000, marketCap:3300000, medical:2200000, medicalNorm:2600000,
+   faultBB:40, faultPre:45, faultThr:10, fraud:52, fraudThr:75, similar:1, stmtMatch:true, autoLimit:1000000,
+   receivedAt:"2026-06-15", slaDays:7 }
+];
+
+/* ===================== 계산 엔진 (결정론) ===================== */
+function hash(o){ const s=JSON.stringify(o); let h=0x811c9dc5; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);} return (h>>>0).toString(16).toUpperCase().padStart(8,"0").slice(0,4); }
+function analyze(c,ov){
+  ov=ov||{};
+  const marketCap=ov.marketCap!=null?ov.marketCap:c.marketCap;
+  const medicalNorm=ov.medicalNorm!=null?ov.medicalNorm:c.medicalNorm;
+  const faultBB=ov.faultBB!=null?ov.faultBB:c.faultBB;
+  const faultPre=ov.faultPre!=null?ov.faultPre:c.faultPre;
+  const repairAccepted=Math.min(c.repair,marketCap), repairExcess=Math.max(0,c.repair-marketCap);
+  const medicalAccepted=Math.min(c.medical,medicalNorm), medicalExcess=Math.max(0,c.medical-medicalNorm);
+  const acceptedLoss=repairAccepted+medicalAccepted;
+  const gap=Math.abs(faultBB-faultPre), disputed=gap>c.faultThr;
+  const faultLow=Math.min(faultBB,faultPre), faultHigh=Math.max(faultBB,faultPre);
+  const ourLiabHigh=Math.round(acceptedLoss*faultHigh/100);
+  const eff=c.fraud+(c.similar>=3?5:0)+(!c.stmtMatch?5:0);
+  const route= ov.clearFraud?"정상":(eff>=c.fraudThr?"SIU":(eff>=60?"검토":"정상"));
+  const blockAuto=(route==="SIU");
+  const autoLiab=Math.round(acceptedLoss*(disputed?faultLow:faultHigh)/100);
+  const autoPay=blockAuto?0:Math.min(autoLiab,c.autoLimit);
+  const review=Math.max(0,ourLiabHigh-autoPay);
+  const autoDisp=autoPay, siuDisp=blockAuto?ourLiabHigh:0, reviewDisp=blockAuto?0:review;
+  return {marketCap,medicalNorm,faultBB,faultPre,repairAccepted,repairExcess,medicalAccepted,medicalExcess,acceptedLoss,
+    gap,disputed,faultLow,faultHigh,ourLiabHigh,eff,route,blockAuto,autoLiab,autoPay,review,autoDisp,siuDisp,reviewDisp,
+    inputHash:hash({m:marketCap,n:medicalNorm,b:faultBB,p:faultPre,cf:!!ov.clearFraud,id:c.id}),
+    resultHash:hash({autoDisp,reviewDisp,siuDisp,route})};
+}
+function won(n){ return "₩"+Math.round(n).toLocaleString("ko-KR"); }
+function el(id){ return document.getElementById(id); }
+
+/* 검토 항목 — 베이스 분석 기준(항목 집합 고정, 레이아웃 안정) */
+function baseItems(c){
+  const a=analyze(c);
+  const items=[];
+  if(a.repairExcess>0) items.push({key:"repair",name:"수리견적 시장가 초과",
+    detail:'청구 <span class="num">'+won(c.repair)+'</span> · 시장 인정 <span class="num">'+won(c.marketCap)+'</span> · 초과 <span class="num">'+won(a.repairExcess)+'</span>',
+    ev:"수리견적서·부품/공임 기준",
+    acts:[{t:"초과분 인정·지급",ov:{marketCap:c.repair},log:"수리비 초과분 인정"},{t:"시장가 적용·기각",ov:{},log:"수리비 시장가 상한 적용"}]});
+  if(a.medicalExcess>0) items.push({key:"medical",name:"대인 합의금 통상 초과",
+    detail:'청구 <span class="num">'+won(c.medical)+'</span> · 통상 <span class="num">'+won(c.medicalNorm)+'</span> · 초과 <span class="num">'+won(a.medicalExcess)+'</span>',
+    ev:"진단서·상해등급 통상범위",
+    acts:[{t:"추가서류 요청",ov:{},log:"대인 추가서류 요청"},{t:"통상범위 적용",ov:{},log:"대인 통상범위 적용"},{t:"초과 인정",ov:{medicalNorm:c.medical},log:"대인 초과분 인정"}]});
+  if(a.disputed) items.push({key:"fault",name:"과실비율 기준 충돌",
+    detail:'블랙박스 <span class="num">'+c.faultBB+'%</span> ↔ 판례 <span class="num">'+c.faultPre+'%</span> · 차이 <span class="num">'+a.gap+'%p</span> → 자동 확정 불가',
+    ev:"블랙박스 영상·사고 유형 인정기준",
+    acts:[{t:"블박 "+c.faultBB+"% 확정",ov:{faultPre:c.faultBB},log:"과실 블랙박스 기준 확정"},{t:"판례 "+c.faultPre+"% 확정",ov:{faultBB:c.faultPre},log:"과실 판례 기준 확정"},{t:"상급 검토",ov:{},log:"과실 상급 검토 의뢰"}]});
+  if(a.route==="SIU") items.push({key:"fraud",name:"보험사기 위험 신호",siu:true,
+    detail:'가중 위험점수 <span class="num">'+a.eff+'</span> ≥ 임계 <span class="num">'+c.fraudThr+'</span>'+(c.similar>=3?' · 유사청구 '+c.similar+'건':'')+(!c.stmtMatch?' · 진술 불일치':''),
+    ev:"과거 청구이력·진술·블랙박스",
+    acts:[{t:"SIU 의뢰",ov:{},flag:"siu",log:"SIU 조사 의뢰"},{t:"정상 처리",ov:{clearFraud:true},log:"위험 신호 해소·정상 처리"}]});
+  else if(a.route==="검토") items.push({key:"fraud",name:"위험 신호 현장 확인",
+    detail:'가중 위험점수 <span class="num">'+a.eff+'</span> (현장 확인 권고)',
+    ev:"과거 청구이력·진술",
+    acts:[{t:"현장 확인·정상",ov:{clearFraud:true},log:"현장 확인 후 정상 처리"},{t:"SIU 의뢰",ov:{},flag:"siu",log:"SIU 조사 의뢰"}]});
+  if(!a.blockAuto && a.review>0) items.push({key:"limit",name:"자동 처리 한도 초과",
+    detail:'추정 부담 <span class="num">'+won(a.ourLiabHigh)+'</span> 중 자동 한도 <span class="num">'+won(c.autoLimit)+'</span> 초과분 <span class="num">'+won(a.review)+'</span> 승인 필요',
+    ev:"손해액 산정·과실 적용",
+    acts:[{t:"초과분 승인",ov:{},log:"자동 한도 초과분 승인"},{t:"보류",ov:{},flag:"hold",log:"한도 초과분 보류"}]});
+  return items;
+}
+
+/* ===================== 케이스 런타임 상태 ===================== */
+const ST={};
+function getST(id){
+  if(!ST[id]){
+    const c=CASES.find(x=>x.id===id);
+    ST[id]={ ov:{}, resolved:{}, flags:{}, confirmed:false, clock:[14,3,0],
+      history:[{t:"14:03:09",who:"시스템",act:"청구 접수 · 자동 분류",tags:["접수"]},
+               {t:"14:03:11",who:"분석 엔진",act:"AI 자동 분석 완료 · 5개 항목 분리 판정",tags:["담보","견적","대인","과실","사기"]}] };
+  }
+  return ST[id];
+}
+function clockNext(s){ s.clock[2]+=7; if(s.clock[2]>=60){s.clock[2]-=60;s.clock[1]++;} const p=n=>(n<10?"0":"")+n; return p(s.clock[0])+":"+p(s.clock[1])+":"+p(s.clock[2]); }
+function curAnalysis(c){ return analyze(c,getST(c.id).ov); }
+function unresolved(c){ const s=getST(c.id); return baseItems(c).filter(it=>!s.resolved[it.key]); }
+function allResolved(c){ return unresolved(c).length===0; }
+
+function caseStatus(c){
+  const s=getST(c.id);
+  if(s.confirmed) return {label:"처리완료",cls:"b-ok"};
+  if(baseItems(c).length===0) return {label:"자동 처리 가능",cls:"b-acc"};
+  if(allResolved(c)) return {label:"결정 대기",cls:"b-acc"};
+  if(analyze(c).route==="SIU") return {label:"SIU 검토",cls:"b-risk"};
+  return {label:"검토 대기",cls:"b-warn"};
+}
+
+/* ===================== 네비 / 필터 ===================== */
+let VIEW={mode:"queue",filter:"mine",caseId:null};
+const FILTERS=[
+ {k:"mine",t:"내 케이스",ic:"M4 6h16M4 12h16M4 18h10"},
+ {k:"review",t:"검토 대기",ic:"M12 8v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
+ {k:"siu",t:"SIU",ic:"M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"},
+ {k:"done",t:"처리완료",ic:"M5 13l4 4L19 7"}
+];
+function filterCases(k){
+  return CASES.filter(c=>{ const s=getST(c.id);
+    if(k==="mine") return !s.confirmed;
+    if(k==="review") return !s.confirmed && baseItems(c).length>0 && !allResolved(c);
+    if(k==="siu") return !s.confirmed && analyze(c).route==="SIU";
+    if(k==="done") return s.confirmed;
+    return true;
+  });
+}
+function buildNav(){
+  let h="";
+  FILTERS.forEach(f=>{ const n=filterCases(f.k).length;
+    h+='<div class="nav-item'+(VIEW.filter===f.k?" on":"")+'" onclick="go(\''+f.k+'\')"><span class="ni-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="'+f.ic+'"/></svg></span>'+f.t+'<span class="ni-ct">'+n+'</span></div>';
+  });
+  el("navItems").innerHTML=h;
+}
+function go(filter){ VIEW={mode:"queue",filter:filter,caseId:null}; render(); }
+function openCase(id){ VIEW.mode="detail"; VIEW.caseId=id; render(); window.scrollTo(0,0); }
+function backToQueue(){ VIEW.mode="queue"; VIEW.caseId=null; render(); }
+
+let toastTok=0;
+function toast(m){ const t=el("toast"); t.textContent=m; t.classList.add("show"); const k=++toastTok; setTimeout(()=>{if(k===toastTok)t.classList.remove("show");},2200); }
+
+/* ===================== 렌더 ===================== */
+function render(){ buildNav(); el("main").innerHTML = VIEW.mode==="detail" ? renderDetail(VIEW.caseId) : renderQueue(); }
+
+function renderQueue(){
+  const f=FILTERS.find(x=>x.k===VIEW.filter);
+  const list=filterCases(VIEW.filter);
+  let h='<div class="h1">'+f.t+'</div><div class="sub">처리할 자동차보험 손해사정 케이스 '+list.length+'건. 행을 누르면 케이스 처리 화면으로 이동합니다.</div>';
+  h+='<div class="panel" style="margin-top:14px;overflow-x:auto"><table class="qt"><thead><tr><th>상태</th><th>케이스</th><th>청구인</th><th>사고 유형</th><th>청구금액</th><th>처리 분기</th><th>검토</th><th>SLA</th></tr></thead><tbody>';
+  if(!list.length) h+='<tr><td colspan="8" style="text-align:center;color:var(--ink3);padding:28px">해당하는 케이스가 없습니다.</td></tr>';
+  list.forEach(c=>{ const a=curAnalysis(c), st=caseStatus(c), items=unresolved(c).length;
+    const claim=c.repair+c.medical, tot=Math.max(1,a.autoDisp+a.reviewDisp+a.siuDisp);
+    const seg=(v,cls)=>v>0?'<span class="sm-seg '+cls+'" style="width:'+Math.max(6,Math.round(v/tot*60))+'px"></span>':'';
+    h+='<tr onclick="openCase(\''+c.id+'\')">';
+    h+='<td><span class="bdg '+st.cls+'"><span class="dot"></span>'+st.label+'</span></td>';
+    h+='<td class="cid mono">'+c.id+'</td><td>'+c.claimant+'</td><td>'+c.type+'</td>';
+    h+='<td class="mono">'+won(claim)+'<div style="font-size:10.5px;color:var(--ink3)">대물 '+won(c.repair)+(c.medical>0?' · 대인 '+won(c.medical):'')+'</div></td>';
+    h+='<td><div class="split-mini">'+seg(a.autoDisp,"sm-auto")+seg(a.reviewDisp,"sm-rev")+seg(a.siuDisp,"sm-siu")+'<span class="sm-lbl">자동 '+won(a.autoDisp)+' / 검토 '+won(a.reviewDisp)+' / SIU '+won(a.siuDisp)+'</span></div></td>';
+    h+='<td>'+(c&&getST(c.id).confirmed?'<span class="bdg b-ok"><span class="dot"></span>완료</span>':(items>0?'<span class="bdg b-warn"><span class="dot"></span>'+items+'건</span>':'<span class="bdg b-acc"><span class="dot"></span>없음</span>'))+'</td>';
+    h+='<td class="mono" style="color:'+(c.slaDays<=3?"var(--risk)":"var(--ink2)")+'">D-'+c.slaDays+'</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  return h;
+}
+
+const STAGES=["접수","AI 분석","심사","결정","처리·지급"];
+function stageIdx(c){ const s=getST(c.id); if(s.confirmed)return 4; if(baseItems(c).length===0)return 3; if(allResolved(c))return 3; return 2; }
+
+function renderDetail(id){
+  const c=CASES.find(x=>x.id===id), s=getST(id), a=curAnalysis(c), st=caseStatus(c);
+  const items=baseItems(c), unres=unresolved(c).length, total=items.length;
+  const prog= total? Math.round((total-unres)/total*100) : 100;
+  const ci=stageIdx(c);
+  let h='<div class="crumb"><a onclick="backToQueue()">'+FILTERS.find(x=>x.k===VIEW.filter).t+'</a> › <span>'+c.id+'</span></div>';
+
+  /* 헤더 */
+  h+='<div class="panel det-head"><div class="dh-top"><div>';
+  h+='<div class="dh-id">'+c.id+' <span class="bdg '+st.cls+'" style="margin-left:6px;vertical-align:middle"><span class="dot"></span>'+st.label+'</span></div>';
+  h+='<div class="dh-meta"><span>청구인 <b>'+c.claimant+'</b></span><span>계약 <b class="mono">'+c.policy+'</b></span><span>사고 <b>'+c.type+'</b></span><span>접수 <b class="mono">'+c.receivedAt+'</b></span><span>SLA <b style="color:'+(c.slaDays<=3?"var(--risk)":"var(--ink)")+'">D-'+c.slaDays+'</b></span></div>';
+  h+='</div><div class="dh-amt"><div class="a-lab">청구금액</div><div class="a-val">'+won(c.repair+c.medical)+'</div><div class="a-split">대물 '+won(c.repair)+(c.medical>0?' · 대인 '+won(c.medical):'')+'</div></div></div>';
+  /* 트래커 */
+  h+='<div class="tracker">';
+  STAGES.forEach((sg,i)=>{ const cls=i<ci?"done":(i===ci?"cur":""); h+='<div class="trk '+cls+'"><div class="trk-node"><div class="trk-dot">'+(i<ci?"✓":(i+1))+'</div><div class="trk-lab">'+sg+'</div></div>'+(i<STAGES.length-1?'<div class="trk-line"></div>':'')+'</div>'; });
+  h+='</div>';
+  h+='<div class="prog"><div class="prog-bar"><i style="width:'+prog+'%"></i></div><div class="prog-lab">처리 진행률 '+prog+'% · '+(total?(total-unres)+'/'+total+' 검토 항목 처리':'검토 항목 없음 · 자동 처리 가능')+'</div></div>';
+  h+='</div>';
+
+  h+='<div class="col2"><div>';
+
+  /* AI 자동 분석 */
+  h+='<div class="sec"><div class="sec-h">AI 자동 분석 <span class="sc-tag">5개 항목 분리 판정</span></div><div class="panel ana">'+renderAnalysis(c,a)+'</div></div>';
+
+  /* 처리 분기 */
+  h+='<div class="sec"><div class="sec-h">처리 분기</div><div class="panel"><div class="split">';
+  h+='<div class="sp-card sp-auto"><div class="sp-lab">자동 지급 가능</div><div class="sp-val">'+won(a.autoDisp)+'</div></div>';
+  h+='<div class="sp-card sp-rev"><div class="sp-lab">검토 대기</div><div class="sp-val">'+won(a.reviewDisp)+'</div></div>';
+  h+='<div class="sp-card sp-siu"><div class="sp-lab">SIU 보류</div><div class="sp-val">'+won(a.siuDisp)+'</div></div>';
+  h+='</div><div class="split-note">인정 손해액 <span class="mono">'+won(a.acceptedLoss)+'</span> · 추정 부담 <span class="mono">'+won(a.ourLiabHigh)+'</span> — 시스템이 처리 가능분과 사람이 볼 부분을 미리 갈라 둡니다. 사람은 걸린 것만 봅니다.</div></div></div>';
+
+  /* 검토 항목 */
+  h+='<div class="sec"><div class="sec-h">검토 항목 <span class="sc-tag">'+(total?unres+' / '+total+' 미처리':'자동 처리')+'</span></div><div class="panel ri">';
+  if(!total){ h+='<div style="font-size:12.5px;color:var(--ink2);padding:2px 0">자동 분석에서 걸린 항목이 없습니다. 전건 자동 처리 가능합니다.</div>'; }
+  else items.forEach((it,ix)=>{ const rv=s.resolved[it.key];
+    h+='<div class="ri-card'+(rv?" resolved":"")+(it.siu?" siu":"")+'"><div class="ri-top"><div><div class="ri-name">'+it.name+'</div><div class="ri-detail">'+it.detail+'</div>';
+    if(it.key==="fault") h+='<div class="conflict">블랙박스 '+c.faultBB+'% <span class="vs">↔</span> 판례 '+c.faultPre+'% <span class="arr">→</span> 자동 확정 불가</div>';
+    h+='<span class="ri-ev" onclick="toast(\'증거 열람: '+it.ev+'\')">증거 보기 · '+it.ev+'</span></div>'+(rv?'<span class="bdg b-ok"><span class="dot"></span>처리됨</span>':'<span class="bdg b-warn"><span class="dot"></span>검토 필요</span>')+'</div>';
+    if(rv) h+='<div class="ri-resolved-tag">✓ '+rv+' · '+s.resolvedAt[it.key]+'</div>';
+    else if(!s.confirmed){ h+='<div class="ri-acts">'; it.acts.forEach((ac,ai)=>{ h+='<button class="btn'+(ai===0?" primary":"")+(ac.flag==="siu"||ac.flag==="hold"?" danger":"")+'" onclick="resolveItem(\''+id+'\',\''+it.key+'\','+ix+','+ai+')">'+ac.t+'</button>'; }); h+='</div>'; }
+    h+='</div>';
+  });
+  h+='</div></div>';
+
+  /* 처리 확정 / 완료 배너 */
+  if(s.confirmed){
+    h+='<div class="panel" style="margin-top:16px"><div class="done-banner"><div class="db-ic">✓</div><div><div class="db-t">처리 확정 · 시스템 반영 완료</div><div class="db-d">'+s.reflectSummary+'</div></div></div></div>';
+  } else {
+    h+='<div class="panel" style="margin-top:16px"><div class="confirm-bar"><div class="cb-info">'+(allResolved(c)?'모든 검토 항목이 처리되었습니다. 확정 시 지급·검토 큐·SIU·고객 안내로 <b>실제 반영</b>되고 판단 이력에 기록됩니다.':'미처리 검토 항목 <b>'+unres+'건</b>을 먼저 처리하세요.')+'</div><button class="btn primary" onclick="confirmCase(\''+id+'\')" '+(allResolved(c)?"":"disabled")+'>처리 확정 → 반영</button></div></div>';
+  }
+
+  h+='</div><div>';
+
+  /* 증거 */
+  h+='<div class="sec" style="margin-top:0"><div class="sec-h">증거</div><div class="panel ev">'+renderEvidence(c)+'</div></div>';
+
+  /* 판단 이력 */
+  h+='<div class="sec"><div class="sec-h">판단 이력 <span class="sc-tag">감사 · 재현</span></div><div class="panel hist">';
+  s.history.forEach(e=>{ h+='<div class="hist-row"><div class="hist-t">'+e.t+'</div><div class="hist-main"><b>'+e.who+'</b> · '+e.act+(e.tags?'<div class="hist-tags">'+e.tags.map(t=>'<span>'+t+'</span>').join("")+'</div>':'')+'</div></div>'; });
+  h+='<div class="hist-row"><div class="hist-t">재현</div><div class="hist-main"><span class="hash">입력 '+c.id+'-'+a.inputHash+' · 결과 '+a.resultHash+'</span><div style="font-size:11px;color:var(--ink3);margin-top:2px">같은 데이터·같은 판단 → 같은 결과(결정론)</div></div></div>';
+  h+='</div></div>';
+
+  h+='</div></div>';
+  return h;
+}
+
+function renderAnalysis(c,a){
+  const row=(name,verdict,vcls,why,conf)=>'<div class="ana-row"><div class="ana-name">'+name+'</div><div><span class="bdg '+vcls+'"><span class="dot"></span>'+verdict+'</span></div><div class="ana-why">'+why+'</div><div class="ana-conf">신뢰도 '+conf+'</div></div>';
+  let h="";
+  h+=row("담보","정상","b-ok",'계약 유효 · 청구 유형이 가입 담보(<span class="num">'+c.policy+'</span>)에 포함','99%');
+  if(a.repairExcess>0) h+=row("수리견적","검토","b-warn",'청구 <span class="num">'+won(c.repair)+'</span> > 시장 인정 <span class="num">'+won(a.marketCap)+'</span> · 초과 <span class="num">'+won(a.repairExcess)+'</span>','92%');
+  else h+=row("수리견적","정상","b-ok",'청구 <span class="num">'+won(c.repair)+'</span> ≤ 시장 인정 <span class="num">'+won(a.marketCap)+'</span> · 범위 내','95%');
+  if(c.medical<=0) h+=row("대인","해당없음","b-mute",'대인 청구 없음','—');
+  else if(a.medicalExcess>0) h+=row("대인","검토","b-warn",'청구 <span class="num">'+won(c.medical)+'</span> > 통상 <span class="num">'+won(a.medicalNorm)+'</span> · 초과 <span class="num">'+won(a.medicalExcess)+'</span>','90%');
+  else h+=row("대인","정상","b-ok",'청구 <span class="num">'+won(c.medical)+'</span> ≤ 통상 <span class="num">'+won(a.medicalNorm)+'</span> · 적정','93%');
+  if(a.disputed) h+=row("과실","검토","b-warn",'블랙박스 <span class="num">'+a.faultBB+'%</span> ↔ 판례 <span class="num">'+a.faultPre+'%</span> · 차이 <span class="num">'+a.gap+'%p</span> → 자동 확정 불가<div class="conflict">블랙박스 '+a.faultBB+'% <span class="vs">↔</span> 판례 '+a.faultPre+'% <span class="arr">→</span> 기준 충돌 표면화</div>','88%');
+  else h+=row("과실","정상","b-ok",'블랙박스 <span class="num">'+a.faultBB+'%</span> · 판례 <span class="num">'+a.faultPre+'%</span> · 차이 <span class="num">'+a.gap+'%p</span> ≤ 임계 · 기준 일치','91%');
+  if(a.route==="SIU") h+=row("사기","위험","b-risk",'가중 위험점수 <span class="num">'+a.eff+'</span> ≥ 임계 <span class="num">'+c.fraudThr+'</span>'+(c.similar>=3?' · 유사청구 '+c.similar+'건':'')+(!c.stmtMatch?' · 진술 불일치':''),'86%');
+  else if(a.route==="검토") h+=row("사기","검토","b-warn",'가중 위험점수 <span class="num">'+a.eff+'</span> · 현장 확인 권고','84%');
+  else h+=row("사기","정상","b-ok",'가중 위험점수 <span class="num">'+a.eff+'</span> < 임계 · 위험 낮음','94%');
+  return h;
+}
+
+function renderEvidence(c){
+  const evs=[{n:"블랙박스 영상",t:"02:14 · 1080p",m:'AI 추출: 신호 상태 <span class="num">녹색</span> · 충돌 지점 교차로 중앙 · 속도 추정 <span class="num">38km/h</span>'},
+   {n:"사고 현장 사진",t:"6장",m:'AI 추출: 파손 부위 <span class="num">전면·좌측</span> · 2차 사고 흔적 없음'},
+   {n:"수리 견적서",t:"PDF · 정비공임",m:'AI 추출: 부품 <span class="num">'+won(Math.round(c.repair*0.6))+'</span> · 공임 <span class="num">'+won(Math.round(c.repair*0.4))+'</span> · 견적 합계 <span class="num">'+won(c.repair)+'</span>'}];
+  if(c.medical>0) evs.push({n:"진단서",t:"의료기관",m:'AI 추출: 상해등급 <span class="num">14급</span> · 치료기간 <span class="num">14일</span> · 합의 청구 <span class="num">'+won(c.medical)+'</span>'});
+  evs.push({n:"사고 진술서",t:"청구인 제출",m:'AI 추출: 진술 vs 영상 '+(c.stmtMatch?'<span class="num">일치</span>':'<span class="num" style="color:var(--risk)">일부 불일치</span>')+(c.similar>0?' · 최근 6개월 유사청구 <span class="num">'+c.similar+'건</span>':'')});
+  let h="";
+  evs.forEach((e,i)=>{ h+='<div class="ev-card" id="ev'+i+'" onclick="this.classList.toggle(\'open\')"><div class="ev-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3v5h5M9 13h6M9 17h6M7 3h8l5 5v11a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/></svg></div><div class="ev-n">'+e.n+'</div><div class="ev-t">'+e.t+'</div><div class="ev-meta">'+e.m+'</div></div>'; });
+  return h;
+}
+
+/* ===================== 액션 ===================== */
+function resolveItem(id,key,ix,ai){
+  const c=CASES.find(x=>x.id===id), s=getST(id);
+  const it=baseItems(c)[ix], ac=it.acts[ai];
+  Object.assign(s.ov, ac.ov);
+  s.resolved[key]=ac.t;
+  s.resolvedAt=s.resolvedAt||{}; s.resolvedAt[key]=clockNext(s);
+  if(ac.flag) s.flags[ac.flag]=true;
+  s.history.push({t:s.resolvedAt[key],who:"김민준 손해사정사",act:'<b>'+it.name+'</b> · '+ac.log,tags:["검토","결정"]});
+  const a=curAnalysis(c);
+  toast(ac.t+" 처리 · 분기 재계산 (자동 "+won(a.autoDisp)+" / 검토 "+won(a.reviewDisp)+")");
+  render();
+}
+function confirmCase(id){
+  const c=CASES.find(x=>x.id===id), s=getST(id);
+  if(!allResolved(c)) return;
+  const a=curAnalysis(c);
+  s.confirmed=true;
+  const refs=[]; const tags=[];
+  if(a.autoDisp>0){ refs.push("지급 시스템 "+won(a.autoDisp)+" 반영"); tags.push("지급"); }
+  if(a.reviewDisp>0){ refs.push("검토 큐 "+won(a.reviewDisp)+" 등록"); tags.push("검토 큐"); }
+  if(a.siuDisp>0||s.flags.siu){ refs.push("SIU 조사 의뢰"); tags.push("SIU"); }
+  refs.push("고객 안내 발송"); tags.push("안내");
+  if(refs.length===2&&a.autoDisp===0&&a.reviewDisp===0&&a.siuDisp===0){ refs.unshift("우리 부담 없음(과실 0%) · 자동 종결"); }
+  s.reflectSummary=refs.join(" · ");
+  const tm=clockNext(s);
+  s.history.push({t:tm,who:"김민준 손해사정사",act:"<b>처리 확정</b> · 결정 시스템 반영",tags:tags});
+  s.history.push({t:clockNext(s),who:"시스템",act:s.reflectSummary,tags:["반영 완료"]});
+  toast("처리 확정 · 시스템 반영 완료");
+  render(); window.scrollTo(0,0);
+}
+
+/* init */
+buildNav(); render();
+</script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Section 4 시안 v2 — Execution Loop 기둥</title>
+<!--
+  시안 v2(260612): 연결을 구조로. Execution Loop 6단계를 '세로 기둥(컬럼)'으로 두고
+  한 컬럼 안에 [업무 프로세스 → 계층(흐름) → 역량]을 쌓음 → 한 컬럼 = 한 단계로 셋이 연결.
+  [1] Customer Env = 상단 기반 밴드, [8] Trust = 하단 횡단 밴드. L2·L8 = 기반 strip.
+  4-1(업무 프로세스)·4-2(계층+미니플로우)·4-3(역량 칩)이 한 그림에서 컬럼으로 묶임.
+-->
+<style>
+  :root{--ink:#17191c;--sub:#4f5660;--muted:#6f7782;--line:#d7dbe1;--soft:#f3f4f6;--teal:#00a39b;--teal-strong:#007f7f;--teal2:#eefafa;--red:#e0282f;--gray-900:#17191c;--gray-300:#b8bec8;--gray-50:#fafafa}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f3f4f6;color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;line-height:1.45}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px 28px;background:#fff}
+  h2{font-size:20px;font-weight:900;letter-spacing:-.02em;margin-bottom:3px}
+  .sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .sub b{color:var(--teal-strong)}
+
+  /* 프레임 밴드 ([1] 상단 / [8] 하단) */
+  .frame-band{display:flex;align-items:center;gap:12px;border-radius:11px;padding:10px 16px}
+  .frame-band .fb-n{width:24px;height:24px;border-radius:50%;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .frame-band b{font-size:13px;font-weight:800;letter-spacing:-.01em}
+  .frame-band .fb-d{font-size:11px;font-weight:600}
+  .frame-band .fb-tag{margin-left:auto;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;opacity:.8}
+  .band-top{background:#f1f5f9;border:1.5px solid #cbd5e1}
+  .band-top .fb-n{background:#475569;color:#fff} .band-top b{color:#334155} .band-top .fb-d{color:#64748b} .band-top .fb-tag{color:#64748b}
+  .band-bot{background:#1e293b}
+  .band-bot .fb-n{background:#0f172a;color:#fff;border:1.5px solid #475569} .band-bot b{color:#fff} .band-bot .fb-d{color:#cbd5e1} .band-bot .fb-tag{color:#94a3b8}
+  .vlink{text-align:center;color:var(--gray-300);font-size:15px;font-weight:900;line-height:1;margin:4px 0}
+
+  /* Loop 기둥 매트릭스 */
+  .matrix{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:6px 0}
+  .mrow{display:grid;grid-template-columns:96px repeat(6,1fr);border-bottom:1px solid var(--line)}
+  .mrow:last-child{border-bottom:0}
+  .mrow>.rl{background:var(--gray-900);color:#fff;font-size:11px;font-weight:800;display:flex;flex-direction:column;justify-content:center;padding:9px 10px;line-height:1.25}
+  .mrow>.rl small{font-size:8.5px;font-weight:600;color:#9aa3af;margin-top:2px}
+  .cell{padding:8px 9px;border-left:1px solid var(--line);min-width:0}
+
+  /* Loop 헤더 행 */
+  .loop-h .rl{background:#0d2b2a;color:#fff}
+  .loop-h .cell{background:var(--teal-strong);color:#fff;text-align:center;font-weight:800;font-size:12px;position:relative}
+  .loop-h .cell small{display:block;font-size:8px;font-weight:600;color:#bdeae6;margin-top:1px}
+  .loop-h .cell.core{background:#005a5a}
+  .loop-h .cell .lh-arr{position:absolute;right:-7px;top:50%;transform:translateY(-50%);z-index:3;color:var(--teal-strong);font-size:12px;font-weight:900}
+
+  /* 업무 프로세스 행 */
+  .r-biz .cell{background:#fff}
+  .r-biz b{display:block;font-size:11.5px;font-weight:800;color:var(--ink);line-height:1.25}
+  .r-biz .area-tag{display:inline-block;font-size:8.5px;font-weight:800;color:#fff;border-radius:4px;padding:1px 5px;margin-top:4px}
+
+  /* 계층(흐름) 행 */
+  .r-layer .cell{background:var(--gray-50);position:relative}
+  .r-layer .ly{display:flex;align-items:center;gap:6px}
+  .r-layer .ln{width:20px;height:20px;border-radius:5px;background:#e2e8f0;color:#475569;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .r-layer b{font-size:10.5px;font-weight:800;color:var(--sub);line-height:1.2}
+  .r-layer .flow-arr{position:absolute;right:-8px;top:50%;transform:translateY(-50%);z-index:4;color:var(--teal);font-size:14px;font-weight:900;background:#fff;border-radius:50%}
+  .r-layer .cell.core .ln{background:var(--teal-strong);color:#fff} .r-layer .cell.core b{color:var(--teal-strong)} .r-layer .cell.core{background:var(--teal2)}
+
+  /* 역량 칩 행 */
+  .r-cap .cell{background:#fff}
+  .r-cap .chips{display:flex;flex-wrap:wrap;gap:3px}
+  .r-cap .chips span{font-size:9px;font-weight:700;color:var(--sub);background:#f3f4f6;border:1px solid #e3e6ea;border-radius:5px;padding:2px 6px;line-height:1.3}
+  .r-cap .chips span.ours{color:var(--red);border-color:#f6c6c9;background:#fff1f2}
+
+  /* 기반 strip */
+  .base-strip{display:flex;align-items:center;gap:10px;border:1px dashed var(--line);border-radius:9px;background:var(--gray-50);padding:7px 13px;margin:6px 0;font-size:10.5px;color:var(--muted);font-weight:600}
+  .base-strip b{color:var(--sub);font-weight:800}
+  .base-strip .bs-tag{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+  .legend{margin-top:14px;font-size:10.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px;line-height:1.6}
+  .legend b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Section 4 시안 v2 — <span style="color:var(--teal-strong)">Execution Loop 기둥</span></h2>
+  <div class="sub">한 컬럼 = 한 작동 단계. 위→아래로 <b>업무 프로세스 → 계층(흐름) → 역량</b>이 쌓여, "이 업무는 이 계층이 이 역량으로 처리"가 한눈에. [1]·[8]은 전체를 감싸는 프레임.</div>
+
+  <!-- [1] 상단 기반 -->
+  <div class="frame-band band-top">
+    <span class="fb-n">1</span><b>Customer Environment</b>
+    <span class="fb-d">· 고객 자산 — Data Platform · 업무시스템(ERP·CRM) · 지식자산(KMS·문서)</span>
+    <span class="fb-tag">모든 입력의 기반</span>
+  </div>
+  <div class="vlink">⊻</div>
+
+  <!-- Loop 기둥 매트릭스 -->
+  <div class="matrix">
+    <!-- Loop 헤더 -->
+    <div class="mrow loop-h">
+      <div class="rl">Execution<br>Loop</div>
+      <div class="cell">Data<span class="lh-arr">▶</span></div>
+      <div class="cell">Semantic<span class="lh-arr">▶</span></div>
+      <div class="cell core">Reasoning<small>★ 핵심</small><span class="lh-arr">▶</span></div>
+      <div class="cell">Decision<span class="lh-arr">▶</span></div>
+      <div class="cell">Action<span class="lh-arr">▶</span></div>
+      <div class="cell">Learning</div>
+    </div>
+    <!-- 업무 프로세스 (= 4-1 도메인) -->
+    <div class="mrow r-biz">
+      <div class="rl">업무 프로세스<small>무슨 일</small></div>
+      <div class="cell"><b>데이터 입력·연결</b><span class="area-tag" style="background:#0369a1">영역 3</span></div>
+      <div class="cell"><b>업무 의미화</b><span class="area-tag" style="background:#6d28d9">영역 4</span></div>
+      <div class="cell"><b>판단·계획·도구 호출</b><span class="area-tag" style="background:#007f7f">영역 5</span></div>
+      <div class="cell"><b>자동 / 검토 분기</b><span class="area-tag" style="background:#b45309">통제</span></div>
+      <div class="cell"><b>시스템 반영·실행</b><span class="area-tag" style="background:#15803d">영역 6 · 접점 2</span></div>
+      <div class="cell"><b>운영·평가·개선</b><span class="area-tag" style="background:#1e40af">영역 7</span></div>
+    </div>
+    <!-- 계층 + 미니플로우 (= 4-2 아키텍처) -->
+    <div class="mrow r-layer">
+      <div class="rl">계층 구조<small>어디서 (흐름)</small></div>
+      <div class="cell"><div class="ly"><span class="ln">5</span><b>데이터·연동</b></div><span class="flow-arr">▶</span></div>
+      <div class="cell"><div class="ly"><span class="ln">4</span><b>지식·시맨틱</b></div><span class="flow-arr">▶</span></div>
+      <div class="cell core"><div class="ly"><span class="ln">3</span><b>에이전트 실행환경</b></div><span class="flow-arr">▶</span></div>
+      <div class="cell"><div class="ly"><span class="ln">7</span><b>컨트롤·거버넌스</b></div><span class="flow-arr">▶</span></div>
+      <div class="cell"><div class="ly"><span class="ln">1</span><b>경험·접근 + 연동</b></div><span class="flow-arr">▶</span></div>
+      <div class="cell"><div class="ly"><span class="ln">6</span><b>AI 품질·평가</b></div></div>
+    </div>
+    <!-- 역량 (= 4-3 Capability) -->
+    <div class="mrow r-cap">
+      <div class="rl">핵심 역량<small>무엇으로</small></div>
+      <div class="cell"><div class="chips"><span>커넥터</span><span class="ours">★AI:ON-U</span><span>운영데이터 연동</span></div></div>
+      <div class="cell"><div class="chips"><span>온톨로지·지식그래프</span><span>업무규칙(BPMN·DMN)</span><span>권한·정책</span></div></div>
+      <div class="cell"><div class="chips"><span>오케스트레이션·A2A</span><span class="ours">★MCP</span><span class="ours">★BEAST</span><span>Model Runtime</span></div></div>
+      <div class="cell"><div class="chips"><span>정책·HITL 승인</span><span>에이전트 권한</span><span>Risk·Confidence</span></div></div>
+      <div class="cell"><div class="chips"><span class="ours">★Antbot</span><span>Writeback</span><span>Agent Portal·UI</span></div></div>
+      <div class="cell"><div class="chips"><span>Decision 로깅</span><span>품질·피드백 평가</span><span>재사용 스킬</span></div></div>
+    </div>
+  </div>
+
+  <!-- 기반 strip (L2·L8) -->
+  <div class="base-strip">
+    <span class="bs-tag">기반 계층 (전 단계 공통)</span>
+    <span><b>L2 설계·개발</b> — Agent Studio · Workflow Designer · Tool/Agent Registry</span>
+    <span style="margin-left:auto"><b>L8 플랫폼 인프라</b> — Compute·GPU · K8s · Storage(RDB·Vector·Graph) · 온프레/클라우드</span>
+  </div>
+
+  <div class="vlink">⊻</div>
+  <!-- [8] 하단 횡단 -->
+  <div class="frame-band band-bot">
+    <span class="fb-n">8</span><b>Trust · Security · Governance</b>
+    <span class="fb-d">· 전 영역 횡단 통제 — IAM·RBAC · 감사·설명가능성 · 보안 가드레일(PII·폐쇄망) · 운영관리</span>
+    <span class="fb-tag">전 단계 횡단</span>
+  </div>
+
+  <div class="legend">
+    <b>읽는 법</b> · 컬럼(Execution Loop 단계) 하나를 위→아래로 읽으면 <b>「무슨 업무 → 어느 계층에서 → 무슨 역량으로」</b>가 한 줄로 연결.
+    예: <b>Reasoning</b> 컬럼 = 판단·계획(업무) → <b>L3 에이전트 실행환경</b>(계층) → 오케스트레이션·★MCP·★BEAST(역량). ·
+    계층 행의 ▶ = 사건이 계층을 거치는 <b>미니 플로우</b>(L5→L4→L3→L7→L1→L6). · ★ = 자사 자산.
+  </div>
+</div>
+</body>
+</html>

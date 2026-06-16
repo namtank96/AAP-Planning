@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Section 4 시안 — 직관 zoom 레이아웃</title>
+<!--
+  시안(260612): Section 4를 "딱 보면 zoom"으로 — 3밴드 모두 [좌:1 | 중앙:처리 | 우:8] 동일 구조.
+  4-1 도메인(이름) → 4-2 아키텍처(같은 좌/우 북엔드 + 중앙 계층) → 4-3 역량(4-1과 쌍둥이 카드, 확대).
+  8영역 일관 색 → 눈이 컬럼으로 추적. 추천안 (A): 캐논 계층 보드 유지 + 북엔드 앵커.
+-->
+<style>
+  :root{--ink:#17191c;--sub:#4f5660;--muted:#6f7782;--line:#d7dbe1;--soft:#f3f4f6;--teal:#00a39b;--teal-strong:#007f7f;--red:#e0282f;--gray-900:#17191c;--gray-300:#b8bec8;--gray-50:#fafafa}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f3f4f6;color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;line-height:1.5}
+  .wrap{max-width:1280px;margin:0 auto;padding:24px 28px;background:#fff}
+  h2{font-size:20px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px}
+  .sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+  .band-label{font-size:14px;font-weight:900;color:var(--ink);margin:20px 0 9px;display:flex;align-items:center;gap:8px}
+  .band-label .bn{width:22px;height:22px;border-radius:6px;background:var(--gray-900);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .band-label small{font-size:11px;font-weight:600;color:var(--muted)}
+
+  /* Execution Loop (4-1 상단) */
+  .zoom-loop{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:10px;background:var(--gray-50);padding:7px 11px;margin-bottom:9px;width:fit-content}
+  .zoom-loop .zl-h{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px}
+  .zoom-loop b{font-size:11px;font-weight:800;color:var(--teal-strong)}
+  .zoom-loop i{color:var(--gray-300);font-style:normal;font-weight:900;font-size:10px}
+
+  /* 3-zone 공통 프레임: 좌[1] | 중앙 | 우[8] */
+  .zone-row{display:grid;grid-template-columns:158px minmax(0,1fr) 158px;gap:10px;align-items:stretch}
+  .zone-row + .zone-row{margin-top:0}
+  .center-flow{display:flex;align-items:stretch;gap:6px}
+  .center-flow .area{flex:1}
+  .flow-arr{align-self:center;color:var(--gray-300);font-weight:900;font-size:12px}
+
+  /* 영역 카드 (8영역 일관 색) */
+  .area{border:1.5px solid var(--bd);background:var(--bg);border-radius:10px;padding:9px 10px;position:relative;min-width:0}
+  .area .an{position:absolute;top:-9px;left:-7px;width:20px;height:20px;border-radius:50%;background:var(--c);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+  .area b{display:block;font-size:11.5px;font-weight:800;color:var(--c);letter-spacing:-.01em;line-height:1.2}
+  .area small{display:block;font-size:9.5px;color:var(--muted);font-weight:700;margin-top:2px}
+  .area .caps{font-size:10px;color:var(--sub);font-weight:600;line-height:1.4;margin-top:7px;border-top:1px dashed var(--bd);padding-top:6px}
+  .area.bookend{display:flex;flex-direction:column;justify-content:center}
+  .area.core{box-shadow:0 0 0 2px rgba(0,163,155,.18)}
+  /* dark 영역[8] */
+  .area.a8{--c:#fff} .area.a8 b{color:#fff} .area.a8 small{color:#cbd5e1} .area.a8 .an{background:#0f172a;border-color:#fff} .area.a8 .caps{color:#cbd5e1;border-top-color:#475569}
+
+  /* 8 영역 색 */
+  .a1{--bg:#f1f5f9;--bd:#cbd5e1;--c:#475569}
+  .a2{--bg:#eff6ff;--bd:#bfdbfe;--c:#1e40af}
+  .a3{--bg:#f0f9ff;--bd:#bae6fd;--c:#0369a1}
+  .a4{--bg:#f5f3ff;--bd:#ddd6fe;--c:#6d28d9}
+  .a5{--bg:#eefafa;--bd:#5eead4;--c:#007f7f}
+  .a6{--bg:#f0fdf4;--bd:#bbf7d0;--c:#15803d}
+  .a7{--bg:#fffbeb;--bd:#fde68a;--c:#b45309}
+  .a8{--bg:#1e293b;--bd:#1e293b;--c:#fff}
+
+  /* 4-2 중앙 계층 보드 */
+  .layers{flex:1;display:flex;flex-direction:column;gap:4px;border:1px dashed var(--line);border-radius:10px;padding:8px;background:#fcfcfd}
+  .lyr{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:7px;background:#fff;padding:5px 9px}
+  .lyr .ln{width:20px;height:20px;border-radius:5px;background:#e2e8f0;color:#475569;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .lyr b{font-size:11px;font-weight:800;color:var(--sub)} .lyr small{font-size:9.5px;color:var(--muted)}
+  .lyr.core{border-color:var(--teal);background:var(--teal2,#eefafa);box-shadow:0 0 0 1.5px rgba(0,163,155,.18)}
+  .lyr.core .ln{background:var(--teal-strong);color:#fff} .lyr.core b{color:var(--teal-strong)}
+  .zone-cap{font-size:8.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-bottom:5px}
+  .anchor-note{font-size:9px;font-weight:700;color:var(--muted);text-align:center;margin-top:4px}
+  .arrow-zoom{text-align:center;color:var(--gray-300);font-size:18px;font-weight:900;margin:3px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Section 4 시안 — 직관 zoom 레이아웃 <span style="font-size:13px;font-weight:700;color:var(--teal-strong)">(추천안 A)</span></h2>
+  <div class="sub">3밴드 모두 <b>좌 [1] · 중앙 처리 · 우 [8]</b> 같은 구조 → 같은 색이 세로로 관통. 4-3은 4-1의 확대(쌍둥이 카드).</div>
+
+  <!-- ===== 4-1 도메인 ===== -->
+  <div class="band-label"><span class="bn">4-1</span> Agentic Operation 도메인 <small>업무 흐름</small></div>
+  <div class="zoom-loop"><span class="zl-h">Execution Loop</span><b>Data</b><i>▶</i><b>Semantic</b><i>▶</i><b>Reasoning</b><i>▶</i><b>Decision</b><i>▶</i><b>Action</b><i>▶</i><b>Learning</b></div>
+  <div class="zone-row">
+    <div class="area bookend a1"><span class="an">1</span><b>Customer Environment</b><small>고객 자산</small></div>
+    <div class="center-flow">
+      <div class="area a2"><span class="an">2</span><b>Service Experience</b><small>현업 접점</small></div>
+      <span class="flow-arr">▶</span>
+      <div class="area a3"><span class="an">3</span><b>Enterprise Data</b><small>입력·연결</small></div>
+      <span class="flow-arr">▶</span>
+      <div class="area a4"><span class="an">4</span><b>Semantic Modeling</b><small>의미화·정책</small></div>
+      <span class="flow-arr">▶</span>
+      <div class="area a5 core"><span class="an">5</span><b>Agentic Reasoning</b><small>판단·도구 ★핵심</small></div>
+      <span class="flow-arr">▶</span>
+      <div class="area a6"><span class="an">6</span><b>Integration·Action</b><small>반영·실행</small></div>
+      <span class="flow-arr">▶</span>
+      <div class="area a7"><span class="an">7</span><b>Operational Learning</b><small>평가·개선</small></div>
+    </div>
+    <div class="area bookend a8"><span class="an">8</span><b>Trust·Security·Governance</b><small>전 영역 횡단</small></div>
+  </div>
+
+  <div class="arrow-zoom">⊻</div>
+
+  <!-- ===== 4-2 아키텍처 ===== -->
+  <div class="band-label"><span class="bn">4-2</span> 계층 아키텍처 <small>기술 구조 · 다른 cut, 양 끝은 같음</small></div>
+  <div class="zone-row">
+    <div class="area bookend a1"><div class="zone-cap">좌 = [1]</div><b>Customer Environment</b><small>Data Platform · 업무시스템 · 지식자산</small></div>
+    <div class="layers">
+      <div class="zone-cap">중앙 = L1~L8 (8계층 · 기술 책임별)</div>
+      <div class="lyr"><span class="ln">1</span><b>경험 / 접근</b><small>Experience / Access</small></div>
+      <div class="lyr"><span class="ln">2</span><b>설계 / 개발</b><small>Build / Design</small></div>
+      <div class="lyr core"><span class="ln">3</span><b>에이전트 실행환경</b><small>Agent Runtime · 오케스트레이션·HITL 게이트 ★</small></div>
+      <div class="lyr"><span class="ln">4</span><b>지식 / 시맨틱</b><small>Knowledge / Semantic</small></div>
+      <div class="lyr"><span class="ln">5</span><b>데이터 / 연동</b><small>Data / Integration</small></div>
+      <div class="lyr"><span class="ln">6</span><b>AI 품질 / 평가</b><small>AI Quality / Evaluation</small></div>
+      <div class="lyr"><span class="ln">7</span><b>AI 컨트롤 / 거버넌스</b><small>Control / Governance</small></div>
+      <div class="lyr"><span class="ln">8</span><b>플랫폼 인프라</b><small>Infra / Foundation</small></div>
+    </div>
+    <div class="area bookend a8"><div class="zone-cap" style="color:#cbd5e1">우 = [8]</div><b>Trust · Security</b><small>IAM · 감사 · 보안 · 폐쇄망</small></div>
+  </div>
+
+  <div class="arrow-zoom">⊻</div>
+
+  <!-- ===== 4-3 역량 (4-1과 쌍둥이) ===== -->
+  <div class="band-label"><span class="bn">4-3</span> Capability Map <small>같은 8영역을 확대 — 영역마다 핵심 역량 (★ 자사 자산)</small></div>
+  <div class="zone-row">
+    <div class="area bookend a1"><span class="an">1</span><b>Customer Environment</b><div class="caps">Data Platform · Business Systems(ERP·CRM) · Knowledge Assets(KMS)</div></div>
+    <div class="center-flow">
+      <div class="area a2"><span class="an">2</span><b>Service Experience</b><div class="caps">Agent Portal · ★Business Agents · 검토승인(HITL Console)</div></div>
+      <div class="area a3"><span class="an">3</span><b>Enterprise Data</b><div class="caps">Connectors · ★AI:ON-U(OCR·Embedding) · 운영데이터 연동</div></div>
+      <div class="area a4"><span class="an">4</span><b>Semantic Modeling</b><div class="caps">온톨로지·지식그래프 · 규칙(BPMN·DMN) · 권한·정책(RBAC·ABAC)</div></div>
+      <div class="area a5 core"><span class="an">5</span><b>Agentic Reasoning</b><div class="caps">오케스트레이션(A2A) · 도구(★MCP·BEAST) · 모델 · HITL·Action</div></div>
+      <div class="area a6"><span class="an">6</span><b>Integration·Action</b><div class="caps">워크플로우(★Antbot·RPA) · Writeback(★BEAST) · 예외·트랜잭션</div></div>
+      <div class="area a7"><span class="an">7</span><b>Operational Learning</b><div class="caps">Decision 로깅 · 품질·피드백 평가 · 재사용 스킬</div></div>
+    </div>
+    <div class="area bookend a8"><span class="an">8</span><b>Trust·Security·Governance</b><div class="caps">IAM·RBAC · 감사·설명가능성 · 보안 가드레일 · 운영관리</div></div>
+  </div>
+
+  <div style="margin-top:18px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px">
+    시안 포인트 · ① 4-1과 4-3이 <b>같은 카드·같은 색·같은 위치</b> → 4-3 = 4-1 확대가 즉시 보임 ·
+    ② 세 밴드 모두 <b>좌[1] / 중앙 / 우[8]</b> 동일 골격 → 양 끝 앵커가 세로로 정렬 ·
+    ③ 4-2만 중앙이 계층(L1~L8)으로 다른 cut임을 인정(색 없이 회색)
+  </div>
+</div>
+</body>
+</html>

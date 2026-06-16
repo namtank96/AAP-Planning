@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>리파인2 mock — 미니플로우 순환·연계 / Trust 라이트카드 / 5장 chip화 / 하이브리드 색</title>
+<!-- 시안(260616): ① 미니플로우=순환(되돌이 레일)+flow↔chip 연계 캡션, PNG 흐름요소(L3엔진·L5파이프라인·L6환류) ② Trust=라이트 카드(가독성) ③ 5장=라벨/값 분리+산출물·연계 chip화 ④ 하이브리드 색(teal=구조, KT레드=★자사·강조 5%이하, 가이드 라이트 토큰) -->
+<style>
+  :root{
+    /* 가이드 라이트모드 뉴트럴 */
+    --ink:#111111; --sub:#555555; --muted:#888888; --line:#E5E5EA; --line-soft:#EEEEEE; --soft:#F5F5F7; --soft2:#FAFAFA;
+    /* AAP 구조 강조색 = teal */
+    --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa; --teal-line:#cfe7e5;
+    /* KT 레드 (가이드 정합) — ★자사·핵심·CTA, 면적 5%↓ */
+    --kt:#E60012; --kt-hover:#C5000F; --kt-muted:#FFF0F2;
+    --gray-900:#17191c; --gray-300:#b8bec8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#eef0f2;color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;line-height:1.45}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 28px;background:#fff}
+  h3{font-size:16px;font-weight:900;margin:0 0 4px}
+  .note{font-size:11px;color:var(--muted);margin-bottom:18px}
+  .note b{color:var(--ink)}
+  .blk{margin:0 0 26px}
+  .blk-h{font-size:12px;font-weight:900;color:var(--ink);margin:0 0 9px;padding-bottom:5px;border-bottom:2px solid var(--line)}
+  .blk-h span{color:var(--teal-strong)}
+
+  /* ===== 공통 계층 행 ===== */
+  .row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:12px;background:#fff;padding:11px 13px;margin-bottom:8px}
+  .ln{display:flex;align-items:center;gap:8px}
+  .ln .n{width:22px;height:22px;border-radius:6px;background:var(--gray-900);color:#fff;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .ln .lt{font-size:12.5px;font-weight:900;color:var(--ink);line-height:1.2}
+  .ln .lt small{display:block;font-size:8.5px;font-weight:700;color:var(--muted);margin-top:1px}
+
+  /* chip = 회색 사각(가이드 톤) */
+  .chips{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+  .chips span{font-size:9.5px;font-weight:600;color:var(--sub);background:var(--soft2);border:1px solid var(--line-soft);border-radius:7px;padding:3px 8px;line-height:1.3}
+  /* ★자사 = KT 레드 마커(가이드 tag--accent: 옅은핑크 bg + 레드 보더/텍스트) */
+  .chips span.own{color:var(--kt);background:var(--kt-muted);border-color:var(--kt);font-weight:800}
+  .chips span.own::before{content:"★ ";font-size:8px}
+  /* HITL 분기 결과 = teal 아웃라인 */
+  .chips span.out{color:var(--teal-strong);background:var(--teal2);border-color:var(--teal-line);font-weight:800}
+
+  /* 서브행(분류 라벨 + 내용) */
+  .subs{display:flex;flex-direction:column;gap:6px}
+  .sub{display:grid;grid-template-columns:128px minmax(0,1fr);gap:9px;align-items:center}
+  .sub .sl{font-size:8.5px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;line-height:1.25}
+  .sub.own-sub .sl{color:var(--kt)}
+
+  /* ===== 미니플로우 = teal 알약 트랙(순환형) ===== */
+  .mflow{display:flex;flex-direction:column;gap:0}
+  .mflow-track{display:inline-flex;align-items:center;gap:4px;background:var(--teal2);border:1px solid var(--teal-line);border-radius:999px;padding:4px 12px;align-self:flex-start}
+  .mflow-track .ms{font-size:9.5px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid var(--teal-line);border-radius:999px;padding:2px 10px}
+  .mflow-track .ma{color:var(--teal);font-weight:900;font-size:11px}
+  /* 되돌이 환류 레일 (순환 명시) */
+  .mflow-return{position:relative;align-self:stretch;margin:4px 4px 0;border-top:1.5px dashed var(--teal);padding-top:4px;display:flex;align-items:center;gap:5px}
+  .mflow-return::before{content:"◄";position:absolute;left:-2px;top:-8px;color:var(--teal);font-size:10px;font-weight:900}
+  .mflow-return .rl{font-size:8.5px;font-weight:800;color:var(--teal-strong)}
+  .mflow-return .rl em{font-style:normal;color:var(--muted);font-weight:700}
+  /* flow → chip 연계 캡션 */
+  .link-note{font-size:8.5px;font-weight:700;color:var(--muted);line-height:1.5;margin-top:5px}
+  .link-note b{color:var(--teal-strong);font-weight:800}
+  .link-note .own-k{color:var(--kt);font-weight:800}
+  /* 그룹 간 흐름 연결 (수직) */
+  .flow-down{font-size:8.5px;font-weight:800;color:var(--teal-strong);background:var(--teal2);border:1px dashed var(--teal-line);border-radius:7px;padding:3px 9px;margin:2px 0;display:inline-block}
+  .flow-down b{color:var(--kt)}
+
+  /* ===== L3 컴팩트(teal ★핵심) ===== */
+  .row.l3{display:block;border:1.5px solid var(--teal);background:var(--teal2);padding:11px 13px}
+  .l3-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .l3-head .n{background:var(--teal-strong)}
+  .l3-head .lt{color:var(--teal-strong)}
+  .l3-iface{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;margin-left:auto}
+  .l3-iface b{font-size:8px;font-weight:900;color:var(--teal-strong);text-transform:uppercase}
+  .l3-iface span{font-size:9px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--teal-line);border-radius:6px;padding:2px 7px}
+  .l3-core{background:#fff;border:1px solid var(--teal-line);border-radius:10px;padding:10px 12px}
+
+  /* ===== Trust 라이트 카드 ===== */
+  .trust-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .trust-card{position:relative;background:var(--soft2);border:1px solid var(--line);border-left:3px solid var(--kt);border-radius:10px;padding:9px 11px}
+  .trust-card b{font-size:11px;font-weight:900;color:var(--ink);display:block}
+  .trust-card .ko{font-size:9px;font-weight:700;color:var(--muted);display:block;margin:1px 0 6px}
+  .trust-card .tt{display:flex;flex-wrap:wrap;gap:4px}
+  .trust-card .tt span{font-size:8.5px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--line-soft);border-radius:6px;padding:2px 7px}
+
+  /* ===== 5장 delivery ===== */
+  .dnode{border:1px solid var(--line);border-radius:12px;padding:13px 13px;background:var(--soft2);max-width:300px}
+  .dnode.accent{border-color:var(--teal);background:var(--teal2)}
+  .dnode .dn-num{display:inline-block;font-size:9.5px;font-weight:900;background:var(--gray-900);color:#fff;padding:2px 9px;border-radius:999px;letter-spacing:.04em}
+  .dnode.accent .dn-num{background:var(--teal-strong)}
+  .dnode h4{margin:7px 0 0;font-size:15px;font-weight:900;color:var(--ink)}
+  .dnode .dn-sub{font-size:11px;font-weight:700;color:var(--muted)}
+  .dnode .dn-p{margin:6px 0 9px;font-size:11.5px;color:var(--sub);line-height:1.55}
+  .drow{margin-top:8px}
+  .drow .dlabel{font-size:8.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px}
+  .drow .dlabel.link{color:var(--kt)}
+  .dtags{display:flex;flex-wrap:wrap;gap:4px}
+  .dtags span{font-size:9.5px;font-weight:600;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:7px;padding:3px 8px;line-height:1.3}
+  .drow.link .dtags span{color:var(--teal-strong);border-color:var(--teal-line);background:var(--teal2);font-weight:700}
+
+  .cap{font-size:10.5px;color:var(--sub);border-top:1px solid var(--line);padding-top:10px;line-height:1.7;margin-top:8px}
+  .cap b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h3>리파인2 mock <span style="font-size:12px;font-weight:700;color:var(--teal-strong)">· 미니플로우 순환·연계 / Trust 라이트카드 / 5장 chip화 / 하이브리드 색</span></h3>
+  <div class="note"><b>색</b> teal=AAP 구조 · <b style="color:var(--kt)">KT 레드=★자사·강조(5%↓)</b> · 가이드 라이트 뉴트럴. <b>미니플로우</b>=teal 알약 트랙 + 되돌이 환류 레일 + flow→chip 연계 캡션.</div>
+
+  <!-- ===== 1) L3 : 순환 엔진 + 연계 캡션 ===== -->
+  <div class="blk">
+    <div class="blk-h"><span>①</span> L3 실행 엔진 — 미니플로우에 <b>순환(되돌이 레일)</b> + <b>flow→chip 연계 설명</b></div>
+    <div class="row l3">
+      <div class="l3-head"><span class="n">3</span><span class="lt">에이전트 실행 환경 <small style="font-weight:700;color:var(--muted)">Agent Runtime · ★핵심</small></span>
+        <span class="l3-iface"><b>Interface</b><span>REST</span><span>GraphQL</span><span>WebSocket</span><span>gRPC</span><span>Event Trigger</span></span>
+      </div>
+      <div class="l3-core">
+        <div class="subs">
+          <div class="sub"><span class="sl">실행 엔진</span>
+            <div class="mflow">
+              <div class="mflow-track"><span class="ms">입력 처리</span><i class="ma">→</i><span class="ms">계획·추론</span><i class="ma">→</i><span class="ms">행동 실행</span><i class="ma">→</i><span class="ms">응답 생성</span></div>
+              <div class="mflow-return"><span class="rl">↺ 관측·학습 환류 <em>— 실행 이력·평가가 다음 입력 처리로 되돌아감</em></span></div>
+              <div class="link-note">단계별로 아래 역량을 호출 · <b>계획·추론</b> → 오케스트레이션·메모리 · <b>행동 실행</b> → 도구(<span class="own-k">★MCP</span>·Function Calling) · <b>응답 생성</b> → HITL 판단·통제</div>
+            </div>
+          </div>
+          <div class="sub"><span class="sl">오케스트레이션·멀티에이전트</span><span class="chips"><span>Supervisor</span><span>Task Routing</span><span>Task Decomposition</span><span>A2A</span><span class="own">MCP</span><span>Multi-Agent Coordination</span><span>Next Best Action</span><span>Case Reasoning</span></span></div>
+          <div class="sub"><span class="sl">메모리·모델·도구</span><span class="chips"><span>대화/단기/장기</span><span>Model Gateway</span><span>LLM Routing</span><span>Model Policy</span><span class="own">BEAST</span><span>Function Calling</span><span>Credential Scope</span></span></div>
+          <div class="sub"><span class="sl">판단·통제(HITL)</span><span class="chips"><span>Risk Scoring</span><span>Confidence Threshold</span><span>Escalation</span><span>Guardrail Hook</span><span>Action Boundary</span><span class="out">자동</span><span class="out">검토</span><span class="out">보류</span></span></div>
+          <div class="sub"><span class="sl">에이전트 관리</span><span class="chips"><span>Lifecycle</span><span>Versioning</span><span>Observability</span><span>Safety·Guardrail</span><span>Prompt/Policy</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 2) L5 : 파이프라인 → 인제스션 연결 ===== -->
+  <div class="blk">
+    <div class="blk-h"><span>②</span> L5 데이터/연동 — 파이프라인 미니플로우가 <b>다음 그룹(지식 인제스션)으로 연결</b></div>
+    <div class="row">
+      <div class="ln"><span class="n">5</span><span class="lt">데이터 / 연동<small>Data / Integration</small></span></div>
+      <div class="subs">
+        <div class="sub"><span class="sl">연결·수집</span><span class="chips"><span>REST/SOAP</span><span>DB Connector</span><span>File/SFTP</span><span>MFT</span><span>API</span><span>SaaS Connector</span><span>Event Bus</span><span>Crawling</span><span>Batch/Stream</span></span></div>
+        <div class="sub"><span class="sl">처리 파이프라인</span>
+          <div class="mflow">
+            <div class="mflow-track"><span class="ms">수집</span><i class="ma">→</i><span class="ms">정제</span><i class="ma">→</i><span class="ms">정규화</span><i class="ma">→</i><span class="ms">변환</span></div>
+            <span class="flow-down">▼ 정제·변환된 데이터를 <b>★AI:ON-U</b> 지식 인제스션으로 적재</span>
+          </div>
+        </div>
+        <div class="sub own-sub"><span class="sl">지식 인제스션 · ★AI:ON-U</span><span class="chips"><span class="own">OCR</span><span class="own">Parser</span><span>Chunking</span><span class="own">Embedding</span><span class="own">Vector Index</span><span>Retrieval Policy</span><span>Hybrid Search</span><span>Source Citation</span></span></div>
+        <div class="sub"><span class="sl">운영 데이터</span><span class="chips"><span>Log Pipeline</span><span>Event Stream</span><span>Storage(RDB·VectorDB)</span><span>DRM</span><span>Data Quality</span><span>Lineage</span><span>PII Masking</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 3) L6 : 평가 환류 미니플로우 추가 ===== -->
+  <div class="blk">
+    <div class="blk-h"><span>③</span> L6 AI 품질/평가 — PNG의 <b>평가→피드백 환류</b>를 미니플로우로 추가</div>
+    <div class="row">
+      <div class="ln"><span class="n">6</span><span class="lt">AI 품질 / 평가<small>AI Quality / Evaluation</small></span></div>
+      <div class="subs">
+        <div class="sub"><span class="sl">품질 환류 루프</span>
+          <div class="mflow">
+            <div class="mflow-track"><span class="ms">실행 추적</span><i class="ma">→</i><span class="ms">품질·근거 평가</span><i class="ma">→</i><span class="ms">피드백 수집</span></div>
+            <div class="mflow-return"><span class="rl">↺ 개선 환류 <em>— 평가·피드백이 운영 학습(4-3)·정책으로 반영</em></span></div>
+          </div>
+        </div>
+        <div class="sub"><span class="sl">추적·로그</span><span class="chips"><span>Experiment Tracking</span><span>Decision Log</span><span>Tool Call Log</span><span>Execution Trace</span><span>Evidence Link</span></span></div>
+        <div class="sub"><span class="sl">평가·기준</span><span class="chips"><span>RAI/편향성</span><span>Answer Quality Score</span><span>Eval Dataset</span><span>Regression Test</span></span></div>
+        <div class="sub"><span class="sl">모니터·피드백</span><span class="chips"><span>Drift Monitoring</span><span>성능·비용 모니터링</span><span>Policy Violation Check</span><span>사용자 피드백</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 4) Trust 라이트 카드 ===== -->
+  <div class="blk">
+    <div class="blk-h"><span>④</span> Trust · Security — 검정 저대비 → <b>라이트 카드(영문 + 한글 보조 + 태그)</b></div>
+    <div class="trust-wrap">
+      <div class="trust-card"><b>Identity · Access</b><span class="ko">신원·접근 통제</span><div class="tt"><span>IAM</span><span>SSO</span><span>RBAC·ABAC</span><span>MFA</span><span>Tenant Boundary</span></div></div>
+      <div class="trust-card"><b>Audit · Explainability</b><span class="ko">감사·설명가능성</span><div class="tt"><span>Audit Trail</span><span>Evidence Store</span><span>Decision Reason</span><span>Citation</span></div></div>
+      <div class="trust-card"><b>Security Guardrails</b><span class="ko">보안 가드레일</span><div class="tt"><span>PII·DLP</span><span>I/O Filter</span><span>Prompt Injection Defense</span></div></div>
+      <div class="trust-card"><b>Private Deployment</b><span class="ko">폐쇄형 배포</span><div class="tt"><span>폐쇄망</span><span>온프레미스</span><span>Private Cloud</span><span>DRM</span></div></div>
+    </div>
+  </div>
+
+  <!-- ===== 5) 5장 delivery ===== -->
+  <div class="blk">
+    <div class="blk-h"><span>⑤</span> 5장 수행 모델 — 라벨/값 분리 + 산출물·연계 <b>chip화</b>(쭉 나열 제거)</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="dnode">
+        <span class="dn-num">04</span>
+        <h4>Connect</h4><span class="dn-sub">고객 환경 연계</span>
+        <div class="dn-p">고객 자산과 업무 시스템을 AAP 실행 흐름에 안전하게 연결</div>
+        <div class="drow"><span class="dlabel">산출물</span><div class="dtags"><span>시스템 연계 설계서</span><span>IAM·SSO 통합 설계</span><span>배포 환경 구성서</span><span>연계 검증 보고</span></div></div>
+        <div class="drow link"><span class="dlabel link">연계 Capability</span><div class="dtags"><span>Enterprise Data &amp; Inputs</span><span>Enterprise Integration &amp; Action</span></div></div>
+      </div>
+      <div class="dnode accent">
+        <span class="dn-num">05</span>
+        <h4>Operate</h4><span class="dn-sub">운영 전환·학습</span>
+        <div class="dn-p">운영 기준과 지속 개선 흐름을 설계하고 재사용 자산으로 축적</div>
+        <div class="drow"><span class="dlabel">산출물</span><div class="dtags"><span>운영 전환 기준서</span><span>Decision Log 구조</span><span>Eval·Feedback 체계</span><span>재사용 스킬 카탈로그</span></div></div>
+        <div class="drow link"><span class="dlabel link">연계 Capability</span><div class="dtags"><span>Operational Learning</span><span>AI Quality</span><span>Governance</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap">
+    확인 포인트 · ① 미니플로우가 <b>순환(되돌이 레일)</b>으로 보이고 단계→역량 <b>연계 캡션</b>으로 chip과의 관계 설명 ·
+    ② L5 파이프라인이 <b>다음 그룹(인제스션)으로 흐름 연결</b> · ③ L6 <b>평가 환류 루프</b> 추가 ·
+    ④ Trust가 <b>라이트 카드</b>로 가독성 확보(영문 유지 + 한글 보조) · ⑤ 5장 산출물·연계 <b>chip화</b> ·
+    ⑥ 색 = teal 구조 + <b style="color:var(--kt)">KT 레드 ★자사·강조 5%↓</b>(가이드 정합). → OK면 v0.6에 8계층 전체 적용.
+  </div>
+</div>
+</body>
+</html>

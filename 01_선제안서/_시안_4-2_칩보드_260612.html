@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>4-2 시안 — 칩 보드 (좌/우 채움 + 센터 경량화)</title>
+<!-- 시안(260612): 4-2 통합 아키텍처를 좌(고객자산 예시칩)|센터(계층=칩 한 줄, 경량)|우(Trust 칩)로 균형. -->
+<style>
+  :root{--ink:#17191c;--sub:#4f5660;--muted:#6f7782;--line:#d7dbe1;--soft:#f3f4f6;--teal:#00a39b;--teal-strong:#007f7f;--teal2:#eefafa;--red:#e0282f;--gray-50:#fafafa;--gray-100:#eef0f3;--gray-300:#b8bec8;--gray-900:#17191c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f3f4f6;color:var(--ink);font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;line-height:1.45}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px 28px;background:#fff}
+  h3{font-size:16.5px;font-weight:900;letter-spacing:-.01em;margin-bottom:12px}
+
+  /* Loop 띠 (연결) */
+  .arch-loop{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9px;background:var(--gray-900);padding:7px 12px;margin-bottom:10px}
+  .arch-loop .all{font-size:9px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.05em;margin-right:6px}
+  .arch-loop .st{font-size:11px;font-weight:800;color:#fff} .arch-loop .ar{color:#5f6670;font-weight:900;font-size:10px}
+  .arch-loop .st.core{color:var(--teal)}
+
+  /* 보드: 좌 | 센터 | 우 */
+  .board{display:grid;grid-template-columns:208px minmax(0,1fr) 208px;gap:10px;align-items:start}
+  .side{border:1px solid var(--line);border-radius:11px;padding:10px 11px;background:var(--gray-50)}
+  .side.cust{border-color:#cbd5e1;background:#f6f8fa}
+  .side.trust{border-color:#cbd5e1;background:#f6f8fa}
+  .side-h{font-size:11.5px;font-weight:900;color:#334155}
+  .side-sub{font-size:9px;font-weight:700;color:var(--muted);margin-bottom:8px}
+  .side-grp{margin-bottom:9px}
+  .side-grp:last-child{margin-bottom:0}
+  .side-grp b{display:block;font-size:10px;font-weight:800;color:var(--sub);margin-bottom:4px}
+  .chips{display:flex;flex-wrap:wrap;gap:3px}
+  .chips span{font-size:9px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.3}
+  .chips span.ours{color:var(--red);border-color:#f6c6c9;background:#fff1f2}
+
+  /* 센터: 계층 칩 한 줄 */
+  .layers{display:flex;flex-direction:column;gap:5px}
+  .lyr{display:grid;grid-template-columns:128px 1fr;gap:9px;align-items:center;border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 10px}
+  .lyr .lh{display:flex;align-items:center;gap:7px}
+  .lyr .ln{width:20px;height:20px;border-radius:5px;background:#e2e8f0;color:#475569;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .lyr .lname{font-size:11px;font-weight:800;color:var(--sub);line-height:1.15}
+  .lyr .lname small{display:block;font-size:8px;font-weight:600;color:var(--muted)}
+  .lyr.core{border:1.5px solid var(--teal);background:var(--teal2)}
+  .lyr.core .ln{background:var(--teal-strong);color:#fff} .lyr.core .lname{color:var(--teal-strong)}
+  .lyr .chips span{background:var(--gray-50)}
+  .lyr.core .chips span{background:#fff;border-color:#99e6e0}
+  /* 미니 플로우 (레이어 내부 흐름) + 레이어 간 연결 */
+  .chips span.flbl{border:0;background:none;padding:0;font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .chips span.ff{color:var(--teal-strong);border-color:#99e6e0;background:#fff;font-weight:800}
+  .chips span.fa{border:0;background:none;padding:0 1px;color:var(--teal);font-weight:900;font-size:9px}
+  .lyr-link{display:flex;align-items:center;gap:5px;font-size:8.5px;font-weight:800;color:var(--teal-strong);padding-left:138px;line-height:1.5}
+  .lyr-link .ll-ar{font-size:12px;font-weight:900}
+  /* L3 ★핵심 확장 블록 (PNG Agent Core 상세 재현) */
+  .l3{border:1.5px solid var(--teal);background:var(--teal2);border-radius:10px;padding:9px 11px}
+  .l3-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .l3-head .ln{width:22px;height:22px;border-radius:6px;background:var(--teal-strong);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .l3-head .l3-title{font-size:12.5px;font-weight:900;color:var(--teal-strong)}
+  .l3-head .l3-title small{font-size:9px;font-weight:700;color:var(--muted);margin-left:4px}
+  .l3-iface{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:7px}
+  .l3-iface b{font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase}
+  .l3-iface span{font-size:9px;font-weight:700;color:var(--sub);background:#fff;border:1px solid #cfe7e5;border-radius:5px;padding:2px 6px}
+  .agentcore{border:1px solid #99e6e0;background:#fff;border-radius:9px;padding:8px 9px}
+  .ac-h{font-size:9px;font-weight:800;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+  .ac-main{display:grid;grid-template-columns:1.05fr 1fr 1.5fr;gap:7px;align-items:start}
+  @media(max-width:1000px){.ac-main{grid-template-columns:1fr}}
+  .ac-box{border:1px solid var(--line);border-radius:7px;background:var(--gray-50);padding:6px 8px}
+  .acb-h{font-size:9.5px;font-weight:800;color:var(--sub);margin-bottom:5px}
+  .ac-flow{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+  .ac-flow span{font-size:9px;font-weight:700;color:var(--teal-strong);background:#fff;border:1px solid #99e6e0;border-radius:5px;padding:2px 5px}
+  .ac-flow i{color:var(--teal);font-weight:900;font-size:9px;font-style:normal}
+  .ac-flow .ac-loop{color:var(--teal);font-weight:900;border:0;background:none;font-size:11px}
+  .ac-col{display:flex;flex-direction:column;gap:6px}
+  .ac-chips{display:flex;flex-wrap:wrap;gap:3px}
+  .ac-chips span{font-size:9px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 5px}
+  .ac-sub{font-size:8.5px;font-weight:700;color:var(--muted);margin-top:4px}
+  .ac-hitl{border:1.5px solid var(--teal);background:var(--teal2);border-radius:7px;padding:6px 8px;font-size:10px;font-weight:800;color:var(--teal-strong);text-align:center;position:relative}
+  .ac-hitl::before{content:'◄';position:absolute;left:-9px;top:50%;transform:translateY(-50%);color:var(--teal);font-size:9px;font-weight:900}
+  .ac-hitl small{display:block;font-size:8px;font-weight:600;color:var(--muted)}
+  .ac-cluster{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .ac-mini{border:1px solid var(--line);border-radius:6px;background:var(--gray-50);padding:5px 7px}
+  .ac-mini.wide{grid-column:1/-1}
+  .ac-mini b{display:block;font-size:9.5px;font-weight:800;color:var(--sub)}
+  .ac-mini span{font-size:8.5px;font-weight:600;color:var(--muted)}
+  .ac-mgmt{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:7px;border-top:1px dashed #cfe7e5;padding-top:6px}
+  .ac-mgmt b{font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase}
+  .ac-mgmt span{font-size:9px;font-weight:700;color:var(--sub);background:var(--gray-50);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h3>4-2. 통합 아키텍처 — 8계층 (작동 무대) <span style="font-size:12px;font-weight:700;color:var(--teal-strong)">· 칩 보드 시안</span></h3>
+
+  <div class="arch-loop">
+    <span class="all">Execution Loop</span>
+    <span class="st">Data</span><span class="ar">▶</span><span class="st">Semantic</span><span class="ar">▶</span>
+    <span class="st core">Reasoning</span><span class="ar">▶</span><span class="st">Decision</span><span class="ar">▶</span>
+    <span class="st">Action</span><span class="ar">▶</span><span class="st">Learning</span>
+    <span style="margin-left:auto;font-size:9px;color:#9aa3af;font-weight:700">계층을 가로지르며 작동</span>
+  </div>
+
+  <div class="board">
+    <!-- 좌: 고객 자산 (예시 칩 흡수) -->
+    <aside class="side cust">
+      <div class="side-h">Customer Environment</div>
+      <div class="side-sub">고객 자산 · 대체 아님</div>
+      <div class="side-grp"><b>Data Platform</b><div class="chips"><span>Lakehouse</span><span>BI</span><span>Catalog</span></div></div>
+      <div class="side-grp"><b>Business Systems</b><div class="chips"><span>ERP</span><span>CRM</span><span>SCM</span><span>결재</span><span>그룹웨어</span></div></div>
+      <div class="side-grp"><b>Knowledge Assets</b><div class="chips"><span>문서</span><span>KMS</span><span>FAQ</span><span>매뉴얼</span><span>상담 이력</span></div></div>
+    </aside>
+
+    <!-- 센터: 8계층 칩 한 줄 -->
+    <div class="layers">
+      <div class="lyr"><div class="lh"><span class="ln">1</span><span class="lname">경험·접근<small>Experience</small></span></div><div class="chips"><span>에이전트 포털</span><span>코파일럿/챗 UI</span><span>관리자 콘솔</span><span>API Gateway/SDK</span><span>Channels(Portal·Teams·Slack·Voice·Email·API)</span></div></div>
+      <div class="lyr"><div class="lh"><span class="ln">2</span><span class="lname">설계·개발<small>Build</small></span></div><div class="chips"><span>에이전트 설계·저코드</span><span>프롬프트/워크플로우 설계</span><span>Tool Registry</span><span>Agent Registry</span></div></div>
+      <div class="lyr-link"><span class="ll-ar">↕</span> 설계·등록된 도구·Agent를 런타임이 호출</div>
+      <div class="l3">
+        <div class="l3-head"><span class="ln">3</span><span class="l3-title">에이전트 실행환경 <small>Agent Runtime · ★핵심</small></span></div>
+        <div class="l3-iface"><b>Interface</b><span>REST/GraphQL</span><span>WebSocket</span><span>gRPC</span><span>Event Trigger</span></div>
+        <div class="agentcore">
+          <div class="ac-h">에이전트 코어 · Agent Core</div>
+          <div class="ac-main">
+            <div class="ac-box"><div class="acb-h">실행 엔진</div><div class="ac-flow"><span>입력 처리</span><i>▶</i><span>계획·추론</span><i>▶</i><span>행동 실행</span><i>▶</i><span>응답 생성</span><span class="ac-loop">↺</span></div></div>
+            <div class="ac-col">
+              <div class="ac-box"><div class="acb-h">오케스트레이션 · 멀티에이전트</div><div class="ac-chips"><span>Supervisor</span><span>Task Routing</span><span>Agent Coordination(A2A)</span></div><div class="ac-sub">Protocol: MCP · A2A · 멀티에이전트 협업</div></div>
+              <div class="ac-hitl">HITL 런타임 검토 게이트<small>Runtime Review / Approval Gate</small></div>
+            </div>
+            <div class="ac-cluster">
+              <div class="ac-mini"><b>메모리</b><span>대화 히스토리·단기·장기</span></div>
+              <div class="ac-mini"><b>모델 게이트웨이</b><span>내부 라우팅/선택·LLM Provider</span></div>
+              <div class="ac-mini"><b>도구 실행</b><span>도구 선택/호출·결과 파싱/검증</span></div>
+              <div class="ac-mini"><b>안전·가드레일</b><span>정책/권한/안정성 검사·I/O 필터</span></div>
+              <div class="ac-mini wide"><b>에이전트 관리</b><span>라이프사이클 · 권한/역할(RBAC) · 버전 관리 · 모니터링</span></div>
+            </div>
+          </div>
+          <div class="ac-mgmt"><b>관리</b><span>세션·상태</span><span>능력·스킬</span><span>프롬프트·정책</span><span>버전</span><span>관측성</span></div>
+        </div>
+      </div>
+      <div class="lyr"><div class="lh"><span class="ln">4</span><span class="lname">지식·시맨틱<small>Knowledge</small></span></div><div class="chips"><span>온톨로지·시맨틱 모델</span><span>지식그래프</span><span>하이브리드 지식 스토어(Graph·Vector DB)</span><span>컨텍스트 조합·RAG</span></div></div>
+      <div class="lyr"><div class="lh"><span class="ln">5</span><span class="lname">데이터·연동<small>Data/Integration</small></span></div><div class="chips"><span class="flbl">파이프라인</span><span class="ff">수집</span><span class="fa">▶</span><span class="ff">정제</span><span class="fa">▶</span><span class="ff">정규화</span><span class="fa">▶</span><span class="ff">변환</span><span>커넥터(DB·API·SaaS·파일/이벤트)</span><span>데이터 관리</span></div></div>
+      <div class="lyr"><div class="lh"><span class="ln">6</span><span class="lname">AI 품질·평가<small>Evaluation</small></span></div><div class="chips"><span>실험·실행 추적</span><span>품질/근거 평가</span><span>RAI/편향성 평가</span><span>성능/비용 모니터링</span><span>사용자 피드백</span></div></div>
+      <div class="lyr"><div class="lh"><span class="ln">7</span><span class="lname">컨트롤·거버넌스<small>Governance</small></span></div><div class="chips"><span>정책 관리/통제</span><span>에이전트 권한 관리</span><span>HITL 승인 기준</span><span>개인정보 관리</span><span>사용량/배포 거버넌스</span></div></div>
+      <div class="lyr"><div class="lh"><span class="ln">8</span><span class="lname">플랫폼 인프라<small>Infra</small></span></div><div class="chips"><span>컴퓨팅/GPU</span><span>컨테이너/K8s</span><span>네트워크/보안</span><span>RDB/스토리지</span><span>GraphDB/VectorDB</span><span>온프레미스/클라우드</span></div></div>
+    </div>
+
+    <!-- 우: Trust -->
+    <aside class="side trust">
+      <div class="side-h">Trust · Security</div>
+      <div class="side-sub">전 영역 횡단 통제</div>
+      <div class="side-grp"><b>Identity·Access</b><div class="chips"><span>IAM</span><span>SSO</span><span>RBAC</span><span>ABAC</span></div></div>
+      <div class="side-grp"><b>Audit·Explainability</b><div class="chips"><span>감사</span><span>근거</span><span>실행 이력</span></div></div>
+      <div class="side-grp"><b>Security Guardrails</b><div class="chips"><span>PII</span><span>DLP</span><span>Prompt Injection</span></div></div>
+      <div class="side-grp"><b>Private / Closed</b><div class="chips"><span>폐쇄망</span><span>Private 배포</span></div></div>
+    </aside>
+  </div>
+
+  <div style="margin-top:16px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px">
+    시안 포인트 · ① 센터 = 계층마다 <b>칩 한 줄</b> (카드·설명 제거) → 높이 ~절반 ·
+    ② 좌 = 고객 시스템 예시 칩 흡수(SAP·Oracle…) → 안 비어 보임 · ③ 우 = Trust 칩 · ④ L3만 강조(틸).
+  </div>
+</div>
+</body>
+</html>

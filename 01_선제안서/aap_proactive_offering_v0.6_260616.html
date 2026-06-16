@@ -1,0 +1,2286 @@
+<!doctype html>
+<!--
+  ════════════════════════════════════════════════════════════════
+  변경 버전 : v0.6 (260616), 직전본 v0.5 (260616)
+  변경 목적(v0.6) : v0.5 골격(4-1=Operating Loop+Customer Env / 4-2=순수 8계층+Trust 스파인) 유지. "재설계 ✕ 정제 ○".
+    [1] 4-2 chip 표기 체계 정정 — own(자사) 남발 제거. type = normal·core·asset·std·partner·outcome.
+        MCP=std, OCR·Parser·Embedding·Vector Index=normal(구성요소). AI:ON-U·BEAST·Antbot·Business Agent만 asset(계층 하단 별도 row).
+    [2] 4-2를 DEFAULT_ARCH_CHIPS 데이터 기반 renderArchitecture()로 렌더(정적 HTML→JS). 인페이지 chip 에디터(Edit/Save/Reset/Export/Import, localStorage).
+    [3] L1~L8 책임 묶음 + 상세 chip 재정리, L4/L5 중복 정리, 고객용 문구화("지식 인제스션·★AI:ON-U" 등 내부표현 제거).
+    [4] Trust 스파인 라이트 카드(가독성)·폭 확대. 5장 산출물·연계 chip화(라벨/값 분리). 가독성(chip 9.5px, 라벨폭 ↑).
+    백업 : 직전 정적 4-2/스파인 마크업은 v0.5 파일에 보존(재설계 금지 기준선).
+  ────────────────────────────────────────────────────────────────
+  변경 버전 : v0.5 (260616), 직전본 v0.4 (260612)
+  변경 목적(v0.5) : 4-1·4-2 역할 분리 + chip 묶음 카드화 + 캐논 정합.
+    [1] 4-1 = Operating Loop(가로 6단계, 각 단계 한 줄 설명 + 내부 미니플로우 3스텝) + Customer Environment(유형 구분) 이동
+    [2] 4-2 = 순수 8계층 + Trust 스파인(Loop 띠·Customer Env 제거). 컴포넌트를 라벨 묶음 카드로, v310 상세 chip 중요도 선별. L4/L5 과적재 정합 슬림(BPMN·DMN·OCR·Embedding 등 4-3 소관으로). L5는 연결·수집 / 수집·검색 파이프라인(자사 AI:ON-U) / 운영 데이터 3그룹. L3 Agent Core 확장 유지.
+  ────────────────────────────────────────────────────────────────
+  변경 버전 : v0.4 (260612), 직전본 v0.3 (260612)
+  변경 목적 : 4장을 캐논 8계층 아키텍처 정합은 유지하면서 본문에서 직관적으로 읽히게 재구성.
+  주요 변경 영역
+    [1] 4-1 AAP Operating Loop : 업무 관점 6단계 · 단계별 운영 산출물 카드
+    [2] 4-2 AAP Platform Architecture : 8계층 본문형 카드, 중앙 Agent Runtime 최대 배치
+    [3] 4-3 Capability Map : 구축·운영 역량 카드 · 제안 태그
+    [4] 5장 수행 모델 : 단계별 Capability 연계 표기 보강
+    [5] 기호형 연결 표현·해설 의존 문구 제거(2-3·3-3 용어 정합 포함)
+  원본 v0.3 보존 : 01_선제안서/00_현행_aap_proactive_offering_v0.3_260612.html
+  ════════════════════════════════════════════════════════════════
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agentic AI Platform · 고객용 선제안서 v0.5</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2; --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--gray-75);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1320px;margin:0 auto;background:var(--gray-white);min-height:100vh;box-shadow:0 0 0 1px var(--gray-150)}
+
+/* === Section base === */
+section{padding:42px 56px;border-bottom:1px solid var(--line);background:#fff}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:var(--gray-900);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:.03em}
+h2{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15.5px;color:var(--sub);margin:10px 0 0;max-width:980px;line-height:1.7}
+.lead strong{color:var(--ink)}
+.sub-h3{margin:26px 0 10px;font-size:16.5px;letter-spacing:-.01em;color:var(--ink);font-weight:900}
+.sub-h3:first-of-type{margin-top:0}
+.sub-note{font-size:13.5px;color:var(--sub);margin:0 0 10px;line-height:1.7}
+.sub-note strong{color:var(--ink)}
+
+/* === Common grid + card === */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:stretch}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:stretch}
+.card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:16px;box-shadow:0 4px 14px rgba(23,25,28,.03);display:flex;flex-direction:column}
+.card h3{margin:0 0 8px;font-size:15px;letter-spacing:-.01em;color:var(--ink);line-height:1.3;font-weight:900}
+.card p{margin:0;color:var(--gray-600);font-size:13px;line-height:1.65}
+.card p strong{color:var(--ink);font-weight:800}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:900;letter-spacing:.02em;margin-bottom:9px;background:var(--gray-75);color:var(--gray-600);align-self:flex-start}
+
+/* === Note === */
+.note{border-left:4px solid var(--red);background:var(--gray-50);padding:14px 18px;border-radius:10px;color:var(--gray-600);font-size:13.5px;margin-top:16px;line-height:1.7}
+.note strong{color:var(--ink);font-weight:800}
+.note.teal{border-left-color:var(--teal-strong)}
+
+
+/* === [2-1] Data Platform Evolution === */
+.dp-evolution{display:grid;grid-template-columns:1fr 22px 1fr 22px 1fr 22px 1fr;gap:0;align-items:stretch;margin-top:10px}
+.dp-evol-step{border:1px solid var(--line);border-radius:12px;padding:12px 11px;background:#fff;display:flex;flex-direction:column;gap:6px}
+.dp-evol-step.accent{border-color:var(--teal);background:var(--teal2)}
+.dp-evol-num{font-size:9.5px;font-weight:900;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.dp-evol-head b{font-size:12.5px;color:var(--ink);font-weight:900;display:block;line-height:1.25}
+.dp-evol-head span{font-size:10.5px;color:var(--muted);display:block;margin-top:1px;line-height:1.4}
+.dp-evol-pos{font-size:11px;color:var(--gray-700);background:var(--gray-50);border-radius:6px;padding:6px 9px;margin-top:auto;line-height:1.5}
+.dp-evol-neg{font-size:11px;color:var(--gray-600);background:var(--red2);border-radius:6px;padding:6px 9px;line-height:1.5}
+.dp-evol-pos strong,.dp-evol-neg strong{color:var(--ink)}
+.dp-evol-plus{display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--gray-300);font-weight:900}
+
+/* === [2-2] HA, AO Two Axes === */
+.ha-ao-bridge{font-size:12.5px;color:var(--gray-600);margin:14px 0 10px;background:var(--gray-50);border-left:3px solid var(--gray-300);padding:9px 12px;line-height:1.55;border-radius:6px}
+.ha-ao-bridge strong{color:var(--ink)}
+.ha-ao-axis{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff;margin-bottom:10px}
+.ha-ao-axis-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--gray-100)}
+.ha-ao-axis-head em{font-style:normal;font-size:9.5px;font-weight:900;letter-spacing:.1em;color:var(--red);background:var(--red2);padding:3px 8px;border-radius:6px}
+.ha-ao-axis-head b{font-size:13.5px;color:var(--ink);font-weight:900;letter-spacing:-.01em}
+.ha-ao-axis-head span{font-size:11.5px;color:var(--muted);line-height:1.5}
+.ha-ao-axis-head span strong{color:var(--ink)}
+.ha-ao-axis-track{display:grid;grid-template-columns:1fr 22px 1fr 22px 1fr;gap:0;align-items:stretch}
+.ha-ao-step{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfbfc}
+.ha-ao-step.peak{border-color:var(--teal);background:var(--teal2)}
+.ha-ao-step b{display:block;font-size:12.5px;color:var(--ink);font-weight:900;letter-spacing:-.005em;line-height:1.3;margin-bottom:4px}
+.ha-ao-step.peak b{color:var(--teal-strong)}
+.ha-ao-step span{display:block;font-size:10.5px;color:var(--gray-600);line-height:1.5}
+.ha-ao-step small{display:block;margin-top:8px;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.ha-ao-arrow{display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--gray-300);font-weight:900}
+
+/* === [2-3] Operation Chain === */
+.operation-chain{margin-top:10px}
+.operation-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.operation-step{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 12px 12px;text-align:center}
+.operation-step:before{content:attr(data-step);position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--gray-900);color:#fff;font-size:9.5px;font-weight:900;letter-spacing:.04em;padding:2px 8px;border-radius:999px}
+.operation-step b{display:block;font-size:12.5px;color:var(--ink);font-weight:900;line-height:1.3;margin:4px 0 6px}
+.operation-step span{font-size:10.5px;color:var(--muted);line-height:1.5;display:block}
+
+/* === [3-1] AI Compare Board === */
+.ai-compare-board{margin-top:10px}
+.evolution-axis{position:relative;height:28px;margin-bottom:10px}
+.evolution-axis-bar{position:absolute;top:50%;left:8px;right:8px;height:2px;background:linear-gradient(to right,var(--gray-300) 0%,var(--teal) 100%);transform:translateY(-50%);border-radius:999px}
+.evolution-axis-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid var(--gray-400)}
+.evolution-axis-dot.s4{border-color:var(--teal)}
+.evolution-axis-labels{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.02em}
+.evolution-axis-labels .right{color:var(--teal-strong)}
+.ai-compare-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ai-compare-card{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfbfc}
+.ai-compare-card.final{border-color:var(--teal);background:var(--teal2)}
+.ai-compare-card h4{margin:0 0 9px;font-size:13px;color:var(--ink);font-weight:900;letter-spacing:-.01em}
+.ai-compare-card.final h4{color:var(--teal-strong)}
+.ai-compare-row{display:grid;grid-template-columns:62px 1fr;gap:6px;padding:5px 0;border-top:1px solid var(--line);font-size:10.5px}
+.ai-compare-row:first-of-type{border-top:none}
+.ai-compare-row b{font-size:9.5px;font-weight:900;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;padding-top:2px}
+.ai-compare-row span{color:var(--gray-700);line-height:1.45}
+
+/* === [3-2] Platform Model === */
+.platform-model{display:grid;grid-template-columns:1fr 28px 1fr;gap:0;align-items:stretch;margin-top:10px}
+.agent-silos,.control-plane{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}
+.control-plane{border-color:var(--teal);background:var(--teal2)}
+.model-title{margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--gray-100)}
+.model-title b{display:block;font-size:12.5px;font-weight:900;color:var(--ink);letter-spacing:-.005em}
+.model-title span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.5}
+.model-arrow{display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:var(--gray-300)}
+.silo-agents-row,.platform-agents{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px}
+.silo-agent-box,.platform-agent-box{border:1px solid var(--line);border-radius:7px;padding:7px 5px;background:#fbfbfc;text-align:center}
+.silo-tag,.pa-tag{font-size:8.5px;font-weight:900;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;display:block}
+.silo-agent-box b,.platform-agent-box b{display:block;font-size:10.5px;font-weight:800;color:var(--ink);margin-top:2px;line-height:1.25}
+.no-foundation,.platform-container{border:1px dashed var(--gray-400);border-radius:10px;padding:10px;background:var(--gray-50)}
+.platform-container{border:1px solid var(--teal);background:#fff}
+.no-foundation-head,.foundation-head{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.no-foundation-icon{width:18px;height:18px;background:var(--red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px}
+.foundation-icon{width:18px;height:18px;background:var(--teal-strong);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px}
+.no-foundation-label,.foundation-label{font-size:11.5px;font-weight:900;color:var(--ink);letter-spacing:-.005em}
+.foundation-pillars{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+.foundation-pillar{border:1px solid var(--line);border-radius:6px;padding:7px 8px;background:#fff;font-size:10px}
+.foundation-pillar.absent{background:var(--gray-25);opacity:.92}
+.foundation-pillar b{display:block;font-size:11px;font-weight:900;color:var(--ink);line-height:1.2}
+.foundation-pillar .pillar-sub{display:block;font-size:9.5px;color:var(--muted);margin-top:1px;line-height:1.35}
+
+/* === [3-3] AAP One-line === */
+.aap-one-line{padding:16px 20px;border-radius:12px;background:#111;color:#fff;font-size:14.5px;line-height:1.65;font-weight:600;letter-spacing:-.005em;margin-top:10px}
+.aap-one-line span{display:block;font-size:9.5px;font-weight:900;letter-spacing:.16em;color:rgba(255,255,255,.6);margin-bottom:6px;text-transform:uppercase}
+.aap-one-line strong{font-weight:900;color:#fff}
+
+/* === [5] Delivery Model === */
+.delivery-model{border:1px solid var(--line);border-radius:14px;background:#fff;padding:16px;margin-top:10px}
+.delivery-model-body{display:flex;flex-direction:column;gap:14px}
+.delivery-track{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;position:relative}
+.delivery-node{border:1px solid var(--line);border-radius:12px;padding:13px 12px;background:#fbfbfc;display:flex;flex-direction:column;gap:6px;position:relative}
+.delivery-node.accent{border-color:var(--teal);background:var(--teal2)}
+.delivery-node.accent .stage-num{background:var(--teal-strong)}
+.delivery-node .stage-num{display:inline-block;font-size:9.5px;font-weight:900;background:var(--gray-900);color:#fff;padding:2px 8px;border-radius:999px;letter-spacing:.04em;align-self:flex-start}
+.delivery-node h4{margin:4px 0 0;font-size:15px;color:var(--ink);font-weight:900;letter-spacing:-.01em}
+.delivery-node small{display:block;font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.01em}
+.delivery-node p{margin:5px 0 0;font-size:12.5px;color:var(--gray-600);line-height:1.6;min-height:72px}
+.delivery-node p strong{color:var(--ink)}
+.delivery-output{margin-top:9px;padding:9px 11px;border-radius:8px;background:#fff;border:1px dashed var(--gray-300);font-size:11.5px;color:var(--gray-600);line-height:1.7;flex:1}
+.delivery-output span{font-size:10.5px;font-weight:900;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:4px}
+.delivery-node.accent .delivery-output{background:#fff;border-color:var(--teal)}
+
+/* === Table === */
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;font-size:13px;margin-top:16px}
+th{background:var(--gray-900);color:#fff;text-align:left;padding:11px 14px;font-weight:800;font-size:12.5px;letter-spacing:.02em}
+td{padding:11px 14px;border-top:1px solid var(--line);vertical-align:top;color:var(--gray-600);line-height:1.65}
+td strong{color:var(--ink);font-weight:800}
+tr:nth-child(even) td{background:var(--gray-50)}
+
+/* === [6] Industry Block (적용 시나리오) === */
+.industry-block{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+.industry-block-head{padding:13px 16px;background:var(--gray-900);color:#fff}
+.industry-block-head h3{margin:0;font-size:14px;color:#fff;font-weight:900;letter-spacing:-.01em}
+.industry-tagline{font-size:11px;color:rgba(255,255,255,.7);margin-top:3px;line-height:1.4}
+.industry-block-body{padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.industry-row{display:grid;grid-template-columns:75px 1fr;gap:10px;align-items:start}
+.industry-label{font-size:9.5px;font-weight:900;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;padding-top:2px}
+.industry-content{font-size:13px;color:var(--gray-700);line-height:1.6}
+
+/* === [8] Type Cards (고객 유형별 진입) === */
+.type-rows{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.type-card{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+.type-head{padding:13px 18px;background:var(--gray-900);color:#fff;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.type-pill{display:inline-block;background:#fff;color:var(--ink);font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;letter-spacing:.04em}
+.type-title{margin:0;font-size:14.5px;color:#fff;font-weight:900;letter-spacing:-.01em;flex:1}
+.type-sub{font-size:11px;color:rgba(255,255,255,.72);line-height:1.4}
+.type-sub b{color:rgba(255,255,255,.92);font-weight:800;margin-right:5px}
+.type-needs{padding:11px 18px;background:var(--gray-50);border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:baseline}
+.type-needs em{font-style:normal;font-size:9.5px;font-weight:900;letter-spacing:.08em;color:var(--red);background:var(--red2);padding:3px 8px;border-radius:6px;flex-shrink:0}
+.type-needs span{font-size:13.5px;color:var(--gray-700);line-height:1.65}
+.type-needs span strong{color:var(--ink)}
+.type-flow{padding:14px 18px;display:grid;grid-template-columns:1fr 28px 1.4fr 1fr;gap:10px;align-items:stretch;border-bottom:1px solid var(--line)}
+.type-arrow{display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--teal-strong);font-weight:900}
+.type-asis,.type-tobe,.type-effect{padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:#fbfbfc;display:flex;flex-direction:column;gap:6px}
+.type-asis em,.type-tobe em,.type-effect em{font-style:normal;font-size:10.5px;font-weight:900;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.type-asis p,.type-effect p{margin:0;font-size:12.5px;color:var(--gray-700);line-height:1.65}
+.type-asis p strong,.type-effect p strong{color:var(--ink)}
+.type-tobe{background:var(--teal2);border-color:var(--teal)}
+.type-tobe em{color:var(--teal-strong)}
+.tobe-line{display:grid;grid-template-columns:52px 1fr;gap:8px;font-size:12px;align-items:start;padding:4px 0}
+.tobe-line b{font-size:10.5px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
+.tobe-line span{color:var(--gray-700);line-height:1.55}
+.tobe-line span strong{color:var(--ink);font-weight:800}
+.type-effect{background:#fff;border-color:var(--gray-300)}
+.type-arrow{display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--gray-300);font-weight:900}
+.type-examples{padding:11px 18px;background:#fbfbfc}
+.type-examples em{font-style:normal;font-size:9.5px;font-weight:900;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px}
+.example-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.example{padding:7px 10px;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:11px;display:flex;gap:10px;align-items:baseline}
+.example b{font-size:11px;font-weight:900;color:var(--ink);min-width:36px}
+.example span{color:var(--gray-700);line-height:1.5;flex:1}
+
+/* === [7] Reference Card === */
+.ref-card{border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:10px;overflow:hidden}
+.ref-card:last-child{margin-bottom:0}
+.ref-card-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:0}
+.ref-card-grid > div{padding:14px 16px}
+.ref-card-grid > div:first-child{border-right:1px solid var(--gray-100)}
+.ref-card-grid h3{margin:6px 0 6px;font-size:14.5px;letter-spacing:-.01em;color:var(--ink);line-height:1.3;font-weight:900}
+.ref-meta{font-size:11.5px;color:var(--muted);margin:0 0 9px;line-height:1.55}
+.ref-meta strong{color:var(--gray-700);font-weight:800}
+.ref-brief{font-size:13px;color:var(--gray-700);line-height:1.7;margin:0 0 11px}
+.ref-brief strong{color:var(--ink)}
+.ref-next-step{background:var(--gray-50);display:flex;flex-direction:column;gap:6px}
+.ref-next-step-label{font-size:9.5px;font-weight:900;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.ref-next-list{margin:0;padding-left:18px;font-size:11.5px;color:var(--gray-700);line-height:1.6}
+.ref-next-list li{margin:3px 0}
+.ref-next-list li strong{color:var(--ink)}
+
+/* === Table tight (별첨 매트릭스) === */
+.table-tight th,.table-tight td{padding:7px 10px;font-size:11px;line-height:1.55}
+.table-tight th{font-size:11px}
+
+/* === [별첨 A-6] Traceability Map === */
+.traceability-map{margin-top:10px}
+.trace-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.trace-col-head{background:var(--gray-900);color:#fff;padding:9px 12px;border-radius:8px;font-size:11.5px;font-weight:900;letter-spacing:-.005em}
+.trace-cell{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fbfbfc;font-size:11px;line-height:1.6;color:var(--gray-700)}
+.trace-cell b{display:block;font-size:11.5px;font-weight:900;color:var(--ink);margin-bottom:3px}
+.trace-cell.new{border-color:var(--red);background:var(--red2)}
+.trace-cell.new b{color:var(--red)}
+.trace-cell.impl{border-color:var(--teal);background:var(--teal2)}
+.trace-cell.impl b{color:var(--teal-strong)}
+
+/* ============================================================
+   Section 4 (v0.4) : Operating Loop · Platform Architecture · Capability Map
+   ============================================================ */
+.arch-section-lead{font-size:13.5px;color:var(--sub);margin:8px 0 0;line-height:1.6;max-width:1000px}
+.arch-section-lead strong{color:var(--ink)}
+
+/* --- 4-1 Operating Loop --- */
+.operating-loop{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:12px;align-items:stretch}
+.op-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:13px 13px 12px;display:flex;flex-direction:column;box-shadow:0 3px 10px rgba(23,25,28,.03)}
+.op-card .op-n{width:23px;height:23px;border-radius:7px;background:var(--gray-900);color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+.op-card .op-en{font-size:14px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.2}
+.op-card .op-ko{font-size:11px;font-weight:800;color:var(--teal-strong);margin-top:2px}
+.op-card .op-role{font-size:11.5px;color:var(--gray-600);line-height:1.55;margin-top:9px;flex:1}
+.op-output{margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--gray-50);border:1px dashed var(--gray-300)}
+.op-output span{display:block;font-size:8.5px;font-weight:900;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:3px}
+.op-output b{font-size:11px;font-weight:800;color:var(--ink);line-height:1.4}
+.op-card.accent{border-color:var(--teal);background:var(--teal2)}
+.op-card.accent .op-n{background:var(--teal-strong)}
+.op-card.accent .op-output{background:#fff;border-color:var(--teal)}
+
+/* --- 4-2 Platform Architecture · 세로 8계층(적층) + 가로 Loop(순환) + 우측 Trust 횡단 스파인 + 상세 chip --- */
+.arch-frame{margin-top:14px;border:1px solid var(--line);border-radius:16px;background:var(--gray-25);padding:11px}
+
+/* 본체 : 좌 8계층 스택 | 우 Trust 횡단 스파인 */
+.arch-body{display:grid;grid-template-columns:minmax(0,1fr) 212px;gap:9px;align-items:stretch}
+.arch-stack{display:flex;flex-direction:column;gap:6px;min-width:0}
+.arch-row{display:grid;grid-template-columns:184px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:10px;background:#fff;padding:9px 12px}
+.arch-row .arch-ln{display:flex;align-items:center;gap:8px}
+.arch-row .arch-ln .n{width:22px;height:22px;border-radius:6px;background:var(--gray-900);color:#fff;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.arch-row .arch-ln .lt{font-size:12px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.2}
+.arch-row .arch-ln .lt small{display:block;font-size:8.5px;font-weight:700;color:var(--muted);letter-spacing:0}
+.arch-comps{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+.arch-comps span.cp{font-size:9.5px;font-weight:700;color:var(--sub);background:var(--gray-50);border:1px solid var(--line);border-radius:6px;padding:2px 7px;line-height:1.3}
+.arch-comps span.cp.own{background:var(--teal-strong);color:#fff;border-color:var(--teal-strong);font-weight:800}
+
+/* 미니플로우 : 계층 내부 처리 순서(콘텐츠) */
+.mflow{display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;background:var(--teal2);border:1px solid #cfe7e5;border-radius:7px;padding:2px 7px}
+.mflow .mlab{font-size:8px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em;margin-right:1px}
+.mflow .mstep{font-size:9px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid #cfe7e5;border-radius:5px;padding:2px 6px}
+.mflow .mchv{color:var(--teal);font-weight:900;font-size:9px}
+
+/* L3 강조 행 (가장 큼) */
+.arch-row.l3{display:block;border:1.5px solid var(--teal);background:var(--teal2);padding:11px 12px}
+.arch-row.l3 .l3-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.arch-row.l3 .l3-head .n{width:22px;height:22px;border-radius:6px;background:var(--teal-strong);color:#fff;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.arch-row.l3 .l3-head .lt{font-size:13px;font-weight:900;color:var(--teal-strong);letter-spacing:-.01em;line-height:1.2}
+.arch-row.l3 .l3-head .lt small{font-size:8.5px;font-weight:700;color:var(--muted);margin-left:4px}
+.arch-row.l3 .l3-iface{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:8px}
+.arch-row.l3 .l3-iface b{font-size:8.5px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em}
+.arch-row.l3 .l3-iface span{font-size:9.5px;font-weight:700;color:var(--sub);background:#fff;border:1px solid #cfe7e5;border-radius:6px;padding:2px 7px}
+.arch-core{border:1px solid #cfe7e5;background:#fff;border-radius:10px;padding:9px 10px}
+.arch-core-h{font-size:8.5px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.arch-core-grid{display:grid;grid-template-columns:1.5fr 1.1fr;gap:7px;align-items:start}
+.acx{border:1px solid var(--gray-100);border-radius:7px;background:var(--gray-50);padding:7px 8px}
+.acx-h{font-size:9.5px;font-weight:900;color:var(--ink);margin-bottom:6px;letter-spacing:-.005em}
+.acx-engine{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+.acx-engine .es{font-size:9.5px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid #cfe7e5;border-radius:5px;padding:3px 7px}
+.acx-engine .ec{color:var(--teal);font-weight:900;font-size:10px}
+.acx-sub{font-size:8.5px;font-weight:700;color:var(--muted);margin-top:6px}
+.acx-chips{display:flex;flex-wrap:wrap;gap:3px}
+.acx-chips span{font-size:9px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--gray-100);border-radius:5px;padding:2px 6px}
+.acx-chips span.own{background:var(--teal-strong);color:#fff;border-color:var(--teal-strong);font-weight:800}
+.acx-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:7px}
+.acx-mini > div{border:1px solid var(--gray-100);border-radius:6px;background:var(--gray-50);padding:5px 7px}
+.acx-mini > div.wide{grid-column:1/-1}
+.acx-mini b{display:block;font-size:9.5px;font-weight:900;color:var(--ink);line-height:1.2}
+.acx-mini span{font-size:8.5px;font-weight:600;color:var(--muted);line-height:1.3}
+.arch-hitl{margin-top:8px;border:1.5px solid var(--teal);background:#fff;border-radius:8px;padding:8px 11px;text-align:center}
+.arch-hitl b{font-size:11px;font-weight:900;color:var(--teal-strong);letter-spacing:-.005em}
+.arch-hitl span{display:block;font-size:8.5px;font-weight:700;color:var(--muted);margin-top:2px}
+.hitl-branch{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin-top:7px}
+.hitl-branch span{font-size:9px;font-weight:800;color:var(--teal-strong);background:var(--teal2);border:1px solid #cfe7e5;border-radius:5px;padding:2px 9px}
+
+/* 우측 Trust 횡단 스파인 (전 영역 공통 · 풀하이트) */
+.arch-spine{background:var(--gray-25);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;color:var(--ink)}
+.arch-spine-h{font-size:11.5px;font-weight:900;color:var(--ink);letter-spacing:-.005em;line-height:1.25}
+.arch-spine-h small{display:block;font-size:8.5px;font-weight:700;color:var(--muted);margin-top:2px}
+.arch-spine-tag{font-size:8px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.06em;margin:8px 0 9px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.arch-spine-list{display:flex;flex-direction:column;gap:7px;flex:1}
+.arch-spine-card{flex:1;display:flex;flex-direction:column;justify-content:center;background:#fff;border:1px solid var(--line);border-left:3px solid var(--teal-strong);border-radius:8px;padding:8px 10px}
+.arch-spine-card b{font-size:10px;font-weight:900;color:var(--ink);line-height:1.25}
+.arch-spine-card .ko{display:block;font-size:8.5px;font-weight:700;color:var(--muted);margin:2px 0 0;line-height:1.3}
+.arch-spine-card .desc{display:block;font-size:8.5px;font-weight:600;color:var(--sub);line-height:1.45;margin-top:6px}
+.arch-spine-card .tt{display:flex;flex-wrap:wrap;gap:3px}
+.arch-spine-card .tt span{font-size:8px;font-weight:700;color:var(--sub);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:5px;padding:1px 6px;line-height:1.3}
+
+/* 하단 : Customer Environment 연결 대상(외부 자산) */
+.arch-cust{margin-top:9px;border:1.5px dashed var(--gray-400);border-radius:11px;background:var(--gray-50);padding:9px 12px}
+.arch-cust-h{font-size:11px;font-weight:900;color:var(--ink);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.arch-cust-h small{font-size:9px;font-weight:700;color:var(--muted)}
+.arch-cust-note{font-size:9.5px;color:var(--gray-600);line-height:1.5;margin:5px 0 8px}
+.arch-cust-note strong{color:var(--ink)}
+.arch-cust-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.arch-cust-groups > span{font-size:9.5px;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:7px;padding:6px 9px;line-height:1.4}
+.arch-cust-groups b{display:block;font-size:10px;font-weight:800;color:var(--ink);margin-bottom:2px}
+
+/* 자사 자산 범례 */
+.arch-legend{display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;color:var(--muted);margin-top:9px}
+.arch-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--teal-strong)}
+/* --- v0.5 : 4-1 카드 내부 미니플로우 + Customer Env를 4-1로 --- */
+.op-mini{margin-top:9px;border-top:1px dashed var(--line);padding-top:7px;display:flex;flex-direction:column;gap:3px}
+.op-mini .om-s{font-size:9px;font-weight:800;color:var(--sub);background:var(--gray-50);border:1px solid var(--line);border-radius:5px;padding:2px 6px;text-align:center;line-height:1.25}
+.op-mini .om-c{text-align:center;color:var(--gray-300);font-size:8px;line-height:.4}
+.op-card.accent .op-mini .om-s{color:var(--teal-strong);border-color:#cfe7e5;background:#fff}
+.op-conn{text-align:center;font-size:9px;font-weight:900;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:11px 0 8px}
+.cust41{border:1.5px dashed var(--gray-400);border-radius:12px;background:var(--gray-50);padding:11px 15px;display:grid;grid-template-columns:158px 1fr;gap:14px;align-items:center}
+.cust41-h{font-size:12.5px;font-weight:900;color:var(--ink)}
+.cust41-h small{display:block;font-size:9px;font-weight:700;color:var(--muted);margin-top:2px}
+.cust41-rows{display:flex;flex-direction:column;gap:6px}
+.cust41-row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center}
+.cust41-row .ck{font-size:9px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cust41-row .cv{display:flex;flex-wrap:wrap;gap:5px}
+.cust41-row .cv span{font-size:10px;font-weight:800;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 9px}
+/* --- v0.5 : 4-2 묶음 카드(라벨+chip) --- */
+.arch-groups{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;min-width:0}
+.cg{border:1px solid var(--line);border-radius:8px;background:var(--gray-50);padding:5px 8px}
+.cg.own-grp{border-color:#cfe7e5;background:var(--teal2)}
+.cg-h{font-size:8px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.cg.own-grp .cg-h{color:var(--teal-strong)}
+.cg-chips{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+.cg-chips span{font-size:9px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.3}
+.cg-chips span.own{background:var(--teal-strong);color:#fff;border-color:var(--teal-strong);font-weight:800}
+.cg .mflow{background:none;border:0;padding:0}
+/* v0.5 재정비 : 라벨 서브행 + 사각 chip / 틸 미니플로우(분리) + L3 컴팩트 */
+.arch-frame .subs{display:flex;flex-direction:column;gap:5px;min-width:0}
+.arch-frame .sub{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px;align-items:center}
+.arch-frame .sub .sl{font-size:8px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;line-height:1.25}
+.arch-frame .sub.own-sub .sl{color:var(--teal-strong)}
+.arch-frame .chips{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+.arch-frame .chips > span{font-size:9px;font-weight:700;color:#5f6670;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:5px;padding:2px 7px;line-height:1.3}
+.arch-frame .chips > span.own{color:#fff;background:var(--teal-strong);border-color:var(--teal-strong);font-weight:800}
+.arch-frame .chips > span.out{color:var(--teal-strong);background:var(--teal2);border-color:var(--teal);font-weight:800}
+.arch-frame .chips .mchv{color:var(--teal);font-weight:900;font-size:10px;margin:0 1px}
+.arch-frame .mflow .mloop{color:var(--teal-strong);font-weight:900;font-size:10px;margin-left:2px}
+.arch-row.l3 .l3-head{flex-wrap:wrap}
+.arch-row.l3 .l3-head .l3-iface{margin-left:auto;margin-bottom:0}
+.arch-row.l3 .l3-head-flow{margin-left:auto;display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
+.arch-row.l3 .l3-flow{display:inline-flex;align-items:center;gap:7px}
+.arch-row.l3 .l3-flow-l{font-size:8px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em}
+.arch-row.l3 .arch-core{padding:8px 10px}
+
+/* 3-2 Platform 모델 : Agent 상호 연결(A2A) 강조 */
+.platform-agents.connected{position:relative;padding-top:13px}
+.platform-agents.connected::before{content:"";position:absolute;top:5px;left:9%;right:9%;height:2px;background:var(--teal);border-radius:2px}
+.platform-agents.connected .platform-agent-box{position:relative;border-color:#99e6e0}
+.platform-agents.connected .platform-agent-box::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:var(--teal-strong);border:2px solid #fff;box-shadow:0 0 0 1px var(--teal)}
+.pa-link-note{text-align:center;font-size:9.5px;font-weight:800;color:var(--teal-strong);margin:-4px 0 10px;letter-spacing:.02em}
+/* 미니플로우 : chip과 시각 구분 (teal 트랙 + 연결 노드 + 화살표 = 흐름) */
+.mflow{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;background:var(--teal2);border:1px solid var(--teal);border-radius:999px;padding:3px 11px 3px 9px}
+.mflow .mlab{font-size:7.5px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.05em;margin-right:3px}
+.mflow .mstep{font-size:9px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid var(--teal);border-radius:999px;padding:2px 8px}
+.mflow .mchv{color:var(--teal-strong);font-weight:900;font-size:11px;margin:0 1px}
+.acx-engine{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;background:var(--teal2);border:1px solid var(--teal);border-radius:999px;padding:3px 10px}
+.acx-engine .es{font-size:9px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid var(--teal);border-radius:999px;padding:2px 8px}
+.acx-engine .ec{color:var(--teal-strong);font-weight:900;font-size:11px;margin:0 1px}
+.acx-engine::after{content:"\21bb 반복";color:var(--teal-strong);font-weight:900;font-size:9px;margin-left:3px}
+/* Execution Loop 상단 띠 화살표 강조 */
+.lr-arr{color:var(--teal)!important;font-weight:900;font-size:13px!important}
+/* Execution Loop · 순환 사이클(맥락 포함) */
+.arch-loop2{background:var(--gray-900);border-radius:12px;padding:10px 13px 9px;margin-bottom:9px}
+.arch-loop2-cap{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.arch-loop2-cap b{font-size:11px;font-weight:900;color:#fff;letter-spacing:.05em;text-transform:uppercase}
+.arch-loop2-cap span{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5)}
+.loop-ring{display:flex;align-items:stretch;gap:4px}
+.lr-step{flex:1;min-width:0;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 4px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.lr-step .lr-n{width:16px;height:16px;border-radius:50%;background:var(--teal);color:var(--gray-900);font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;font-style:normal;margin-bottom:3px}
+.lr-step b{font-size:10.5px;font-weight:800;color:#fff;line-height:1.15}
+.lr-step small{font-size:8.5px;font-weight:600;color:rgba(255,255,255,.6);margin-top:1px}
+.lr-arr{align-self:center;color:var(--teal);font-weight:900;font-size:11px;font-style:normal}
+.loop-back{margin-top:8px;border-top:1px dashed rgba(255,255,255,.18);padding-top:7px;font-size:9.5px;font-weight:700;color:var(--teal);display:flex;align-items:center;gap:7px;line-height:1.4}
+.loop-back .lb-ic{font-size:14px;font-weight:900}
+@media (max-width:760px){.loop-ring{flex-wrap:wrap}.lr-step{flex:1 1 28%}.lr-arr{display:none}}
+/* --- Section 4 responsive --- */
+@media (max-width:1100px){
+  .arch-row{grid-template-columns:130px minmax(0,1fr)}
+}
+@media (max-width:900px){
+  .operating-loop{grid-template-columns:repeat(3,1fr)}
+  .arch-body{grid-template-columns:minmax(0,1fr) 158px}
+  .arch-core-grid{grid-template-columns:1fr}
+  .acx-mini{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  .arch-body{grid-template-columns:1fr}
+  .arch-spine{flex-direction:row;flex-wrap:wrap;align-items:stretch}
+  .arch-spine-h,.arch-spine-tag{width:100%}
+  .arch-spine-tag{margin-bottom:4px}
+  .arch-spine-list{flex-direction:row;flex-wrap:wrap;width:100%}
+  .arch-spine-card{flex:1 1 150px}
+  .arch-row{grid-template-columns:1fr;gap:7px}
+  .arch-cust-groups{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .operating-loop{grid-template-columns:repeat(2,1fr)}
+  .acx-mini{grid-template-columns:1fr}
+}
+
+/* === Footer === */
+.footer{padding:22px 56px;background:#111;color:#fff;display:flex;justify-content:space-between;gap:20px;font-size:12px}
+.footer div{color:rgba(255,255,255,.68)}
+
+/* === Responsive === */
+@media (max-width:1100px){
+  .dp-evolution,.ha-ao-axis-track{grid-template-columns:1fr;gap:6px}
+  .dp-evol-plus,.ha-ao-arrow{transform:rotate(90deg);padding:4px 0}
+  .platform-model{grid-template-columns:1fr;gap:8px}
+  .model-arrow{transform:rotate(90deg);padding:4px 0}
+}
+
+/* ════════ v0.6 : 4-2 데이터 기반 렌더 · chip 표기 체계 · asset row · 가독성 ════════ */
+#archStack .chiprow{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+#archStack .chip{font-size:9.5px;font-weight:700;border-radius:6px;padding:2px 8px;line-height:1.3;display:inline-flex;align-items:center;white-space:nowrap}
+#archStack .chip-normal{color:#5f6670;background:var(--gray-50);border:1px solid var(--gray-100)}
+#archStack .chip-core{color:var(--teal-strong);background:var(--teal2);border:1px solid var(--teal);font-weight:900}
+#archStack .chip-core::before{content:"\2605";font-size:8px;margin-right:2px}
+#archStack .chip-std{color:#5f6670;background:#fff;border:1px dashed var(--gray-400)}
+#archStack .chip-std::before{content:"STD";font-size:6.5px;font-weight:900;color:var(--muted);margin-right:3px;letter-spacing:.02em}
+#archStack .chip-partner{color:var(--teal-strong);background:#fff;border:1px dashed var(--teal)}
+#archStack .chip-partner::before{content:"PARTNER";font-size:6.5px;font-weight:900;color:var(--teal);margin-right:3px;letter-spacing:.02em}
+#archStack .chip-outcome{color:var(--teal-strong);background:#fff;border:1px solid var(--teal);font-weight:800}
+#archStack .chip-asset{color:var(--teal-strong);background:#fff;border:1.5px solid var(--teal-strong);font-weight:800}
+#archStack .chip-sep{flex-basis:100%;font-size:7.5px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:5px 0 1px;padding-top:5px;border-top:1px dashed #e0e3e8}
+#archStack .layer-conn{display:flex;justify-content:center;margin:-1px 0}
+#archStack .layer-conn span{font-size:10px;font-weight:900;color:var(--gray-300);line-height:1}
+
+/* asset row (활용 가능 자산) */
+#archStack .asset-row{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px;align-items:center;margin-top:6px;padding-top:6px;border-top:1px dashed #e6e8ec}
+#archStack .asset-label{font-size:8px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em}
+#archStack .asset-chips{display:flex;flex-wrap:wrap;gap:4px}
+
+/* L3 강조계층 : 다군 → 2열 카드 */
+#archStack .l3-groups{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#archStack .l3-grp{border:1px solid var(--gray-100);border-radius:7px;background:var(--gray-50);padding:6px 8px;min-width:0}
+#archStack .l3-grp.wide{grid-column:1/-1;background:#fff;border-color:#cfe7e5}
+#archStack .l3-grp .gl{font-size:8px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}
+#archStack .l3-grp.wide .gl{color:var(--teal-strong)}
+
+/* 표기 범례 */
+.arch-legend2{display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:9px;font-weight:700;color:var(--muted);margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.arch-legend2 b{color:var(--ink);font-weight:900}
+.arch-legend2 .lg{display:inline-flex;align-items:center;gap:5px}
+.arch-legend2 .lg i{font-style:normal;font-weight:900;font-size:7.5px;border-radius:4px;padding:1px 6px;letter-spacing:.02em}
+.arch-legend2 .i-core{color:var(--teal-strong);background:var(--teal2);border:1px solid var(--teal)}
+.arch-legend2 .i-asset{color:var(--teal-strong);background:#fff;border:1.5px solid var(--teal-strong)}
+.arch-legend2 .i-std{color:var(--muted);background:#fff;border:1px dashed var(--gray-400)}
+.arch-legend2 .i-partner{color:var(--teal-strong);background:#fff;border:1px dashed var(--teal)}
+
+/* 5장 delivery : 라벨/값 분리 + chip화 */
+.delivery-tags{display:flex;flex-wrap:wrap;gap:4px}
+.delivery-tags span{font-size:10px;font-weight:600;color:var(--gray-600);background:#fff;border:1px solid var(--line);border-radius:7px;padding:3px 8px;line-height:1.3}
+.delivery-link{margin-top:auto;display:block;padding-top:10px}
+.delivery-link > span{font-size:10px;font-weight:900;letter-spacing:.05em;color:var(--teal-strong);text-transform:uppercase;display:block;margin-bottom:5px}
+.delivery-link .delivery-tags span{color:var(--teal-strong);border-color:#cfe7e5;background:var(--teal2);font-weight:700}
+.delivery-node.accent .delivery-link .delivery-tags span{background:#fff}
+
+/* ════ v0.6 : L3 '에이전트 코어' 도식(아키텍처 이미지 정합) · L5 flow-under-title · 3-2 미연결 ════ */
+.l3-iface-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:9px 0}
+.l3-iface-row b{font-size:8px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em}
+.l3-iface-row .ifc{font-size:9px;font-weight:700;color:var(--sub);background:#fff;border:1px solid #cfe7e5;border-radius:6px;padding:3px 10px}
+.agent-core{border:1px solid #cfe7e5;background:#fff;border-radius:10px;padding:10px 11px}
+.agent-core .ac-h{font-size:8.5px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.agent-core .ac-h small{font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px}
+.ac-engine{border:1px solid var(--teal);background:var(--teal2);border-radius:9px;padding:9px 11px;margin-bottom:8px}
+.agent-core .acb-h{font-size:9.5px;font-weight:900;color:var(--ink);margin-bottom:6px}
+.agent-core .acb-h small{font-weight:600;color:var(--muted);margin-left:3px}
+.eng-flow{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.eng-flow .es{font-size:9.5px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid var(--teal);border-radius:999px;padding:4px 13px}
+.eng-flow i{color:var(--teal-strong);font-style:normal;font-weight:900;font-size:12px}
+.eng-fb{margin-top:7px;font-size:8.5px;font-weight:800;color:var(--teal-strong);border-top:1px dashed #cfe7e5;padding-top:6px}
+.ac-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.agent-core .ac-box{border:1px solid var(--gray-100);background:var(--gray-50);border-radius:8px;padding:8px 9px;min-width:0}
+.ac-box .acb-items{display:flex;flex-wrap:wrap;gap:4px}
+.ac-box .acb-items span{font-size:8.5px;font-weight:700;color:var(--sub);background:#fff;border:1px solid var(--gray-100);border-radius:5px;padding:2px 7px;line-height:1.3}
+.ac-box .acb-note{font-size:8px;font-weight:700;color:var(--muted);margin-top:5px;line-height:1.3}
+.ac-box .acb-flow{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ac-box .acb-flow span{font-size:8.5px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid #cfe7e5;border-radius:6px;padding:3px 8px}
+.ac-box .acb-flow i{color:var(--teal);font-style:normal;font-weight:900}
+.ac-hitl{margin-top:8px;background:var(--teal-strong);border-radius:9px;padding:10px 12px;text-align:center;display:flex;flex-direction:column;gap:3px}
+.ac-hitl b{font-size:12px;font-weight:900;color:#fff;letter-spacing:-.01em}
+.ac-hitl span{font-size:8.5px;font-weight:700;color:rgba(255,255,255,.85)}
+.ac-band{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)}
+.ac-band span{font-size:8px;font-weight:700;color:var(--muted);text-align:center;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:6px;padding:6px 4px;line-height:1.3}
+.arch-row.l3 .asset-row{margin-top:9px}
+#archStack .arch-row.has-flow{align-items:start}
+#archStack .arch-ln{flex-direction:column;align-items:flex-start;gap:0}
+#archStack .ln-top{display:flex;align-items:center;gap:8px}
+#archStack .ln-flow{display:flex;flex-direction:column;gap:5px;width:100%;padding-top:8px;border-top:1px dashed var(--gray-100)}
+#archStack .ln-flow .ln-flow-l{font-size:8px;font-weight:900;color:var(--teal-strong);text-transform:uppercase;letter-spacing:.03em}
+.silo-agents-row.disconnected{position:relative;padding-top:13px}
+.silo-agents-row.disconnected .silo-agent-box{position:relative}
+.silo-agents-row.disconnected::before{content:"";position:absolute;top:5px;left:9%;right:9%;height:2px;background:repeating-linear-gradient(90deg,var(--gray-300) 0 4px,transparent 4px 13px)}
+.silo-agents-row.disconnected .silo-agent-box::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:#fff;border:2px solid var(--gray-300);box-shadow:0 0 0 1px #e6e8ec}
+.silo-link-note{text-align:center;font-size:9.5px;font-weight:800;color:var(--muted);margin:-4px 0 10px;letter-spacing:.02em}
+
+/* ════ v0.6 : 계층 Role + Operating Loop Tag (4-1↔4-2 연결) ════ */
+#archStack .layer-role{font-size:9.5px;font-weight:600;color:var(--gray-600);line-height:1.5;margin-top:6px}
+#archStack .loop-tags{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin-top:7px}
+#archStack .loop-tags b{font-size:7px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+#archStack .loop-tags span{font-size:7.5px;font-weight:900;letter-spacing:.03em;color:var(--teal-strong);background:var(--teal2);border:1px solid #cfe7e5;border-radius:999px;padding:2px 7px;line-height:1.2}
+/* L3 도식 : role 풀폭 · loop 우측 · 보조문구 */
+.arch-row.l3 .l3-head{flex-wrap:wrap}
+.arch-row.l3 .loop-tags{margin-left:auto;margin-top:0}
+.arch-row.l3 .layer-role{font-size:10px;margin:7px 0 0;max-width:760px}
+.l3-note{font-size:9px;font-weight:600;color:var(--muted);line-height:1.55;margin-top:9px;padding-top:8px;border-top:1px dashed #cfe7e5}
+/* L7 vs Trust 구분 캡션 */
+.arch-distinct{font-size:9.5px;color:var(--sub);line-height:1.55;margin-top:9px;padding:8px 11px;background:var(--gray-50);border:1px solid var(--line);border-radius:8px}
+.arch-distinct b{color:var(--ink);font-weight:800}
+
+/* ════ v0.6 : 계층 요약(핵심 영역) + 상세 토글 ════ */
+#archStack .layer-right{min-width:0}
+#archStack .lr-head{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
+#archStack .sm-chips{display:flex;flex-wrap:wrap;align-items:center;gap:4px;flex:1;min-width:0}
+#archStack .sm-chips span{font-size:9px;font-weight:700;color:var(--sub);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:6px;padding:3px 9px;line-height:1.3}
+#archStack .sm-chips span.sm-asset{color:var(--teal-strong);border-color:#cfe7e5;background:var(--teal2);font-weight:800}
+#archStack .layer-toggle{flex:0 0 auto;font-size:9px;font-weight:800;color:var(--teal-strong);background:#fff;border:1px solid var(--teal);border-radius:999px;padding:3px 12px;cursor:pointer;line-height:1.3;white-space:nowrap}
+#archStack .layer-toggle:hover{background:var(--teal2)}
+#archStack .layer-detail{display:none;margin-top:10px}
+#archStack .arch-row.expanded .layer-detail{display:block}
+#archStack .arch-row.expanded .sm-chips{display:none}
+#archStack .arch-row.l3 .layer-summary{margin-top:8px}
+#archStack .arch-row.l3 .l3-head .layer-toggle{margin-left:8px}
+
+/* ════ v0.6 : 펼친 상세 = L3식 카드 박스 그리드 ════ */
+#archStack .layer-core{border:1px solid var(--line);background:var(--gray-25);border-radius:10px;padding:9px}
+#archStack .lc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#archStack .layer-core .ac-box{border:1px solid var(--gray-100);background:#fff;border-radius:8px;padding:8px 9px;min-width:0}
+#archStack .layer-core .ac-box.is-flow{grid-column:1/-1;border-color:#cfe7e5;background:var(--teal2)}
+#archStack .layer-core .acb-h{font-size:9px;font-weight:900;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;flex-wrap:wrap;gap:2px}
+#archStack .layer-core .ac-box.add-card{border-style:dashed;display:flex;align-items:center;justify-content:center;background:transparent}
+#archStack .layer-core .asset-row{margin-top:8px}
+</style>
+</head>
+<body>
+<div class="page">
+
+
+<!-- ============ 01. Enterprise AI의 현 주소 ============ -->
+<section id="s1">
+  <div class="section-head">
+    <div class="num">01</div>
+    <div>
+      <h2>Enterprise AI의 현 주소</h2>
+      <p class="lead">Data Platform·LLM·RAG·Copilot 기반은 이미 확보, 전사 운영 확장에 구조적 병목 4가지 잔존</p>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <div class="card">
+      <span class="badge">① 표준 부재</span>
+      <h3>단편적 AI 도입</h3>
+      <p>용어·정책·권한 기준 분산, 유사 PoC·중복 투자 반복</p>
+    </div>
+    <div class="card">
+      <span class="badge">② 실행 연계 부족</span>
+      <h3>AI 결과 ↔ 처리 흐름 단절</h3>
+      <p>RAG·Copilot 결과가 ERP·CRM·결재로 미연결, 사람이 복사·재입력</p>
+    </div>
+    <div class="card">
+      <span class="badge">③ 책임 경계 불명확</span>
+      <h3>검토·승인 기준 모호</h3>
+      <p>자동/수동 경계·책임 소재 미정, 자동화 확대 보류</p>
+    </div>
+    <div class="card">
+      <span class="badge">④ 운영 학습 부족</span>
+      <h3>PoC 자산화 미비</h3>
+      <p>판단 근거·반려 사유·예외가 자산화 안 됨, 매번 새로 시작</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02. 운영 중심 Enterprise AI로의 전환 ============ -->
+<section id="s2">
+  <div class="section-head">
+    <div class="num">02</div>
+    <div>
+      <h2>'운영 중심' Enterprise AI로의 전환</h2>
+      <p class="lead">4가지 병목은 AI 기능 추가로 미해결 — <strong>공통 빈 영역</strong> 인식 + <strong>패러다임 변화</strong> 수용 + <strong>실행 구조</strong> 동시 설계 필요</p>
+    </div>
+  </div>
+
+  <!-- 2-1 -->
+  <h3 class="sub-h3">2-1. Data Platform의 단계적 확장: AI 활용 중심</h3>
+  <p class="sub-note">AI 활용은 <strong>분석·예측, RAG, Copilot</strong> 순 확장, <strong>판단·실행·통제·학습</strong> 영역은 매 단계 공백</p>
+
+  <div class="dp-evolution" aria-label="Data Platform 위 AI 활용 확장의 단계별 발전">
+    <div class="dp-evol-step">
+      <span class="dp-evol-num">STAGE 01</span>
+      <div class="dp-evol-head">
+        <b>Data Platform</b>
+        <span>Lakehouse · DW · Mart · Catalog · BI</span>
+      </div>
+      <div class="dp-evol-pos">데이터 <strong>통합·정제·시각화</strong> 기반 확보</div>
+      <div class="dp-evol-neg">분석 이후 <strong>판단·승인·실행</strong>은 사람이 담당</div>
+    </div>
+    <div class="dp-evol-plus">+</div>
+    <div class="dp-evol-step">
+      <span class="dp-evol-num">STAGE 02</span>
+      <div class="dp-evol-head">
+        <b>분석 · 예측 AI</b>
+        <span>ML 모델 · 예측 · 분류 · 추천</span>
+      </div>
+      <div class="dp-evol-pos"><strong>의사결정 보조·사전 감지</strong> 능력 확보</div>
+      <div class="dp-evol-neg"><strong>언제·누가</strong> 실행할지, <strong>어떤 이력</strong>을 남길지 미정</div>
+    </div>
+    <div class="dp-evol-plus">+</div>
+    <div class="dp-evol-step">
+      <span class="dp-evol-num">STAGE 03</span>
+      <div class="dp-evol-head">
+        <b>RAG · AI 검색</b>
+        <span>LLM · 벡터검색 · 자연어 탐색</span>
+      </div>
+      <div class="dp-evol-pos"><strong>문서·데이터 접근성</strong>과 근거 기반 답변</div>
+      <div class="dp-evol-neg"><strong>정책·권한·예외</strong>가 처리 경로로 이어지지 않음</div>
+    </div>
+    <div class="dp-evol-plus">+</div>
+    <div class="dp-evol-step">
+      <span class="dp-evol-num">STAGE 04</span>
+      <div class="dp-evol-head">
+        <b>Copilot UI</b>
+        <span>대화형 인터페이스 · 초안 · 요약</span>
+      </div>
+      <div class="dp-evol-pos">진입장벽 ↓, <strong>분석·검색·요약 가속</strong></div>
+      <div class="dp-evol-neg"><strong>시스템 반영·감사·학습</strong>은 별도로 남음</div>
+    </div>
+  </div>
+
+  <!-- 2-2 -->
+  <h3 class="sub-h3">2-2. Human Analytics에서 Agentic Operation으로</h3>
+  <p class="sub-note">기존: <strong>Human Analytics</strong>(사람이 보고·판단·입력), Agent 합류 시: 사람과 같은 <strong>의미·정책·권한</strong> 해석 + <strong>실행·검토·학습</strong> 연결 구조</p>
+
+  <p class="ha-ao-bridge">두 축이 함께 진화 — <strong>자원 구조</strong>(데이터 형태) + <strong>수행 주체</strong>(누가 일하는가)</p>
+
+  <!-- 축 ① 자원 구조 -->
+  <div class="ha-ao-axis">
+    <div class="ha-ao-axis-head">
+      <em>축 ①</em>
+      <b>자원 구조의 변화</b>
+      <span>Agent가 사람과 같은 <strong>의미·정책·권한</strong>으로 데이터를 해석할 수 있어야 함</span>
+    </div>
+    <div class="ha-ao-axis-track">
+      <div class="ha-ao-step">
+        <b>정적 분석 데이터</b>
+        <span>Lakehouse · Warehouse · BI 리포트</span>
+        <small>Data Platform 단독</small>
+      </div>
+      <div class="ha-ao-arrow">·</div>
+      <div class="ha-ao-step">
+        <b>+ 의미·정책·권한 해석</b>
+        <span>Metadata · Ontology · Metric · Knowledge Asset</span>
+        <small>+ Data Intelligence 보강</small>
+      </div>
+      <div class="ha-ao-arrow">·</div>
+      <div class="ha-ao-step peak">
+        <b>의도·맥락 반응 동적 자원</b>
+        <span>요청 시점의 의도·권한·이력을 반영해 그때마다 구성</span>
+        <small>Agent 즉시 활용 가능</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- 축 ② 수행 주체 -->
+  <div class="ha-ao-axis">
+    <div class="ha-ao-axis-head">
+      <em>축 ②</em>
+      <b>수행 주체의 변화</b>
+      <span><strong>AI Agent가 새로운 업무 수행자</strong>로 합류하게 됨</span>
+    </div>
+    <div class="ha-ao-axis-track">
+      <div class="ha-ao-step">
+        <b>사람 단독</b>
+        <span>해석·판단·시스템 입력·실행 모두 사람 몫</span>
+        <small>Human Analytics</small>
+      </div>
+      <div class="ha-ao-arrow">·</div>
+      <div class="ha-ao-step">
+        <b>사람과 Agent의 의미 공유</b>
+        <span>동일한 용어·정책 위에서 Agent가 데이터를 해석</span>
+        <small>의미 기반 협업 진입</small>
+      </div>
+      <div class="ha-ao-arrow">·</div>
+      <div class="ha-ao-step peak">
+        <b>사람 + Agent 협업 운영</b>
+        <span>Agent: 판단 후보·실행 후보 / 사람: 검토·승인·예외</span>
+        <small>Agentic Operation</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2-3 -->
+  <h3 class="sub-h3">2-3. Agentic Operation의 5가지 조건</h3>
+  <p class="sub-note">AI 자동 판단이 아니라 <strong>의미화·판단·실행·검토·학습</strong>이 <strong>하나의 운영 구조</strong>로 묶일 때 작동합니다.</p>
+
+  <div class="operation-chain" aria-label="Agentic Operation의 5가지 조건">
+    <div class="operation-steps">
+      <div class="operation-step" data-step="01">
+        <b>업무 의미화</b>
+        <span>데이터, 문서, 정책을 업무 용어와 권한, 예외 기준으로 정리합니다.</span>
+      </div>
+      <div class="operation-step" data-step="02">
+        <b>판단 후보 생성</b>
+        <span>근거와 처리 경로, 위험도를 반영해 판단 후보를 생성합니다.</span>
+      </div>
+      <div class="operation-step" data-step="03">
+        <b>실행 연계</b>
+        <span>판단 결과를 Workflow, API, RPA, 업무 시스템 반영으로 연결합니다.</span>
+      </div>
+      <div class="operation-step" data-step="04">
+        <b>검토와 통제</b>
+        <span>권한과 위험도, 승인 기준에 따라 자동 처리와 사람 검토 경계를 설정합니다.</span>
+      </div>
+      <div class="operation-step" data-step="05">
+        <b>운영 학습</b>
+        <span>판단, 실행, 예외, 피드백을 재사용 지식과 Skill로 축적합니다.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">AAP는 Agentic Operation을 반복 가능하고 통제 가능한 플랫폼 구조로 구현합니다.</div>
+</section>
+
+<!-- ============ 03. Agentic AI Platform은 무엇인가 ============ -->
+<section id="s3">
+  <div class="section-head">
+    <div class="num">03</div>
+    <div>
+      <h2>Agentic AI Platform은 무엇인가</h2>
+      <p class="lead">전제: <strong>목표 해석·도구 선택·결과 검토</strong>하는 <strong>Agentic AI</strong> + 안전·반복 가능한 <strong>Platform</strong></p>
+    </div>
+  </div>
+
+  <h3 class="sub-h3">3-1. Agentic AI가 바꾼 AI의 역할: Reactive to Proactive</h3>
+  <p class="sub-note">Agentic AI = <strong>목표 해석·도구 선택·단계별 계획·수행·검토</strong> 패러다임 — Enterprise AI 역할이 단발 답변에서 <strong>검토 가능한 실행 후보·운영 이력</strong>으로 이동</p>
+
+  <div class="ai-compare-board" aria-label="AI 역할 변화 비교">
+    <div class="evolution-axis">
+      <div class="evolution-axis-bar"></div>
+      <span class="evolution-axis-dot s1" style="left:12.5%"></span>
+      <span class="evolution-axis-dot s2" style="left:37.5%"></span>
+      <span class="evolution-axis-dot s3" style="left:62.5%"></span>
+      <span class="evolution-axis-dot s4" style="left:87.5%"></span>
+      <div class="evolution-axis-labels">
+        <span>Reactive · 답변 중심</span>
+        <span class="right">Proactive · 업무 수행</span>
+      </div>
+    </div>
+
+    <div class="ai-compare-grid">
+      <div class="ai-compare-card">
+        <h4>Generative AI</h4>
+        <div class="ai-compare-row"><b>핵심 능력</b><span>자연어 답변·요약·생성</span></div>
+        <div class="ai-compare-row"><b>응답 방식</b><span>단발 응답</span></div>
+        <div class="ai-compare-row"><b>자산화</b><span>프롬프트·문서</span></div>
+      </div>
+      <div class="ai-compare-card">
+        <h4>RAG 기반 챗봇</h4>
+        <div class="ai-compare-row"><b>핵심 능력</b><span>검색 결과 기반 답변</span></div>
+        <div class="ai-compare-row"><b>응답 방식</b><span>근거 기반 응답</span></div>
+        <div class="ai-compare-row"><b>자산화</b><span>문서 인덱스·검색 패턴</span></div>
+      </div>
+      <div class="ai-compare-card">
+        <h4>Tool-Augmented AI</h4>
+        <div class="ai-compare-row"><b>핵심 능력</b><span>외부 도구·API 호출</span></div>
+        <div class="ai-compare-row"><b>응답 방식</b><span>응답 + 도구 호출</span></div>
+        <div class="ai-compare-row"><b>자산화</b><span>도구 호출 패턴</span></div>
+      </div>
+      <div class="ai-compare-card final">
+        <h4>Agentic AI</h4>
+        <div class="ai-compare-row"><b>핵심 능력</b><span>목표 해석·계획·도구 사용·결과 검증</span></div>
+        <div class="ai-compare-row"><b>응답 방식</b><span>계획, 실행, 검증</span></div>
+        <div class="ai-compare-row"><b>자산화</b><span>Skill·실행 패턴·Decision Log</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-h3">3-2. Enterprise 환경에 최적화된 Platform</h3>
+  <p class="sub-note">필요한 것: 개별 Agent가 아니라 <strong>공통 의미·권한·도구·감사·학습 위 작동하는 Platform</strong></p>
+
+  <div class="platform-model" aria-label="개별 Agent와 Platform 운영 모델 비교">
+    <div class="agent-silos">
+      <div class="model-title">
+        <b>개별 Agent 집합 모델</b>
+        <span>운영 기준이 Agent마다 흩어짐</span>
+      </div>
+      <div class="silo-agents-row disconnected">
+        <div class="silo-agent-box"><span class="silo-tag">Agent A</span><b>영업 Q&amp;A</b></div>
+        <div class="silo-agent-box"><span class="silo-tag">Agent B</span><b>결재 보조</b></div>
+        <div class="silo-agent-box"><span class="silo-tag">Agent C</span><b>운영 리포트</b></div>
+        <div class="silo-agent-box"><span class="silo-tag">Agent D</span><b>HR FAQ</b></div>
+        <div class="silo-agent-box"><span class="silo-tag">Agent E</span><b>고객 응대</b></div>
+      </div>
+      <div class="silo-link-note">Agent 간 연결 없음 · 공통 기반 미공유</div>
+      <div class="no-foundation">
+        <div class="no-foundation-head">
+          <span class="no-foundation-icon">✗</span>
+          <span class="no-foundation-label">공통 운영 기반 없음</span>
+        </div>
+        <div class="foundation-pillars">
+          <div class="foundation-pillar absent"><b>표준화</b><span class="pillar-sub">의미·도구·실행 인터페이스</span></div>
+          <div class="foundation-pillar absent"><b>통제</b><span class="pillar-sub">권한·승인·HITL·가드레일</span></div>
+          <div class="foundation-pillar absent"><b>관측</b><span class="pillar-sub">판단 근거·실행 이력·품질·비용</span></div>
+          <div class="foundation-pillar absent"><b>재사용</b><span class="pillar-sub">Skill·Decision Log·지식 자산</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="model-arrow">·</div>
+
+    <div class="control-plane">
+      <div class="model-title">
+        <b>Platform 중심 운영 모델</b>
+        <span>단일 공통 운영 기반에서 통합 작동</span>
+      </div>
+      <div class="platform-agents connected">
+        <div class="platform-agent-box"><span class="pa-tag">Agent A</span><b>영업 Q&amp;A</b></div>
+        <div class="platform-agent-box"><span class="pa-tag">Agent B</span><b>결재 보조</b></div>
+        <div class="platform-agent-box"><span class="pa-tag">Agent C</span><b>운영 리포트</b></div>
+        <div class="platform-agent-box"><span class="pa-tag">Agent D</span><b>HR FAQ</b></div>
+        <div class="platform-agent-box"><span class="pa-tag">Agent E</span><b>고객 응대</b></div>
+      </div>
+      <div class="pa-link-note">Agent 간 A2A 연결 · 공통 기반 공유</div>
+      <div class="platform-container">
+        <div class="foundation-head">
+          <span class="foundation-icon">✓</span>
+          <span class="foundation-label">공통 운영 기반 · Platform Layer</span>
+        </div>
+        <div class="foundation-pillars">
+          <div class="foundation-pillar"><b>표준화</b><span class="pillar-sub">의미·도구·실행 인터페이스</span></div>
+          <div class="foundation-pillar"><b>통제</b><span class="pillar-sub">권한·승인·HITL·가드레일</span></div>
+          <div class="foundation-pillar"><b>관측</b><span class="pillar-sub">판단 근거·실행 이력·품질·비용</span></div>
+          <div class="foundation-pillar"><b>재사용</b><span class="pillar-sub">Skill·Decision Log·지식 자산</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-h3">3-3. Agentic AI Platform</h3>
+  <div class="aap-one-line">
+    <span>정의</span>
+    <strong>(1) 고객의 데이터·문서·시스템을 업무 맥락으로 연결하고,</strong><br>
+    <strong>(2) Agent가 업무 기준에 따라 판단 후보 생성·실행 보조·사람 검토 연계를 수행하며,</strong><br>
+    <strong>(3) 그 결과가 시스템 반영과 운영 이력으로 안전하게 이어지도록 만드는(Agentic Operation) 기업용 플랫폼</strong>
+  </div>
+
+  <div class="grid-4" style="margin-top:14px">
+    <div class="card">
+      <span class="badge">①</span>
+      <h3>업무 의미화</h3>
+      <p>용어, 정책, 권한, 예외 기준을 Agent가 사용할 수 있는 업무 맥락으로 정리합니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge">②</span>
+      <h3>시스템 반영</h3>
+      <p>Agent의 판단 후보와 실행 결과를 Workflow, API, RPA, ERP, CRM, 결재 흐름에 연결합니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge">③</span>
+      <h3>실행 통제</h3>
+      <p>권한, 위험도, 승인 기준에 따라 자동 처리, 사람 검토, 보류 경로를 관리합니다.</p>
+    </div>
+    <div class="card">
+      <span class="badge">④</span>
+      <h3>운영 학습</h3>
+      <p>판단 근거, 실행 결과, 예외, 피드백을 정책, 지식, 재사용 Skill로 축적합니다.</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============ 04. AAP 아키텍처와 운영 구조 ============ -->
+<section id="s4">
+  <div class="section-head">
+    <div class="num">04</div>
+    <div>
+      <h2>AAP 아키텍처와 운영 구조</h2>
+      <p class="lead">업무 요청을 판단, 검토, 실행, 학습으로 연결하기 위한 운영 구조와 플랫폼 계층입니다.</p>
+    </div>
+  </div>
+
+  <!-- 4-1. AAP Operating Loop -->
+  <h3 class="sub-h3">4-1. AAP Operating Loop</h3>
+  <div class="operating-loop" aria-label="AAP Operating Loop 6단계">
+    <div class="op-card">
+      <div class="op-n">1</div>
+      <div class="op-en">Data</div>
+      <div class="op-ko">데이터 수집</div>
+      <div class="op-role">고객 데이터, 문서, 업무 시스템에서 필요한 입력을 수집합니다.</div>
+      <div class="op-mini"><span class="om-s">연결·수집</span><span class="om-c">▾</span><span class="om-s">정제·정규화</span><span class="om-c">▾</span><span class="om-s">업무 데이터 구성</span></div>
+    </div>
+    <div class="op-card">
+      <div class="op-n">2</div>
+      <div class="op-en">Semantic</div>
+      <div class="op-ko">의미화</div>
+      <div class="op-role">입력 자료를 업무 용어, 정책, 관계 기준으로 해석합니다.</div>
+      <div class="op-mini"><span class="om-s">용어·개념 매핑</span><span class="om-c">▾</span><span class="om-s">정책·권한 해석</span><span class="om-c">▾</span><span class="om-s">업무 맥락 구성</span></div>
+    </div>
+    <div class="op-card">
+      <div class="op-n">3</div>
+      <div class="op-en">Reasoning</div>
+      <div class="op-ko">추론과 계획</div>
+      <div class="op-role">업무를 처리 단계로 나누고 판단 후보를 생성합니다.</div>
+      <div class="op-mini"><span class="om-s">작업 분해</span><span class="om-c">▾</span><span class="om-s">도구 호출</span><span class="om-c">▾</span><span class="om-s">판단 후보 생성</span></div>
+    </div>
+    <div class="op-card">
+      <div class="op-n">4</div>
+      <div class="op-en">Decision</div>
+      <div class="op-ko">판단과 분기</div>
+      <div class="op-role">위험도, 확신도, 권한 기준에 따라 처리 경로를 결정합니다.</div>
+      <div class="op-mini"><span class="om-s">판단 후보 검증</span><span class="om-c">▾</span><span class="om-s">근거·위험도 평가</span><span class="om-c">▾</span><span class="om-s">승인·보류 분기</span></div>
+    </div>
+    <div class="op-card">
+      <div class="op-n">5</div>
+      <div class="op-en">Action</div>
+      <div class="op-ko">실행 반영</div>
+      <div class="op-role">승인된 결과를 업무 시스템과 처리 흐름에 반영합니다.</div>
+      <div class="op-mini"><span class="om-s">Workflow 실행</span><span class="om-c">▾</span><span class="om-s">시스템 반영</span><span class="om-c">▾</span><span class="om-s">안전 처리</span></div>
+    </div>
+    <div class="op-card accent">
+      <div class="op-n">6</div>
+      <div class="op-en">Learning</div>
+      <div class="op-ko">운영 학습</div>
+      <div class="op-role">판단 근거, 실행 결과, 예외, 피드백을 재사용 자산으로 축적합니다.</div>
+      <div class="op-mini"><span class="om-s">실행 이력</span><span class="om-c">▾</span><span class="om-s">품질 평가</span><span class="om-c">▾</span><span class="om-s">개선 환류</span></div>
+    </div>
+  </div>
+
+  <div class="op-conn">▲ 연결 · 호출 · 반영 · 이력 수집 ▼</div>
+  <div class="cust41" aria-label="Customer Environment">
+    <div class="cust41-h">Customer Environment<small>고객 보유 자산 · 연결 대상</small></div>
+    <div class="cust41-rows">
+      <div class="cust41-row"><span class="ck">Data · Analytics</span><span class="cv"><span>Data Platform</span><span>Lakehouse · BI · Catalog</span><span>분석 자산</span></span></div>
+      <div class="cust41-row"><span class="ck">Business Systems</span><span class="cv"><span>ERP / CRM / SCM</span><span>Groupware · 결재</span><span>Internal API</span></span></div>
+      <div class="cust41-row"><span class="ck">Knowledge Assets</span><span class="cv"><span>Document / KMS / FAQ</span><span>업무 매뉴얼</span><span>VOC · 상담 이력</span></span></div>
+    </div>
+  </div>
+  <!-- 4-2. AAP Platform Architecture -->
+  <h3 class="sub-h3" style="margin-top:26px">4-2. AAP Reference Architecture &amp; Capability View</h3>
+  <p class="arch-section-lead">4-1의 Operating Loop는 별도 프로세스가 아니라, 아래 <strong>8개 플랫폼 계층이 함께 수행하는 공통 운영 구조</strong>입니다. 각 계층은 <strong>담당 역할(Role)</strong>과 <strong>연결되는 Loop 단계</strong>, <strong>대표 Capability</strong>를 함께 가지며, Trust·Security는 전 계층을 관통하는 공통 통제 기준으로 작동합니다.</p>
+  <div class="arch-frame" aria-label="AAP Platform Architecture">
+
+    <!-- v0.5: Execution Loop 띠 제거(4-1 Operating Loop와 중복). 4-2는 순수 플랫폼 구조. -->
+    <div class="arch-body">
+
+      <div class="arch-stack" id="archStack"><!-- renderArchitecture() 가 DEFAULT_ARCH_CHIPS / localStorage 로 렌더 (정적 마크업은 v0.5 보존) --></div>
+
+      <aside class="arch-spine" aria-label="Trust and Security" id="archSpine">
+        <div class="arch-spine-h">Trust · Security<small>전 계층 공통 통제</small></div>
+        <div class="arch-spine-tag">Cross-cutting</div>
+        <div class="arch-spine-list">
+          <div class="arch-spine-card"><b>Identity · Access</b><span class="ko">신원·접근 통제</span><span class="desc">모든 계층에 인증·권한 일관 적용</span></div>
+          <div class="arch-spine-card"><b>Audit · Explainability</b><span class="ko">감사·설명가능성</span><span class="desc">판단 근거·실행 이력 추적·설명</span></div>
+          <div class="arch-spine-card"><b>Security Guardrails</b><span class="ko">보안 가드레일</span><span class="desc">입출력 필터·PII·프롬프트 주입 방어</span></div>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- v0.5: Customer Environment는 4-1로 이동(운영 흐름의 입력·연결 대상). 4-2는 플랫폼 구조만. -->
+  </div>
+
+  <div class="arch-legend2">
+    <b>표기 기준</b>
+    <span class="lg"><i class="i-asset">Asset</i>활용 가능 자산 (kt ds·KT)</span>
+    <span class="lg"><i class="i-partner">Partner</i>외부·상용 조합 후보</span>
+  </div>
+  <div class="arch-distinct"><b>AI 컨트롤 / 거버넌스(L7)</b>는 업무 실행·승인 기준을 관리하고, <b>Trust · Security</b>는 전 계층에 공통 적용되는 접근·감사·보안 원칙을 담당합니다. <b>Loop Tag</b>는 각 계층이 4-1 Operating Loop의 어느 단계를 수행하는지를 나타냅니다.</div>
+</section>
+
+<!-- ============ 05. 수행 모델 ============ -->
+<section id="s5">
+  <div class="section-head">
+    <div class="num">05</div>
+    <div>
+      <h2>수행 모델</h2>
+      <p class="lead"><strong>Assess · Define · Compose · Connect · Operate</strong> 5단계 수행</p>
+    </div>
+  </div>
+  <p class="sub-note">목적: 모델·솔루션 도입이 아니라 <strong>고객 업무·시스템·자산을 운영 흐름으로 잇는 단계적 수행</strong></p>
+
+  <div class="delivery-model" aria-label="AAP 수행 모델 시각화">
+    <div class="delivery-model-body">
+      <div class="delivery-track">
+
+        <div class="delivery-node">
+          <div class="stage-num">01</div>
+          <h4>Assess</h4>
+          <small>적용 진단</small>
+          <p>고객 업무·시스템·보안 조건을 기준으로 적용 후보와 우선순위를 선별</p>
+          <div class="delivery-output"><span>산출물</span><div class="delivery-tags"><span>적용 후보 명세서</span><span>ROI 가설서</span><span>도입 제약 진단서</span><span>Discovery 일정 제안서</span></div></div>
+          <div class="delivery-link"><span>연계 Capability</span><div class="delivery-tags"><span>Customer Environment</span><span>Trust &amp; Governance</span></div></div>
+        </div>
+
+        <div class="delivery-node accent">
+          <div class="stage-num">02</div>
+          <h4>Define</h4>
+          <small>업무 기준 정의</small>
+          <p>업무 의미·정책·권한·예외 기준을 Agent가 실행 가능한 구조로 정리</p>
+          <div class="delivery-output"><span>산출물</span><div class="delivery-tags"><span>업무 의미 모델</span><span>정책·권한 매트릭스</span><span>HITL 분기 기준서</span><span>KPI 정의서</span></div></div>
+          <div class="delivery-link"><span>연계 Capability</span><div class="delivery-tags"><span>Business Semantic Modeling</span><span>HITL Policy</span></div></div>
+        </div>
+
+        <div class="delivery-node">
+          <div class="stage-num">03</div>
+          <h4>Compose</h4>
+          <small>자산 조합</small>
+          <p>검증된 AI·자동화 자산을 업무 목적에 맞게 조합, UI·통제·보안 도구를 결합</p>
+          <div class="delivery-output"><span>산출물</span><div class="delivery-tags"><span>Agent 구성도</span><span>Capability 확보 명세</span><span>Tool Registry</span><span>검증 시나리오 설계</span></div></div>
+          <div class="delivery-link"><span>연계 Capability</span><div class="delivery-tags"><span>Agentic Reasoning</span><span>Service Experience</span></div></div>
+        </div>
+
+        <div class="delivery-node">
+          <div class="stage-num">04</div>
+          <h4>Connect</h4>
+          <small>고객 환경 연계</small>
+          <p>고객 자산과 업무 시스템을 AAP 실행 흐름에 안전하게 연결</p>
+          <div class="delivery-output"><span>산출물</span><div class="delivery-tags"><span>시스템 연계 설계서</span><span>IAM·SSO 통합 설계</span><span>배포 환경 구성서</span><span>연계 검증 보고</span></div></div>
+          <div class="delivery-link"><span>연계 Capability</span><div class="delivery-tags"><span>Enterprise Data &amp; Inputs</span><span>Enterprise Integration &amp; Action</span></div></div>
+        </div>
+
+        <div class="delivery-node accent">
+          <div class="stage-num">05</div>
+          <h4>Operate</h4>
+          <small>운영 전환·학습</small>
+          <p>운영 기준과 지속 개선 흐름을 설계하고 재사용 자산으로 축적</p>
+          <div class="delivery-output"><span>산출물</span><div class="delivery-tags"><span>운영 전환 기준서</span><span>Decision Log 구조</span><span>Eval·Feedback 체계</span><span>재사용 스킬 카탈로그</span></div></div>
+          <div class="delivery-link"><span>연계 Capability</span><div class="delivery-tags"><span>Operational Learning</span><span>AI Quality</span><span>Governance</span></div></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06. 적용 시나리오 ============ -->
+<section id="s6">
+  <div class="section-head">
+    <div class="num">06</div>
+    <div>
+      <h2>적용 가능한 업무 시나리오</h2>
+      <p class="lead">초기 적용: <strong>정책·권한·예외·시스템 반영·감사</strong>가 중요한 산업·업무</p>
+    </div>
+  </div>
+  <div class="grid-2">
+
+    <div class="industry-block">
+      <div class="industry-block-head">
+        <h3>[타깃 1] 금융·보험·자산운용</h3>
+        <div class="industry-tagline">판단 기준과 감사 이력이 성과와 리스크를 좌우</div>
+      </div>
+      <div class="industry-block-body">
+        <div class="industry-row">
+          <div class="industry-label">고객 상황</div>
+          <div class="industry-content">규정·승인·감사 요구가 높고, 건별 판단 근거를 일관되게 남겨야 하는 업무가 많음</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 업무</div>
+          <div class="industry-content">손해사정 심사, 내부통제 점검·보고 보조, 투자 리서치·자문 보조, 리스크 검토</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 방식</div>
+          <div class="industry-content">약관·규정·계약·거래 이력을 사건 단위로 묶고, 업무 기준에 따라 판단 근거와 처리 경로 후보를 검토자에게 제시</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">Pilot 후보</div>
+          <div class="industry-content">손해사정 심사 보조, 내부통제 검토, 투자 리서치 보조</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="industry-block">
+      <div class="industry-block-head">
+        <h3>[타깃 2] 공공·협회·산업단체</h3>
+        <div class="industry-tagline">도메인 관계 모델링이 정책 대응 속도를 좌우</div>
+      </div>
+      <div class="industry-block-body">
+        <div class="industry-row">
+          <div class="industry-label">고객 상황</div>
+          <div class="industry-content">정책·규제·회원사·산업 데이터가 분산되어 변화 발생 시 즉각 대응이 어려움</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 업무</div>
+          <div class="industry-content">정책 영향도 분석, 회원사 차등 통보, R&amp;D 정책 매칭, 규제 변화 리포트</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 방식</div>
+          <div class="industry-content">산업 개념·품목·회원사·정책 관계를 구조화하고, 변화 이벤트에 따라 영향 대상과 대응 메시지 후보를 도출</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">Pilot 후보</div>
+          <div class="industry-content">통상규제 영향도 분석, R&amp;D 정책 매칭, 회원사 통보 보조</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="industry-block">
+      <div class="industry-block-head">
+        <h3>[타깃 3] 제조·유통</h3>
+        <div class="industry-tagline">업무 판단과 시스템 반영의 단절이 반복 비용을 만듦</div>
+      </div>
+      <div class="industry-block-body">
+        <div class="industry-row">
+          <div class="industry-label">고객 상황</div>
+          <div class="industry-content">품질·구매·계약·클레임·공급망 이슈가 반복되지만, 판단 기준/처리 이력이 분산</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 업무</div>
+          <div class="industry-content">품질 클레임 검토, 구매·계약 조건 검토, 공급 리스크 대응, 작업 지시 후보 생성</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 방식</div>
+          <div class="industry-content">규정·계약·생산·처리 이력을 업무 건 단위로 묶고, 처리 경로와 후속 조치 후보를 담당자 검토 후 업무 시스템에 반영</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">Pilot 후보</div>
+          <div class="industry-content">품질 클레임 처리 보조, 계약 조건 검토, 공급 리스크 대응</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="industry-block">
+      <div class="industry-block-head">
+        <h3>[타깃 4] 국방·방산·보안망</h3>
+        <div class="industry-tagline">보안 제약 안에서 AI 활용 가능성을 검증해야 함</div>
+      </div>
+      <div class="industry-block-body">
+        <div class="industry-row">
+          <div class="industry-label">고객 상황</div>
+          <div class="industry-content">폐쇄망·권한·감사·데이터 반출 제한이 강해 외부 SaaS형 AI를 그대로 적용하기 어려움</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 업무</div>
+          <div class="industry-content">폐쇄망 지식 검색, 정비·군수 절차 검토, 승인형 업무 지원, 보안 정책 질의 응답</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">적용 방식</div>
+          <div class="industry-content">교범·규정·정비 이력·보안 정책을 권한 기준 안에서 활용하고, 표준 절차 초안과 검토 근거를 감사 가능한 형태로 남김</div>
+        </div>
+        <div class="industry-row">
+          <div class="industry-label">Pilot 후보</div>
+          <div class="industry-content">폐쇄망 지식 검색, 정비·절차 검토, 보안 정책 질의</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 07. 레퍼런스 ============ -->
+<section id="s7">
+  <div class="section-head">
+    <div class="num">07</div>
+    <div>
+      <h2>레퍼런스 (AAP로 확장 가능한 사례 중심)</h2>
+      <p class="lead">AAP 구성요소 부분 검증 사례 → 확장 가능 요소 발굴</p>
+    </div>
+  </div>
+  <!-- Case 1 · 금융 자문형 -->
+  <div class="ref-card">
+    <div class="ref-card-grid">
+      <div>
+        <span class="badge">Case 1 · 내부 프로젝트 추진</span>
+        <h3>멀티에이전트 기반 금융 자문 검증 (AI 투자메이트)</h3>
+        <p class="ref-meta"><strong>도메인</strong> 자산운용 · <strong>영역</strong> 개인 투자 의사결정</p>
+        <p class="ref-brief">시장 데이터·뉴스·매크로 지표를 통합 수집, 멀티에이전트가 단계적으로 분석해 투자 자문 초안을 생성 — <strong>데이터 수집 → 자문 산출까지 End-to-End</strong> 작동 검증</p>
+        <div class="note">AAP의 <strong>데이터 통합·Agentic Reasoning 축</strong>이 실제 구성 가능함을 입증, <strong>의미화·시스템 반영·운영 학습</strong> 고도화로 패턴화 및 AI OS 확장 가능성 검토</div>
+      </div>
+      <div class="ref-next-step">
+        <div class="ref-next-step-label">Next Step</div>
+        <ul class="ref-next-list">
+          <li>TBD (검증·고도화 방향 및 일정 미정)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case 2 · 산업 도메인 -->
+  <div class="ref-card">
+    <div class="ref-card-grid">
+      <div>
+        <span class="badge">Case 2 · 대외 사업 선제안</span>
+        <h3>온톨로지 기반 정부 정책·공급망 영향 분석 PoC</h3>
+        <p class="ref-meta"><strong>도메인</strong> 공공·산업단체 · <strong>영역</strong> 제조 산업 정책 의사결정 보조</p>
+        <p class="ref-brief"><strong>제조 도메인 온톨로지 구축</strong>, <strong>투자 방향·정책 시그널 파악 및 대응 영역 제시</strong>에 초점 — 1차 세미나 완료, 2차 데모 시연 준비 중</p>
+        <div class="note"><strong>온톨로지 기반 업무 의미화</strong>가 산업 도메인의 다층 의사결정에서 작동 입증, <strong>공공 도메인 고객군(산업단체·R&amp;D 발주기관·정책 기관)</strong>으로 확장 가능</div>
+      </div>
+      <div class="ref-next-step">
+        <div class="ref-next-step-label">Next Step</div>
+        <ul class="ref-next-list">
+          <li>고객사 실 데이터 기반 <strong>2차 데모 시연</strong> 준비 (6월 내)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case 3 · 금융 내부통제 -->
+  <div class="ref-card">
+    <div class="ref-card-grid">
+      <div>
+        <span class="badge">Case 3 · 대외 사업 제안</span>
+        <h3>금융 내부통제 목표시스템 구조 검토</h3>
+        <p class="ref-meta"><strong>도메인</strong> 금융지주·금융사 · <strong>영역</strong> 내부통제·책무관리·감사 대응</p>
+        <p class="ref-brief">규정·문서·점검·보고 데이터 수집, 내부통제 UI와 AI Agent로 분석·요약·추천·Insight 후보 제공 — <strong>그룹 표준관리·책무관리·점검·개선과제</strong> 등 금융권 내부통제 흐름을 시스템 관점에서 구조화</p>
+        <div class="note"><strong>금융 업무 의미화·HITL·감사·폐쇄망/권한 통제 축</strong>을 목표시스템 형태로 구조화, <strong>Semantic·HITL·Reasoning·Governance</strong>와 연결해 금융권 내부통제 패턴으로 확장 가능</div>
+      </div>
+      <div class="ref-next-step">
+        <div class="ref-next-step-label">Next Step</div>
+        <ul class="ref-next-list">
+          <li>(세부 내용 확인 필요)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============ 08. 도입 방식 · 후속 논의 ============ -->
+<section id="s8">
+  <div class="section-head">
+    <div class="num">08</div>
+    <div>
+      <h2>도입 방식 · 후속 논의</h2>
+      <p class="lead">AI 성숙도·반복 업무·보안 요구에 따라 진입·Pilot 범위 차등</p>
+    </div>
+  </div>
+  <p class="sub-note">고객 유형별로 <strong>진입 메시지·Pilot 범위</strong>가 다름</p>
+
+  <div class="type-rows">
+
+    <!-- Type A -->
+    <div class="type-card">
+      <div class="type-head">
+        <span class="type-pill">Type A</span>
+        <h3 class="type-title">기존 Data/AI 자산 보유 고객</h3>
+        <div class="type-sub"><b>대상</b>대형·중견 · 운영 계층이 비어 있는 고객</div>
+      </div>
+      <div class="type-needs">
+        <em>NEEDS</em>
+        <span>기존 투자를 유지하면서 <strong>분석·답변을 실행 흐름으로 잇고</strong> 판단·승인 이력이 운영 자산으로 쌓이는 구조</span>
+      </div>
+      <div class="type-flow">
+        <div class="type-asis">
+          <em>As-Is</em>
+          <p>BI·RAG·Copilot 결과가 업무 처리로 이어지지 않아 <strong>현업이 리포트 재해석·재입력을 반복</strong></p>
+        </div>
+        <div class="type-arrow">→</div>
+        <div class="type-tobe">
+          <em>+ AAP (To-Be)</em>
+          <div class="tobe-line"><b>기존</b><span>Data Platform + BI + RAG + Copilot</span></div>
+          <div class="tobe-line"><b>+ AAP</b><span>Agentic Operation Layer (<strong>의미화·판단·HITL·Writeback·학습</strong>)</span></div>
+        </div>
+        <div class="type-effect">
+          <em>기대효과</em>
+          <p>분석→판단→승인→시스템 반영이 <strong>단일 흐름</strong>, Decision Log·Skill로 축적</p>
+        </div>
+      </div>
+      <div class="type-examples">
+        <em>산업별 적용 예시</em>
+        <div class="example-list">
+          <div class="example"><b>제조</b><span>품질 이상 알림 → 조치 후보 → MES 반영</span></div>
+          <div class="example"><b>금융</b><span>리스크 모니터링 → 대응 후보 → 정책 갱신</span></div>
+          <div class="example"><b>통신</b><span>망 알람 → 대응 시나리오 → NMS·티켓 반영</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Type B -->
+    <div class="type-card">
+      <div class="type-head">
+        <span class="type-pill">Type B</span>
+        <h3 class="type-title">산업 특화 중견 고객</h3>
+        <div class="type-sub"><b>대상</b>반복 업무 구조화가 먼저인 고객</div>
+      </div>
+      <div class="type-needs">
+        <em>NEEDS</em>
+        <span>대형 플랫폼 선구축 없이 업무 단위로 시작, <strong>성공 패턴을 다른 업무로 확장</strong> 가능한 가벼운 구조</span>
+      </div>
+      <div class="type-flow">
+        <div class="type-asis">
+          <em>As-Is</em>
+          <p>반복 업무는 명확하나 <strong>담당자 경험 의존</strong>으로 품질·속도 편차가 크고 onboarding이 느림</p>
+        </div>
+        <div class="type-arrow">→</div>
+        <div class="type-tobe">
+          <em>+ AAP (To-Be)</em>
+          <div class="tobe-line"><b>기존</b><span>ERP·CRM + 매뉴얼·규정·KMS</span></div>
+          <div class="tobe-line"><b>+ AAP</b><span>RAG·Knowledge Pipeline + Business Semantic + <strong>Business Agent + 승인 Workspace</strong></span></div>
+        </div>
+        <div class="type-effect">
+          <em>기대효과</em>
+          <p>판단 품질의 담당자 의존 ↓, 성공 패턴이 <strong>Skill·Template</strong>으로 인접 업무 확장</p>
+        </div>
+      </div>
+      <div class="type-examples">
+        <em>산업별 적용 예시</em>
+        <div class="example-list">
+          <div class="example"><b>유통</b><span>반품 사유 분류 → 처리 가이드 → 승인</span></div>
+          <div class="example"><b>제조</b><span>작업지시서 검토 → 예외·누락 식별</span></div>
+          <div class="example"><b>보험</b><span>청구 사유 분류 → 약관 검토 → 처리 가이드</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Type C -->
+    <div class="type-card">
+      <div class="type-head">
+        <span class="type-pill">Type C</span>
+        <h3 class="type-title">공공·금융·국방 고객</h3>
+        <div class="type-sub"><b>대상</b>통제 요건이 먼저인 고객</div>
+      </div>
+      <div class="type-needs">
+        <em>NEEDS</em>
+        <span>자동 실행보다 <strong>검토 가능한 판단 보조</strong>부터, 모든 처리가 감사·재현 가능해야 함</span>
+      </div>
+      <div class="type-flow">
+        <div class="type-asis">
+          <em>As-Is</em>
+          <p><strong>근거·승인 이력·감사·망분리</strong>가 확보되지 않으면 운영 적용 보류, 외부 클라우드 LLM 제약</p>
+        </div>
+        <div class="type-arrow">→</div>
+        <div class="type-tobe">
+          <em>+ AAP (To-Be)</em>
+          <div class="tobe-line"><b>기존</b><span>폐쇄망 시스템 + 규정·내규·교범 + 결재 체계</span></div>
+          <div class="tobe-line"><b>+ AAP</b><span>Private/폐쇄망 + 근거 인용 RAG + <strong>Decision Log · Audit · HITL</strong></span></div>
+        </div>
+        <div class="type-effect">
+          <em>기대효과</em>
+          <p>모든 판단에 <strong>근거·인용·승인 이력</strong>, 폐쇄망에서도 통제 가능한 AI 운영</p>
+        </div>
+      </div>
+      <div class="type-examples">
+        <em>산업별 적용 예시</em>
+        <div class="example-list">
+          <div class="example"><b>공공</b><span>민원 분류 → 법령·내규 검색 → 회신 초안</span></div>
+          <div class="example"><b>금융</b><span>여신·심사 시 규정 검색 → 근거 제시</span></div>
+          <div class="example"><b>국방</b><span>작전·교범 검색 → 규정 위반 검토</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="sub-note" style="margin-top:14px">→ <strong>후속 논의 5단계</strong>(Data Foundation 진단 → Operational Learning 설계)와 <strong>고객에게 던질 6가지 질문</strong>은 <a href="#sappD" style="color:var(--red);font-weight:800">별첨 D</a> 참조</p>
+</section>
+
+<!-- ============ 별첨 A · 사업화 추진 및 확보 전략 ============ -->
+<section id="sappA">
+  <div class="section-head">
+    <div class="num">A</div>
+    <div>
+      <h2>별첨 · 사업화 추진 및 확보 전략</h2>
+      <p class="lead"><strong>주도 · 통합 · 외부 활용</strong> 방식을 정리한 사업화 추진 전략</p>
+    </div>
+  </div>
+  <p class="sub-note">주도: 업무 의미화·시스템 통합·운영 통제 | 외부 활용: LLM·Framework·EvalOps·Guardrail (병렬 검증)</p>
+
+  <h3 class="sub-h3">A-1. Build · Integrate · Partner 추진 원칙</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:220px">원칙</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Build · 핵심 직접 설계</strong></td>
+        <td>업무 맥락·의미화·시스템 통합·승인·감사·통제·운영 로그처럼 고객별 차이가 크고 SI 책임이 필요한 영역은 kt ds 주도 설계·구축</td>
+      </tr>
+      <tr>
+        <td><strong>Integrate · 보유 자산 우선 조합</strong></td>
+        <td>kt ds/KT그룹 보유 솔루션·고객 기존 시스템·검증된 내부 자산을 우선 활용해 초기 구축 속도·신뢰성 확보 — 보유 자산만으로 부족 시 외부 자산 조합</td>
+      </tr>
+      <tr>
+        <td><strong>Partner · 외부 전문역량 활용</strong></td>
+        <td>LLM·Agent Framework·Guardrail·EvalOps·Knowledge Graph·고급 보안·품질평가처럼 기술 변화가 빠르거나 전문성이 큰 영역은 외부 솔루션·프레임워크·전문 업체 적극 활용</td>
+      </tr>
+      <tr>
+        <td><strong>Accelerate · 병렬 검증과 단계 확장</strong></td>
+        <td>외부 의존 영역은 단일 업체 고정 ✕ — 후보군 Pool 구성 → 기술 미팅/샌드박스 검증 → 표준 조합안 확보 → 고객별 적용 순서로 가속화</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">A-2. Capability별 추진 전략 매트릭스</h3>
+  <p class="sub-note">★ 수 ↑ = <strong>kt ds 주도 필요도</strong> ↑ | <strong>권장 추진</strong> = 자체 구축 여부가 아닌 주도·통합·외부 활용 방식</p>
+
+  <div style="overflow-x:auto">
+    <table class="table-tight">
+      <thead>
+        <tr>
+          <th style="width:180px">Capability</th>
+          <th style="width:75px">주도 필요성</th>
+          <th style="width:160px">권장 추진</th>
+          <th>Now</th>
+          <th>Near</th>
+          <th>Next</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Business Semantic Modeling</strong></td>
+          <td>★★★</td>
+          <td><strong>Build 중심</strong></td>
+          <td>업무 용어·정책·권한·프로세스 정리</td>
+          <td>Decision Rule · Authority Matrix · Ontology 고도화</td>
+          <td>산업별 Semantic Pack 자산화</td>
+        </tr>
+        <tr>
+          <td><strong>Enterprise Integration / Writeback</strong></td>
+          <td>★★★</td>
+          <td><strong>Build + Integrate</strong></td>
+          <td>API/RPA/Workflow 연계, 기본 Writeback 경로 확보</td>
+          <td>Transaction Safety · Exception Handling 고도화</td>
+          <td>복수 시스템 조치 자동화 및 운영 표준화</td>
+        </tr>
+        <tr>
+          <td><strong>HITL · Approval</strong></td>
+          <td>★★★</td>
+          <td><strong>Build + Integrate</strong></td>
+          <td>승인·반려 UI, 검토 큐, 근거 확인 화면</td>
+          <td>위험도 기반 라우팅, 승인 정책 연계</td>
+          <td>정책 기반 자동 승인·보류 분기</td>
+        </tr>
+        <tr>
+          <td><strong>RAG · Knowledge Ingestion</strong></td>
+          <td>★★</td>
+          <td><strong>Integrate + Partner</strong></td>
+          <td>자사 AI KMS/문서처리 자산 적용 가능성 점검</td>
+          <td>OCR · Parser · Hybrid Search · Vector DB 후보 검증</td>
+          <td>지식 갱신 Workflow · Knowledge Quality 관리</td>
+        </tr>
+        <tr>
+          <td><strong>LLM · Agent Framework</strong></td>
+          <td>★</td>
+          <td><strong>Partner + Integrate</strong></td>
+          <td>Tool Calling, 기본 Agent Flow, 모델 후보 검토</td>
+          <td>Agent Routing · State Memory · Work Context 검증</td>
+          <td>Multi-Agent Collaboration, A2A Protocol 적용 검토</td>
+        </tr>
+        <tr>
+          <td><strong>EvalOps · Reliability</strong></td>
+          <td>★★</td>
+          <td><strong>Partner + Build</strong></td>
+          <td>평가 기준·평가 데이터셋·Human Review 체계 정의</td>
+          <td>Regression Test · Reliability Score · 품질 대시보드</td>
+          <td>Continuous Reliability Testing · 자동 회귀 점검</td>
+        </tr>
+        <tr>
+          <td><strong>Guardrails · Policy Engine</strong></td>
+          <td>★★</td>
+          <td><strong>Partner + Build</strong></td>
+          <td>금지행위·권한·민감정보 제한 기준 정의</td>
+          <td>Prompt Injection 방어, Output Policy Check 후보 검증</td>
+          <td>동적 정책 적용 · 위험도 기반 실행 제어</td>
+        </tr>
+        <tr>
+          <td><strong>Observability · Trace · Audit</strong></td>
+          <td>★★</td>
+          <td><strong>Build + Integrate</strong></td>
+          <td>Decision Basis · Audit Link · Action Log 설계</td>
+          <td>Cost · Usage · Quality Dashboard, 운영 모니터링 연계</td>
+          <td>Cross-Agent 운영 관측 및 감사 리포트 표준화</td>
+        </tr>
+        <tr>
+          <td><strong>Operational Learning</strong></td>
+          <td>★★</td>
+          <td><strong>Build + Integrate/Partner</strong></td>
+          <td>Decision Log · Feedback Store · Reject Reason 축적</td>
+          <td>Skill Versioning · Feedback Loop · 개선 후보 관리</td>
+          <td>Self-Improving Loop · Skill Optimization 적용 검토</td>
+        </tr>
+        <tr>
+          <td><strong>Service Experience</strong></td>
+          <td>★★</td>
+          <td><strong>Build + Integrate</strong></td>
+          <td>Agent Portal · Review UI · Run History</td>
+          <td>업무별 Copilot · Agent UX · 승인형 Workspace</td>
+          <td>Role-based Adaptive Experience · 산업별 UX Pack</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="sub-h3">A-3. Now · Near · Next 사업화 로드맵</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:120px">단계</th>
+        <th style="width:160px">기간 감각</th>
+        <th style="width:220px">목표</th>
+        <th>주요 추진 방안</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Now</strong></td>
+        <td>Pilot · 초기 검증</td>
+        <td>1~2개 업무에서 Pilot 가능한 최소 조합 확보</td>
+        <td>kt ds 주도 영역 정의, 보유 솔루션 적용 가능성 점검, 외부 후보 Long-list 구성, 기술 미팅·샌드박스 검증 착수</td>
+      </tr>
+      <tr>
+        <td><strong>Near</strong></td>
+        <td>운영 전환</td>
+        <td>반복 가능한 표준 조합안과 운영 기준 확보</td>
+        <td>LLM·RAG·Agent Framework·Guardrail·EvalOps Short-list 선정, 고객 유형별 Reference Architecture와 표준 제안 패키지 정리</td>
+      </tr>
+      <tr>
+        <td><strong>Next</strong></td>
+        <td>확장 · 패키지화</td>
+        <td>산업별 패키지화 및 파트너 생태계 확대</td>
+        <td>산업별 Semantic/Workflow Pack, 검증 파트너 Pool, 공동 제안·공동 영업 체계화, Agent Marketplace 가능성 검토</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">A-4. Build · Integrate · Partner 의사결정 기준</h3>
+  <table class="table-tight">
+    <thead>
+      <tr>
+        <th style="width:180px">판단 기준</th>
+        <th>Build 우선</th>
+        <th>Integrate 우선</th>
+        <th>Partner 우선</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>고객 업무 특수성</strong></td>
+        <td>고객별 업무 맥락·정책·권한 차이가 큼</td>
+        <td>고객 기존 시스템/자산과 조합 필요</td>
+        <td>범용 기술 요소에 가까움</td>
+      </tr>
+      <tr>
+        <td><strong>ds 보유 역량/자산</strong></td>
+        <td>충분하고 차별화 가능</td>
+        <td>보유 자산이 있으나 보완 필요</td>
+        <td>부족하거나 빠른 외부 검증 필요</td>
+      </tr>
+      <tr>
+        <td><strong>보안·통제 요구</strong></td>
+        <td>고객 정책에 맞춘 직접 설계 필요</td>
+        <td>기존 보안·권한 자산과 연계 가능</td>
+        <td>검증된 전문 보안 솔루션 활용 필요</td>
+      </tr>
+      <tr>
+        <td><strong>기술 변화 속도</strong></td>
+        <td>낮거나 고객화가 핵심</td>
+        <td>중간, 안정된 솔루션 조합 가능</td>
+        <td>매우 빠르고 외부 생태계가 선도</td>
+      </tr>
+      <tr>
+        <td><strong>Time-to-Market</strong></td>
+        <td>일정 여유가 있고 내재화 가치가 큼</td>
+        <td>빠른 구현이 필요하되 통합 책임은 ds가 보유</td>
+        <td>즉시 역량 확보와 빠른 실험·검증이 필요</td>
+      </tr>
+      <tr>
+        <td><strong>차별화 축적 가능성</strong></td>
+        <td>고객·산업별 자산으로 축적 가능</td>
+        <td>자사/고객 자산과 결합해 재사용 가능</td>
+        <td>직접 차별화보다는 기술 추종·가속 영역</td>
+      </tr>
+      <tr>
+        <td><strong>운영 책임</strong></td>
+        <td>ds 직접 책임 필요</td>
+        <td>ds가 통합 책임, 솔루션 책임 병행</td>
+        <td>벤더 전문 책임과 내부 검증 병행</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">A-5. 외부 파트너 발굴·검증 추진 방식</h3>
+  <p class="sub-note">외부 협력 = 수동적 역량 보완 ✕ → 빠르게 변화하는 Agentic AI 기술을 사업화 속도에 맞춰 흡수하는 가속 전략 ✓</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:120px">단계</th>
+        <th style="width:220px">핵심 활동</th>
+        <th>검토 대상</th>
+        <th style="width:230px">산출물</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>01. Gap 정의</strong></td>
+        <td>내부 자산으로 가능한 영역과 부족한 영역을 Capability 단위로 구분</td>
+        <td>LLM, Agent Framework, RAG/검색, KG/Ontology, Guardrail, EvalOps, Workflow 등</td>
+        <td>Capability Gap List</td>
+      </tr>
+      <tr>
+        <td><strong>02. Long-list</strong></td>
+        <td>영역별 후보 업체·오픈소스·상용 솔루션 후보군 확보</td>
+        <td>국내외 모델/검색/보안/평가/워크플로우 업체, 오픈소스 프레임워크, 클라우드 기반 서비스</td>
+        <td>Partner Long-list</td>
+      </tr>
+      <tr>
+        <td><strong>03. Fast Validation</strong></td>
+        <td>1~2주 단위 기술 미팅, 샌드박스 검증, 레퍼런스 확인</td>
+        <td>성능, 보안 적합성, 폐쇄망 가능성, API 연계성, 비용, 운영 책임 범위</td>
+        <td>Short-list · 검증 결과표</td>
+      </tr>
+      <tr>
+        <td><strong>04. Preferred Stack</strong></td>
+        <td>고객 유형별 권장 조합안과 대체 후보 확보</td>
+        <td>Type A/B/C 고객군별 모델·검색·Agent·Guardrail·EvalOps·Workflow 조합</td>
+        <td>Preferred Stack · 대체 후보군</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>추진 원칙</strong> · 외부 의존 영역은 단일 업체 고정 ✕, 복수 후보 병렬 검토 — 고객 제안 단계에서는 검증된 조합안 우선 제시 + 보안·비용·기존 자산·파트너 정책에 따라 대체 조합 신속 구성 준비
+  </div>
+
+  <h3 class="sub-h3">A-6. 1~3장 Traceability Map</h3>
+  <p class="sub-note">문제 진단 → 운영 전환 조건 → AAP 구현 축 연결표</p>
+
+  <div class="traceability-map" aria-label="1~3장 논리 연결 매트릭스">
+    <div class="trace-grid">
+      <div class="trace-col-head">1장 · 운영 공백</div>
+      <div class="trace-col-head">2장 · 운영 전환 조건</div>
+      <div class="trace-col-head">3장 · AAP 구현 축</div>
+
+      <div class="trace-cell"><b>업무 맥락 공백</b>문서·데이터는 있지만 업무 의미가 Agent 기준으로 정리되지 않음</div>
+      <div class="trace-cell"><b>업무 의미화</b>정책·권한·예외 기준을 업무 맥락으로 재구성</div>
+      <div class="trace-cell impl"><b>Agent 해석 기반</b>Semantic Context, Knowledge Asset, Policy Context</div>
+
+      <div class="trace-cell new"><b>Agentic AI 추가 조건</b>기존 공백 보완을 넘어 목표 기반 판단 후보가 필요</div>
+      <div class="trace-cell new"><b>판단 후보 생성</b>근거·위험도·처리 경로·다음 단계 후보 제시</div>
+      <div class="trace-cell impl"><b>Agentic Reasoning</b>Plan, Tool Selection, Risk Scoring, Recommendation</div>
+
+      <div class="trace-cell"><b>실행 연계 공백</b>AI 결과가 업무 시스템 처리로 이어지지 않음</div>
+      <div class="trace-cell"><b>실행 연계</b>Workflow, API, RPA, 업무 시스템 반영 경로 확보</div>
+      <div class="trace-cell impl"><b>Workflow · Writeback</b>System Action, Approval Flow, Status Update</div>
+
+      <div class="trace-cell"><b>통제/권한 공백</b>자동 처리와 사람 검토의 경계가 정의되지 않음</div>
+      <div class="trace-cell"><b>사람 검토와 통제</b>권한·위험도·승인 기준 기반의 실행 경계 관리</div>
+      <div class="trace-cell impl"><b>HITL · Governance</b>Human Review, Audit Trail, Guardrails</div>
+
+      <div class="trace-cell"><b>운영 학습 공백</b>판단 근거와 실행 결과가 재사용 자산으로 쌓이지 않음</div>
+      <div class="trace-cell"><b>운영 학습</b>예외·피드백·반려 사유를 Skill과 지식으로 환류</div>
+      <div class="trace-cell impl"><b>Feedback · Decision Log</b>Skill Catalog, Evaluation, Knowledge Update</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 별첨 B · 내부 검토용 사업화 확장 항목 ============ -->
+<section id="sappB">
+  <div class="section-head">
+    <div class="num">B</div>
+    <div>
+      <h2>내부 검토용 · 사업화 확장 항목</h2>
+      <p class="lead" style="font-size:13px;color:var(--muted)">※ <strong>내부 검토용</strong> — 외부 공유 시 본 섹션 분리 또는 <strong>별도 내부 보고서</strong> 권장</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:240px">내부 검토 항목</th>
+        <th>추후 상세화 방향</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>사업 기회와 1차 타겟</strong></td><td>산업별 우선순위, 고객군, 첫 적용 업무, 매출 가능성</td></tr>
+      <tr><td><strong>오퍼링 패키지화</strong></td><td>Assessment, Controlled Pilot, Build, Operate &amp; Improve 단계별 산출물과 과금 구조</td></tr>
+      <tr><td><strong>R&amp;R</strong></td><td>사업개발, 영업, 수행총괄, 기술조직, 보안·컴플라이언스, 파트너 역할</td></tr>
+      <tr><td><strong>비용·견적 구조</strong></td><td>인력 투입, 파트너 비용, 솔루션 비용, 운영 비용, Pilot·본구축 견적 기준</td></tr>
+      <tr><td><strong>Build · Buy · Borrow</strong></td><td>직접 책임 영역, 자사·상용 솔루션 활용 영역, 파트너·외부 검증 자산 활용 영역</td></tr>
+      <tr><td><strong>Action Plan</strong></td><td>3개월·6개월 실행 로드맵, 고객 접촉 계획, 데모·제안서 제작, 레퍼런스 Pack화</td></tr>
+      <tr><td><strong>리스크와 대응책</strong></td><td>데이터 연계, 보안, 모델 품질, 운영 책임, 파트너 종속, 과도한 자동화 리스크</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 별첨 C(영역별 역량 상세)는 v0.3에서 본문 4-3으로 이동·요약. 이하 재번호: 旧 D→C, 旧 E→D. -->
+
+<!-- ============ 별첨 C · 수행 모델 상세표 ============ -->
+<section id="sappC">
+  <div class="section-head">
+    <div class="num">C</div>
+    <div>
+      <h2>수행 모델 상세표</h2>
+      <p class="lead">Section 5 5단계 <strong>단계별 목적·활동·연계</strong> 상세</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:130px">단계</th>
+        <th style="width:32%">목적</th>
+        <th>주요 활동</th>
+        <th style="width:24%">연계 영역</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Assess<br/>(적용 진단)</strong></td>
+        <td>고객 업무·시스템·보안 조건을 검토해 AAP 적용 후보와 우선순위를 도출</td>
+        <td>· 업무 후보 선정<br>· 데이터·시스템 가용성 확인<br>· 보안·규제 제약 검토<br>· 적용 효과·ROI 가설 정리</td>
+        <td>· Customer Environment<br>· Business Systems<br>· Document/Knowledge Assets</td>
+      </tr>
+      <tr>
+        <td><strong>Define<br/>(업무 기준 정의)</strong></td>
+        <td>업무 의미·정책·권한·예외 기준을 Agent가 실행 가능한 구조로 정리</td>
+        <td>· 대상 업무 분석<br>· 판단 기준 구조화<br>· 권한·승인 매트릭스 규정<br>· HITL 분기 기준·성과 지표 선정</td>
+        <td>· 지식/시멘틱 계층<br>· Authority &amp; Policy Model<br>· HITL &amp; Action Policy</td>
+      </tr>
+      <tr>
+        <td><strong>Compose<br/>(자산 조합)</strong></td>
+        <td>검증된 AI·자동화 자산과 자사·파트너 역량을 고객 환경 및 사업 목적에 맞게 조합</td>
+        <td>· 모델·검색·문서 처리 선정<br>· Agent Framework 구성<br>· Workflow/RPA 조합<br>· Service UI·보안·통제 도구 결합</td>
+        <td>· 경험/접근 계층<br>· 에이전트 실행 환경<br>· Trust · Security</td>
+      </tr>
+      <tr>
+        <td><strong>Connect<br/>(고객 환경 연계)</strong></td>
+        <td>고객 자산과 업무 시스템을 AAP 실행 흐름에 안전하게 연결</td>
+        <td>· Data Platform·ERP·CRM·KMS 연계<br>· API·Writeback 설계<br>· IAM·SSO 통합<br>· 폐쇄망·Private 배포 구조 설계</td>
+        <td>· Customer Environment<br>· 데이터/연동 계층<br>· 시스템 반영 (Writeback)</td>
+      </tr>
+      <tr>
+        <td><strong>Operate<br/>(운영 전환·학습)</strong></td>
+        <td>운영 전환 기준과 지속 개선 흐름을 설계하고 재사용 자산으로 축적</td>
+        <td>· HITL 운영 기준<br>· Decision/Action Log 축적<br>· Evaluation·Feedback 루프<br>· Skill Catalog 관리<br>· 운영 리포트 제공</td>
+        <td>· AI 품질/평가 계층<br>· Audit &amp; Explainability<br>· Governance</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 별첨 D · 후속 논의 5단계 · 6질문 ============ -->
+<section id="sappD">
+  <div class="section-head">
+    <div class="num">D</div>
+    <div>
+      <h2>후속 논의 5단계 · 고객 진단 6질문</h2>
+      <p class="lead">Section 8 <strong>후속 진단·논의</strong> 상세</p>
+    </div>
+  </div>
+
+  <h3 class="sub-h3">E-1. 후속 논의 5단계</h3>
+  <p class="sub-note">각 단계 산출물 → 다음 단계 입력</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:220px">단계</th>
+        <th>핵심 질문</th>
+        <th style="width:240px">산출물</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>1. Data Foundation 진단</strong></td><td>어떤 데이터 플랫폼·BI·문서·업무 시스템을 보유하고 있는가?</td><td>Customer Environment Map</td></tr>
+      <tr><td><strong>2. Semantic Foundation 진단</strong></td><td>어떤 업무 개념·정책·권한·판단 기준이 필요한가?</td><td>Business Semantic 후보</td></tr>
+      <tr><td><strong>3. Build · Buy · Borrow 매핑</strong></td><td>어떤 capability를 직접 구축하고, 어떤 자산을 활용·차용할 것인가?</td><td>Capability 확보 전략 (별첨 A 참조)</td></tr>
+      <tr><td><strong>4. Agentic Pilot 설계</strong></td><td>어떤 업무를 첫 Pilot으로 검증할 것인가?</td><td>Pilot Scope · HITL · Action Flow</td></tr>
+      <tr><td><strong>5. Operational Learning 설계</strong></td><td>실행 결과와 피드백을 어떻게 축적·개선할 것인가?</td><td>Decision Log · Feedback Loop · Now-Near-Next Roadmap</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-h3">E-2. 고객에게 던질 6가지 질문</h3>
+  <p class="sub-note">각 질문 = E-1 진단 시작점</p>
+
+  <div class="grid-3">
+    <div class="card">
+      <span class="badge">① 기반 자산</span>
+      <h3>Data Platform 범위</h3>
+      <p>현재 Data Platform, BI, Catalog, Lakehouse, 문서·KMS, 업무 시스템은 어떤 범위로 구축되어 있는가?</p>
+    </div>
+    <div class="card">
+      <span class="badge">② 업무 흐름</span>
+      <h3>수작업 잔여 영역</h3>
+      <p>분석 결과 이후 사람이 수작업으로 판단·승인·시스템 반영하는 업무는 무엇인가?</p>
+    </div>
+    <div class="card">
+      <span class="badge">③ Agent · HITL 경계</span>
+      <h3>판단·검토 경계</h3>
+      <p>AI Agent가 판단 후보를 만들 수 있는 업무와 반드시 사람이 검토해야 하는 업무는 어떻게 나뉘는가?</p>
+    </div>
+    <div class="card">
+      <span class="badge">④ 시스템 반영</span>
+      <h3>Writeback 가능 영역</h3>
+      <p>시스템 Writeback이 가능한 업무와 검토·승인까지만 가능한 업무는 무엇인가?</p>
+    </div>
+    <div class="card">
+      <span class="badge">⑤ 학습 환류</span>
+      <h3>로그 · 환류 구조</h3>
+      <p>운영 결과를 정책·룰·Agent Skill 개선으로 환류할 수 있는 로그 구조가 있는가?</p>
+    </div>
+    <div class="card">
+      <span class="badge">⑥ 기술 확보 전략</span>
+      <h3>Build · Buy · Borrow</h3>
+      <p>어떤 capability는 내부 구축이 필요하고, 어떤 capability는 자사·상용·외부 검증 자산 활용이 적합한가?</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Footer ============ -->
+<footer class="footer">
+  <div>Agentic AI Platform · 고객용 선제안서 v0.5</div>
+  <div>kt ds · 2026.05.29</div>
+</footer>
+
+</div>
+<script>
+/* ════════ v0.6 : 4-2 데이터 기반 렌더 + 인페이지 chip 에디터 ════════
+   DEFAULT_ARCH_CHIPS(데이터) → renderArchitecture(). chip.type = normal·core·asset·std·partner·outcome.
+   에디터: chip/그룹/자산 추가·수정·삭제·순서변경, localStorage 저장, Export/Import JSON(+검증).
+   자사(asset)는 계층 하단 별도 row. MCP=std, OCR/Parser/Embedding/Vector=normal(구성요소). */
+(function(){
+  "use strict";
+  var ARCH_LS_KEY = "aap_arch_chips_v06";
+  var CHIP_TYPES = ["normal","asset","partner","outcome","sep"];   // 검증 허용 타입(sep=연결 화살표)
+  var EDIT_TYPES = ["normal","asset","partner","outcome"];          // 에디터 드롭다운 노출 타입
+  var TYPE_LABELS = {normal:"일반 capability", asset:"활용 가능 자산", partner:"외부·상용 후보", outcome:"분기 결과(→)", sep:"연결(→)"};
+
+  var DEFAULT_ARCH_CHIPS = [
+    { no:"1", titleKo:"경험 / 접근", titleEn:"Experience / Access",
+      role:"판단 후보와 실행 결과를 현업이 확인·검토·승인하는 접점.",
+      loop:["Decision","Action","Learning"], assets:["Business Agent"], groups:[
+      { label:"사용자 접점", chips:["Agent Portal","Copilot/Chat UI","Knowledge Assistant","Admin Console"] },
+      { label:"검토·승인", chips:["HITL Console","Evidence View","Approval Queue","Audit View","Comment Trail"] },
+      { label:"접근·채널", chips:["API Gateway/SDK","Portal","Teams","Slack","Email","API"] }
+    ]},
+    { no:"2", titleKo:"설계 / 개발", titleEn:"Build / Design",
+      role:"Agent·Prompt·Workflow·Tool·Rule·승인 시나리오를 설계·관리하는 구성 환경.",
+      loop:["Reasoning","Decision","Learning"], groups:[
+      { label:"Agent 설계", chips:["Agent Studio","Low-Code","Agent Template","Role Definition"] },
+      { label:"Prompt / Workflow", chips:["Prompt Design","Workflow Designer","Scenario Map","Test Case"] },
+      { label:"Registry", chips:["Tool Registry","Agent Registry","Version","Owner","Permission"] },
+      { label:"Rule / Policy Design", chips:["Rule Design","Decision Rule","Approval Scenario"] }
+    ]},
+    { no:"3", titleKo:"에이전트 실행 환경", titleEn:"Agent Runtime Environment", emphasis:true,
+      role:"업무를 작업 단위로 분해하고 모델·도구·지식·정책을 호출해 판단 후보와 처리 경로를 생성하는 핵심 실행 엔진.",
+      loop:["Reasoning","Decision"], assets:["BEAST"], groups:[] },
+    { no:"4", titleKo:"지식 / 시맨틱", titleEn:"Knowledge / Semantic",
+      role:"업무 용어·정책·권한·관계·예외를 Agent가 쓸 수 있는 업무 맥락으로 구조화.",
+      loop:["Semantic","Decision"], groups:[
+      { label:"의미 모델", chips:["Domain Ontology","Taxonomy","Business Dictionary","Entity/Relation Model","Case Model"] },
+      { label:"관계 지식", chips:["Knowledge Graph","Relation Mapping","Entity Linking","Customer Journey Context"] },
+      { label:"업무 판단 지식", chips:["Policy Rule","Decision Table","Exception Taxonomy","Authority Context"] },
+      { label:"컨텍스트 구성", chips:["Context Assembly","Grounded Context","Evidence Bundle","RAG","Hybrid Knowledge Store"] }
+    ]},
+    { no:"5", titleKo:"데이터 / 연동", titleEn:"Data / Integration",
+      role:"고객 데이터·시스템을 연결해 입력을 구성하고, 승인 결과를 Workflow·API·RPA·업무 시스템에 반영.",
+      loop:["Data","Action"], assets:["AI:ON-U"], groups:[
+      { label:"연결·수집", chips:["REST/SOAP","DB Connector","File/SFTP","MFT","API","SaaS Connector","Event Bus","Crawling","Batch/Stream"] },
+      { label:"처리 파이프라인", flow:["수집","정제","정규화","변환"] },
+      { label:"문서 처리", chips:["OCR","Parser","Document Validation","Document Standardization","Chunking"] },
+      { label:"검색·참조", chips:["Embedding","Vector Index","Retrieval Policy","Hybrid Search","Source Citation"] },
+      { label:"실행 연계", chips:["Workflow","API / RPA","Writeback","System Status Update","Action Log"] },
+      { label:"운영 데이터", chips:["Log Pipeline","Event Stream","Storage","Data Quality","Lineage","PII Masking"] }
+    ]},
+    { no:"6", titleKo:"AI 품질 / 운영 학습", titleEn:"AI Quality / Learning & Observability",
+      role:"판단 근거·실행 결과·피드백·오류를 추적·평가하고 재사용 지식·Skill 개선 후보로 축적.",
+      loop:["Learning"], groups:[
+      { label:"실험·실행 추적", chips:["Experiment Tracking","Run History","Prompt Version","Dataset Version"] },
+      { label:"품질·근거 평가", chips:["Grounding Eval","Citation Match","Answer Quality Score","Evidence Coverage"] },
+      { label:"안전·책임 평가", chips:["RAI Evaluation","Bias Check","Policy Violation Check","Safety Eval"] },
+      { label:"성능·비용", chips:["Latency","Token Usage","Cost Monitoring","Error Rate"] },
+      { label:"운영 학습·환류", chips:["Decision Log","Feedback Loop","Reject Reason","Human Feedback","Skill Candidate","Knowledge Update"] }
+    ]},
+    { no:"7", titleKo:"AI 컨트롤 / 거버넌스", titleEn:"AI Control / Governance",
+      role:"권한·위험도·정책·승인 기준으로 Agent의 판단·실행을 자동·검토·보류·차단으로 분기.",
+      loop:["Decision","Action"], groups:[
+      { label:"정책 관리", chips:["Policy Pack","Control Rule","Risk Policy","No-go Policy","Guardrail Policy","Model Usage Policy"] },
+      { label:"권한 관리", chips:["IAM","SSO","RBAC","ABAC","Tenant Boundary"] },
+      { label:"승인 기준", chips:["Approval Matrix","HITL Approval Criteria","Delegation Rule","Human Review Boundary"] },
+      { label:"개인정보·보안 기준", chips:["PII Policy","Data Boundary","Retention Policy","Masking Policy","DRM"] },
+      { label:"배포·사용량 거버넌스", chips:["Usage Quota","Deployment Approval","Release Gate","Model Quota"] }
+    ]},
+    { no:"8", titleKo:"플랫폼 인프라", titleEn:"Infra / Foundation",
+      role:"모델 실행·저장·검색·네트워크·보안·배포를 제공하는 기술 기반.",
+      loop:["Data","Reasoning","Action","Learning"], groups:[
+      { label:"Compute", chips:["CPU/GPU","Model Serving","Auto Scaling"] },
+      { label:"Container", chips:["Container","Kubernetes","Runtime Isolation"] },
+      { label:"Network / Security", chips:["Network","Firewall","Secret Manager","Secure Gateway"] },
+      { label:"Storage", chips:["RDB","Object Storage","Log Store","Backup","DR"] },
+      { label:"Specialized Store", chips:["GraphDB","VectorDB","Index Storage"] },
+      { label:"Deployment", chips:["On-premises","Private Cloud","Public Cloud","Closed Network"] }
+    ]}
+  ];
+
+  /* ---------- state ---------- */
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  function loadState(){
+    try{ var raw=localStorage.getItem(ARCH_LS_KEY); if(raw){ var d=JSON.parse(raw); if(validate(d)===null) return d; } }catch(e){}
+    return clone(DEFAULT_ARCH_CHIPS);
+  }
+  function persist(){ try{ localStorage.setItem(ARCH_LS_KEY, JSON.stringify(ARCH_STATE)); }catch(e){} }
+  var ARCH_STATE = null;
+  var editMode = false;
+
+  /* ---------- render ---------- */
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function normChip(c){ return (typeof c==="string") ? {text:c,type:"normal"} : {text:c.text, type:(c.type||"normal")}; }
+  function chipHtml(c,li,gi,ci){
+    c=normChip(c);
+    if(c.type==="sep") return '<span class="chip-sep">'+esc(c.text)+'</span>';
+    var attr = editMode ? ' data-act="chip-edit" data-li="'+li+'" data-gi="'+gi+'" data-ci="'+ci+'"' : '';
+    return '<span class="chip chip-'+c.type+(editMode?' editable':'')+'"'+attr+'>'+esc(c.text)+'</span>';
+  }
+  function flowHtml(g){
+    var steps = g.flow.map(function(s){ return '<span class="mstep">'+esc(s)+'</span>'; }).join('<i class="mchv">→</i>');
+    return '<span class="mflow">'+steps+(g.loop?'<span class="mloop">↻</span>':'')+'</span>';
+  }
+  function chiprow(g,li,gi){
+    var h = (g.chips||[]).map(function(c,ci){ return chipHtml(c,li,gi,ci); }).join('');
+    if(editMode) h += '<button class="add-chip" data-act="chip-add" data-li="'+li+'" data-gi="'+gi+'">+ chip</button>';
+    return '<div class="chiprow">'+h+'</div>';
+  }
+  function gtools(li,gi,locked){
+    if(!editMode) return '';
+    return '<span class="g-tools">'
+      +'<button data-act="grp-edit" data-li="'+li+'" data-gi="'+gi+'" title="라벨 수정">✎</button>'
+      +'<button data-act="grp-up" data-li="'+li+'" data-gi="'+gi+'" title="위로">▲</button>'
+      +'<button data-act="grp-down" data-li="'+li+'" data-gi="'+gi+'" title="아래로">▼</button>'
+      +'<button data-act="grp-del" data-li="'+li+'" data-gi="'+gi+'" title="그룹 삭제">✕</button>'
+      +'</span>';
+  }
+  function subHtml(g,li,gi){
+    var body = g.flow ? (flowHtml(g)+'<span class="flow-tag">flow</span>') : chiprow(g,li,gi);
+    return '<div class="sub"><span class="sl">'+esc(g.label)+gtools(li,gi)+'</span><div class="sub-body">'+body+'</div></div>';
+  }
+  function l3GrpHtml(g,li,gi){
+    var body = g.flow ? flowHtml(g) : chiprow(g,li,gi);
+    return '<div class="l3-grp'+(g.flow?' wide':'')+'"><div class="gl">'+esc(g.label)+gtools(li,gi)+'</div>'+body+'</div>';
+  }
+  function assetRow(L,li){
+    var assets=L.assets||[];
+    if(!editMode && !assets.length) return '';
+    var c = assets.map(function(a,ai){
+      var attr = editMode ? ' data-act="asset-edit" data-li="'+li+'" data-ai="'+ai+'"' : '';
+      return '<span class="chip chip-asset'+(editMode?' editable':'')+'"'+attr+'>'+esc(normChip(a).text)+'</span>';
+    }).join('');
+    if(editMode) c += '<button class="add-asset" data-act="asset-add" data-li="'+li+'">+ 자산</button>';
+    return '<div class="asset-row"><span class="asset-label">활용 가능 자산</span><div class="asset-chips">'+c+'</div></div>';
+  }
+  function addGroupBtn(li){ return editMode ? '<button class="add-group" data-act="grp-add" data-li="'+li+'">+ 그룹</button>' : ''; }
+  /* L3 = AAP 아키텍처 이미지의 '에이전트 코어' 도식 그대로 (고정 다이어그램). chip 데이터 미사용, asset row만 편집 가능. */
+  var expandedLayers = {};
+  function isExpanded(li){ return editMode || !!expandedLayers[li]; }
+  function toggleBtn(li,exp){ return '<button class="layer-toggle" data-act="layer-toggle" data-li="'+li+'">'+(exp?'접기 ▴':'상세 ▾')+'</button>'; }
+  function groupSummary(L){
+    var labels = L.emphasis
+      ? ["실행 엔진","오케스트레이션","메모리","모델 게이트웨이","도구 실행","안전·가드레일","HITL 게이트","에이전트 관리"]
+      : (L.groups||[]).map(function(g){ return g.label; });
+    var h = labels.map(function(a){ return '<span>'+esc(a)+'</span>'; }).join('');
+    if(L.assets && L.assets.length){ h += L.assets.map(function(a){ return '<span class="sm-asset">'+esc(normChip(a).text)+'</span>'; }).join(''); }
+    return '<div class="sm-chips">'+h+'</div>';
+  }
+  function renderL3Diagram(L,li){
+    var exp = isExpanded(li);
+    var diagram = '<div class="l3-iface-row"><b>Interface</b><span class="ifc">REST / GraphQL</span><span class="ifc">WebSocket</span><span class="ifc">gRPC</span><span class="ifc">Event Trigger</span></div>'
+      + '<div class="agent-core">'
+      +   '<div class="ac-h">에이전트 코어 <small>Agent Core</small></div>'
+      +   '<div class="ac-engine"><div class="acb-h">실행 엔진 <small>Execution Engine</small></div>'
+      +     '<div class="eng-flow"><span class="es">입력 처리</span><i>→</i><span class="es">계획·추론</span><i>→</i><span class="es">행동 실행</span><i>→</i><span class="es">응답 생성</span></div>'
+      +     '<div class="eng-fb">↺ 응답·실행 이력이 입력으로 환류 — 관측·학습</div></div>'
+      +   '<div class="ac-grid">'
+      +     '<div class="ac-box"><div class="acb-h">오케스트레이션 · 멀티에이전트</div><div class="acb-items"><span>Supervisor</span><span>Task Routing</span><span>Agent Coordination (A2A)</span></div><div class="acb-note">Protocol : MCP · A2A · 멀티에이전트 협업</div></div>'
+      +     '<div class="ac-box"><div class="acb-h">메모리 <small>Memory</small></div><div class="acb-items"><span>대화 히스토리</span><span>단기 메모리</span><span>장기 메모리</span></div></div>'
+      +     '<div class="ac-box"><div class="acb-h">모델 게이트웨이 <small>Model Gateway</small></div><div class="acb-items"><span>내부 라우팅 · 선택</span><span>LLM Provider</span></div></div>'
+      +     '<div class="ac-box"><div class="acb-h">도구 실행 <small>Tool Execution</small></div><div class="acb-flow"><span>도구 선택 · 호출</span><i>→</i><span>결과 파싱 · 검증</span></div></div>'
+      +     '<div class="ac-box"><div class="acb-h">안전 · 가드레일 <small>Safety / Guardrail</small></div><div class="acb-items"><span>정책 · 권한 · 안정성 검사</span><span>콘텐츠 · 입출력 필터</span></div></div>'
+      +     '<div class="ac-box"><div class="acb-h">에이전트 관리 <small>Agent Management</small></div><div class="acb-items"><span>라이프사이클</span><span>권한 · 역할 (RBAC)</span><span>버전 관리</span><span>모니터링</span></div></div>'
+      +   '</div>'
+      +   '<div class="ac-hitl"><b>HITL 런타임 검토 게이트</b><span>Runtime Review / Approval Gate — 자동 처리 · 사람 검토 · 보류 분기</span></div>'
+      +   '<div class="ac-band"><span>세션 · 상태 관리</span><span>능력 · 스킬 관리</span><span>프롬프트 · 정책 관리</span><span>버전 관리</span><span>관측성 (Observability)</span></div>'
+      + '</div>'
+      + '<div class="l3-note">Agent Runtime은 단독으로 작동하지 않습니다. 지식/시맨틱(L4)의 업무 의미, 데이터/연동(L5)의 입력·실행 경로, 거버넌스(L7)의 승인 기준, 품질/운영 학습(L6)의 평가·로그와 결합해 운영됩니다.</div>';
+    return '<div class="arch-row l3 has-meta'+(exp?' expanded':'')+'">'
+      + '<div class="l3-head"><span class="n">'+esc(L.no)+'</span><span class="lt">'+esc(L.titleKo)+' <small>'+esc(L.titleEn)+'</small></span>'+loopTags(L.loop)+toggleBtn(li,exp)+'</div>'
+      + (L.role?'<div class="layer-role">'+esc(L.role)+'</div>':'')
+      + '<div class="layer-summary">'+groupSummary(L)+'</div>'
+      + '<div class="layer-detail">'+diagram+assetRow(L,li)+'</div>'
+      + '</div>';
+  }
+  function loopTags(loop){
+    if(!loop || !loop.length) return '';
+    return '<div class="loop-tags"><b>Loop</b>'+loop.map(function(t){return '<span>'+esc(t)+'</span>';}).join('')+'</div>';
+  }
+  function cardBox(g,li,gi){
+    var body = g.flow ? flowHtml(g) : chiprow(g,li,gi);
+    return '<div class="ac-box'+(g.flow?' is-flow':'')+'"><div class="acb-h">'+esc(g.label)+gtools(li,gi)+'</div>'+body+'</div>';
+  }
+  function layerHtml(L,li){
+    if(L.emphasis){ return renderL3Diagram(L,li); }
+    var exp = isExpanded(li);
+    var flows="", cards="";
+    L.groups.forEach(function(g,gi){
+      if(g.flow){ flows += '<div class="ln-flow"><span class="ln-flow-l">'+esc(g.label)+'</span>'+flowHtml(g)+'</div>'; }
+      else { cards += cardBox(g,li,gi); }
+    });
+    var meta = (L.role?'<div class="layer-role">'+esc(L.role)+'</div>':'')+loopTags(L.loop);
+    var detail = '<div class="layer-core"><div class="ac-grid lc-grid">'+cards+(editMode?'<div class="ac-box add-card"><button class="add-group" data-act="grp-add" data-li="'+li+'">+ 그룹</button></div>':'')+'</div>'+assetRow(L,li)+'</div>';
+    return '<div class="arch-row has-meta'+(flows?' has-flow':'')+(exp?' expanded':'')+'">'
+      + '<div class="arch-ln"><div class="ln-top"><span class="n">'+esc(L.no)+'</span><span class="lt">'+esc(L.titleKo)+'<small>'+esc(L.titleEn)+'</small></span></div>'+flows+meta+'</div>'
+      + '<div class="layer-right"><div class="lr-head">'+groupSummary(L)+toggleBtn(li,exp)+'</div>'
+      +   '<div class="layer-detail">'+detail+'</div>'
+      + '</div>'
+      + '</div>';
+  }
+  function render(){
+    var el=document.getElementById("archStack"); if(!el) return;
+    el.innerHTML = ARCH_STATE.map(function(L,li){return layerHtml(L,li);}).join('<div class="layer-conn" aria-hidden="true"><span>↕</span></div>');
+    document.body.classList.toggle("arch-editing", editMode);
+    syncToolbar();
+  }
+
+  /* ---------- mutations ---------- */
+  function moveGroup(li,gi,dir){ var g=ARCH_STATE[li].groups; var j=gi+dir; if(j<0||j>=g.length) return; var t=g[gi]; g[gi]=g[j]; g[j]=t; persist(); render(); }
+  function delGroup(li,gi){ if(!confirm("이 그룹을 삭제할까요?")) return; ARCH_STATE[li].groups.splice(gi,1); persist(); render(); }
+
+  /* ---------- modal core ---------- */
+  function overlay(html){
+    var ov=document.createElement("div"); ov.className="arch-ov"; ov.innerHTML='<div class="arch-md">'+html+'</div>';
+    ov.addEventListener("click", function(e){ if(e.target===ov) ov.remove(); });
+    document.addEventListener("keydown", function esc2(e){ if(e.key==="Escape"){ ov.remove(); document.removeEventListener("keydown",esc2);} });
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function typeOptions(sel){
+    return EDIT_TYPES.map(function(t){ return '<option value="'+t+'"'+(t===sel?' selected':'')+'>'+TYPE_LABELS[t]+'</option>'; }).join('');
+  }
+  function openChipModal(mode,li,gi,ci){
+    var chips=ARCH_STATE[li].groups[gi].chips; var cur = mode==="edit"? normChip(chips[ci]) : {text:"",type:"normal"};
+    var moveRow = mode==="edit" ? '<div class="md-row md-move"><button class="md-btn" id="mvL">◄ 앞으로</button><button class="md-btn" id="mvR">뒤로 ►</button></div>' : '';
+    var delBtn = mode==="edit" ? '<button class="md-btn danger" id="mdDel">삭제</button>' : '';
+    var ov=overlay('<h4 class="md-h">'+(mode==="edit"?"chip 수정":"chip 추가")+'</h4>'
+      +'<label class="md-l">chip 텍스트</label><input class="md-in" id="mdText" value="'+esc(cur.text)+'" placeholder="예: Vector Index">'
+      +'<label class="md-l">표기 유형</label><select class="md-in" id="mdType">'+typeOptions(cur.type)+'</select>'
+      +moveRow
+      +'<div class="md-foot">'+delBtn+'<span class="md-spacer"></span><button class="md-btn" id="mdCancel">취소</button><button class="md-btn primary" id="mdSave">저장</button></div>');
+    var inEl=ov.querySelector("#mdText"); inEl.focus();
+    ov.querySelector("#mdCancel").onclick=function(){ ov.remove(); };
+    ov.querySelector("#mdSave").onclick=function(){
+      var text=inEl.value.trim(); if(!text){ inEl.focus(); return; }
+      var type=ov.querySelector("#mdType").value;
+      var obj = (type==="normal") ? text : {text:text,type:type};
+      if(mode==="edit") chips[ci]=obj; else chips.push(obj);
+      persist(); ov.remove(); render();
+    };
+    inEl.addEventListener("keydown",function(e){ if(e.key==="Enter") ov.querySelector("#mdSave").click(); });
+    if(mode==="edit"){
+      ov.querySelector("#mdDel").onclick=function(){ chips.splice(ci,1); persist(); ov.remove(); render(); };
+      ov.querySelector("#mvL").onclick=function(){ if(ci>0){ var t=chips[ci-1]; chips[ci-1]=chips[ci]; chips[ci]=t; persist(); ov.remove(); render(); } };
+      ov.querySelector("#mvR").onclick=function(){ if(ci<chips.length-1){ var t=chips[ci+1]; chips[ci+1]=chips[ci]; chips[ci]=t; persist(); ov.remove(); render(); } };
+    }
+  }
+  function openGroupModal(mode,li,gi){
+    var cur = mode==="edit"? ARCH_STATE[li].groups[gi].label : "";
+    var ov=overlay('<h4 class="md-h">'+(mode==="edit"?"그룹 라벨 수정":"그룹 추가")+'</h4>'
+      +'<label class="md-l">그룹(책임 묶음) 이름</label><input class="md-in" id="mdText" value="'+esc(cur)+'" placeholder="예: 검색·참조">'
+      +'<div class="md-foot"><span class="md-spacer"></span><button class="md-btn" id="mdCancel">취소</button><button class="md-btn primary" id="mdSave">저장</button></div>');
+    var inEl=ov.querySelector("#mdText"); inEl.focus();
+    ov.querySelector("#mdCancel").onclick=function(){ ov.remove(); };
+    ov.querySelector("#mdSave").onclick=function(){
+      var v=inEl.value.trim(); if(!v){ inEl.focus(); return; }
+      if(mode==="edit") ARCH_STATE[li].groups[gi].label=v;
+      else ARCH_STATE[li].groups.push({label:v,chips:[]});
+      persist(); ov.remove(); render();
+    };
+    inEl.addEventListener("keydown",function(e){ if(e.key==="Enter") ov.querySelector("#mdSave").click(); });
+  }
+  function openAssetModal(mode,li,ai){
+    if(!ARCH_STATE[li].assets) ARCH_STATE[li].assets=[];
+    var assets=ARCH_STATE[li].assets; var cur = mode==="edit"? normChip(assets[ai]).text : "";
+    var delBtn = mode==="edit" ? '<button class="md-btn danger" id="mdDel">삭제</button>' : '';
+    var ov=overlay('<h4 class="md-h">'+(mode==="edit"?"활용 가능 자산 수정":"활용 가능 자산 추가")+'</h4>'
+      +'<label class="md-l">자산명 (kt ds·KT 보유)</label><input class="md-in" id="mdText" value="'+esc(cur)+'" placeholder="예: AI:ON-U">'
+      +'<div class="md-foot">'+delBtn+'<span class="md-spacer"></span><button class="md-btn" id="mdCancel">취소</button><button class="md-btn primary" id="mdSave">저장</button></div>');
+    var inEl=ov.querySelector("#mdText"); inEl.focus();
+    ov.querySelector("#mdCancel").onclick=function(){ ov.remove(); };
+    ov.querySelector("#mdSave").onclick=function(){
+      var v=inEl.value.trim(); if(!v){ inEl.focus(); return; }
+      if(mode==="edit") assets[ai]=v; else assets.push(v);
+      persist(); ov.remove(); render();
+    };
+    inEl.addEventListener("keydown",function(e){ if(e.key==="Enter") ov.querySelector("#mdSave").click(); });
+    if(mode==="edit") ov.querySelector("#mdDel").onclick=function(){ assets.splice(ai,1); if(!assets.length) delete ARCH_STATE[li].assets; persist(); ov.remove(); render(); };
+  }
+
+  /* ---------- export / import ---------- */
+  function openIO(kind){
+    if(kind==="export"){
+      var json=JSON.stringify(ARCH_STATE,null,2);
+      var ov=overlay('<h4 class="md-h">Export JSON</h4><p class="md-note">현재 4-2 chip 구성입니다. 복사하거나 파일로 내려받아 백업하세요.</p>'
+        +'<textarea class="md-ta" id="ioText" readonly>'+esc(json)+'</textarea>'
+        +'<div class="md-foot"><button class="md-btn" id="ioCopy">복사</button><button class="md-btn" id="ioDl">다운로드(.json)</button><span class="md-spacer"></span><button class="md-btn primary" id="ioClose">닫기</button></div>');
+      ov.querySelector("#ioClose").onclick=function(){ ov.remove(); };
+      ov.querySelector("#ioCopy").onclick=function(){ var ta=ov.querySelector("#ioText"); ta.select(); try{document.execCommand("copy");}catch(e){} if(navigator.clipboard) navigator.clipboard.writeText(json); this.textContent="복사됨"; };
+      ov.querySelector("#ioDl").onclick=function(){ var b=new Blob([json],{type:"application/json"}); var u=URL.createObjectURL(b); var a=document.createElement("a"); a.href=u; a.download="aap_arch_chips_v06.json"; a.click(); setTimeout(function(){URL.revokeObjectURL(u);},1500); };
+    } else {
+      var ov2=overlay('<h4 class="md-h">Import JSON</h4><p class="md-note">JSON을 붙여넣고 적용하세요. 구조 검증 후 반영되며, 오류 시 현재 구성은 유지됩니다.</p>'
+        +'<textarea class="md-ta" id="ioText" placeholder="[ { &quot;no&quot;:&quot;1&quot;, &quot;titleKo&quot;:&quot;...&quot;, &quot;titleEn&quot;:&quot;...&quot;, &quot;groups&quot;:[...] }, ... ]"></textarea>'
+        +'<div class="md-err" id="ioErr"></div>'
+        +'<div class="md-foot"><span class="md-spacer"></span><button class="md-btn" id="ioCancel">취소</button><button class="md-btn primary" id="ioApply">적용</button></div>');
+      ov2.querySelector("#ioCancel").onclick=function(){ ov2.remove(); };
+      ov2.querySelector("#ioApply").onclick=function(){
+        var err=ov2.querySelector("#ioErr"); var raw=ov2.querySelector("#ioText").value;
+        var data; try{ data=JSON.parse(raw); }catch(e){ err.textContent="JSON 파싱 오류: "+e.message; return; }
+        var msg=validate(data); if(msg){ err.textContent="검증 실패 — "+msg; return; }
+        ARCH_STATE=data; persist(); ov2.remove(); render(); flash("Import 적용됨");
+      };
+    }
+  }
+  function validate(d){
+    if(!Array.isArray(d)||!d.length) return "최상위는 비어있지 않은 배열이어야 합니다.";
+    for(var i=0;i<d.length;i++){ var L=d[i];
+      if(!L||typeof L!=="object") return "layer["+i+"] 객체 아님";
+      if(L.no==null||!L.titleKo||!L.titleEn) return "layer["+i+"] no·titleKo·titleEn 필요";
+      if(!Array.isArray(L.groups)) return "layer["+i+"] groups 배열 필요";
+      for(var j=0;j<L.groups.length;j++){ var g=L.groups[j];
+        if(!g||!g.label) return "layer["+i+"] group["+j+"] label 필요";
+        if(g.flow){ if(!Array.isArray(g.flow)) return "layer["+i+"] group["+j+"] flow 배열 필요"; }
+        else if(!Array.isArray(g.chips)) return "layer["+i+"] group["+j+"] chips 배열 필요";
+        if(g.chips){ for(var k=0;k<g.chips.length;k++){ var c=g.chips[k];
+          if(typeof c==="string") continue;
+          if(!c||!c.text) return "layer["+i+"] group["+j+"] chip["+k+"] text 필요";
+          if(c.type && CHIP_TYPES.indexOf(c.type)<0) return "chip type 오류('"+c.type+"') — "+CHIP_TYPES.join("/")+" 중 하나";
+        } }
+      }
+      if(L.assets && !Array.isArray(L.assets)) return "layer["+i+"] assets 배열 필요";
+    }
+    return null;
+  }
+
+  /* ---------- toolbar ---------- */
+  function buildToolbar(){
+    var frame=document.querySelector(".arch-frame"); if(!frame||document.getElementById("archToolbar")) return;
+    var tb=document.createElement("div"); tb.className="arch-toolbar"; tb.id="archToolbar";
+    tb.innerHTML='<span class="atb-hint" id="tbHint">chip 클릭=수정 · +chip/+그룹/+자산 · ✎▲▼✕ 그룹</span>'
+      +'<span class="atb-grp" id="tbGroup"><button class="atb" data-act="tb-import">Import</button><button class="atb" data-act="tb-export">Export</button><button class="atb danger" data-act="tb-reset">초기화</button></span>'
+      +'<button class="atb" data-act="layer-expand-all" id="tbExpand">전체 펼치기</button>'
+      +'<button class="atb toggle" data-act="tb-toggle" id="tbToggle">✎ chip 편집</button>';
+    frame.parentNode.insertBefore(tb, frame);
+  }
+  function syncToolbar(){
+    var tg=document.getElementById("tbToggle"), grp=document.getElementById("tbGroup"), hint=document.getElementById("tbHint");
+    if(!tg) return;
+    var exb=document.getElementById("tbExpand");
+    if(exb){ var allE=ARCH_STATE.every(function(_,i){return expandedLayers[i];}); exb.textContent = allE ? "전체 접기" : "전체 펼치기"; exb.style.display = editMode ? "none" : ""; }
+    tg.textContent = editMode ? "✓ 편집 종료" : "✎ chip 편집";
+    tg.classList.toggle("on", editMode);
+    if(grp) grp.style.display = editMode ? "inline-flex" : "none";
+    if(hint) hint.style.display = editMode ? "inline" : "none";
+  }
+  var flashT=null;
+  function flash(msg){
+    var f=document.getElementById("archFlash");
+    if(!f){ f=document.createElement("div"); f.id="archFlash"; f.className="arch-flash"; document.body.appendChild(f); }
+    f.textContent=msg; f.classList.add("show");
+    if(flashT) clearTimeout(flashT); flashT=setTimeout(function(){ f.classList.remove("show"); },1600);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener("click", function(e){
+    var t=e.target.closest("[data-act]"); if(!t) return;
+    if(!t.closest("#archStack") && !t.closest(".arch-toolbar")) return;
+    var act=t.getAttribute("data-act");
+    var li=+t.getAttribute("data-li"), gi=+t.getAttribute("data-gi"), ci=+t.getAttribute("data-ci"), ai=+t.getAttribute("data-ai");
+    if(act==="tb-toggle"){ editMode=!editMode; render(); return; }
+    if(act==="tb-export"){ openIO("export"); return; }
+    if(act==="tb-import"){ openIO("import"); return; }
+    if(act==="tb-reset"){ if(confirm("기본 chip 구성으로 되돌릴까요? 편집 내용이 삭제됩니다.")){ try{localStorage.removeItem(ARCH_LS_KEY);}catch(e2){} ARCH_STATE=clone(DEFAULT_ARCH_CHIPS); render(); flash("기본 구성으로 초기화"); } return; }
+    if(act==="layer-toggle"){ expandedLayers[li]=!expandedLayers[li]; render(); return; }
+    if(act==="layer-expand-all"){ var allE=ARCH_STATE.every(function(_,i){return expandedLayers[i];}); ARCH_STATE.forEach(function(_,i){ expandedLayers[i]=!allE; }); render(); return; }
+    if(act==="chip-edit"){ openChipModal("edit",li,gi,ci); }
+    else if(act==="chip-add"){ openChipModal("add",li,gi); }
+    else if(act==="grp-edit"){ openGroupModal("edit",li,gi); }
+    else if(act==="grp-add"){ openGroupModal("add",li); }
+    else if(act==="grp-up"){ moveGroup(li,gi,-1); }
+    else if(act==="grp-down"){ moveGroup(li,gi,1); }
+    else if(act==="grp-del"){ delGroup(li,gi); }
+    else if(act==="asset-edit"){ openAssetModal("edit",li,ai); }
+    else if(act==="asset-add"){ openAssetModal("add",li); }
+  });
+
+  /* ---------- editor CSS (주입) ---------- */
+  function injectCss(){
+    var css=''
+    +'.arch-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;justify-content:flex-end;margin:0 0 8px}'
+    +'.arch-toolbar .atb{font-size:10.5px;font-weight:800;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:7px;padding:4px 10px;cursor:pointer;line-height:1.4}'
+    +'.arch-toolbar .atb:hover{border-color:var(--teal);color:var(--teal-strong)}'
+    +'.arch-toolbar .atb.toggle.on{background:var(--teal2);border-color:var(--teal);color:var(--teal-strong)}'
+    +'.arch-toolbar .atb.danger{color:var(--red)}'
+    +'.arch-toolbar .atb-grp{display:none;gap:7px}'
+    +'.arch-toolbar .atb-hint{display:none;font-size:9.5px;font-weight:700;color:var(--muted);margin-right:auto}'
+    +'body.arch-editing #archStack .chip.editable{cursor:pointer}'
+    +'body.arch-editing #archStack .chip.editable:hover{outline:2px solid var(--teal);outline-offset:1px}'
+    +'#archStack .g-tools{display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle}'
+    +'#archStack .g-tools button{font-size:8.5px;font-weight:800;border:1px solid var(--line);background:#fff;border-radius:4px;padding:0 4px;cursor:pointer;color:var(--muted);line-height:1.5}'
+    +'#archStack .g-tools button:hover{border-color:var(--teal);color:var(--teal-strong)}'
+    +'#archStack .add-chip,#archStack .add-asset{font-size:9px;font-weight:800;border:1px dashed var(--teal);background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;color:var(--teal-strong);line-height:1.3}'
+    +'#archStack .add-group{display:inline-block;margin-top:7px;font-size:9.5px;font-weight:800;border:1px dashed var(--teal);background:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--teal-strong)}'
+    +'#archStack .flow-tag{display:none;margin-left:6px;font-size:8px;font-weight:800;color:var(--muted)}'
+    +'body.arch-editing #archStack .flow-tag{display:inline}'
+    +'.arch-ov{position:fixed;inset:0;background:rgba(17,17,17,.42);display:flex;align-items:center;justify-content:center;z-index:99999}'
+    +'.arch-md{background:#fff;border-radius:14px;padding:18px 20px;width:min(460px,92vw);box-shadow:0 18px 50px rgba(0,0,0,.28);font-family:inherit}'
+    +'.arch-md .md-h{margin:0 0 12px;font-size:14px;font-weight:900;color:var(--ink)}'
+    +'.arch-md .md-l{display:block;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 4px}'
+    +'.arch-md .md-in{width:100%;font-size:13px;font-family:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--ink)}'
+    +'.arch-md .md-in:focus{outline:none;border-color:var(--teal)}'
+    +'.arch-md .md-move{display:flex;gap:8px;margin-top:12px}'
+    +'.arch-md .md-foot{display:flex;align-items:center;gap:8px;margin-top:16px}'
+    +'.arch-md .md-spacer{flex:1}'
+    +'.arch-md .md-btn{font-size:12px;font-weight:800;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;color:var(--sub)}'
+    +'.arch-md .md-btn:hover{border-color:var(--teal);color:var(--teal-strong)}'
+    +'.arch-md .md-btn.primary{background:var(--teal-strong);border-color:var(--teal-strong);color:#fff}'
+    +'.arch-md .md-btn.danger{color:var(--red);border-color:#f0c8ca}'
+    +'.arch-md .md-note{font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.5}'
+    +'.arch-md .md-ta{width:100%;height:230px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical;color:var(--ink)}'
+    +'.arch-md .md-err{font-size:11px;font-weight:700;color:var(--red);margin-top:8px;min-height:14px;line-height:1.4}'
+    +'.arch-flash{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:9px 16px;border-radius:9px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:99999}'
+    +'.arch-flash.show{opacity:1;transform:translateX(-50%) translateY(0)}'
+    +'@media print{.arch-toolbar{display:none}}';
+    var st=document.createElement("style"); st.id="archEditorCss"; st.textContent=css; document.head.appendChild(st);
+  }
+
+  /* ---------- init ---------- */
+  function init(){ ARCH_STATE=loadState(); injectCss(); buildToolbar(); render(); }
+  window.AAP_ARCH = { get state(){return ARCH_STATE;}, DEFAULT:DEFAULT_ARCH_CHIPS, KEY:ARCH_LS_KEY, render:render, validate:validate };
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+</script>
+</body>
+</html>
