@@ -1,5 +1,6 @@
-# Claude Code 로컬 설정
-.claude/
+# Claude Code 로컬 설정 (개인 설정은 제외, 공유 에이전트 정의는 추적)
+.claude/*
+!.claude/agents/
 .claude/settings.local.json
 
 # OS 메타 파일
