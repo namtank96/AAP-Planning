@@ -39,6 +39,7 @@
 |---|---|---|---|---|
 | 1 | **생애주기 단계 최상위 탭** | Foundry, Copilot, Cognigy | ✅ **차용** | 3뷰(구성→실행→관리)를 업무 흐름의 생애주기로 명확히 |
 | 2 | **타입별 부품 팔레트/카탈로그** | n8n 노드 라이브러리, Make 모듈, Foundry Tool catalog | ✅ **차용** | 5타입(Agent·Module·Solution·Connector·Policy) 팔레트 = 구성 뷰의 핵심 |
+| 2b | **실행 맵·목록에 부품 타입 색 표시** (KEY MESSAGE 증명) | 오케스트레이션 v2 자체 실험(`Agentic_AI_회의_오케스트레이션_v2.html`: 타입 색 점 `.mn-type`+타입 배지) | ✅ **차용**(색·분류 정합) | 다크 맵·목록 노드에 5타입 색 점/배지+범례 → "Agent가 잔뜩 도는 그림"이 아니라 "조합된 구조"임을 시각 증명. **엔진·모델은 별도 타입 ✕ → Agent/Module 내부 리소스로 흡수.** 색·규칙은 UI 가이드 §5.9 |
 | 3 | **Connector를 1급 카탈로그로** + MCP | Retool "Resources", UiPath "Integration Service", Foundry/Copilot/Glean "Tools+MCP" (MCP는 사실상 표준) | ✅ **차용** | Connector 타입을 1급으로, "기존 시스템 연결"을 카탈로그화. MCP 연결 표기 |
 | 4 | **관측/트레이싱을 명명된 메뉴로** | Foundry "Tracing", LangSmith "Observability", Copilot "Monitor", n8n "Executions" | ✅ **차용**(주의) | 관리 뷰에 실행 이력·Decision Lineage. 단 **업무 언어로**(raw 트레이스 ✕) |
 | 5 | **재사용 컴포넌트 레지스트리/라이브러리** (신생 1급 개념) | Copilot "Agent Library", Foundry "Entra Agent Registry", Glean agent library | ✅ **차용** | 관리 뷰 = Component Registry(이미 보유) — 시대 흐름과 일치 |
@@ -64,6 +65,7 @@
 
 ### ▶ 실행 (Run/Operate) — "흐름이 자율로 돈다"
 - 업무 순서(직전·현재·다음 3개) + 8계층 다크 캔버스 실행(오케스트레이션 맵)
+- **맵 노드에 부품 타입 색 표시**(§3-2b) — 실행 중에도 Agent/Connector/Solution/Policy 구분
 - 실시간 로그(Datadog·n8n Executions 패턴, 업무 언어) + HITL/산출물 모달
 - *"맡기기" 버튼 없이 자율 실행* (현행 원칙 유지)
 
