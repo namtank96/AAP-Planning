@@ -17,6 +17,12 @@ Agent=teal · Module=violet · 기존 솔루션(Solution)=cyan · Connector=blue
 - **엔진·모델(LLM·STT·번역)은 별도 타입 ✕** → Agent/Module 내부 리소스로 흡수(부품 종류 5개 고정).
 - 다크 맵에서 **상태색(indigo/emerald/amber)과 타입색(teal 5색) 혼동 금지.** 모션: 연결선 데이터 점 `flowping`.
 
+## 아이콘 = Lucide 표준 (어기지 말 것)
+모든 아이콘은 **Lucide icon set**을 쓴다(이모지 🧠📅✓🧩 등 → Lucide SVG로 교체).
+- **제약 정합**: 플랫폼 구현체는 "외부 라이브러리 0 · file:// 더블클릭 동작"이 원칙 → **CDN/npm 의존 금지**(file://에서 깨짐). 필요한 아이콘만 **인라인 SVG로 임베드**(또는 SVG 심볼 스프라이트).
+- **스타일**: stroke 기반 1.5~2px, `currentColor`로 색 상속 → 5타입 색·상태색 토큰과 자동 정합. 임의 색 하드코딩 ✕.
+- 디자인 가이드에 사용 아이콘 매핑(역할→Lucide 이름)을 §에 정리.
+
 ## 상용 벤치마크 (에이전트 오케스트레이션 콘솔 성격)
 Linear(규율·밀도) · LangGraph Studio/LangSmith(실행 트레이스) · n8n(노드 캔버스) · MS Copilot Studio(컴포넌트 카탈로그) · Datadog(운영 로그) · Notion(차분한 산출물 모달).
 
