@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Platform · Workload Runtime Builder</title>
+<link rel="stylesheet" href="core/platform.css">
+</head>
+<body>
+
+<!-- ===== TOP BAR (platform shell · 도메인 무관) ===== -->
+<div class="topbar">
+  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>운영 콘솔 · 통합 인박스</span></div>
+  <div class="sp"></div>
+  <span class="case-title" id="caseTitle"></span>
+  <label class="devtg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
+  <button class="authbtn" id="authBtn" data-ic="rocket" data-ic-pos="pre">업무 격상</button>
+  <button class="runbtn" id="runBtn" data-ic="play" data-ic-pos="pre">Run</button>
+</div>
+
+<div class="shell">
+
+<!-- ===== LEFT GLOBAL NAV (운영 콘솔 IA · 도메인 무관) ===== -->
+<nav class="gnav" id="gnav">
+  <button class="gnav-i" data-view="inbox"><span class="gn-ic" data-ic="inbox"></span><span class="gn-l">인박스</span><span class="gn-c" id="navCnt"></span></button>
+  <button class="gnav-i" data-view="run"><span class="gn-ic" data-ic="play"></span><span class="gn-l">실행</span></button>
+  <button class="gnav-i" data-view="govern"><span class="gn-ic" data-ic="shield"></span><span class="gn-l">관리</span></button>
+  <button class="gnav-i" data-view="domain"><span class="gn-ic" data-ic="puzzle"></span><span class="gn-l">도메인</span></button>
+</nav>
+
+<div class="views">
+
+  <!-- ============ INBOX VIEW (인박스) — core가 CASES로 렌더 ============ -->
+  <section class="view" data-view="inbox" hidden>
+    <div class="scroll"><div class="wrapc">
+      <div class="inbox-top">
+        <div>
+          <p class="sec-title" style="margin-top:0">통합 업무 인박스 <span style="font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px" id="inboxSub"></span></p>
+          <p class="sec-sub">여러 유형의 업무가 <b>하나의 인박스</b>로 들어옵니다 — 유형 필터 × 상태로 보고, 행을 클릭하면 그 유형의 실행 콘솔로 엽니다</p>
+        </div>
+        <button class="newcase" id="newCaseBtn" data-ic="plus" data-ic-pos="pre">새 업무 요청</button>
+      </div>
+      <div class="ty-filter" id="inboxFilter"></div>
+      <div class="inbox" id="inboxList"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ DOMAIN VIEW (도메인 = 구 구성) — core가 PACK 데이터로 렌더 ============ -->
+  <section class="view" data-view="domain" hidden>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title">Domain Catalog · 처리 가능한 업무 유형</p>
+      <p class="sec-sub">'도메인'은 앱을 갈아타는 모드가 아니라 플랫폼이 <b>처리할 수 있는 업무 유형의 레지스트리</b>입니다 — 새 유형을 자동저작으로 등록하면 여기·통합 인박스·필터에 자동 편입됩니다. 항목을 클릭하면 그 유형의 실행 구조를 미리 봅니다.</p>
+      <div class="catalog" id="catGrid"></div>
+      <p class="sec-title" id="catPrevTitle" style="margin-top:22px">실행 구조 미리보기</p>
+      <p class="sec-title" style="margin-top:14px">Workload Analysis · 업무 이해</p>
+      <p class="sec-sub">AAP가 요청을 먼저 해석합니다 — 무엇을 / 무엇을 만들어야 하나</p>
+      <div class="wa" id="waBox"></div>
+      <p class="sec-title">Execution Structure · AAP가 구성한 실행 구조</p>
+      <p class="sec-sub">AAP는 Agent를 많이 띄우는 게 아니라, 이 업무에 필요한 <b>구성요소를 골라 조합</b>합니다</p>
+      <div class="compose" id="composeGrid"></div>
+      <div class="compose-note"><span class="cn-ic" data-ic="puzzle"></span><b>운영 가능한 업무 흐름</b> = Agent(전문 작업) + Module(재사용 기능) + 기존 솔루션(Buy·Integrate) + Connector(시스템 연동) + Policy(통제·권한)의 조합. AAP는 이 구성요소들을 업무 의미에 맞게 엮어 <b>실행 구조</b>로 만들고, 실행 뷰에서 그 구조가 자율 작동합니다.</div>
+      <p class="sec-title">Execution Plan · 실행 순서</p>
+      <p class="sec-sub">AAP가 업무를 단계로 분해합니다 — 각 단계가 <b>무엇을 만들고</b>, 어디서 <b>사람이 선택·확인</b>하는지</p>
+      <div class="plan" id="planTable"></div>
+      <div class="gatebar" id="gatebar"></div>
+      <p class="sec-title" style="margin-top:20px">Architecture Coherence · AAP 아키텍처 정합</p>
+      <p class="sec-sub">이 실행 구조는 곧 AAP 표준 아키텍처입니다 — Operating Loop · 8계층 · 4대 역량 · Trust. 회의 Pack은 그 위에서 작동(점등 = 이 도메인이 경유하는 계층)</p>
+      <div class="archc" id="archMap"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ RUN VIEW (실행) ============ -->
+  <section class="view" data-view="run">
+    <div class="runtop">
+      <button class="rt-back" id="rtBack" data-tip="인박스로 돌아가기">‹ 인박스</button>
+      <span class="rt-lab">업무 순서 <em>· 직전 / 현재 / 다음</em></span>
+      <div class="seq" id="seq"></div>
+      <span class="rt-prog" id="seqProg"></span>
+    </div>
+    <div class="main">
+      <section class="panel left">
+        <div class="cons-wrap">
+          <div class="cons-h">고객이 보는 서비스 화면</div>
+          <div class="console">
+            <div class="cust-head" id="custHead"></div>
+            <div class="con-body" id="conBody"></div>
+            <div class="cmodal" id="cmodal"></div>
+          </div>
+        </div>
+      </section>
+      <section class="panel right">
+        <div class="ph">AAP 작동 구조 · 8계층 흐름 <span class="help" data-tip="왼쪽 고객 화면에서 일어나는 일을 AAP가 8계층 안에서 어떤 구성요소로 실행하는지 보여줍니다. 각 단계 '결과 보기'로 실제 산출물(더미)을 확인할 수 있습니다. ∥ = 병렬. 보라 = kt ds 자산.">?</span></div>
+        <div class="explain" id="explain"></div>
+        <div class="flow" id="flow"></div>
+        <div style="flex:1"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============ GOVERN VIEW (관리) ============ -->
+  <section class="view" data-view="govern" hidden>
+    <div class="scroll"><div class="wrapc">
+      <div class="gov-strip" id="govStrip"></div>
+      <p class="sec-title">Run Trace · Decision Log <span style="font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px">실행하면 자율 판단·HITL·반영이 누적됩니다 (감사·재현 가능)</span></p>
+      <div class="trace" id="traceLog"></div>
+      <p class="sec-title">Component Registry · 실행 구조를 이루는 구성요소</p>
+      <p class="sec-sub">AAP가 이 업무를 위해 조합한 구성요소 — <b>Agent만이 아니라 Module·기존 솔루션·Connector·Policy</b>로 구성</p>
+      <div class="master-card">
+        <div class="mi" data-ic="brain"></div>
+        <div><div class="mt">총괄 · 오케스트레이터 (Supervisor)</div><h3>Master Agent</h3>
+        <p>업무 맥락을 분석하고 어떤 Agent·모듈·솔루션·Connector·정책이 필요한지 판단해 실행 구조를 구성·지휘합니다. 사람(HITL)과 소통하는 창구이기도 합니다.</p></div>
+      </div>
+      <div class="reg" id="reg"></div>
+    </div></div>
+  </section>
+
+</div>
+</div><!-- /.shell -->
+
+<div id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<!-- 자동 저작 오버레이 (업무 소스 → AI breakdown → Domain Pack 생성) -->
+<div id="authoring" class="authoring" hidden>
+  <div class="auth-box">
+    <button class="auth-x" id="authX" data-ic="x"></button>
+    <div class="auth-h"><span class="ah-ic" data-ic="plus"></span>새 업무 자동 학습 <span>AAP가 업무 설명을 스스로 분해(RFP→WBS식)해 Domain Pack을 만들고 기억합니다 — 같은 플랫폼에서 바로 작동</span></div>
+    <div class="auth-body" id="authBody"></div>
+  </div>
+</div>
+
+<!-- 도메인 팩 먼저 적재(window.AAP_PACKS) → 코어 부팅 → 자동 저작 모듈. <script src>라 file://에서도 동작 -->
+<script src="core/icons.js"></script>
+<script>
+/* 정적 chrome 아이콘 하이드레이션 — [data-ic] 요소에 인라인 SVG 주입.
+   data-ic-pos="pre" 이면 기존 텍스트 앞에 아이콘 + 라벨 래핑(버튼). */
+window.AAP_hydrateIcons=function(root){
+  (root||document).querySelectorAll('[data-ic]').forEach(function(el){
+    if(el.dataset.icDone)return;
+    var sv=window.AAP_ICON.svg(el.dataset.ic); if(!sv)return;
+    if(el.dataset.icPos==='pre'){ el.innerHTML=sv+'<span class="btn-l">'+el.textContent.trim()+'</span>'; }
+    else { el.innerHTML=sv; }
+    el.dataset.icDone='1';
+  });
+};
+document.addEventListener('DOMContentLoaded',function(){window.AAP_hydrateIcons();});
+</script>
+<script src="packs/meeting.js"></script>
+<script src="packs/voc.js"></script>
+<script src="core/core.js"></script>
+<script src="core/authoring.js"></script>
+<script src="core/pipeline.js"></script>
+</body>
+</html>

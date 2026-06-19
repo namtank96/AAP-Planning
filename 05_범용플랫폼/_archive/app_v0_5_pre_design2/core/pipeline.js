@@ -230,9 +230,8 @@
     else if(step===4)next='④ 검증 통과 — 시운전으로';
     else if(step===5)next='';
     const blocked=(step===3&&!M.gates.length)||(step===4&&!M._checkPass);
-    const warnBlock=step===3&&!M.gates.length; /* 게이트 0 = red 차단 */
     f.innerHTML=`${step>1?`<button class="cp-btn ghost" id="plPrev">${ICO('chevron-left')}이전</button>`:'<span></span>'}
-      ${warn?`<div class="pl-warn ${warnBlock?'block':''}">${ICO('alert-triangle')}${warn}</div>`:'<span class="pl-foot-sp"></span>'}
+      ${warn?`<div class="pl-warn">${ICO('alert-triangle')}${warn}</div>`:'<span class="pl-foot-sp"></span>'}
       ${next?`<button class="cp-btn primary ${blocked?'is-block':''}" id="plNext" ${blocked?'disabled':''}>${next}${ICO('arrow-right')}</button>`:'<span></span>'}`;
     const p=$('plPrev'); if(p)p.onclick=()=>{ step=Math.max(1,step-1); render(); };
     const n=$('plNext'); if(n)n.onclick=()=>{
@@ -266,55 +265,8 @@
     $('plRe').onclick=()=>{ M.sourceText=$('plText').value; initModel(M.sourceText); render(); };
   }
 
-  /* ── ② 실행 구조 구성 (5타입 매핑 · 사람 수정) ──
-     뷰 2종: graph(다크 엔진룸 노드 그래프 · 작동 증명) / list(편집). M._cmpView 로 토글 */
+  /* ── ② 실행 구조 구성 (5타입 매핑 · 사람 수정) ── */
   function renderCompose(){
-    if(!M._cmpView)M._cmpView='graph';
-    /* 타입별 합계(디자인 계약: 5타입 색 칩) */
-    const cnt={}; M.compose.forEach(t=>t.comps.forEach(c=>{const k=typeMeta(c.type).k;cnt[k]=(cnt[k]||0)+1;}));
-    const view=M._cmpView;
-    $('plBody').innerHTML=`
-      <div class="pl-sech">${ICO('boxes')}작업별 구성요소 매핑 <span class="pl-secsub">AAP는 Agent만이 아니라 5타입을 골라 <b>조합</b>합니다 — Agent가 잔뜩 도는 그림이 아니라 <b>조합된 실행 구조</b></span>
-        <span class="pl-cmp-toggle">
-          <button class="pl-cmp-tg ${view==='graph'?'on':''}" data-cv="graph">${ICO('git-branch')}노드 그래프</button>
-          <button class="pl-cmp-tg ${view==='list'?'on':''}" data-cv="list">${ICO('list')}편집</button>
-        </span></div>
-      <div class="pl-typebar">${TYPES.map(t=>`<span class="pl-t ${t.cls}"><span class="pl-t-dot"></span>${t.k} ${cnt[t.k]||0}</span>`).join('')}</div>
-      ${view==='graph'?renderComposeGraph():renderComposeList()}`;
-    $('plBody').querySelectorAll('.pl-cmp-tg').forEach(e=>e.onclick=()=>{ M._cmpView=e.dataset.cv; renderCompose(); });
-    if(view==='list')wireComposeList();
-  }
-  /* ── ②-graph: 다크 엔진룸 SVG 노드 그래프(작업→구성요소) — 5타입 teal 색 정합 ── */
-  function renderComposeGraph(){
-    /* 레이아웃: 좌 = 작업(캐논 단계) 노드, 우 = 구성요소 노드(타입색). 곡선 엣지로 연결. */
-    const tasks=M.compose; const PADT=14, GAP=12;
-    /* 우측 컬럼 노드 = 작업별 comps 평면화(작업 묶음 간격) */
-    const compH=34, compW=210, taskW=150, taskH=46, colGap=120;
-    let compY=PADT, taskGeo=[], compGeo=[], edges=[];
-    tasks.forEach((t,ti)=>{
-      const start=compY;
-      t.comps.forEach((c,ci)=>{ const m=typeMeta(c.type);
-        compGeo.push({x:taskW+colGap, y:compY, w:compW, h:compH, name:c.name, cls:m.cls, ic:m.ic, note:c.note}); compY+=compH+8; });
-      const end=compY-(t.comps.length?8:0);
-      const ty=t.comps.length?(start+end-compH)/2:compY;
-      taskGeo.push({x:0,y:ty,w:taskW,h:taskH,label:t.taskLabel,cap:(CANON.find(c=>c.id===t.taskId)||{}).cap||''});
-      /* edges: this task → each of its comps */
-      const cidxStart=compGeo.length-t.comps.length;
-      t.comps.forEach((c,ci)=>{ const cg=compGeo[cidxStart+ci]; edges.push({tx:taskW,ty:ty+taskH/2,cx:taskW+colGap,cy:cg.y+compH/2}); });
-      compY+=GAP;
-    });
-    const W=taskW+colGap+compW+4, H=Math.max(compY,160);
-    const edgeP=edges.map(e=>{const mx=(e.tx+e.cx)/2;return `<path class="plg-edge" d="M${e.tx},${e.ty} C${mx},${e.ty} ${mx},${e.cy} ${e.cx},${e.cy}"/>`;}).join('');
-    const taskN=taskGeo.map(g=>`<g class="plg-task" transform="translate(${g.x},${g.y})"><rect width="${g.w}" height="${g.h}" rx="9"/><text class="plg-cap" x="11" y="18">${esc(g.cap)}</text><text class="plg-tl" x="11" y="34">${esc(g.label)}</text></g>`).join('');
-    const compN=compGeo.map(g=>`<g class="plg-comp ${g.cls}" transform="translate(${g.x},${g.y})"><rect width="${g.w}" height="${g.h}" rx="8"/><circle class="plg-dot" cx="13" cy="${g.h/2}" r="4"/><text class="plg-cn" x="26" y="${g.h/2+4}">${esc(g.name)}</text></g>`).join('');
-    return `<div class="plg-wrap">
-      <div class="plg-canvas"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMinYMin meet">
-        <g class="plg-edges">${edgeP}</g>${taskN}${compN}</svg></div>
-      <div class="plg-leg">${TYPES.map(t=>`<span class="plg-lg ${t.cls}"><span class="plg-lg-d"></span>${t.k}</span>`).join('')}<span class="plg-leg-note">작업(좌) → AAP가 배정한 구성요소(우) · 색 = 5타입</span></div>
-    </div>`;
-  }
-  /* ── ②-list: 편집 가능한 매핑 목록(기존 골격) ── */
-  function renderComposeList(){
     const typeSel=(ti,ci,cur)=>`<select class="pl-ty-sel" data-ti="${ti}" data-ci="${ci}">${TYPE_KEYS.map(k=>`<option ${k===cur?'selected':''}>${k}</option>`).join('')}</select>`;
     const compRow=(t,ti)=>`<div class="pl-cmp">
       <div class="pl-cmp-h"><span class="pl-cmp-can">${esc(CANON.find(c=>c.id===t.taskId)?CANON.find(c=>c.id===t.taskId).cap:'')}</span><b>${esc(t.taskLabel)}</b></div>
@@ -322,9 +274,13 @@
         return `<div class="pl-comp ${m.cls}"><span class="pl-comp-dot"></span>${typeSel(ti,ci,c.type)}<div class="pl-comp-main"><input class="pl-comp-name" data-ti="${ti}" data-ci="${ci}" value="${esc(c.name)}"><div class="pl-comp-note">${esc(c.note||'')}</div></div><button class="pl-comp-del" data-ti="${ti}" data-ci="${ci}" title="삭제">${ICO('trash')}</button></div>`;
       }).join('')}
       <button class="pl-comp-add" data-ti="${ti}">${ICO('plus')}구성요소 추가</button></div></div>`;
-    return `<div class="pl-cmps">${M.compose.map(compRow).join('')}</div>`;
-  }
-  function wireComposeList(){
+    /* 타입별 합계(디자인 계약: 5타입 색 칩) */
+    const cnt={}; M.compose.forEach(t=>t.comps.forEach(c=>{const k=typeMeta(c.type).k;cnt[k]=(cnt[k]||0)+1;}));
+    $('plBody').innerHTML=`
+      <div class="pl-sech">${ICO('puzzle')}작업별 구성요소 매핑 <span class="pl-secsub">AAP는 Agent만이 아니라 5타입을 골라 <b>조합</b>합니다 — 타입·이름을 직접 고치세요</span></div>
+      <div class="pl-typebar">${TYPES.map(t=>`<span class="pl-t ${t.cls}"><span class="pl-t-dot"></span>${t.k} ${cnt[t.k]||0}</span>`).join('')}</div>
+      <div class="pl-cmps">${M.compose.map(compRow).join('')}</div>`;
+    /* 와이어링 */
     $('plBody').querySelectorAll('.pl-ty-sel').forEach(e=>e.onchange=()=>{ M.compose[+e.dataset.ti].comps[+e.dataset.ci].type=e.value; renderCompose(); renderFoot(); });
     $('plBody').querySelectorAll('.pl-comp-name').forEach(e=>e.onchange=()=>{ M.compose[+e.dataset.ti].comps[+e.dataset.ci].name=e.value; });
     $('plBody').querySelectorAll('.pl-comp-del').forEach(e=>e.onclick=()=>{ M.compose[+e.dataset.ti].comps.splice(+e.dataset.ci,1); renderCompose(); renderFoot(); });
@@ -343,9 +299,8 @@
     const cand=gateCandidates().filter(c=>!gated.has(c.id));
     $('plBody').innerHTML=`
       <div class="pl-sech">${ICO('flag')}HITL 게이트 배치 <span class="pl-secsub">책임·되돌리기 어려운·외부 영향 결정점에 <b>사람 통제점</b>을 둡니다. <b style="color:var(--amber-ink)">자율=사람 통제점 정의가 전제 — 0개면 격상 불가</b></span></div>
-      ${M.gates.length?'':`<div class="pl-gate-block">${ICO('alert-triangle')}<div><b>게이트 0개 — 자율 격상 차단</b><span>사람 통제점이 하나도 없는 자율 운영은 책임·되돌리기 위험이 있어 진행할 수 없습니다. 아래 후보에서 최소 1개를 배치하세요.</span></div></div>`}
       <div class="pl-gates ${M.gates.length?'':'is-empty'}">
-        ${M.gates.length?M.gates.map(gateCard).join(''):''}
+        ${M.gates.length?M.gates.map(gateCard).join(''):`<div class="pl-gate-empty">${ICO('alert-triangle')}배치된 게이트가 없습니다. 아래 후보에서 추가하세요 — 최소 1개가 있어야 자율 운영으로 격상할 수 있습니다.</div>`}
       </div>
       ${cand.length?`<div class="pl-sech sub">${ICO('plus')}게이트 추가 후보</div>
       <div class="pl-gcand">${cand.map(c=>`<button class="pl-gcand-i" data-add="${c.id}">${ICO('flag')}<b>${esc(c.label)}</b><span>${c.id==='approve'?'처리 전 계획·옵션 승인':'반영·발송 전 최종 승인'}</span></button>`).join('')}</div>`:''}

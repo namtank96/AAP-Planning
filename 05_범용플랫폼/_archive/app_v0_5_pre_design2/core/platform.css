@@ -419,7 +419,6 @@ textarea.au-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0
 /* 우측 8계층 흐름 — 단계 화살표 + 결과 토글 아이콘 */
 .rarrow{display:flex;align-items:center;justify-content:center;} .rarrow .ic{width:14px;height:14px;}
 .op-more{align-items:center;} .op-more .ic{width:12px;height:12px;}
-
 /* 실행 계획 표 — 사람 확인 플래그 아이콘 정렬 */
 .sel-human,.sel-hitl{display:inline-flex;align-items:center;gap:4px;} .sel-human .ic,.sel-hitl .ic{width:12px;height:12px;}
 .sel-hitl .ic{color:var(--amber);} .sel-human .ic{color:#15803d;}
@@ -616,84 +615,3 @@ textarea.au-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0
 .pl-promo-act{margin-top:14px;text-align:center;}
 .cp-btn.lg{font-size:13px;padding:11px 20px;}
 .pl-promo-note{font-size:10.5px;color:var(--muted);margin-top:9px;line-height:1.5;} .pl-promo-note code{font-family:Consolas,monospace;font-size:10px;background:var(--surf);border:1px solid var(--border);border-radius:5px;padding:1px 5px;color:var(--slate);}
-
-/* =========================================================================
-   aap-design v0.2 · 격상 파이프라인 정교화 (스텝퍼 라인 · 노드 그래프 · 게이트 차단)
-   신규 hex 0 — 5타입 색·상태 4색·다크 엔진룸(#0b1220) 토큰만. file:// 인라인.
-   ========================================================================= */
-
-/* ── 스텝퍼: 연결 진행선 + 완료/현재/대기 위계 강화 ── */
-.pl-steps{position:relative;gap:0;justify-content:space-between;}
-.pl-stp{position:relative;flex:1;justify-content:center;z-index:1;}
-.pl-stsep{flex:0 0 auto;position:relative;z-index:0;}
-.pl-stsep .ic{opacity:.55;}
-.pl-stp.done .pl-stl{color:var(--aap-ink);} .pl-stp .pl-stl{transition:color .2s;}
-.pl-stn{transition:background .2s,border-color .2s,box-shadow .2s;}
-.pl-stp.on .pl-stn{box-shadow:0 0 0 4px var(--aap-soft);}
-
-/* ── ② compose 뷰 토글 (graph / list) ── */
-.pl-cmp-toggle{margin-left:auto;display:inline-flex;background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:2px;gap:2px;}
-.pl-cmp-tg{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:10.5px;font-weight:700;color:var(--muted);background:transparent;border:0;border-radius:7px;padding:5px 10px;cursor:pointer;}
-.pl-cmp-tg .ic{width:13px;height:13px;}
-.pl-cmp-tg:hover{color:var(--slate);}
-.pl-cmp-tg.on{background:#fff;color:var(--aap-ink);box-shadow:0 1px 2px rgba(15,23,42,.1);}
-
-/* ── ② 노드 그래프 = 다크 "엔진룸" 캔버스 (가이드 §6) ── */
-.plg-wrap{border:1px solid #1e293b;border-radius:13px;overflow:hidden;background:#0b1220;box-shadow:0 6px 20px rgba(11,18,32,.18);}
-.plg-canvas{
-  padding:14px 16px;overflow:auto;max-height:340px;
-  background:
-    linear-gradient(0deg, rgba(255,255,255,.03) 1px, transparent 1px) 0 0/36px 36px,
-    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px) 0 0/36px 36px,
-    #0b1220;
-}
-.plg-canvas svg{display:block;min-width:480px;}
-/* 엣지 = 데이터 흐름 (옅은 청록) */
-.plg-edge{fill:none;stroke:#2dd4bf;stroke-width:1.4;opacity:.4;}
-/* 작업 노드 (좌) = 중립 다크 */
-.plg-task rect{fill:#1e293b;stroke:#334155;stroke-width:1;}
-.plg-cap{fill:#64748b;font-size:8px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-family:inherit;}
-.plg-tl{fill:#e2e8f0;font-size:11.5px;font-weight:800;font-family:inherit;}
-/* 구성요소 노드 (우) = 타입색 (currentColor 미지원 SVG라 클래스별 직접 토큰) */
-.plg-comp rect{fill:#111c30;stroke-width:1.4;}
-.plg-comp .plg-dot{stroke:none;}
-.plg-cn{fill:#cbd5e1;font-size:10.5px;font-weight:600;font-family:inherit;}
-.plg-comp.tA rect{stroke:#0d9488;} .plg-comp.tA .plg-dot{fill:#2dd4bf;}
-.plg-comp.tM rect{stroke:#7c3aed;} .plg-comp.tM .plg-dot{fill:#a78bfa;}
-.plg-comp.tS rect{stroke:#0891b2;} .plg-comp.tS .plg-dot{fill:#22d3ee;}
-.plg-comp.tC rect{stroke:#2563eb;} .plg-comp.tC .plg-dot{fill:#60a5fa;}
-.plg-comp.tP rect{stroke:#d97706;} .plg-comp.tP .plg-dot{fill:#fbbf24;}
-/* 그래프 범례 (다크 위 · 5타입) */
-.plg-leg{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:9px 14px;border-top:1px solid #1e293b;background:#0d1526;}
-.plg-lg{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#cbd5e1;}
-.plg-lg-d{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
-.plg-lg.tA .plg-lg-d{background:#2dd4bf;} .plg-lg.tM .plg-lg-d{background:#a78bfa;} .plg-lg.tS .plg-lg-d{background:#22d3ee;} .plg-lg.tC .plg-lg-d{background:#60a5fa;} .plg-lg.tP .plg-lg-d{background:#fbbf24;}
-.plg-leg-note{margin-left:auto;font-size:9.5px;color:#64748b;}
-
-/* ── ③ HITL 게이트 0개 = red 차단 (자율 격상 안전 전제) ── */
-.pl-gate-block{display:flex;align-items:flex-start;gap:11px;font-size:12px;color:var(--red);background:var(--red-soft);border:1.5px solid var(--red-border);border-radius:11px;padding:13px 15px;margin-bottom:12px;}
-.pl-gate-block .ic{width:19px;height:19px;flex:0 0 auto;color:var(--red);transform:translateY(1px);}
-.pl-gate-block b{display:block;font-size:12.5px;font-weight:800;color:#b91c1c;margin-bottom:2px;}
-.pl-gate-block span{font-size:11px;color:#7f1d1d;line-height:1.5;}
-.pl-gates.is-empty{margin-bottom:14px;min-height:0;}
-.pl-warn.block{color:var(--red);background:var(--red-soft);border-color:var(--red-border);} .pl-warn.block .ic{color:var(--red);}
-/* 후보 버튼 = 차단 상태일 때 amber로 행동 유도(추가하면 해제) */
-.pl-gates.is-empty ~ .pl-sech.sub + .pl-gcand .pl-gcand-i{border-color:var(--amber-border);}
-
-/* =========================================================================
-   aap-design v0.2 · 통합 인박스 + 카탈로그 정교화 (Linear/Datadog 톤)
-   ========================================================================= */
-/* 인박스 그룹 헤더 = 상태 점 색 일치 + 카운트 pill */
-.ibx-gh .gh-n{background:var(--surf);border-radius:20px;padding:0 7px;min-width:16px;text-align:center;color:var(--muted);}
-.ibx{margin-top:10px;}
-/* 행 진행률 바 — 상태색 동기화(검토대기=amber·진행=blue·완료=green) */
-.ibx-grp:has(.gh-dot.st-wait) .ibx-bar i{background:var(--amber);}
-.ibx-grp:has(.gh-dot.st-done) .ibx-bar i{background:var(--green);}
-.ibx-grp:has(.gh-dot.st-run) .ibx-bar i{background:var(--blue);}
-/* 검토대기 그룹은 카드를 살짝 더 띄워 주목(F-패턴 상단 우선) */
-.ibx-grp:has(.gh-dot.st-wait) .ibx-row{box-shadow:0 2px 10px rgba(217,119,6,.08);}
-
-/* 카탈로그 카드 — HITL 스탯 amber 강조(게이트=amber 규칙) + 자동저작 dot */
-.cat-stats span:nth-child(3) b{color:var(--amber-ink);}
-.cat-card{position:relative;}
-.cat-card .cat-h .ty-badge::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px;background:currentColor;}
