@@ -119,7 +119,7 @@ function loadApp(){
   const cs=lsGet('cases',null);
   if(Array.isArray(cs)) APP.cases=cs.filter(c=>c&&c.id&&c.packId);
   APP.active=lsGet('active',null);
-  const v=lsGet('view',null); if(['inbox','run','govern','domain','demo'].includes(v))APP.view=v;
+  const v=lsGet('view',null); if(['inbox','run','govern','domain'].includes(v))APP.view=v;
   APP.pack=lsGet('pack',null);
   const tf=lsGet('typeFilter',null); if(typeof tf==='string')APP.typeFilter=tf;
 }
@@ -209,8 +209,6 @@ function setView(v){
   document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   document.querySelectorAll('.view').forEach(s=>s.hidden=s.dataset.view!==v);
   if(v!=='run'&&STATE.playing)stopPlay();
-  /* 시연 모드: 가이드 투어는 운영 화면 위 오버레이. 시연 뷰를 떠나도(투어가 다른 뷰를 조작 중일 땐 유지) */
-  if(window.AAP_DEMO){ if(v==='demo')window.AAP_DEMO.renderDemoView(); }
   if(v==='inbox')renderInbox();
   if(v==='domain')renderDesign();
   if(v==='govern')renderGovern();
@@ -657,7 +655,7 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
   keys.forEach(seedPack);
   /* 뷰·케이스 복원 */
   let view=APP.view||'inbox';
-  const qv=q.get('view'); if(qv&&['inbox','run','govern','domain','demo'].includes(qv))view=qv;
+  const qv=q.get('view'); if(qv&&['inbox','run','govern','domain'].includes(qv))view=qv;
   if(qv==='design')view='domain'; /* 하위호환 */
   const qtf=q.get('type'); if(qtf&&(qtf==='all'||PACKS[qtf]))APP.typeFilter=qtf;
   const qopen=q.get('open');

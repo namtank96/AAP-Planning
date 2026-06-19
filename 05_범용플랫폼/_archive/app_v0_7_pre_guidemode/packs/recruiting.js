@@ -403,52 +403,10 @@
     {title:'데이터 분석가 채용 마감', customer:'데이터팀 · JD-2030', icon:'💼', request:'"데이터 분석가 1명, 오퍼까지 진행해줘."', status:'done'},
   ];
 
-  /* =======================================================================
-     시연 모드(Guide Mode) 시나리오 — 데이터로 정의(코어 가이드 엔진이 재생).
-     각 step: { do(액션), target(운영 화면 실제 요소 셀렉터), title, body }
-     do = { view? / open?(이 팩 첫 케이스 열기) / go?(work step id로 이동) }
-       코어 demo.js 가 step 진입 시 do 를 실행해 운영 화면을 실제 조작한 뒤
-       rAF 로 target 위치에 스포트라이트+말풍선 배치(layoutGuide 가 드리프트 방지).
-     화법=설명형 'AAP가'. 금칙: "AAP가 알아서 다 한다"·"사람 볼 필요 없음".
-     ======================================================================= */
-  const DEMO_SCENARIO={
-    id:'recruiting',
-    title:'채용 스크리닝·코디네이션',
-    desc:'"백엔드 2명 충원" 요청 한 건이 AAP에서 요건 분해→구성요소 조합→자율 스크리닝→사람 승인→면접·오퍼로 이어지는 한 흐름을 짚어 봅니다.',
-    icon:'briefcase',
-    steps:[
-      {do:{view:'inbox'}, target:'#inboxList, #gnav [data-view="inbox"]',
-       title:'한 인박스로 여러 업무가 들어옵니다',
-       body:'채용·VOC·회의 등 여러 유형의 요청이 하나의 통합 인박스로 들어옵니다. 채용 건을 열어 AAP가 이 요청을 어떻게 처리하는지 따라가 보겠습니다.'},
-      {do:{open:1, go:'understand'}, target:'#seq',
-       title:'AAP가 요청을 요건으로 분해합니다',
-       body:'"백엔드 2명 충원" 한 문장을 AAP가 직무·인원·연차·필수 스택으로 분해하고, 채용 차별금지·개인정보 정책까지 자율로 달아 실행 흐름을 세웁니다.'},
-      {do:{go:'compose'}, target:'#flow',
-       title:'필요한 구성요소를 골라 조합합니다',
-       body:'AAP는 Agent를 많이 띄우는 게 아닙니다. 이력서 파싱·요건 매칭 Agent, OCR·편향 점검 Module, 기존 ATS, 캘린더 Connector, 차별금지 Policy를 업무에 맞게 골라 실행 구조로 조합합니다.'},
-      {do:{go:'approve'}, target:'#cmodal .cmodal-card',
-       title:'책임이 걸린 지점은 사람이 정합니다 (HITL ①)',
-       body:'AAP가 스크리닝 계획과 숏리스트 컷 후보(엄격/표준/넓게)를 제시합니다. 어느 기준으로 거를지 — 숏리스트 컷은 채용담당이 직접 정하는 첫 번째 게이트입니다.'},
-      {do:{go:'prepare'}, target:'.con-body .recr-board',
-       title:'승인된 기준대로 AAP가 자율 실행합니다',
-       body:'담당자가 정한 기준대로 AAP가 이력서 38건을 병렬 파싱·매칭·랭킹하고 편향·PII를 점검합니다. 후보 파이프라인 보드에 스코어카드와 함께 결과가 채워집니다.'},
-      {do:{go:'meeting'}, target:'#cmodal .cmodal-card',
-       title:'외부로 나가는 안내는 사람이 확인합니다 (HITL ②)',
-       body:'AAP가 후보·면접관 캘린더를 교차해 충돌 0 슬롯을 잡았습니다. 후보에게 안내가 나가는 단계라, 일정·패널을 담당자가 확인한 뒤 발송합니다.'},
-      {do:{go:'commit'}, target:'#cmodal .cmodal-card',
-       title:'오퍼 발송 직전, 최종 승인을 받습니다 (HITL ③)',
-       body:'AAP가 평가를 취합하고 보상밴드·헤드카운트·차별금지를 점검했습니다. 후보에게 오퍼가 나가는 마지막 행동은 담당자·현업 리드의 최종 승인으로 멈춰 둡니다.'},
-      {do:{view:'govern'}, target:'#traceLog',
-       title:'모든 판단이 기록되고 학습으로 남습니다',
-       body:'요청→파싱→매칭→사람 승인→오퍼까지 전 구간이 Run Trace에 남아 감사·재현이 가능합니다. 이번 채용 패턴은 다음 포지션의 매칭 정확도를 높이는 학습 자산이 됩니다.'},
-    ],
-  };
-
   (window.AAP_PACKS=window.AAP_PACKS||{}).recruiting={
     id:'recruiting', label:'채용',
     times:TIMES, products:PRODUCTS, work:WORK, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
-    demoScenario:DEMO_SCENARIO,
     stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',meeting:'Decision',commit:'Decision',share:'Learning'},
     extExcluded:(S)=>S.decisions['approve']==='no',
     /* (b) 함수형 surface — ATS 화면을 코어 generic 렌더 대신 이 팩이 직접 그린다 */

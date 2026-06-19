@@ -26,8 +26,6 @@
   <button class="gnav-i" data-view="run"><span class="gn-ic" data-ic="play"></span><span class="gn-l">실행</span></button>
   <button class="gnav-i" data-view="govern"><span class="gn-ic" data-ic="shield"></span><span class="gn-l">관리</span></button>
   <button class="gnav-i" data-view="domain"><span class="gn-ic" data-ic="puzzle"></span><span class="gn-l">도메인</span></button>
-  <div class="gnav-sp"></div>
-  <button class="gnav-i demo-nav" data-view="demo"><span class="gn-ic" data-ic="presentation"></span><span class="gn-l">시연</span></button>
 </nav>
 
 <div class="views">
@@ -68,15 +66,6 @@
       <p class="sec-title" style="margin-top:20px">Architecture Coherence · AAP 아키텍처 정합</p>
       <p class="sec-sub">이 실행 구조는 곧 AAP 표준 아키텍처입니다 — Operating Loop · 8계층 · 4대 역량 · Trust. 회의 Pack은 그 위에서 작동(점등 = 이 도메인이 경유하는 계층)</p>
       <div class="archc" id="archMap"></div>
-    </div></div>
-  </section>
-
-  <!-- ============ DEMO VIEW (시연 = 시나리오 선택 → 가이드 투어 오버레이) ============ -->
-  <section class="view" data-view="demo" hidden>
-    <div class="scroll"><div class="wrapc">
-      <p class="sec-title">시연 모드 · Guided Tour</p>
-      <p class="sec-sub">운영 콘솔 화면 <b>위에</b> 안내를 얹어, AAP가 한 업무 요청을 <b>요건 분해 → 구성요소 조합 → 자율 실행 → 사람 승인(HITL)</b>으로 처리하는 흐름을 한 호흡으로 보여줍니다 — 데모와 실제가 같은 화면을 씁니다.</p>
-      <div class="demo-grid" id="demoList"></div>
     </div></div>
   </section>
 
@@ -159,7 +148,6 @@ document.addEventListener('DOMContentLoaded',function(){window.AAP_hydrateIcons(
 <script src="packs/meeting.js"></script>
 <script src="packs/voc.js"></script>
 <script src="packs/recruiting.js"></script>
-<script src="core/demo.js"></script>
 <script src="core/core.js"></script>
 <script src="core/authoring.js"></script>
 <script src="core/pipeline.js"></script>
