@@ -119,7 +119,7 @@ function loadApp(){
   const cs=lsGet('cases',null);
   if(Array.isArray(cs)) APP.cases=cs.filter(c=>c&&c.id&&c.packId);
   APP.active=lsGet('active',null);
-  const v=lsGet('view',null); if(['inbox','run','studio','assets','logs','govern','demo'].includes(v))APP.view=v;
+  const v=lsGet('view',null); if(['inbox','run','govern','domain','demo'].includes(v))APP.view=v;
   APP.pack=lsGet('pack',null);
   const tf=lsGet('typeFilter',null); if(typeof tf==='string')APP.typeFilter=tf;
 }
@@ -225,9 +225,7 @@ function setView(v){
   /* 시연 모드: 가이드 투어는 운영 화면 위 오버레이. 시연 뷰를 떠나도(투어가 다른 뷰를 조작 중일 땐 유지) */
   if(window.AAP_DEMO){ if(v==='demo')window.AAP_DEMO.renderDemoView(); }
   if(v==='inbox')renderInbox();
-  if(v==='studio')renderDesign();
-  if(v==='assets')renderAssets();
-  if(v==='logs')renderLogs();
+  if(v==='domain')renderDesign();
   if(v==='govern')renderGovern();
   updateCaseTitle();
   saveApp();
@@ -669,33 +667,11 @@ function renderPlan(P){
   P.work.forEach((w,i)=>{h+=`<div class="plan-row ${w.gate?'gate':''}"><div class="pr-n">${i+1}</div><div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.role}</div></div><div class="pr-make">${makes(w)}</div><div class="pr-sel">${sel(w)}</div><div class="pr-lay">${lays(w)}</div></div>`;});
   document.getElementById('planTable').innerHTML=h;
 }
-/* ===== 거버넌스·정책 뷰 (관리 · govStrip 만) ===== */
+/* ===== 관리 뷰 (코어 · 거버넌스 strip + Component Registry) ===== */
 function renderGovern(){
-  const gs=document.getElementById('govStrip'); if(gs)gs.innerHTML=PACK.govern.map(c=>`<div class="gov-cell"><div class="gk">${c.k}</div><div class="gv">${c.v}</div></div>`).join('');
-}
-/* ===== 로그·트레이스 뷰 (관리 · Run Trace · Decision Log) ===== */
-function renderLogs(){ renderTrace(); }
-/* ===== 자산 뷰 (스튜디오 · 5타입 레지스트리 = 구 govern Component Registry · 타입 필터) =====
-   현재 런타임 팩의 components 를 5타입(A/M/S/C/P)으로 그룹·필터. 타입 색점은 ty* 토큰. */
-const _ASSET_T={tyA:'Agent',tyM:'Module',tyS:'기존 솔루션',tyC:'Connector',tyP:'Policy'};
-const _ASSET_ORDER=['tyA','tyM','tyS','tyC','tyP'];
-let _assetFilter='all';
-function renderAssets(){
-  const reg=document.getElementById('reg'); if(!reg)return;
-  const comps=COMPONENTS||[];
-  /* 타입 필터 칩 */
-  const fbar=document.getElementById('assetFilter');
-  if(fbar){
-    const cnt=t=>comps.filter(a=>a.ty===t).length;
-    const present=_ASSET_ORDER.filter(t=>cnt(t));
-    if(_assetFilter!=='all' && !present.includes(_assetFilter))_assetFilter='all';
-    let fh=`<button class="asset-chip ${_assetFilter==='all'?'on':''}" data-af="all">전체<span class="ac-n">${comps.length}</span></button>`;
-    fh+=present.map(t=>`<button class="asset-chip ${t} ${_assetFilter===t?'on':''}" data-af="${t}"><span class="ac-dot"></span>${_ASSET_T[t]}<span class="ac-n">${cnt(t)}</span></button>`).join('');
-    fbar.innerHTML=fh;
-    fbar.querySelectorAll('[data-af]').forEach(e=>e.onclick=()=>{_assetFilter=e.dataset.af;renderAssets();});
-  }
-  const shown=_assetFilter==='all'?comps:comps.filter(a=>a.ty===_assetFilter);
-  reg.innerHTML=shown.map(a=>`<div class="ag ${a.asset?'asset':''}"><div class="ag-h"><div class="ag-ic">${a.ic}</div><div><span class="ag-type ${a.ty}">${a.type}</span><div class="ag-name">${a.name}</div></div><span class="ag-lay">${a.L} ${LK[a.L]}</span>${a.asset?'<span class="ag-kt">kt ds</span>':''}</div><div class="ag-desc">${a.desc}</div><div class="ag-meta"><div class="ag-m when"><div class="ag-mk">${_ICO('compass')}언제 쓰나</div><div class="ag-mv">${a.when}</div></div><div class="ag-m data"><div class="ag-mk">${_ICO('folder')}사용 데이터</div><div class="ag-mv">${a.data}</div></div><div class="ag-m how"><div class="ag-mk">${_ICO('settings')}수행 방식</div><div class="ag-mv">${a.how}</div></div></div></div>`).join('');
+  document.getElementById('govStrip').innerHTML=PACK.govern.map(c=>`<div class="gov-cell"><div class="gk">${c.k}</div><div class="gv">${c.v}</div></div>`).join('');
+  renderTrace();
+  document.getElementById('reg').innerHTML=COMPONENTS.map(a=>`<div class="ag ${a.asset?'asset':''}"><div class="ag-h"><div class="ag-ic">${a.ic}</div><div><span class="ag-type ${a.ty}">${a.type}</span><div class="ag-name">${a.name}</div></div><span class="ag-lay">${a.L} ${LK[a.L]}</span>${a.asset?'<span class="ag-kt">kt ds</span>':''}</div><div class="ag-desc">${a.desc}</div><div class="ag-meta"><div class="ag-m when"><div class="ag-mk">${_ICO('compass')}언제 쓰나</div><div class="ag-mv">${a.when}</div></div><div class="ag-m data"><div class="ag-mk">${_ICO('folder')}사용 데이터</div><div class="ag-mv">${a.data}</div></div><div class="ag-m how"><div class="ag-mk">${_ICO('settings')}수행 방식</div><div class="ag-mv">${a.how}</div></div></div></div>`).join('');
 }
 
 /* B-2: Run Trace · Decision Log (관리 뷰) — 실행 중 누적된 자율 판단·HITL·반영 */
@@ -720,8 +696,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
    load: 그 유형으로 케이스 시드 후 첫 케이스를 실행 콘솔에 연다(자동저작 데모 연속성). */
 window.AAP_CORE={
   register:(pack)=>{PACKS[pack.id]=normalizePack(pack);typeTok(pack.id);
-    if(document.getElementById('catGrid')&&STATE.view==='studio')renderDesign();
-    if(STATE.view==='assets')renderAssets();
+    if(document.getElementById('catGrid')&&STATE.view==='domain')renderDesign();
     if(STATE.view==='inbox')renderInbox();},
   load:(id)=>{if(!PACKS[id])return;setPackRefs(id);seedPack(id);const cs=APP.cases.filter(c=>c.packId===id);if(cs.length)openCase(cs[0].id);else createCase(id);},
   has:(id)=>!!PACKS[id],
@@ -733,8 +708,6 @@ document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.onclick=()=>setView(b.da
 const _runb=document.getElementById('runBtn');if(_runb)_runb.onclick=()=>STATE.playing?stopPlay():startPlay();
 document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
 const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>promptNewCase(_nc);
-/* 스튜디오 '＋ 신규 격상' → 격상 파이프라인(없으면 자동저작 오버레이) — 상단 '업무 격상' 버튼 흡수 */
-const _np=document.getElementById('newPromoteBtn');if(_np)_np.onclick=()=>{ if(window.AAP_PIPELINE)window.AAP_PIPELINE.open(); else if(window.AAP_AUTHORING_OPEN)window.AAP_AUTHORING_OPEN(); };
 const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
 const TIP=document.getElementById('tip');
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(t){TIP.textContent=t.getAttribute('data-tip');TIP.style.display='block';const r=t.getBoundingClientRect();TIP.style.left=Math.min(r.left,window.innerWidth-320)+'px';let tp=r.bottom+8;if(tp+TIP.offsetHeight>window.innerHeight)tp=r.top-TIP.offsetHeight-8;TIP.style.top=Math.max(8,tp)+'px';}else if(!e.target.closest('#tip'))TIP.style.display='none';});
@@ -757,8 +730,8 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
   keys.forEach(seedPack);
   /* 뷰·케이스 복원 */
   let view=APP.view||'inbox';
-  const qv=q.get('view'); if(qv&&['inbox','run','studio','assets','logs','govern','demo'].includes(qv))view=qv;
-  if(qv==='design'||qv==='domain')view='studio'; /* 하위호환: 구 도메인/디자인 → 스튜디오 */
+  const qv=q.get('view'); if(qv&&['inbox','run','govern','domain','demo'].includes(qv))view=qv;
+  if(qv==='design')view='domain'; /* 하위호환 */
   const qtf=q.get('type'); if(qtf&&(qtf==='all'||PACKS[qtf]))APP.typeFilter=qtf;
   const qopen=q.get('open');
   if(qopen&&APP.cases.some(c=>c.id===qopen)){openCase(qopen);}

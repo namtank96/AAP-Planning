@@ -594,7 +594,7 @@
       {do:{go:'commit'}, target:'#cmodal .cmodal-card',
        title:'오퍼 발송 직전, 최종 승인을 받습니다 (HITL ③)',
        body:'AAP가 평가를 취합하고 보상밴드·헤드카운트·차별금지를 점검했습니다. 후보에게 오퍼가 나가는 마지막 행동은 담당자·현업 리드의 최종 승인으로 멈춰 둡니다.'},
-      {do:{view:'logs'}, target:'#traceLog',
+      {do:{view:'govern'}, target:'#traceLog',
        title:'모든 판단이 기록되고 학습으로 남습니다',
        body:'요청→파싱→매칭→사람 승인→오퍼까지 전 구간이 Run Trace에 남아 감사·재현이 가능합니다. 이번 채용 패턴은 다음 포지션의 매칭 정확도를 높이는 학습 자산이 됩니다.'},
     ],

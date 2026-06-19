@@ -271,9 +271,9 @@
      '구성·게이트 사람 수정'을 반영한 최종 Pack 을 조립한다. od/SOURCES 도 공유. */
   window.AAP_AUTHOR={ genericAuthor, od, SOURCES, PIPE };
 
-  /* 진입: 상단 '업무 격상' 버튼은 메뉴 IA 재편으로 제거 → 스튜디오 '＋ 신규 격상'(core 가 배선).
-     이 오버레이 open 을 전역 폴백으로 노출(pipeline.js 미로드 시 core 가 호출). */
-  window.AAP_AUTHORING_OPEN=open;
+  /* 진입 버튼: pipeline.js 가 로드돼 있으면 5단계 격상 파이프라인을 우선 사용,
+     아니면 기존 자동저작 오버레이로 폴백(무회귀). */
+  $('authBtn').onclick=()=>{ if(window.AAP_PIPELINE){window.AAP_PIPELINE.open();} else open(); };
   $('authX').onclick=close;
   $('authoring').addEventListener('click',e=>{if(e.target.id==='authoring')close();});
   /* 검증/딥링크: ?author=1(오버레이) · ?author=run[&astep=approve](생성 팩 즉시 로드) */

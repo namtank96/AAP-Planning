@@ -49,23 +49,6 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .gnav-i .gn-c{font-size:10px;font-weight:800;color:#fff;background:var(--aap);border-radius:20px;padding:1px 7px;min-width:18px;text-align:center;}
 .gnav-i .gn-c:empty{display:none;}
 .gnav-i.on .gn-c{background:var(--aap-ink);}
-.gnav-grp{font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--faint);text-transform:uppercase;padding:11px 12px 4px;}
-.gnav-grp:first-child{padding-top:2px;}
-/* 스튜디오 상단 (제목 + 신규 격상) */
-.studio-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:4px;}
-/* 자산 타입 필터 칩 (5타입 색점) — ty-chip 패턴 재사용 */
-.asset-filter{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 14px;}
-.asset-chip{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;transition:.12s;}
-.asset-chip:hover{border-color:var(--aap-border);}
-.asset-chip .ac-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto;}
-.asset-chip .ac-n{font-size:10px;font-weight:800;color:var(--faint);background:var(--surf);border-radius:20px;padding:0 6px;min-width:16px;text-align:center;}
-.asset-chip.tyA .ac-dot{color:var(--aap);} .asset-chip.tyM .ac-dot{color:var(--violet);} .asset-chip.tyS .ac-dot{color:#0891b2;} .asset-chip.tyC .ac-dot{color:var(--blue);} .asset-chip.tyP .ac-dot{color:var(--amber);}
-.asset-chip.on{color:#fff;background:var(--aap);border-color:var(--aap);} .asset-chip.on .ac-n{color:var(--aap-ink);background:#fff;}
-.asset-chip.on.tyM{background:var(--violet);border-color:var(--violet);} .asset-chip.on.tyM .ac-n{color:var(--violet);}
-.asset-chip.on.tyS{background:#0891b2;border-color:#0891b2;} .asset-chip.on.tyS .ac-n{color:#0e7490;}
-.asset-chip.on.tyC{background:var(--blue);border-color:var(--blue);} .asset-chip.on.tyC .ac-n{color:var(--blue);}
-.asset-chip.on.tyP{background:var(--amber);border-color:var(--amber);} .asset-chip.on.tyP .ac-n{color:var(--amber-ink);}
-.asset-chip.on .ac-dot{color:#fff;}
 .case-title{font-size:12px;font-weight:700;color:var(--slate);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .views{flex:1;min-width:0;min-height:0;position:relative;}
