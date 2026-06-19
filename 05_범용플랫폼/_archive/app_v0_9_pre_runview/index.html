@@ -80,12 +80,7 @@
     </div></div>
   </section>
 
-  <!-- ============ RUN VIEW (실행 = AAP 작동 중심 · 풀폭) ============
-       유저 결정: '고객이 보는 서비스 화면'을 별도 영역으로 두지 않는다 —
-       이 플랫폼(HTML) 자체가 고객이 보는 화면이고, 인박스 항목을 AAP에 태워 처리한다.
-       실행 뷰 = 상단 업무 순서(8단계) + 메인 AAP 작동 흐름(풀폭).
-       HITL/결과/미리보기는 실행 영역 위 오버레이(#cmodal, run-surface 풀 오버레이). per-도메인 고객화면
-       (surfaceSpec / PACK.surface)은 코드 보존, 시연 모드에서만 사용. -->
+  <!-- ============ RUN VIEW (실행) ============ -->
   <section class="view" data-view="run">
     <div class="runtop">
       <button class="rt-back" id="rtBack" data-tip="인박스로 돌아가기">‹ 인박스</button>
@@ -93,17 +88,22 @@
       <div class="seq" id="seq"></div>
       <span class="rt-prog" id="seqProg"></span>
     </div>
-    <div class="run-main">
-      <section class="run-surface">
-        <div class="rs-head">
-          <div class="ph">AAP 작동 구조 · 8계층 흐름 <span class="help" data-tip="이 업무 단계에서 AAP(Master)가 8계층 안에서 어떤 구성요소로 일을 실행하는지 보여줍니다. 각 단계 '결과 보기'로 실제 산출물(더미)을 확인하고, 게이트 단계에서는 사람이 승인(HITL)합니다. ∥ = 병렬. 보라 = kt ds 자산.">?</span></div>
+    <div class="main">
+      <section class="panel left">
+        <div class="cons-wrap">
+          <div class="cons-h">고객이 보는 서비스 화면</div>
+          <div class="console">
+            <div class="cust-head" id="custHead"></div>
+            <div class="con-body" id="conBody"></div>
+            <div class="cmodal" id="cmodal"></div>
+          </div>
         </div>
-        <div class="rs-scroll">
-          <div class="explain" id="explain"></div>
-          <div class="flow" id="flow"></div>
-        </div>
-        <!-- HITL / 결과 / 미리보기 = 실행 영역 위 오버레이(인-콘솔 → run 영역으로 승격) -->
-        <div class="cmodal" id="cmodal"></div>
+      </section>
+      <section class="panel right">
+        <div class="ph">AAP 작동 구조 · 8계층 흐름 <span class="help" data-tip="왼쪽 고객 화면에서 일어나는 일을 AAP가 8계층 안에서 어떤 구성요소로 실행하는지 보여줍니다. 각 단계 '결과 보기'로 실제 산출물(더미)을 확인할 수 있습니다. ∥ = 병렬. 보라 = kt ds 자산.">?</span></div>
+        <div class="explain" id="explain"></div>
+        <div class="flow" id="flow"></div>
+        <div style="flex:1"></div>
       </section>
     </div>
   </section>

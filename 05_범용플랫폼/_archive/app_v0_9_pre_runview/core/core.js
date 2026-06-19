@@ -253,9 +253,7 @@ function openCase(id){
 }
 /* hydrate 된 STATE(sel/decisions/...) 로 화면을 '진행된 그 지점'에 복원(재생 ✕, 정지 상태) */
 function restoreStep(){
-  /* 정지(비재생) 복원 = 단계를 '완료(정착)'로 보여 AAP 작동 흐름을 기본 노출(결과 모달이 흐름을 덮지 않게).
-     HITL await 단계는 currentCM 이 baseOnly 와 무관하게 모달을 띄움(사람 승인 필요). */
-  const w=W(STATE.sel); clearRun(); STATE.previewK=null; STATE.baseOnly=true; STATE.opOpen=new Set();
+  const w=W(STATE.sel); clearRun(); STATE.previewK=null; STATE.baseOnly=false; STATE.opOpen=new Set();
   if(w.meeting){ STATE.meetPhase=STATE.meetPhase==='done'?'done':'await_end'; RUN.phase=STATE.meetPhase==='done'?'done':'await'; }
   else if(w.hitl){ STATE.meetPhase='idle'; RUN.phase=STATE.decisions[w.id]?'done':'await'; }
   else { STATE.meetPhase='idle'; RUN.phase='done'; }
@@ -430,12 +428,13 @@ function cmodalSpec(kind,C){
   return '';
 }
 
-/* ===== 실행 콘솔 렌더 (run 뷰 = AAP 작동 중심 · 풀폭) =====
-   유저 결정: 실행 뷰에서 '고객이 보는 서비스 화면'(custHead/conBody) 좌패널을 제거.
-   이 함수는 이제 HITL/결과/미리보기 오버레이(#cmodal)만 갱신한다.
-   surfHead/surfBase(고객화면 본문)는 코드 보존(시연 모드용) — 운영 실행 뷰에서 미호출.
-   surfCmodal(HITL/결과/미리보기 콘텐츠)은 오버레이 모달이 계속 사용(도메인 네이티브 HITL 유지). */
+/* ===== 좌측 고객 서비스 화면 ===== */
 function renderConsole(){
+  const C=ctx();
+  document.getElementById('custHead').innerHTML=surfHead(C);
+  const rp=document.getElementById('replay');if(rp)rp.onclick=()=>runStep();
+  const cb=document.getElementById('conBody');cb.innerHTML=surfBase(C);
+  cb.querySelectorAll('[data-dlv]').forEach(e=>e.onclick=()=>openPreview(e.dataset.dlv));
   renderCModal();
 }
 function currentCM(){
