@@ -28,11 +28,10 @@
       src:`신규 거래처 등록 심사 업무.\n영업이 등록을 요청하면 사업자·신용·제재 리스트를 확인하고 리스크를 판단해\n등록 승인 여부를 정하고, 승인 시 ERP에 등록하고 영업에 통지한다.\n고액·고위험 건은 책임자 승인이 필요하고, 반복 패턴은 기준으로 축적하고 싶다.` },
   };
   /* 자유 소스 → 일반 골격 Pack (도메인 비특화 · 표준 7단계). 실제 분해 품질은 LLM 연동 시 향상 */
-  function genericAuthor(text,opts){
-    opts=opts||{};
+  function genericAuthor(text){
     const lines=(text||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    const title=opts.title||(lines.find(l=>!l.startsWith('['))||'새 업무').replace(/\.$/,'').slice(0,30);
-    const req=opts.request||lines.join(' ').slice(0,120)||'업무 요청';
+    const title=(lines.find(l=>!l.startsWith('['))||'새 업무').replace(/\.$/,'').slice(0,30);
+    const req=lines.join(' ').slice(0,120)||'업무 요청';
     const o=(g,feed,out,L,comp,x)=>Object.assign({g,feed,out,L,comp},x||{});
     const WORK=[
      {id:'request',label:'요청 접수',role:'요청',actor:'human',explain:`업무 요청을 <b>L1 경험·접근</b>이 접수하고 <b>L4 지식·시맨틱</b>이 핵심 신호를 추출합니다.`,
@@ -66,36 +65,27 @@
       done:{prepare:{title:'처리 준비 완료',lines:[{ic:'📄',t:'분석 결과 · 처리안 생성'},{ic:'🗂️',t:'시스템 반영 준비'}]},
         share:{title:'반영·기록 완료',lines:[{ic:'📤',t:'결과 전달'},{ic:'🗂️',t:'시스템 기록',dlv:'plan'},{ic:'⏰',t:'후속·학습 등록'}]}},
     };
-    /* 격상 파이프라인 오버라이드: 사람이 수정한 구성/게이트/식별자 반영 (없으면 골격 기본값) */
-    if(opts.work)         { /* work 단계의 hitl/gate 플래그를 게이트 결정대로 보정 */ }
-    if(opts.gateSteps){    /* gateSteps = HITL 게이트가 걸린 work step id 집합 */
-      WORK.forEach(w=>{ const on=opts.gateSteps.includes(w.id);
-        if(on){ w.hitl=1; w.gate=1; } else if(w.id==='approve'||w.id==='commit'){ w.hitl=0; w.gate=0; } });
-    }
-    const _compose=opts.compose||[{t:'Agent',sub:'전문 작업',cls:'tA',n:4,items:['분류','분석','생성','처리']},{t:'Module',sub:'재사용 기능',cls:'tM',n:2,items:['평가(Antbot)','정책 매칭']},{t:'기존 솔루션',sub:'Buy·Integrate',cls:'tS',n:1,items:['기간계/ERP']},{t:'Connector',sub:'시스템 연동',cls:'tC',n:2,items:['데이터 소스','알림']},{t:'Policy',sub:'통제·권한',cls:'tP',n:2,items:['승인 정책','PII·보안']}];
-    const _gates=opts.gates||['★ HITL ① 계획 승인 · 옵션 선택','★ HITL ② 최종 반영 승인'];
     return {
-      id:opts.id||'custom',label:opts.label||title.slice(0,10)||'새 업무',authored:1,
+      id:'custom',label:title.slice(0,10)||'새 업무',authored:1,
       times:[{t:'표준 처리',s:'권장'},{t:'간소 처리',s:'최소'},{t:'정밀 처리',s:'고강도'}],
       products:{result:{ic:'📄',title:'분석 결과',sub:'초안',body:`<div class="doc"><h5>분석 결과</h5><div class="drow"><span class="dk">대상</span>${title}</div><div class="drow"><span class="dk">요약</span>요청을 분해·분석한 결과(골격)</div></div>`},
         plan:{ic:'📋',title:'처리안',sub:'초안',body:`<div class="doc"><h5>처리안</h5><div class="drow"><span class="dk">방향</span>표준 처리</div><div class="drow"><span class="dk">단계</span>분석 → 판단 → 실행 → 기록</div></div>`}},
       work:WORK,
-      compose:_compose,
-      components:opts.components||[{type:'Agent',ty:'tyA',ic:'🏷️',name:'분류 Agent',L:'L4',desc:'요청을 유형으로 분류합니다.',when:'요청 접수 시.',data:'요청, 유형 온톨로지',how:'의미 분류로 유형·요구 구조화.'},
+      compose:[{t:'Agent',sub:'전문 작업',cls:'tA',n:4,items:['분류','분석','생성','처리']},{t:'Module',sub:'재사용 기능',cls:'tM',n:2,items:['평가(Antbot)','정책 매칭']},{t:'기존 솔루션',sub:'Buy·Integrate',cls:'tS',n:1,items:['기간계/ERP']},{t:'Connector',sub:'시스템 연동',cls:'tC',n:2,items:['데이터 소스','알림']},{t:'Policy',sub:'통제·권한',cls:'tP',n:2,items:['승인 정책','PII·보안']}],
+      components:[{type:'Agent',ty:'tyA',ic:'🏷️',name:'분류 Agent',L:'L4',desc:'요청을 유형으로 분류합니다.',when:'요청 접수 시.',data:'요청, 유형 온톨로지',how:'의미 분류로 유형·요구 구조화.'},
         {type:'Agent',ty:'tyA',ic:'🔎',name:'분석 Agent',L:'L5',desc:'근거 데이터를 조회·분석합니다 (RAG).',when:'판단에 근거가 필요할 때.',data:'기간계·문서·이력',how:'검색·분석해 근거 제시.'},
         {type:'Agent',ty:'tyA',ic:'⚙️',name:'처리 Agent',L:'L3',desc:'산출물·처리안을 생성합니다.',when:'실행 산출물이 필요할 때.',data:'분석 결과, 템플릿',how:'결과를 템플릿에 채워 생성.'},
         {type:'Module',ty:'tyM',ic:'🧐',name:'품질 평가 모듈',L:'L6',asset:1,desc:'산출물 충족도를 검수합니다 (Antbot).',when:'산출물 생성 후.',data:'근거, 체크리스트',how:'근거 대조로 오류·누락 점검.'},
         {type:'기존 솔루션',ty:'tyS',ic:'🗄️',name:'기간계/ERP',L:'L8',desc:'사내 기간계를 연동합니다 (Integrate).',when:'조회·등록이 필요할 때.',data:'ERP API, 마스터',how:'기존 시스템 연동 — 조회·쓰기.'},
         {type:'Policy',ty:'tyP',ic:'🛡️',name:'승인·보안 정책',L:'L7',desc:'책임 행동 시 자동 실행을 막고 승인을 요구합니다.',when:'승인·외부 발송 등 책임 지점.',data:'승인 권한, 보안 정책',how:'책임 행동 감지 → 차단 후 HITL.'},
         {type:'Agent',ty:'tyA',ic:'📚',name:'지식 자산화 Agent',L:'L7',asset:1,desc:'패턴을 축적해 다음 처리를 개선합니다 (Self-Improving).',when:'종결 후 학습 되먹임 시.',data:'유형·처리·피드백',how:'패턴 정규화로 자산화.'}],
-      workload:{request:req,type:opts.wlType||title,purpose:'분석 · 판단 · 처리 · 기록',outputs:opts.outputs||['분석 결과','처리안','기록'],gates:opts.gatesLabel||'계획 승인 · 최종 반영 (책임 지점만 사람 확인 · HITL 2회)'},
+      workload:{request:req,type:title,purpose:'분석 · 판단 · 처리 · 기록',outputs:['분석 결과','처리안','기록'],gates:'계획 승인 · 최종 반영 (책임 지점만 사람 확인 · HITL 2회)'},
       planProduces:{request:[],understand:[],compose:['실행 구조(계획안)'],approve:['처리안','처리 옵션 3안'],prepare:['분석·산출물 초안'],commit:['반영안'],share:['반영·기록·학습 자산']},
-      gates:_gates,
+      gates:['★ HITL ① 계획 승인 · 옵션 선택','★ HITL ② 최종 반영 승인'],
       govern:[{k:'Policy',v:'승인·외부 발송·보안 정책. 책임 지점은 <b>자동 실행 차단</b> 후 승인.'},{k:'Run Trace',v:'요청→판단→처리→승인→반영을 <b>전 구간 기록</b>.'},{k:'Evaluation',v:'근거 충족도·정책 준수를 <b>Antbot</b>이 평가.'},{k:'Skill Library',v:'업무 유형·처리 패턴을 <b>재사용 자산</b>으로 축적.'}],
       stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',commit:'Decision',share:'Learning'},
       extExcluded:(S)=>S.decisions['approve']==='no',
       surfaceSpec:SS,
-      seeds:opts.seeds||undefined,
     };
   }
 
@@ -266,14 +256,7 @@
     $('authBody').appendChild(foot);
     $('auLoad').onclick=()=>{window.AAP_CORE.register(pack);window.AAP_CORE.load(pack.id);close();};
   }
-  /* ---- 외부 노출: 격상 파이프라인(pipeline.js)이 분해 골격·헬퍼를 재사용 ----
-     genericAuthor = 결정론 골격 빌더(텍스트→Domain Pack). pipeline.js 는 이걸 호출해
-     '구성·게이트 사람 수정'을 반영한 최종 Pack 을 조립한다. od/SOURCES 도 공유. */
-  window.AAP_AUTHOR={ genericAuthor, od, SOURCES, PIPE };
-
-  /* 진입 버튼: pipeline.js 가 로드돼 있으면 5단계 격상 파이프라인을 우선 사용,
-     아니면 기존 자동저작 오버레이로 폴백(무회귀). */
-  $('authBtn').onclick=()=>{ if(window.AAP_PIPELINE){window.AAP_PIPELINE.open();} else open(); };
+  $('authBtn').onclick=open;
   $('authX').onclick=close;
   $('authoring').addEventListener('click',e=>{if(e.target.id==='authoring')close();});
   /* 검증/딥링크: ?author=1(오버레이) · ?author=run[&astep=approve](생성 팩 즉시 로드) */
