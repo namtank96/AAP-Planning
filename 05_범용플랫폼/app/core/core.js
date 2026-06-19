@@ -672,7 +672,7 @@ window.AAP_CORE={
 
 /* ===== wiring ===== */
 document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.onclick=()=>setView(b.dataset.view));
-document.getElementById('runBtn').onclick=()=>STATE.playing?stopPlay():startPlay();
+const _runb=document.getElementById('runBtn');if(_runb)_runb.onclick=()=>STATE.playing?stopPlay():startPlay();
 document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
 const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>promptNewCase(_nc);
 const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
