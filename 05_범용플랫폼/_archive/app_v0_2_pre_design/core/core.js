@@ -226,7 +226,7 @@ function switchPack(key){
   setPackRefs(key); seedPack(key);
   const sl=document.getElementById('packSel'); if(sl)sl.value=key;
   APP.active=null; clearRun();
-  setRunBtn(false);
+  const rb=document.getElementById('runBtn'); if(rb){rb.textContent='▶ Run';rb.classList.remove('stop');}
   setView('inbox');
 }
 /* 케이스(인스턴스) 열기 → 런타임 STATE hydrate → 실행 뷰 */
@@ -234,7 +234,7 @@ function openCase(id){
   const c=APP.cases.find(x=>x.id===id); if(!c)return;
   if(c.packId!==APP.pack)setPackRefs(c.packId);
   APP.active=id; hydrateFromCase(c);
-  clearRun(); setRunBtn(false);
+  clearRun(); const rb=document.getElementById('runBtn'); if(rb){rb.textContent='▶ Run';rb.classList.remove('stop');}
   setView('run'); renderSeq(); restoreStep(); saveApp();
 }
 /* hydrate 된 STATE(sel/decisions/...) 로 화면을 '진행된 그 지점'에 복원(재생 ✕, 정지 상태) */
@@ -253,8 +253,8 @@ function renderSeq(){
   const ci=idxOf(STATE.sel);let html='';
   for(let d=-1;d<=1;d++){const i=ci+d; if(i<0||i>=WORK.length)continue;
     const w=WORK[i];let cls='snode'+(d===0?' active':' adj')+(w.gate?' gate':'');
-    if(d>0||(d===0&&i>0))html+=`<span class="sarrow">${_ICO('chevron-right')}</span>`;
-    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${w.gate?_ICO('star'):''}</span></div>`;}
+    if(d>0||(d===0&&i>0))html+='<span class="sarrow">›</span>';
+    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${w.gate?' ★':''}</span></div>`;}
   document.getElementById('seq').innerHTML=html;
   document.getElementById('seqProg').textContent=`${ci+1} / ${WORK.length}`;
   document.querySelectorAll('#seq .snode').forEach(e=>e.onclick=()=>setSel(e.dataset.go));
@@ -279,7 +279,7 @@ function renderInbox(){
         <div class="ibx-main"><div class="ibx-t">${dcText(c.title,'case.title')}</div><div class="ibx-meta">${c.customer||PACK.label}${c.request?` · ${String(c.request).replace(/^["“]|["”]$/g,'').slice(0,46)}…`:''}</div></div>
         <div class="ibx-prog"><div class="ibx-bar"><i style="width:${pg}%"></i></div><div class="ibx-pn">${pg}%</div></div>
         <span class="ibx-st st-${st}">${STATUS[st].ko}</span>
-        <span class="ibx-go">${_ICO('chevron-right')}</span></div>`;
+        <span class="ibx-go">›</span></div>`;
     });
     h+=`</div></div>`;
   });
@@ -325,8 +325,8 @@ function headSpec(C){
   return `<div class="hd-top"><span class="hd-ic">${SS.icon}</span>
      <div class="hd-main"><div class="hd-title">${SS.title} <span class="hd-status ${stc}">${stt}</span></div>
      <div class="hd-meta">${meta}</div></div>
-     ${avs?`<div class="hd-avs">${avs}</div>`:''}${SS.owner?`<div class="hd-user">${SS.owner}${_ICO('chevron-down')}</div>`:''}</div>
-   <div class="hd-tabs">${SS.tabs.map(t=>`<span class="${t===tab?'on':''}">${t}</span>`).join('')}<span class="hd-replay" id="replay">${_ICO('rotate-ccw')}다시</span></div>`;
+     ${avs?`<div class="hd-avs">${avs}</div>`:''}${SS.owner?`<div class="hd-user">${SS.owner} ▾</div>`:''}</div>
+   <div class="hd-tabs">${SS.tabs.map(t=>`<span class="${t===tab?'on':''}">${t}</span>`).join('')}<span class="hd-replay" id="replay">↻ 다시</span></div>`;
 }
 function wsListSpec(C){
   const SS=PACK.surfaceSpec,i=C.idxOf(C.S.sel);
@@ -361,15 +361,15 @@ function cmodalSpec(kind,C){
     return `<div class="cmodal-h">${h.title}</div>${h.sub?`<div class="cmodal-sub">${h.sub}</div>`:''}${reviewSpec(h,C)}<div class="cmodal-actions"><button class="cp-btn primary" data-yes>${h.yes||'승인'}</button><button class="cp-btn ghost" data-no>${h.no||'수정'}</button></div>`;}
   if(kind==='done'){const d=(SS.done||{})[sel];if(!d)return '';
     if(d.card){const c=d.card,when=typeof c.when==='function'?c.when(C):c.when,sum=typeof c.summary==='function'?c.summary(C):c.summary;
-      return `<button class="cmodal-x" data-close>${_ICO('x')}</button><div class="cmodal-h done">${d.title} <span class="cp-check">${_ICO('check')}</span></div><div class="mtcard"><div class="mt-row"><span class="mt-ic">${c.ic||'📅'}</span><div><div class="mt-title">${c.title}</div><div class="mt-when">${when||''}</div></div></div>${sum?`<div class="rv-sum" style="line-height:1.9">${sum}</div>`:''}${c.foot?`<div class="mt-foot">${c.foot}</div>`:''}</div><div class="cmodal-actions"><button class="cp-btn primary" data-close>확인</button></div>`;}
-    return `<button class="cmodal-x" data-close>${_ICO('x')}</button><div class="cmodal-h done">${d.title} <span class="cp-check">${_ICO('check')}</span></div><div class="done-list">${(d.lines||[]).map(l=>`<div class="dn-row"><span class="dn-ic">${l.ic||_ICO('check')}</span>${typeof l.t==='function'?l.t(C):l.t}${l.dlv?` <button class="wl-go" data-dlv="${l.dlv}" style="margin-left:6px">열기</button>`:''}</div>`).join('')}</div><div class="cmodal-actions"><button class="cp-btn primary" data-close>확인</button></div>`;}
-  if(kind==='meetingStart'){const m=SS.meeting||{},s=m.start||{};return `<div class="cmodal-h">${m.startTitle||'진행'}</div><div class="meet-pre"><div class="mp-t">${s.text||''}</div><button class="cp-btn primary lg" data-mstart>${_ICO('play')}${s.btn||'시작'}</button></div>`;}
+      return `<button class="cmodal-x" data-close>×</button><div class="cmodal-h done">${d.title} <span class="cp-check">✓</span></div><div class="mtcard"><div class="mt-row"><span class="mt-ic">${c.ic||'📅'}</span><div><div class="mt-title">${c.title}</div><div class="mt-when">${when||''}</div></div></div>${sum?`<div class="rv-sum" style="line-height:1.9">${sum}</div>`:''}${c.foot?`<div class="mt-foot">${c.foot}</div>`:''}</div><div class="cmodal-actions"><button class="cp-btn primary" data-close>확인</button></div>`;}
+    return `<button class="cmodal-x" data-close>×</button><div class="cmodal-h done">${d.title} <span class="cp-check">✓</span></div><div class="done-list">${(d.lines||[]).map(l=>`<div class="dn-row"><span class="dn-ic">${l.ic||'✓'}</span>${typeof l.t==='function'?l.t(C):l.t}${l.dlv?` <button class="wl-go" data-dlv="${l.dlv}" style="margin-left:6px">열기</button>`:''}</div>`).join('')}</div><div class="cmodal-actions"><button class="cp-btn primary" data-close>확인</button></div>`;}
+  if(kind==='meetingStart'){const m=SS.meeting||{},s=m.start||{};return `<div class="cmodal-h">${m.startTitle||'진행'}</div><div class="meet-pre"><div class="mp-t">${s.text||''}</div><button class="cp-btn primary lg" data-mstart>${s.btn||'▶ 시작'}</button></div>`;}
   if(kind==='meetingLive'){const lv=(SS.meeting||{}).live||{},ended=C.S.meetPhase==='done';
-    return `<div class="cmodal-h">${ended?(lv.endedTitle||'종료됨')+' <span class="cp-check">'+_ICO('check')+'</span>':(lv.title||'진행 중')+' <span class="live"><span class="live-dot"></span>LIVE</span>'}</div>
+    return `<div class="cmodal-h">${ended?(lv.endedTitle||'종료됨')+' <span class="cp-check">✓</span>':(lv.title||'진행 중')+' <span class="live">● LIVE</span>'}</div>
       <div class="lm"><div class="lm-h"><span class="rec" ${ended?'style="background:#94a3b8;animation:none"':''}></span>${ended?(lv.recEnded||'정리됨'):(lv.rec||'실시간')}</div>
       ${(lv.lines||[]).map(l=>`<div class="lm-line"><b>${l.time}</b> ${l.t}</div>`).join('')}
       <div class="lm-tags">${lv.tags||''}${lv.tagsDlv?` <button class="wl-go" data-dlv="${lv.tagsDlv}" style="margin-left:4px">보기</button>`:''}</div></div>
-      ${C.S.meetPhase==='await_end'?`<div class="cmodal-actions"><button class="cp-btn primary" data-mend>${lv.endBtn||'종료'}</button></div>`:''}`;}
+      ${C.S.meetPhase==='await_end'?`<div class="cmodal-actions"><button class="cp-btn primary" data-mend>${lv.endBtn||'■ 종료'}</button></div>`:''}`;}
   return '';
 }
 
@@ -396,7 +396,7 @@ function renderCModal(){
   if(!kind){cm.classList.remove('show');cm.innerHTML='';return;}
   const C=ctx();let html;
   if(kind==='preview'){const d=resolveDlv(STATE.previewK,C);
-    html=`<button class="cmodal-back" data-back>${_ICO('chevron-left')}뒤로</button><div class="cmodal-h">${d.ic} ${d.title}</div><div class="cmodal-sub">${d.sub}</div>${d.body}`;
+    html=`<button class="cmodal-back" data-back>‹ 뒤로</button><div class="cmodal-h">${d.ic} ${d.title}</div><div class="cmodal-sub">${d.sub}</div>${d.body}`;
   } else html=surfCmodal(kind,C);
   cm.innerHTML=`<div class="cmodal-card">${html}</div>`;cm.classList.add('show');
   cm.querySelectorAll('[data-dlv]').forEach(e=>e.onclick=()=>openPreview(e.dataset.dlv));
@@ -419,12 +419,12 @@ function renderRight(){
   }
   gs.forEach((g,gi)=>{
     const ops=w.ops.filter(o=>o.g===g);const stt=gi<RUN.reveal?'done':(gi===RUN.reveal&&RUN.phase==='working'?'doing':'');
-    if(gi>0)h+=`<div class="rarrow ${gi<=RUN.reveal?'on':''}">${_ICO('arrow-down')}</div>`;
+    if(gi>0)h+=`<div class="rarrow ${gi<=RUN.reveal?'on':''}">▼</div>`;
     const par=ops.length>1;h+=`<div class="rstage ${par?'par':''}">`;if(par)h+=`<div class="rph">∥ 병렬 동시 실행</div>`;
     ops.forEach((o,oi)=>{const micro=o.micro?`<div class="op-micro">${o.micro.map(m=>`<span class="mc">${m}</span>`).join('')}</div>`:'';
       const badge=o.badge?`<span class="op-badge">${o.badge}</span>`:'';
       const key=`${w.id}-${gi}-${oi}`;const open=STATE.opOpen.has(key);
-      const more=(stt==='done'&&o.detail)?`<div class="op-more" data-op="${key}">${_ICO(open?'chevron-down':'chevron-right')}${open?'결과 접기':'결과 보기'}</div>${open?o.detail:''}`:'';
+      const more=(stt==='done'&&o.detail)?`<div class="op-more" data-op="${key}">${open?'▾ 결과 접기':'▸ 결과 보기'}</div>${open?o.detail:''}`:'';
       h+=`<div class="op ${stt} ${o.asset?'asset':''}"><div class="op-h"><span class="op-lay">${o.L} ${LK[o.L]}</span><span class="op-t">${o.comp}</span>${badge}</div><div class="op-out">${o.feed} · <b>${stt?o.out:'대기'}</b></div>${(stt?micro:'')}${more}</div>`;});
     h+=`</div>`;
   });
@@ -476,8 +476,8 @@ function startPlay(){
   if(STATE.view!=='run')setView('run');
   STATE.playing=true;STATE.decisions={};STATE.pickedTime=TIMES[0].t;STATE.trace=[];STATE.traced=new Set();
   const c=activeCase();if(c)c.done=false;
-  setRunBtn(true);setSel(WORK[0].id);}
-function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);setRunBtn(false);}
+  const b=document.getElementById('runBtn');b.textContent='■ 중지';b.classList.add('stop');setSel(WORK[0].id);}
+function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);const b=document.getElementById('runBtn');b.textContent='▶ Run';b.classList.remove('stop');}
 function playNext(){const ci=idxOf(STATE.sel);if(ci<WORK.length-1)setSel(WORK[ci+1].id);else stopPlay();}
 
 /* ===== 구성 뷰 (코어 · PACK 데이터 기반) ===== */
@@ -506,7 +506,7 @@ function renderArchCoherence(){
 }
 function renderPlan(){
   const PROD=PACK.planProduces;
-  const sel=w=>w.meeting?`<span class="sel-human">${_ICO('flag')}시작·종료 신호</span>`:(w.hitl?`<span class="sel-hitl">${_ICO('flag')}담당자 확인</span>`:(w.actor==='human'?`<span class="sel-human">사람 요청</span>`:`<span class="sel-auto">자동</span>`));
+  const sel=w=>w.meeting?`<span class="sel-human">⚑ 시작·종료 신호</span>`:(w.hitl?`<span class="sel-hitl">⚑ 담당자 확인</span>`:(w.actor==='human'?`<span class="sel-human">사람 요청</span>`:`<span class="sel-auto">자동</span>`));
   const makes=w=>{const o=PROD[w.id]||[];return o.length?o.map(x=>`<b>${x}</b>`).join(' · '):'<i style="color:#94a3b8;font-style:normal">중간 처리</i>';};
   const lays=w=>[...new Set(w.ops.map(o=>o.L))].map(l=>`<span>${l}</span>`).join('');
   let h=`<div class="plan-head"><div>#</div><div>단계</div><div>만드는 산출물</div><div>사람이 선택·확인</div><div>거치는 계층</div></div>`;
@@ -517,24 +517,17 @@ function renderPlan(){
 function renderGovern(){
   document.getElementById('govStrip').innerHTML=PACK.govern.map(c=>`<div class="gov-cell"><div class="gk">${c.k}</div><div class="gv">${c.v}</div></div>`).join('');
   renderTrace();
-  document.getElementById('reg').innerHTML=COMPONENTS.map(a=>`<div class="ag ${a.asset?'asset':''}"><div class="ag-h"><div class="ag-ic">${a.ic}</div><div><span class="ag-type ${a.ty}">${a.type}</span><div class="ag-name">${a.name}</div></div><span class="ag-lay">${a.L} ${LK[a.L]}</span>${a.asset?'<span class="ag-kt">kt ds</span>':''}</div><div class="ag-desc">${a.desc}</div><div class="ag-meta"><div class="ag-m when"><div class="ag-mk">${_ICO('compass')}언제 쓰나</div><div class="ag-mv">${a.when}</div></div><div class="ag-m data"><div class="ag-mk">${_ICO('folder')}사용 데이터</div><div class="ag-mv">${a.data}</div></div><div class="ag-m how"><div class="ag-mk">${_ICO('settings')}수행 방식</div><div class="ag-mv">${a.how}</div></div></div></div>`).join('');
+  document.getElementById('reg').innerHTML=COMPONENTS.map(a=>`<div class="ag ${a.asset?'asset':''}"><div class="ag-h"><div class="ag-ic">${a.ic}</div><div><span class="ag-type ${a.ty}">${a.type}</span><div class="ag-name">${a.name}</div></div><span class="ag-lay">${a.L} ${LK[a.L]}</span>${a.asset?'<span class="ag-kt">kt ds</span>':''}</div><div class="ag-desc">${a.desc}</div><div class="ag-meta"><div class="ag-m when"><div class="ag-mk">🧭 언제 쓰나</div><div class="ag-mv">${a.when}</div></div><div class="ag-m data"><div class="ag-mk">🗂️ 사용 데이터</div><div class="ag-mv">${a.data}</div></div><div class="ag-m how"><div class="ag-mk">⚙️ 수행 방식</div><div class="ag-mv">${a.how}</div></div></div></div>`).join('');
 }
 
 /* B-2: Run Trace · Decision Log (관리 뷰) — 실행 중 누적된 자율 판단·HITL·반영 */
 function renderTrace(){
   const el=document.getElementById('traceLog');if(!el)return;
-  if(!STATE.trace.length){el.innerHTML='<div class="tr-empty">아직 기록 없음 — Run 을 실행하거나 단계를 진행하면 자율 판단·HITL·반영이 여기 누적됩니다(감사·재현 가능).</div>';return;}
+  if(!STATE.trace.length){el.innerHTML='<div class="tr-empty">아직 기록 없음 — ▶ Run 을 실행하거나 단계를 진행하면 자율 판단·HITL·반영이 여기 누적됩니다(감사·재현 가능).</div>';return;}
   el.innerHTML=STATE.trace.map(e=>`<div class="tr-line"><span class="tr-st">${e.st}</span><span class="tr-k ${e.k}">${e.k}</span><span class="tr-t">${e.t}</span><span class="tr-L">${e.L}</span></div>`).join('');
 }
 
 /* ===== misc ===== */
-/* Run 버튼 상태(아이콘 유지) — 이모지 textContent 대체. play/stop SVG + 라벨 */
-const _ICO=(n)=>window.AAP_ICON?window.AAP_ICON.svg(n):'';
-function setRunBtn(running){
-  const b=document.getElementById('runBtn'); if(!b)return;
-  b.innerHTML=(running?_ICO('square'):_ICO('play'))+`<span class="btn-l">${running?'중지':'Run'}</span>`;
-  b.classList.toggle('stop',!!running);
-}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),2200);}
 
 /* ===== 외부 API (자동 저작 모듈이 새 팩을 등록·로드) ===== */

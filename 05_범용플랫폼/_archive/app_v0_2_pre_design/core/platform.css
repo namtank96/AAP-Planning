@@ -8,13 +8,6 @@
   --shadow:0 8px 24px rgba(15,23,42,.06);
 }
 *{box-sizing:border-box;}
-
-/* ===== Lucide 인라인 SVG 아이콘 (currentColor 상속 · stroke 1.75) ===== */
-.ic{display:inline-block;vertical-align:-0.14em;flex:0 0 auto;stroke-width:1.75;}
-/* 버튼 = 아이콘 + 라벨 정렬 통일 */
-.runbtn,.newcase,.authbtn{display:inline-flex;align-items:center;gap:7px;}
-.runbtn .ic,.newcase .ic,.authbtn .ic{width:15px;height:15px;}
-.btn-l{display:inline-block;}
 html,body{margin:0;height:100%;}
 body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   background:var(--bg);color:var(--ink);font-size:13px;line-height:1.55;-webkit-font-smoothing:antialiased;
@@ -41,10 +34,7 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .gnav-i{display:flex;align-items:center;gap:10px;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:700;color:var(--slate);padding:9px 12px;border-radius:10px;cursor:pointer;text-align:left;width:100%;}
 .gnav-i:hover{background:var(--surf);}
 .gnav-i.on{background:var(--aap-soft);color:var(--aap-ink);}
-.gnav-i .gn-ic{width:18px;height:18px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);}
-.gnav-i .gn-ic .ic{width:18px;height:18px;}
-.gnav-i:hover .gn-ic{color:var(--slate);}
-.gnav-i.on .gn-ic{color:var(--aap);}
+.gnav-i .gn-ic{width:18px;text-align:center;font-size:13px;flex:0 0 auto;}
 .gnav-i .gn-l{flex:1;}
 .gnav-i .gn-c{font-size:10px;font-weight:800;color:#fff;background:var(--aap);border-radius:20px;padding:1px 7px;min-width:18px;text-align:center;}
 .gnav-i .gn-c:empty{display:none;}
@@ -178,8 +168,7 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .cmodal-h.done{color:var(--green);}
 .cmodal-sub{font-size:11px;color:var(--muted);margin:-7px 0 12px;}
 .cmodal-actions{display:flex;gap:8px;margin-top:15px;}
-.cp-btn{font-size:12.5px;font-weight:800;padding:10px 16px;border-radius:10px;cursor:pointer;border:1px solid;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
-.cp-btn .ic{width:14px;height:14px;}
+.cp-btn{font-size:12.5px;font-weight:800;padding:10px 16px;border-radius:10px;cursor:pointer;border:1px solid;font-family:inherit;}
 .cp-btn.primary{background:var(--aap);color:#fff;border-color:var(--aap);box-shadow:0 4px 12px rgba(13,148,136,.22);}
 .cp-btn.primary:hover{background:var(--aap-ink);} .cp-btn.ghost{background:#fff;color:var(--slate);border-color:var(--border);} .cp-btn.lg{padding:12px 22px;font-size:13px;}
 .live{font-size:10px;font-weight:800;color:var(--red);} .cp-check{color:var(--green);}
@@ -392,51 +381,3 @@ textarea.au-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0
 .au-gate{font-size:11px;font-weight:700;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:7px;padding:5px 10px;margin-bottom:4px;}
 .au-foot{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;}
 .au-done{font-size:12.5px;color:var(--slate);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:10px;padding:11px 13px;margin-bottom:12px;line-height:1.6;} .au-done b{color:var(--aap-ink);}
-.auth-x .ic{width:18px;height:18px;color:var(--faint);} .auth-x:hover .ic{color:var(--slate);}
-.auth-h{display:flex;align-items:flex-start;gap:8px;} .auth-h .ah-ic .ic{width:17px;height:17px;color:var(--violet);transform:translateY(2px);} .auth-h span{flex-basis:100%;}
-
-/* ===== aap-design v0.2 · 아이콘 배치 + 운영 콘솔 시각 정교화 ===== */
-/* 글로벌 네비 — 활성 좌측 teal 인디케이터(F-패턴 좌측 고정) */
-.gnav-i{position:relative;transition:background .12s,color .12s;}
-.gnav-i.on::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--aap);}
-
-/* 인박스 — Linear/Datadog 톤: 상태 그룹 헤더 정돈 + 좌측 상태 보더 */
-.ibx-grp{position:relative;}
-.ibx-row{position:relative;border-left:3px solid transparent;}
-.ibx-grp:has(.gh-dot.st-wait) .ibx-row{border-left-color:var(--amber-border);}
-.ibx-grp:has(.gh-dot.st-run) .ibx-row{border-left-color:var(--blue-border);}
-.ibx-grp:has(.gh-dot.st-done) .ibx-row{border-left-color:#bbf7d0;}
-.ibx-grp:has(.gh-dot.st-new) .ibx-row{border-left-color:var(--border);}
-.ibx-go .ic{width:17px;height:17px;}
-.ibx-row:hover .ibx-go{transform:translateX(2px);transition:.12s;}
-
-/* 실행 — 업무 순서 바 chevron/star + 진행률 강조 */
-.sarrow{display:inline-flex;align-items:center;} .sarrow .ic{width:14px;height:14px;}
-.snode .lab .ic{width:12px;height:12px;color:var(--amber);margin-left:1px;}
-.hd-tabs .hd-replay{display:inline-flex;align-items:center;gap:4px;} .hd-replay .ic{width:13px;height:13px;}
-.hd-user{display:inline-flex;align-items:center;gap:2px;} .hd-user .ic{width:13px;height:13px;color:var(--faint);}
-
-/* 우측 8계층 흐름 — 단계 화살표 + 결과 토글 아이콘 */
-.rarrow{display:flex;align-items:center;justify-content:center;} .rarrow .ic{width:14px;height:14px;}
-.op-more{align-items:center;} .op-more .ic{width:12px;height:12px;}
-
-/* 실행 계획 표 — 사람 확인 플래그 아이콘 정렬 */
-.sel-human,.sel-hitl{display:inline-flex;align-items:center;gap:4px;} .sel-human .ic,.sel-hitl .ic{width:12px;height:12px;}
-.sel-hitl .ic{color:var(--amber);} .sel-human .ic{color:#15803d;}
-
-/* HITL/결과 모달 — 닫기/뒤로/체크 아이콘 + LIVE 점 */
-.cmodal-x{display:inline-flex;align-items:center;justify-content:center;} .cmodal-x .ic{width:18px;height:18px;}
-.cmodal-back{align-items:center;} .cmodal-back .ic{width:13px;height:13px;}
-.cp-check{display:inline-flex;align-items:center;} .cp-check .ic{width:15px;height:15px;color:var(--green);}
-.live{display:inline-flex;align-items:center;gap:4px;} .live-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1s infinite;}
-.dn-ic{display:inline-flex;align-items:center;} .dn-ic .ic{width:15px;height:15px;color:var(--green);}
-
-/* 관리 — Master 카드 + Registry 메타 아이콘(타입색 의미 유지) */
-.master-card .mi .ic{width:24px;height:24px;color:#fff;}
-.compose-note{display:flex;align-items:flex-start;gap:7px;} .compose-note .cn-ic .ic{width:15px;height:15px;color:var(--aap-ink);transform:translateY(2px);}
-.ag-m .ag-mk{align-items:center;} .ag-m .ag-mk .ic{width:13px;height:13px;}
-.ag-m.when .ag-mk .ic{color:var(--amber);} .ag-m.data .ag-mk .ic{color:var(--green);} .ag-m.how .ag-mk .ic{color:var(--aap-ink);}
-
-/* 컴포넌트 타입 색점(§5.9) — Registry 카드/compose 칩에 타입 신호 강화 */
-.ag .ag-type::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px;background:currentColor;}
-.casm .ct2::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:5px;vertical-align:1px;background:currentColor;opacity:.85;}

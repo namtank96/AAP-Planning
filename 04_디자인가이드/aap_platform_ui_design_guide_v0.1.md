@@ -102,6 +102,17 @@ AAP 데모는 "회의 예약 도구"가 아니라 **에이전트 오케스트레
 **테두리**: 기본 `1px solid --border`. 점선(dashed)은 *병렬/예정/조건부* 의미일 때만(violet-border).
 **간격**: 패널 패딩 12–18px, 카드 갭 6–13px, 토큰화된 일관 간격 유지.
 
+### 4.2 아이콘 — Lucide 인라인 SVG (이모지 금지)
+*(`05_범용플랫폼/app/` 구현 = 표준. 이모지 톤 배제 §1 Notion 차용 원칙과 정합.)*
+
+- **표준 = Lucide** (stroke 기반, 미니멀). 이모지(📥▶🛡️🧩🧠📅✓ 등) → Lucide SVG로 교체.
+- **외부 라이브러리 0 · `file://` 더블클릭 동작** 제약 → CDN/npm 금지, **인라인 SVG 임베드**. 구현: `app/core/icons.js`가 Lucide path를 *필요한 것만* 정의하고 `window.AAP_ICON.svg(name)` 헬퍼로 emit.
+- **stroke 1.5~2px(표준 1.75) · `stroke="currentColor"`** → 아이콘이 부모 `color`(5타입 색·상태색 토큰)를 **상속**. 색을 SVG에 박지 말고 CSS `color`로 제어.
+- **크기**: 본문 14–15px, 네비 18px, 마이크로(칩 안) 12–13px. `viewBox="0 0 24 24"` 고정.
+- **의미 매핑(현행 app 기준)**: 인박스=`inbox` · 실행/Run=`play`(중지=`square`) · 관리=`shield` · 도메인/조합=`puzzle` · Master=`brain` · 게이트=`star`(amber) · 사람 확인=`flag` · 완료=`check`/`check-circle`(green) · 추가=`plus` · 다시=`rotate-ccw` · 펼침/접기=`chevron-down`/`chevron-right` · 이동=`arrow-right`/`arrow-down` · 닫기=`x` · Registry 메타(언제=`compass` amber · 데이터=`folder` green · 방식=`settings` teal).
+- **도메인 데이터 아이콘**(케이스 아이콘·서비스 헤더 등 Domain Pack이 emit)은 현재 이모지 허용 — *플랫폼 chrome(코어가 강제하는 셸)만 Lucide로 표준화*. 팩 데이터까지 표준화하려면 팩 스키마에 icon-token 도입 필요(후속).
+- **금칙**: SVG에 hex fill 박기 ✕(currentColor만) · CDN `<link>`/`<script src=lucide>` ✕ · 같은 의미에 다른 아이콘 ✕(매핑 1:1).
+
 ### 4.1 레이아웃·밀도 규칙 (Palantir Blueprint / Workshop 차용 — 규율만, 색은 teal 유지)
 데이터 밀도 높은 운영 콘솔의 정석. 단 Palantir 다크 모노크롬은 차용 ✕.
 - **주 액션 ≤ 5개**(상단/툴바). 그 이상은 보조로 강등

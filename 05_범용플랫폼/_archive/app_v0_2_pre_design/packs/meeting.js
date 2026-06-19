@@ -304,10 +304,10 @@
       prepare:{title:'회의 준비가 끝났어요',card:{title:'AAP 고객사 킥오프 회의',ic:'📅',when:(C)=>`${C.S.pickedTime} · A동 301 · 화상`,summary:(C)=>`참석자 ${C.ex?5:6}명 · 자료 4건 · 안건 6항 · 초대장 준비됨`,foot:'✓ 캘린더 등록 (CAL-3391) · 회의실 ROOM-552 예약 완료'}},
       share:{title:'공유 완료',lines:[{ic:'✉️',t:(C)=>`참석자 ${C.ex?5:6}명에게 회의록·후속 할 일 전달`},{ic:'🗂️',t:'KMS에 회의록 기록됨',dlv:'minutes'},{ic:'⏰',t:'후속 일정·마감 리마인더 등록'}]},
     },
-    meeting:{startTitle:'회의 진행',start:{text:'회의가 준비되었어요. 시작하면 녹취·회의록이 자동으로 작성됩니다.',btn:'회의 시작'},
+    meeting:{startTitle:'회의 진행',start:{text:'회의가 준비되었어요. 시작하면 녹취·회의록이 자동으로 작성됩니다.',btn:'▶ 회의 시작'},
       live:{title:'회의 진행 중',endedTitle:'회의가 종료됐어요',rec:'실시간 회의록',recEnded:'회의록 (정리됨)',
         lines:[{time:'09:12',t:'박지훈 · 1차 데모는 킥오프 준비 시나리오로 합의'},{time:'09:21',t:'최도현 · 연계 우선순위는 캘린더·문서함·그룹웨어'},{time:'09:30',t:'정하은 · 외부 공유 기준부터 정리 필요'}],
-        tags:'결정 3 · 할 일 3 ·',tagsDlv:'minutes',endBtn:'회의 끝났습니다'}},
+        tags:'결정 3 · 할 일 3 ·',tagsDlv:'minutes',endBtn:'■ 회의 끝났습니다'}},
   };
 
   /* 데모용 시드 케이스(인스턴스) — 서로 다른 진행 상태로 인박스를 채움 (코어가 caseTemplate 으로 생성) */
