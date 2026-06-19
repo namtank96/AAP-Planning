@@ -80,11 +80,12 @@
     </div></div>
   </section>
 
-  <!-- ============ RUN VIEW (실행 = 업무가 돌아가는 화면 · 도메인 surface 메인) ============
-       유저 결정: 이 플랫폼(HTML) 자체가 고객이 보는 화면. 인박스에서 케이스를 열면
-       메인 = '그 업무(시나리오)가 실제로 돌아가는 화면'(채용=ATS 보드 등 surface).
-       AAP 작동 구조는 메인이 아니라 우측 얇은 '근거 레일'로 강등(단계별 1~2줄 + ▸펼침).
-       HITL/결과/미리보기 = surface 위 오버레이(#cmodal). #flow/#explain ID는 데모/안정성 위해 유지. -->
+  <!-- ============ RUN VIEW (실행 = AAP 작동 중심 · 풀폭) ============
+       유저 결정: '고객이 보는 서비스 화면'을 별도 영역으로 두지 않는다 —
+       이 플랫폼(HTML) 자체가 고객이 보는 화면이고, 인박스 항목을 AAP에 태워 처리한다.
+       실행 뷰 = 상단 업무 순서(8단계) + 메인 AAP 작동 흐름(풀폭).
+       HITL/결과/미리보기는 실행 영역 위 오버레이(#cmodal, run-surface 풀 오버레이). per-도메인 고객화면
+       (surfaceSpec / PACK.surface)은 코드 보존, 시연 모드에서만 사용. -->
   <section class="view" data-view="run">
     <div class="runtop">
       <button class="rt-back" id="rtBack" data-tip="인박스로 돌아가기">‹ 인박스</button>
@@ -93,19 +94,17 @@
       <span class="rt-prog" id="seqProg"></span>
     </div>
     <div class="run-main">
-      <!-- 메인 = 업무가 돌아가는 도메인 화면 (PACK.surface / surfaceSpec) -->
       <section class="run-surface">
-        <div class="con-head" id="surfHead"></div>
-        <div class="con-body" id="surfBody"></div>
-        <!-- HITL / 결과 / 미리보기 = 업무 화면 위 오버레이 -->
+        <div class="rs-head">
+          <div class="ph">AAP 작동 구조 · 8계층 흐름 <span class="help" data-tip="이 업무 단계에서 AAP(Master)가 8계층 안에서 어떤 구성요소로 일을 실행하는지 보여줍니다. 각 단계 '결과 보기'로 실제 산출물(더미)을 확인하고, 게이트 단계에서는 사람이 승인(HITL)합니다. ∥ = 병렬. 보라 = kt ds 자산.">?</span></div>
+        </div>
+        <div class="rs-scroll">
+          <div class="explain" id="explain"></div>
+          <div class="flow" id="flow"></div>
+        </div>
+        <!-- HITL / 결과 / 미리보기 = 실행 영역 위 오버레이(인-콘솔 → run 영역으로 승격) -->
         <div class="cmodal" id="cmodal"></div>
       </section>
-      <!-- 우측 얇은 레일 = AAP 작동 '근거'(메인 아님). 단계별 구성요소가 무슨 근거로 무엇을 했나 -->
-      <aside class="run-evid" id="runEvid">
-        <div class="re-head">AAP 작동 근거 <span class="help" data-tip="이 단계를 AAP가 어떤 구성요소(Agent·Module·기존솔루션·Connector·Policy)로, 어떤 근거로 처리했는지 한 줄씩 보여줍니다. ▸로 펼치면 관여 계층·세부가 보입니다. 메인 업무 화면이 주인공이고, 이건 '왜 그렇게 돌아갔는지'의 근거입니다.">?</span></div>
-        <div class="explain" id="explain"></div>
-        <div class="flow" id="flow"></div>
-      </aside>
     </div>
   </section>
 

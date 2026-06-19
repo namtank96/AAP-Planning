@@ -430,21 +430,13 @@ function cmodalSpec(kind,C){
   return '';
 }
 
-/* ===== 실행 콘솔 렌더 (run 뷰 = 업무가 돌아가는 도메인 화면이 메인) =====
-   유저 정정(되돌림): 실행 뷰 메인 = 'AAP 작동 구조'가 아니라 '그 업무가 실제로 돌아가는 화면'.
-   per-도메인 surface(PACK.surface=ATS 보드 / surfaceSpec)를 #surfHead/#surfBody 에 렌더하고,
-   단계 진행(RUN.phase/STATE.sel)에 따라 살아 움직이게 한다(surface 가 C=ctx 의 S/R 을 읽어 반영).
-   HITL/결과/미리보기 오버레이(#cmodal)는 그대로. AAP 작동은 우측 얇은 근거 레일(renderRight). */
+/* ===== 실행 콘솔 렌더 (run 뷰 = AAP 작동 중심 · 풀폭) =====
+   유저 결정: 실행 뷰에서 '고객이 보는 서비스 화면'(custHead/conBody) 좌패널을 제거.
+   이 함수는 이제 HITL/결과/미리보기 오버레이(#cmodal)만 갱신한다.
+   surfHead/surfBase(고객화면 본문)는 코드 보존(시연 모드용) — 운영 실행 뷰에서 미호출.
+   surfCmodal(HITL/결과/미리보기 콘텐츠)은 오버레이 모달이 계속 사용(도메인 네이티브 HITL 유지). */
 function renderConsole(){
-  const C=ctx();
-  const sh=document.getElementById('surfHead'); if(sh){ sh.innerHTML=surfHead(C); wireSurface(sh); }
-  const sb=document.getElementById('surfBody'); if(sb){ sb.innerHTML=surfBase(C); wireSurface(sb); }
   renderCModal();
-}
-/* surface 내 산출물 보기 버튼(data-dlv)·다시(replay) 배선 — 코어 책임(도메인 무관) */
-function wireSurface(root){
-  root.querySelectorAll('[data-dlv]').forEach(e=>e.onclick=()=>openPreview(e.dataset.dlv));
-  const rp=root.querySelector('#replay'); if(rp)rp.onclick=()=>{ if(STATE.playing)stopPlay(); setSel(WORK[0].id); };
 }
 function currentCM(){
   if(STATE.previewK)return 'preview';
@@ -474,59 +466,28 @@ function renderCModal(){
 }
 function openPreview(k){STATE.previewK=k;renderConsole();}
 
-/* ===== 우측 얇은 'AAP 작동 근거' 레일 (코어 · WORK.ops 데이터 기반) =====
-   유저 정정: 8계층 op 그래프를 메인에서 강등. 단계별로 어떤 구성요소(comp)가
-   어떤 근거(feed)로 무엇을(out) 했는지 1~2줄로 축약. ▸펼침 = 관여 계층(L)·micro·detail.
-   '코어 실행엔진 전시' ✕ → '그런 근거로 그렇게 돌아갔다'. 데이터는 w.ops(도메인 무관).
-   구성요소 타입(5타입 색)은 comp 문자열에 매핑 휴리스틱(코어 토큰) — 도메인 분기 없음. */
-/* op.comp 라벨 → 5타입 키(A/M/S/C/P) 추정(근거 칩 색). 토큰 기반·도메인 무관 휴리스틱. */
-function evidType(o){
-  const t=(o.comp||'')+' '+(o.badge||'');
-  if(/정책|Policy|게이트|HITL|차단|승인|통제|마스킹|DLP|PII/.test(t))return 'P';
-  if(/Connector|커넥터|연결|수집|연동/.test(t))return 'C';
-  if(/솔루션|ATS|HRIS|KMS|그룹웨어|문서함|스토리지|DB/.test(t))return 'S';
-  if(/Module|모듈|OCR|정규화|검증|평가|Antbot|AI:ON-U|품질/.test(t))return 'M';
-  return 'A'; /* 기본 = Agent(전문 작업·코어 실행) */
-}
-const _TYKO={A:'Agent',M:'Module',S:'기존 솔루션',C:'Connector',P:'Policy'};
+/* ===== 우측 8계층 흐름 (코어 · WORK.ops 데이터 기반) ===== */
 function renderRight(){
   const w=W(STATE.sel),gs=groupsOf(w);let h='';
   const lb=PACK.stepLoop?`<div class="loopbadge">추론 루프 · ${PACK.stepLoop[w.id]||'—'}</div>`:'';
-  const flow=document.getElementById('flow'),exp=document.getElementById('explain');
-  if(!flow)return;
   if(w.meeting && STATE.meetPhase==='await_start'){
-    flow.innerHTML=lb+`<div class="evid-row wait">회의 시작 신호 대기 — 사람이 실시간 Agent 가동 시점을 통제합니다 (HITL ②)</div>`;
-    if(exp)exp.innerHTML=w.explain;return;
+    document.getElementById('flow').innerHTML=lb+`<div class="op" style="opacity:.5">회의 시작 신호 대기 — 사람이 실시간 Agent 가동 시점을 통제합니다 (HITL ②)</div>`;document.getElementById('explain').innerHTML=w.explain;return;
   }
   gs.forEach((g,gi)=>{
-    const ops=w.ops.filter(o=>o.g===g);
-    const stt=gi<RUN.reveal?'done':(gi===RUN.reveal&&RUN.phase==='working'?'doing':'wait');
-    const par=ops.length>1;
-    ops.forEach((o,oi)=>{
-      const tk=evidType(o);
+    const ops=w.ops.filter(o=>o.g===g);const stt=gi<RUN.reveal?'done':(gi===RUN.reveal&&RUN.phase==='working'?'doing':'');
+    if(gi>0)h+=`<div class="rarrow ${gi<=RUN.reveal?'on':''}">${_ICO('arrow-down')}</div>`;
+    const par=ops.length>1;h+=`<div class="rstage ${par?'par':''}">`;if(par)h+=`<div class="rph">∥ 병렬 동시 실행</div>`;
+    ops.forEach((o,oi)=>{const micro=o.micro?`<div class="op-micro">${o.micro.map(m=>`<span class="mc">${m}</span>`).join('')}</div>`:'';
+      const badge=o.badge?`<span class="op-badge">${o.badge}</span>`:'';
       const key=`${w.id}-${gi}-${oi}`;const open=STATE.opOpen.has(key);
-      const badge=o.badge?`<span class="ev-badge">${o.badge}</span>`:'';
-      const parTag=(par&&oi===0)?`<span class="ev-par">∥ 병렬</span>`:'';
-      /* 펼침 상세 = 관여 계층 + micro + detail(산출물 표) */
-      const micro=o.micro?`<div class="ev-micro">${o.micro.map(m=>`<span class="mc">${m}</span>`).join('')}</div>`:'';
-      const det=(o.detail||'');
-      const canOpen=(stt==='done')&&(o.detail||o.micro);
-      const more=canOpen?`<button class="ev-more" data-op="${key}">${_ICO(open?'chevron-down':'chevron-right')}${open?'근거 접기':'근거 펼침'}</button>${open?`<div class="ev-detail"><div class="ev-lay">관여 계층 · <b>${o.L} ${LK[o.L]}</b></div>${micro}${det}</div>`:''}`:'';
-      const val=stt==='wait'?'<span class="ev-na">대기</span>':`<b>${o.out}</b>`;
-      h+=`<div class="evid-row ${stt}">
-        <span class="ev-dot ty${tk}"></span>
-        <div class="ev-body">
-          <div class="ev-h"><span class="ev-comp ty${tk}">${dcText(o.comp,'op.comp')}</span><span class="ev-tag ty${tk}">${_TYKO[tk]}</span>${badge}${parTag}</div>
-          <div class="ev-line">${o.feed} → ${val}</div>
-          ${more}
-        </div></div>`;
-    });
+      const more=(stt==='done'&&o.detail)?`<div class="op-more" data-op="${key}">${_ICO(open?'chevron-down':'chevron-right')}${open?'결과 접기':'결과 보기'}</div>${open?o.detail:''}`:'';
+      h+=`<div class="op ${stt} ${o.asset?'asset':''}"><div class="op-h"><span class="op-lay">${o.L} ${LK[o.L]}</span><span class="op-t">${o.comp}</span>${badge}</div><div class="op-out">${o.feed} · <b>${stt?o.out:'대기'}</b></div>${(stt?micro:'')}${more}</div>`;});
+    h+=`</div>`;
   });
   let casm='';
   if(w.id==='compose'){const lit=RUN.phase==='done'||RUN.phase==='await'||RUN.reveal>2;
     casm=`<div class="casm"><div class="casm-h">AAP가 조합한 구성요소</div>${COMPOSE.map(c=>`<span class="ct2 ${c.cls} ${lit?'on':''}">${c.t} ${c.n}</span>`).join('')}</div>`;}
-  flow.innerHTML=lb+h+casm;
-  if(exp)exp.innerHTML=w.explain;
+  const flow=document.getElementById('flow');flow.innerHTML=lb+h+casm;document.getElementById('explain').innerHTML=w.explain;
   flow.querySelectorAll('[data-op]').forEach(e=>e.onclick=()=>{const k=e.dataset.op;STATE.opOpen.has(k)?STATE.opOpen.delete(k):STATE.opOpen.add(k);renderRight();});
 }
 
