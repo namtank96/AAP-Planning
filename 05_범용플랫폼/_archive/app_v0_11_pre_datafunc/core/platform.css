@@ -796,68 +796,15 @@ textarea.au-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0
 .rm-mt{font-size:10.5px;font-weight:800;color:var(--aap-ink);} .rm-sc{font-size:11px;font-weight:900;color:var(--slate);width:26px;text-align:right;}
 /* 후보 비교표(DLV preview) */
 .cmp-table{border:1px solid var(--border);border-radius:11px;overflow:hidden;font-size:11.5px;}
-.cmp-h,.cmp-r{display:grid;grid-template-columns:1.3fr .55fr .5fr .6fr .55fr .6fr 1fr;gap:8px;align-items:center;padding:8px 12px;}
+.cmp-h,.cmp-r{display:grid;grid-template-columns:1.4fr .7fr .7fr .6fr .9fr;gap:8px;align-items:center;padding:8px 12px;}
 .cmp-h{background:var(--surf);border-bottom:1px solid var(--border);font-size:9px;font-weight:800;letter-spacing:.03em;color:var(--faint);text-transform:uppercase;}
 .cmp-r{border-bottom:1px solid var(--line);} .cmp-r:last-child{border-bottom:none;}
 .cmp-nm{display:flex;align-items:center;gap:7px;font-weight:800;color:var(--ink);}
 .cmp-mt b{color:var(--aap-ink);font-weight:900;} .cmp-sc{font-weight:900;color:var(--slate);}
 .cmp-rk{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--slate);}
-.cmp-rk .dot-r,.cmp-rk .dot-g,.cmp-rk .dot-a{width:7px;height:7px;border-radius:50%;flex:0 0 auto;} .cmp-rk .dot-r{background:var(--red);} .cmp-rk .dot-g{background:var(--green);} .cmp-rk .dot-a{background:var(--amber);}
+.cmp-rk .dot-r,.cmp-rk .dot-g{width:7px;height:7px;border-radius:50%;flex:0 0 auto;} .cmp-rk .dot-r{background:var(--amber);} .cmp-rk .dot-g{background:var(--green);}
 /* 채용 유형 헤더 아이콘 + 탭 SVG 정렬 */
 .con-body .recr-jd .ic{vertical-align:-.14em;}
-
-/* ===== v0.11: 후보 카드 플래그 · 정렬/필터 바 · 후보 상세 모달 ===== */
-/* 카드 플래그(스킬매치/경력하한/도메인불일치/안정성/IC) */
-.rc-flag{font-size:8.5px;font-weight:800;border-radius:5px;padding:1px 6px;}
-.rc-flag.ok{color:var(--green);background:var(--green-soft);}
-.rc-flag.warn{color:var(--amber);background:var(--amber-soft);}
-.rc-flag.risk{color:var(--red);background:var(--red-soft);}
-.recr-card.rejected{opacity:.5;}
-.recr-card.rejected .rc-nm{text-decoration:line-through;}
-/* 정렬·필터 바 */
-.recr-tools{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:9px;flex:0 0 auto;}
-.recr-tools .rbt-lb{font-size:9px;font-weight:800;letter-spacing:.03em;color:var(--faint);text-transform:uppercase;margin-right:1px;}
-.recr-tools .rbt-sp{width:1px;height:14px;background:var(--border);margin:0 4px;}
-.rbt{font-family:inherit;font-size:10px;font-weight:700;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:7px;padding:3px 9px;cursor:pointer;transition:.12s;}
-.rbt:hover{border-color:var(--aap-border);}
-.rbt.on{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink);}
-/* 후보 상세 모달 */
-.recr-av.lg{width:42px;height:42px;font-size:16px;}
-.cd-h{display:flex;align-items:center;gap:12px;margin:6px 0 11px;}
-.cd-id{flex:1;min-width:0;}
-.cd-nm{font-size:15px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.cd-cur{font-size:11px;color:var(--muted);margin-top:2px;}
-.cd-mt{text-align:center;flex:0 0 auto;}
-.cd-mt-n{font-size:24px;font-weight:900;color:var(--aap-ink);line-height:1;} .cd-mt-l{font-size:9px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;}
-.cd-dec{font-size:9.5px;font-weight:800;border-radius:6px;padding:2px 8px;}
-.cd-dec.shortlist,.cd-dec.interview,.cd-dec.offer{color:var(--aap-ink);background:var(--aap-soft);}
-.cd-dec.reject{color:var(--red);background:var(--red-soft);}
-.cd-flags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
-.cd-flag{font-size:10px;font-weight:800;border-radius:6px;padding:2px 9px;}
-.cd-flag.ok{color:var(--green);background:var(--green-soft);}
-.cd-flag.warn{color:var(--amber);background:var(--amber-soft);}
-.cd-flag.risk{color:var(--red);background:var(--red-soft);}
-.cd-resume{font-size:11.5px;color:var(--slate);line-height:1.6;background:var(--surf);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:12px;}
-.cd-sec{font-size:11px;font-weight:800;color:var(--ink);margin:0 0 9px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
-.cd-formula{font-size:9.5px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:6px;padding:2px 8px;}
-.cd-bd{display:flex;flex-direction:column;gap:7px;margin-bottom:11px;}
-.cd-bd-row{display:grid;grid-template-columns:108px 1fr 26px 34px;grid-template-areas:"k bar raw c" "sub sub sub sub";gap:4px 8px;align-items:center;font-size:11px;}
-.cd-bd-k{grid-area:k;color:var(--slate);font-weight:700;} .cd-bd-k em{font-style:normal;color:var(--faint);font-size:9px;font-weight:700;}
-.cd-bd-bar{grid-area:bar;height:7px;border-radius:7px;background:var(--line);overflow:hidden;} .cd-bd-bar i{display:block;height:100%;background:var(--aap);border-radius:7px;}
-.cd-bd-raw{grid-area:raw;text-align:right;font-weight:800;color:var(--slate);}
-.cd-bd-c{grid-area:c;text-align:right;font-weight:900;color:var(--aap-ink);}
-.cd-bd-sub{grid-area:sub;font-size:9.5px;color:var(--faint);margin-top:-2px;}
-.cd-skills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:11px;}
-.cd-skills span{font-size:9.5px;font-weight:700;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-radius:5px;padding:2px 7px;}
-.cd-skills span.must{color:var(--aap-ink);background:var(--aap-soft);border-color:var(--aap-border);}
-.cd-skills span.plus{color:var(--blue);background:var(--blue-soft);border-color:var(--blue-border);}
-.cd-verdict{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;border-radius:9px;padding:9px 12px;margin-bottom:9px;line-height:1.5;}
-.cd-verdict .ic{width:15px;height:15px;flex:0 0 auto;}
-.cd-verdict.ok{color:var(--green);background:var(--green-soft);} .cd-verdict.ok b{color:#15803d;}
-.cd-verdict.hold{color:var(--amber-ink);background:var(--amber-soft);}
-.cd-verdict.risk{color:#b91c1c;background:var(--red-soft);} .cd-verdict.risk .ic{color:var(--red);}
-.cd-hi{font-size:11px;color:var(--slate);line-height:1.5;}
-.cd-acts{margin-top:13px;}
 
 /* =========================================================================
    시연 모드 (Guide Mode) — demo.js · core/도메인 무관

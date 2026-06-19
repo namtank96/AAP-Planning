@@ -168,13 +168,8 @@ function caseTemplate(pack,seed){
     trace:(seed&&seed.trace)||[],
     traced:(seed&&seed.traced)||[],
     done:(seed&&seed.done)||false,
-    packState:(seed&&seed.packState)||{},  /* 팩 선언 persistKeys 보관(도메인 무관) */
   };
 }
-/* 팩이 영속을 원하는 STATE 키 목록(없으면 빈 배열) — 도메인 무관 */
-function packPersistKeys(){ const hk=PACK&&PACK.surfaceHooks; return (hk&&Array.isArray(hk.persistKeys))?hk.persistKeys:[]; }
-/* 팩 transient 키 초기화(케이스/단계 전환 시 누수 방지) — 도메인 무관 */
-function clearPackTransient(){ const hk=PACK&&PACK.surfaceHooks; if(hk&&Array.isArray(hk.transientKeys))hk.transientKeys.forEach(k=>{ delete STATE[k]; }); }
 /* 케이스 진행 상태 라벨(상태 4종) — 인박스 그룹핑/배지 */
 const STATUS={new:{k:'new',ko:'접수'},run:{k:'run',ko:'진행'},wait:{k:'wait',ko:'검토대기'},done:{k:'done',ko:'완료'}};
 function caseStatus(c){
@@ -194,19 +189,11 @@ function hydrateFromCase(c){
   STATE.sel=c.sel; STATE.decisions={...c.decisions}; STATE.pickedTime=c.pickedTime; STATE.meetPhase=c.meetPhase||'idle';
   STATE.trace=Array.isArray(c.trace)?c.trace.slice():[]; STATE.traced=new Set(c.traced||[]);
   STATE.previewK=null; STATE.baseOnly=false; STATE.opOpen=new Set(); STATE.playing=false;
-  /* 팩 선언 키 복원(도메인 무관) — 매번 초기화 후 저장된 값 주입(누수 방지) */
-  packPersistKeys().forEach(k=>{ delete STATE[k]; });
-  const ps=(c.packState&&typeof c.packState==='object')?c.packState:{};
-  packPersistKeys().forEach(k=>{ if(k in ps)STATE[k]=ps[k]; });
-  /* 팩 선언 transient 키 초기화(케이스 간 누수 방지 — 예: 열린 상세 모달) */
-  clearPackTransient();
 }
 function persistToCase(){
   const c=activeCase(); if(!c)return;
   c.sel=STATE.sel; c.decisions={...STATE.decisions}; c.pickedTime=STATE.pickedTime; c.meetPhase=STATE.meetPhase;
   c.trace=STATE.trace.slice(); c.traced=[...STATE.traced];
-  /* 팩 선언 키 영속(도메인 무관) */
-  const ps={}; packPersistKeys().forEach(k=>{ if(k in STATE)ps[k]=STATE[k]; }); c.packState=ps;
   const pack=PACKS[c.packId], last=pack.work[pack.work.length-1];
   if(STATE.sel===last.id && RUN.phase==='done') c.done=true;
   saveApp();
@@ -458,26 +445,9 @@ function renderConsole(){
 function wireSurface(root){
   root.querySelectorAll('[data-dlv]').forEach(e=>e.onclick=()=>openPreview(e.dataset.dlv));
   const rp=root.querySelector('#replay'); if(rp)rp.onclick=()=>{ if(STATE.playing)stopPlay(); setSel(WORK[0].id); };
-  wirePackHooks(root);
-}
-/* 팩이 선언한 surface 인터랙션 배선(도메인 무관 메커니즘) — 후보 카드 클릭·정렬·결정 등.
-   rerender(opts?) 콜백 = 콘솔/모달 재렌더 + 선택적 영속/토스트/trace. 채용 전용 분기 0줄. */
-function wirePackHooks(root){
-  const hk=PACK.surfaceHooks; if(!hk||!hk.wire)return;
-  const rerender=(opts)=>{
-    opts=opts||{};
-    if(opts.trace){ STATE.trace.push({st:W(STATE.sel).label, t:opts.trace.t, L:opts.trace.L||'L7', k:opts.trace.k||''}); }
-    renderConsole(); renderRight();
-    if(opts.persist)afterStateChange();
-    if(opts.toast)toast(opts.toast);
-  };
-  hk.wire(root, STATE, rerender);
 }
 function currentCM(){
   if(STATE.previewK)return 'preview';
-  /* 팩이 도메인 인터랙션 모달(예: 후보 상세)을 우선 표시하려면 hook 으로 kind 반환(도메인 무관) */
-  const hk=PACK.surfaceHooks;
-  if(hk&&hk.currentCM){ const k=hk.currentCM(STATE); if(k)return k; }
   const w=W(STATE.sel);
   if(STATE.baseOnly && w.doneModal)return null;
   if(w.meeting){if(STATE.meetPhase==='await_start')return 'meetingStart';if(STATE.meetPhase!=='idle')return 'meetingLive';}
@@ -494,7 +464,6 @@ function renderCModal(){
   } else html=surfCmodal(kind,C);
   cm.innerHTML=`<div class="cmodal-card">${html}</div>`;cm.classList.add('show');
   cm.querySelectorAll('[data-dlv]').forEach(e=>e.onclick=()=>openPreview(e.dataset.dlv));
-  wirePackHooks(cm);
   const bk=cm.querySelector('[data-back]');if(bk)bk.onclick=()=>{STATE.previewK=null;renderConsole();};
   const yes=cm.querySelector('[data-yes]');if(yes)yes.onclick=()=>decide('yes');
   const no=cm.querySelector('[data-no]');if(no)no.onclick=()=>decide('no');
@@ -583,7 +552,7 @@ function revealOps(){
 /* 케이스 영속 + 인박스 카운트 갱신 (런타임 상태가 바뀐 직후) */
 function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} }
 function runStep(){
-  clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();clearPackTransient();const w=W(STATE.sel);
+  clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();const w=W(STATE.sel);
   if(w.meeting){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
   else{STATE.meetPhase='idle';startWorking();}
 }
@@ -591,8 +560,6 @@ function meetingStart(){STATE.meetPhase='in_meeting';startWorking();}
 function meetingEnd(){STATE.meetPhase='done';RUN.phase='done';renderConsole();renderRight();afterStateChange();if(STATE.playing)RUN.playTimer=setTimeout(playNext,1700);}
 function decide(v){
   const w=W(STATE.sel);STATE.decisions[w.id]=v;RUN.phase='done';
-  /* 팩이 HITL 결정을 도메인 surface 상태로 번역(도메인 무관 hook) — 예: 오퍼 승인→보드 offer 배치 */
-  if(PACK.surfaceHooks&&PACK.surfaceHooks.decideHook){ try{PACK.surfaceHooks.decideHook(STATE,v,w.id);}catch(e){} }
   STATE.trace.push({st:w.label,t:'담당자 결정 · '+(v==='yes'?'승인':(w.id==='approve'?'외부 제외':'수정 요청')),L:'L7',k:'HITL'});
   renderConsole();renderRight();afterStateChange();
   toast(v==='yes'?'승인 · 다음 단계로 진행합니다':(w.id==='approve'?'외부 고객 제외하고 진행':'수정 요청'));
