@@ -10,43 +10,23 @@
 
 <!-- ===== TOP BAR (platform shell · 도메인 무관) ===== -->
 <div class="topbar">
-  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>운영 콘솔</span></div>
+  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>Workload Runtime Builder</span></div>
   <div class="pack">Domain Pack <select id="packSel" class="packsel"></select></div>
   <div class="sp"></div>
-  <span class="case-title" id="caseTitle"></span>
   <label class="devtg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
+  <div class="toggle" id="toggle">
+    <button data-view="design">구성</button>
+    <button data-view="run" class="on">실행</button>
+    <button data-view="govern">관리</button>
+  </div>
   <button class="authbtn" id="authBtn">＋ 업무 학습</button>
   <button class="runbtn" id="runBtn">▶ Run</button>
 </div>
 
-<div class="shell">
-
-<!-- ===== LEFT GLOBAL NAV (운영 콘솔 IA · 도메인 무관) ===== -->
-<nav class="gnav" id="gnav">
-  <button class="gnav-i" data-view="inbox"><span class="gn-ic">📥</span><span class="gn-l">인박스</span><span class="gn-c" id="navCnt"></span></button>
-  <button class="gnav-i" data-view="run"><span class="gn-ic">▶</span><span class="gn-l">실행</span></button>
-  <button class="gnav-i" data-view="govern"><span class="gn-ic">🛡️</span><span class="gn-l">관리</span></button>
-  <button class="gnav-i" data-view="domain"><span class="gn-ic">🧩</span><span class="gn-l">도메인</span></button>
-</nav>
-
 <div class="views">
 
-  <!-- ============ INBOX VIEW (인박스) — core가 CASES로 렌더 ============ -->
-  <section class="view" data-view="inbox" hidden>
-    <div class="scroll"><div class="wrapc">
-      <div class="inbox-top">
-        <div>
-          <p class="sec-title" style="margin-top:0">업무 인박스 <span style="font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px" id="inboxSub"></span></p>
-          <p class="sec-sub">들어온 업무 요청을 상태별로 봅니다 — 행을 클릭하면 실행 콘솔에서 그 건을 엽니다</p>
-        </div>
-        <button class="newcase" id="newCaseBtn">＋ 새 업무 요청</button>
-      </div>
-      <div class="inbox" id="inboxList"></div>
-    </div></div>
-  </section>
-
-  <!-- ============ DOMAIN VIEW (도메인 = 구 구성) — core가 PACK 데이터로 렌더 ============ -->
-  <section class="view" data-view="domain" hidden>
+  <!-- ============ DESIGN VIEW (구성) — core가 PACK 데이터로 렌더 ============ -->
+  <section class="view" data-view="design" hidden>
     <div class="scroll"><div class="wrapc">
       <p class="sec-title">Workload Analysis · 업무 이해</p>
       <p class="sec-sub">AAP가 요청을 먼저 해석합니다 — 무엇을 / 무엇을 만들어야 하나</p>
@@ -68,7 +48,6 @@
   <!-- ============ RUN VIEW (실행) ============ -->
   <section class="view" data-view="run">
     <div class="runtop">
-      <button class="rt-back" id="rtBack" data-tip="인박스로 돌아가기">‹ 인박스</button>
       <span class="rt-lab">업무 순서 <em>· 직전 / 현재 / 다음</em></span>
       <div class="seq" id="seq"></div>
       <span class="rt-prog" id="seqProg"></span>
@@ -111,7 +90,6 @@
   </section>
 
 </div>
-</div><!-- /.shell -->
 
 <div id="tip"></div>
 <div class="toast" id="toast"></div>

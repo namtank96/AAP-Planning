@@ -240,17 +240,10 @@
     },
   };
 
-  /* 데모용 시드 케이스(인스턴스) — 서로 다른 진행 상태 */
-  const SEEDS=[
-    {title:'김하늘(VIP) 요금·품질 복합 불만', customer:'고객 김하늘 (VIP) · VOC-20461', icon:'🎧', request:WORKLOAD.request, atStep:'approve'},
-    {title:'신규 가입 개통 지연 문의', customer:'고객 박서준 · VOC-20488', icon:'🎧', request:'"개통한다더니 사흘째 안 돼요. 확인 부탁해요."', atStep:'request'},
-    {title:'데이터 차단 오작동 항의', customer:'고객 이도윤 · VOC-20455', icon:'🎧', request:'"한도 남았는데 데이터가 끊겼어요. 보상해 주세요."', status:'done'},
-  ];
-
   (window.AAP_PACKS=window.AAP_PACKS||{}).voc={
     id:'voc', label:'VOC 대응',
     times:TIMES, products:PRODUCTS, work:WORK, components:COMPONENTS, compose:COMPOSE,
-    workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
+    workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN,
     stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',commit:'Decision',share:'Learning'},
     extExcluded:(S)=>S.decisions['approve']==='no',
     surfaceSpec:SS,

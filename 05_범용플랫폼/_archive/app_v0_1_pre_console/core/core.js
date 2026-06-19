@@ -102,150 +102,34 @@ const idxOf=id=>WORK.findIndex(w=>w.id===id);
 const W=id=>WORK.find(w=>w.id===id);
 const groupsOf=w=>[...new Set(w.ops.map(o=>o.g))].sort((a,b)=>a-b);
 
-/* =========================================================================
-   영속성 (Phase 0) — localStorage 네임스페이스 aap.v1.*
-   케이스 목록·진행상태·decisions·trace 를 저장/복원. 손상·없음 시 안전 초기화.
-   ========================================================================= */
-const LS_NS='aap.v1.';
-function lsGet(k,fb){ try{const v=localStorage.getItem(LS_NS+k);return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
-function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(e){} }
-
-/* APP = 코어가 책임지는 인스턴스성 모델(도메인 무관). cases=인스턴스 배열, active=열린 케이스 id */
-const APP={cases:[], active:null, view:'inbox', pack:null};
-function saveApp(){ lsSet('cases',APP.cases); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); }
-function loadApp(){
-  const cs=lsGet('cases',null);
-  if(Array.isArray(cs)) APP.cases=cs.filter(c=>c&&c.id&&c.packId);
-  APP.active=lsGet('active',null);
-  const v=lsGet('view',null); if(['inbox','run','govern','domain'].includes(v))APP.view=v;
-  APP.pack=lsGet('pack',null);
-}
-
-/* ===== STATE = 현재 열린 케이스의 런타임 슬라이스(엔진이 직접 읽고 쓰는 뷰) =====
-   케이스를 열면 케이스 객체에서 hydrate, 변경 시 케이스로 persist 해 영속화한다. */
-const STATE={view:'inbox', sel:null, playing:false, decisions:{}, pickedTime:null, meetPhase:'idle', previewK:null, baseOnly:false, opOpen:new Set(), trace:[], traced:new Set()};
+/* ===== STATE ===== */
+const STATE={view:'run', sel:null, playing:false, decisions:{}, pickedTime:null, meetPhase:'idle', previewK:null, baseOnly:false, opOpen:new Set(), trace:[], traced:new Set()};
 const RUN={phase:'idle', reveal:0, timers:[], playTimer:null};
 function clearRun(){RUN.timers.forEach(clearTimeout);RUN.timers=[];clearTimeout(RUN.playTimer);}
 function extExcluded(){return PACK.extExcluded?PACK.extExcluded(STATE):false;}
-
-/* ===== 케이스(인스턴스) 헬퍼 ===== */
-function activeCase(){return APP.cases.find(c=>c.id===APP.active);}
-function newId(){return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-/* 팩 → 케이스 템플릿. 팩이 seeds/caseTemplate 를 안 줘도 workload/surfaceSpec 에서 자동 도출(코어 책임) */
-function caseTemplate(pack,seed){
-  const wl=pack.workload||{}, ss=pack.surfaceSpec||{};
-  return {
-    id:newId(), packId:pack.id,
-    title:(seed&&seed.title)||ss.title||wl.type||pack.label,
-    customer:(seed&&seed.customer)||ss.customer||'',
-    icon:(seed&&seed.icon)||ss.icon||'📋',
-    request:(seed&&seed.request)||wl.request||'',
-    createdAt:Date.now(),
-    /* 런타임 슬라이스(독립 진행상태) */
-    sel:(seed&&seed.sel)||pack.work[0].id,
-    decisions:(seed&&seed.decisions)||{},
-    pickedTime:(seed&&seed.pickedTime)||(pack.times&&pack.times[0]?pack.times[0].t:null),
-    meetPhase:'idle',
-    trace:(seed&&seed.trace)||[],
-    traced:(seed&&seed.traced)||[],
-    done:(seed&&seed.done)||false,
-  };
-}
-/* 케이스 진행 상태 라벨(상태 4종) — 인박스 그룹핑/배지 */
-const STATUS={new:{k:'new',ko:'접수'},run:{k:'run',ko:'진행'},wait:{k:'wait',ko:'검토대기'},done:{k:'done',ko:'완료'}};
-function caseStatus(c){
-  const pack=PACKS[c.packId]; if(!pack)return 'new';
-  if(c.done)return 'done';
-  const w=pack.work.find(x=>x.id===c.sel)||pack.work[0];
-  const i=pack.work.findIndex(x=>x.id===c.sel);
-  /* 검토대기 = 현재 단계가 HITL 게이트(승인 대기) */
-  if(w&&(w.hitl||w.meeting)&&!c.decisions[c.sel]&&!(w.meeting&&c.meetPhase==='done'))return 'wait';
-  if(i>0||Object.keys(c.decisions).length)return 'run';
-  return 'new';
-}
-function caseProgress(c){ const pack=PACKS[c.packId]; if(!pack)return 0; const i=pack.work.findIndex(x=>x.id===c.sel); const n=pack.work.length; return c.done?100:Math.round(((i+ (c.done?1:0))/n)*100); }
-
-/* STATE ↔ case 동기화 */
-function hydrateFromCase(c){
-  STATE.sel=c.sel; STATE.decisions={...c.decisions}; STATE.pickedTime=c.pickedTime; STATE.meetPhase=c.meetPhase||'idle';
-  STATE.trace=Array.isArray(c.trace)?c.trace.slice():[]; STATE.traced=new Set(c.traced||[]);
-  STATE.previewK=null; STATE.baseOnly=false; STATE.opOpen=new Set(); STATE.playing=false;
-}
-function persistToCase(){
-  const c=activeCase(); if(!c)return;
-  c.sel=STATE.sel; c.decisions={...STATE.decisions}; c.pickedTime=STATE.pickedTime; c.meetPhase=STATE.meetPhase;
-  c.trace=STATE.trace.slice(); c.traced=[...STATE.traced];
-  const pack=PACKS[c.packId], last=pack.work[pack.work.length-1];
-  if(STATE.sel===last.id && RUN.phase==='done') c.done=true;
-  saveApp();
-}
 
 /* surface 컨텍스트 (코어→팩) */
 function ctx(){return {S:STATE, R:RUN, idxOf, W, par:parTrack, times:TIMES, ex:extExcluded()};}
 function resolveDlv(k,C){const d=PACK.products[k];return {ic:d.ic,title:d.title,sub:typeof d.sub==='function'?d.sub(C):d.sub,body:typeof d.body==='function'?d.body(C):d.body};}
 
-/* ===== view 전환 (운영 콘솔 IA: inbox / run / govern / domain) ===== */
+/* ===== view toggle ===== */
 function setView(v){
-  STATE.view=v; APP.view=v;
-  document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+  STATE.view=v;
+  document.querySelectorAll('#toggle button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   document.querySelectorAll('.view').forEach(s=>s.hidden=s.dataset.view!==v);
   if(v!=='run'&&STATE.playing)stopPlay();
-  if(v==='inbox')renderInbox();
-  if(v==='domain')renderDesign();
+  if(v==='design')renderDesign();
   if(v==='govern')renderGovern();
-  updateCaseTitle();
-  saveApp();
-}
-function updateCaseTitle(){
-  const el=document.getElementById('caseTitle'); if(!el)return;
-  const c=activeCase();
-  el.textContent=(STATE.view==='run'&&c)?`${c.icon||''} ${c.title}`:'';
 }
 
-/* ===== Domain Pack 활성화 (같은 셸/엔진, 팩만 갈아끼움) =====
-   팩 데이터 참조만 바꾼다. 케이스(인스턴스) 생성·열기는 분리(openCase/seedPack). */
-function setPackRefs(key){
+/* ===== Domain Pack 교체 (Step C: 표준화 — 같은 셸/엔진, 팩만 갈아끼움) ===== */
+function loadPack(key){
   PACK=normalizePack(PACKS[key]); WORK=PACK.work; COMPONENTS=PACK.components; COMPOSE=PACK.compose; TIMES=PACK.times;
-  APP.pack=key;
-}
-/* 팩에 데모용 케이스가 없으면 시드(서로 다른 상태). 팩이 pack.seeds 를 주면 그걸, 없으면 단일 기본 케이스 */
-function seedPack(key){
-  if(APP.cases.some(c=>c.packId===key))return;
-  const pack=PACKS[key];
-  const seeds=pack.seeds||[{}];
-  seeds.forEach(s=>{ const c=caseTemplate(pack,s);
-    /* seed 의 atStep 으로 진행 위치를, status 로 완료여부 초기화 */
-    if(s.atStep&&pack.work.some(w=>w.id===s.atStep))c.sel=s.atStep;
-    if(s.status==='done'){c.done=true;c.sel=pack.work[pack.work.length-1].id;}
-    APP.cases.push(c);
-  });
-  saveApp();
-}
-/* 팩 셀렉터로 도메인 전환 — 인박스로 이동(케이스 중심) */
-function switchPack(key){
-  setPackRefs(key); seedPack(key);
-  const sl=document.getElementById('packSel'); if(sl)sl.value=key;
-  APP.active=null; clearRun();
-  const rb=document.getElementById('runBtn'); if(rb){rb.textContent='▶ Run';rb.classList.remove('stop');}
-  setView('inbox');
-}
-/* 케이스(인스턴스) 열기 → 런타임 STATE hydrate → 실행 뷰 */
-function openCase(id){
-  const c=APP.cases.find(x=>x.id===id); if(!c)return;
-  if(c.packId!==APP.pack)setPackRefs(c.packId);
-  APP.active=id; hydrateFromCase(c);
+  STATE.sel=WORK[0].id; STATE.decisions={}; STATE.pickedTime=TIMES[0].t; STATE.meetPhase='idle';
+  STATE.previewK=null; STATE.baseOnly=false; STATE.opOpen=new Set(); STATE.trace=[]; STATE.traced=new Set(); STATE.playing=false;
   clearRun(); const rb=document.getElementById('runBtn'); if(rb){rb.textContent='▶ Run';rb.classList.remove('stop');}
-  setView('run'); renderSeq(); restoreStep(); saveApp();
-}
-/* hydrate 된 STATE(sel/decisions/...) 로 화면을 '진행된 그 지점'에 복원(재생 ✕, 정지 상태) */
-function restoreStep(){
-  const w=W(STATE.sel); clearRun(); STATE.previewK=null; STATE.baseOnly=false; STATE.opOpen=new Set();
-  if(w.meeting){ STATE.meetPhase=STATE.meetPhase==='done'?'done':'await_end'; RUN.phase=STATE.meetPhase==='done'?'done':'await'; }
-  else if(w.hitl){ STATE.meetPhase='idle'; RUN.phase=STATE.decisions[w.id]?'done':'await'; }
-  else { STATE.meetPhase='idle'; RUN.phase='done'; }
-  RUN.reveal=groupsOf(w).length;
-  if(!STATE.traced.has(w.id))traceStep(w);
-  renderConsole(); renderRight(); afterStateChange();
+  renderSeq(); runStep();
+  if(STATE.view==='design')renderDesign(); else if(STATE.view==='govern')renderGovern();
 }
 
 /* ===== 업무 순서 (top bar · prev/current/next) ===== */
@@ -258,42 +142,6 @@ function renderSeq(){
   document.getElementById('seq').innerHTML=html;
   document.getElementById('seqProg').textContent=`${ci+1} / ${WORK.length}`;
   document.querySelectorAll('#seq .snode').forEach(e=>e.onclick=()=>setSel(e.dataset.go));
-}
-
-/* ===== 업무 인박스 (Phase 1 · 코어 · CASES 기반 · 도메인 무관) ===== */
-const STATUS_ORDER=['wait','run','new','done'];
-function renderInbox(){
-  const list=document.getElementById('inboxList'); if(!list)return;
-  const cs=APP.cases.filter(c=>c.packId===APP.pack);
-  const sub=document.getElementById('inboxSub'); if(sub)sub.textContent=`${PACK.label} · ${cs.length}건`;
-  const navc=document.getElementById('navCnt'); if(navc){const w=cs.filter(c=>caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';}
-  if(!cs.length){ list.innerHTML=`<div class="ibx-empty">아직 들어온 업무 요청이 없습니다 — <b>＋ 새 업무 요청</b>으로 시작하세요.</div>`; return; }
-  const byStatus={}; cs.forEach(c=>{(byStatus[caseStatus(c)]=byStatus[caseStatus(c)]||[]).push(c);});
-  let h='';
-  STATUS_ORDER.forEach(s=>{ const arr=byStatus[s]; if(!arr||!arr.length)return;
-    arr.sort((a,b)=>b.createdAt-a.createdAt);
-    h+=`<div class="ibx-grp"><div class="ibx-gh"><span class="gh-dot st-${s}"></span>${STATUS[s].ko}<span class="gh-n">${arr.length}</span></div><div class="ibx-rows">`;
-    arr.forEach(c=>{ const pg=caseProgress(c), st=caseStatus(c);
-      h+=`<div class="ibx-row" data-open="${c.id}">
-        <div class="ibx-ic">${c.icon||'📋'}</div>
-        <div class="ibx-main"><div class="ibx-t">${dcText(c.title,'case.title')}</div><div class="ibx-meta">${c.customer||PACK.label}${c.request?` · ${String(c.request).replace(/^["“]|["”]$/g,'').slice(0,46)}…`:''}</div></div>
-        <div class="ibx-prog"><div class="ibx-bar"><i style="width:${pg}%"></i></div><div class="ibx-pn">${pg}%</div></div>
-        <span class="ibx-st st-${st}">${STATUS[st].ko}</span>
-        <span class="ibx-go">›</span></div>`;
-    });
-    h+=`</div></div>`;
-  });
-  list.innerHTML=h;
-  list.querySelectorAll('[data-open]').forEach(e=>e.onclick=()=>openCase(e.dataset.open));
-}
-/* 새 업무 요청 = 활성 팩 workload 템플릿으로 새 케이스 인스턴스 생성 → 인박스 추가 → 실행 투입 */
-let _newSeq=0;
-function createCase(){
-  const c=caseTemplate(PACK);
-  _newSeq++; c.title=`${PACK.workload&&PACK.workload.type?PACK.workload.type:PACK.label} · 신규 #${_newSeq}`;
-  APP.cases.push(c); saveApp();
-  openCase(c.id);
-  toast('새 업무 요청을 생성했습니다 — 실행 콘솔에 투입');
 }
 
 /* ===== parallel track helper (코어 · RUN 상태 기반) ===== */
@@ -451,32 +299,24 @@ function revealOps(){
     if(w.meeting&&STATE.meetPhase==='in_meeting'){STATE.meetPhase='await_end';RUN.phase='await';renderConsole();renderRight();}
     else if(w.hitl){RUN.phase='await';renderConsole();renderRight();}
     else{RUN.phase='done';renderConsole();renderRight();if(STATE.playing)RUN.playTimer=setTimeout(playNext,1700);}
-    afterStateChange();
   },n*640+300));
 }
-/* 케이스 영속 + 인박스 카운트 갱신 (런타임 상태가 바뀐 직후) */
-function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} }
 function runStep(){
   clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();const w=W(STATE.sel);
   if(w.meeting){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
   else{STATE.meetPhase='idle';startWorking();}
 }
 function meetingStart(){STATE.meetPhase='in_meeting';startWorking();}
-function meetingEnd(){STATE.meetPhase='done';RUN.phase='done';renderConsole();renderRight();afterStateChange();if(STATE.playing)RUN.playTimer=setTimeout(playNext,1700);}
+function meetingEnd(){STATE.meetPhase='done';RUN.phase='done';renderConsole();renderRight();if(STATE.playing)RUN.playTimer=setTimeout(playNext,1700);}
 function decide(v){
   const w=W(STATE.sel);STATE.decisions[w.id]=v;RUN.phase='done';
   STATE.trace.push({st:w.label,t:'담당자 결정 · '+(v==='yes'?'승인':(w.id==='approve'?'외부 제외':'수정 요청')),L:'L7',k:'HITL'});
-  renderConsole();renderRight();afterStateChange();
+  renderConsole();renderRight();
   toast(v==='yes'?'승인 · 다음 단계로 진행합니다':(w.id==='approve'?'외부 고객 제외하고 진행':'수정 요청'));
   if(STATE.playing)RUN.playTimer=setTimeout(playNext,1500);
 }
-function setSel(id){STATE.sel=id;renderSeq();runStep();afterStateChange();}
-function startPlay(){
-  if(!activeCase()){ const cs=APP.cases.filter(c=>c.packId===APP.pack); if(cs.length){openCase(cs[0].id);} else {createCase();} }
-  if(STATE.view!=='run')setView('run');
-  STATE.playing=true;STATE.decisions={};STATE.pickedTime=TIMES[0].t;STATE.trace=[];STATE.traced=new Set();
-  const c=activeCase();if(c)c.done=false;
-  const b=document.getElementById('runBtn');b.textContent='■ 중지';b.classList.add('stop');setSel(WORK[0].id);}
+function setSel(id){STATE.sel=id;renderSeq();runStep();}
+function startPlay(){if(STATE.view!=='run')setView('run');STATE.playing=true;STATE.decisions={};STATE.pickedTime=TIMES[0].t;STATE.trace=[];STATE.traced=new Set();const b=document.getElementById('runBtn');b.textContent='■ 중지';b.classList.add('stop');setSel(WORK[0].id);}
 function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);const b=document.getElementById('runBtn');b.textContent='▶ Run';b.classList.remove('stop');}
 function playNext(){const ci=idxOf(STATE.sel);if(ci<WORK.length-1)setSel(WORK[ci+1].id);else stopPlay();}
 
@@ -534,44 +374,36 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 function addPackOption(pack){const sl=document.getElementById('packSel');if(!sl)return;if([...sl.options].some(o=>o.value===pack.id))return;const o=document.createElement('option');o.value=pack.id;o.textContent=pack.label;sl.appendChild(o);}
 window.AAP_CORE={
   register:(pack)=>{PACKS[pack.id]=normalizePack(pack);addPackOption(pack);},
-  /* 새 팩으로 전환 → 케이스 시드 → 첫 케이스를 실행 콘솔에 열기(자동저작 데모 연속성) */
-  load:(id)=>{if(!PACKS[id])return;setPackRefs(id);seedPack(id);const sl=document.getElementById('packSel');if(sl)sl.value=id;const cs=APP.cases.filter(c=>c.packId===id);if(cs.length)openCase(cs[0].id);else createCase();},
+  load:(id)=>{if(!PACKS[id])return;const sl=document.getElementById('packSel');if(sl)sl.value=id;STATE.view='run';loadPack(id);setView('run');},
   has:(id)=>!!PACKS[id],
-  go:(id)=>{if(activeCase()&&W(id)){STATE.sel=id;renderSeq();runStep();}},
+  go:(id)=>{if(W(id)){STATE.sel=id;renderSeq();runStep();}},
 };
 
 /* ===== wiring ===== */
-document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+document.querySelectorAll('#toggle button').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 document.getElementById('runBtn').onclick=()=>STATE.playing?stopPlay():startPlay();
 document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
-const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=createCase;
-const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
 const TIP=document.getElementById('tip');
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(t){TIP.textContent=t.getAttribute('data-tip');TIP.style.display='block';const r=t.getBoundingClientRect();TIP.style.left=Math.min(r.left,window.innerWidth-320)+'px';let tp=r.bottom+8;if(tp+TIP.offsetHeight>window.innerHeight)tp=r.top-TIP.offsetHeight-8;TIP.style.top=Math.max(8,tp)+'px';}else if(!e.target.closest('#tip'))TIP.style.display='none';});
 
-/* ===== boot (영속 복원 → 인박스 중심) ===== */
+/* ===== boot ===== */
 (function(){
   const q=new URLSearchParams(location.search);
   if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
-  loadApp();
-  const keys=Object.keys(PACKS);
-  const sl=document.getElementById('packSel');
+  const v=q.get('view');if(v&&['design','run','govern'].includes(v))STATE.view=v;
+  /* 팩 셀렉터 채우기 + 교체 wiring */
+  const sl=document.getElementById('packSel'), keys=Object.keys(PACKS);
   if(sl){sl.innerHTML=keys.map(k=>`<option value="${k}">${PACKS[k].label}</option>`).join('');
-    sl.onchange=()=>switchPack(sl.value);}
-  /* 활성 팩 결정: ?pack > 저장값 > 첫 팩 */
-  const pk=q.get('pack');
-  let initKey=(pk&&PACKS[pk])?pk:((APP.pack&&PACKS[APP.pack])?APP.pack:keys[0]);
+    sl.onchange=()=>{STATE.view='run';loadPack(sl.value);setView('run');};}
+  const pk=q.get('pack'); const initKey=(pk&&PACKS[pk])?pk:keys[0];
   if(sl)sl.value=initKey;
-  setPackRefs(initKey);
-  /* 모든 팩에 시드 보장(인박스가 비어보이지 않게 · 1회) */
-  keys.forEach(seedPack);
-  /* 뷰·케이스 복원 */
-  let view=APP.view||'inbox';
-  const qv=q.get('view'); if(qv&&['inbox','run','govern','domain'].includes(qv))view=qv;
-  if(qv==='design')view='domain'; /* 하위호환 */
-  const qopen=q.get('open');
-  if(qopen&&APP.cases.some(c=>c.id===qopen)){openCase(qopen);}
-  else if(view==='run'&&APP.active&&APP.cases.some(c=>c.id===APP.active&&c.packId===initKey)){openCase(APP.active);}
-  else { APP.active=null; setView(view==='run'?'inbox':view); }
+  loadPack(initKey);
+  /* 쿼리 오버라이드 (loadPack 리셋 이후 적용) */
+  if(q.get('ext')==='no')STATE.decisions['approve']='no';
+  const s=q.get('sel');if(s&&W(s))STATE.sel=s;
+  renderSeq();
+  if(q.get('still')==='1'){const w=W(STATE.sel);clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen=new Set();if(w.meeting){STATE.meetPhase='await_end';RUN.phase='await';}else{STATE.meetPhase='idle';RUN.phase=w.hitl?'await':'done';}RUN.reveal=groupsOf(w).length;renderConsole();renderRight();}
+  else runStep();
+  setView(STATE.view);
 })();
 })();

@@ -310,17 +310,10 @@
         tags:'결정 3 · 할 일 3 ·',tagsDlv:'minutes',endBtn:'■ 회의 끝났습니다'}},
   };
 
-  /* 데모용 시드 케이스(인스턴스) — 서로 다른 진행 상태로 인박스를 채움 (코어가 caseTemplate 으로 생성) */
-  const SEEDS=[
-    {title:'대한제조 킥오프 회의', customer:'대한제조그룹', icon:'📅', request:WORKLOAD.request, atStep:'approve'},
-    {title:'분기 사업검토 회의 준비', customer:'사내 · 전략기획팀', icon:'📅', request:'"이번 분기 사업검토 회의 잡고 자료 모아줘"', atStep:'request'},
-    {title:'고객사 정기 점검 회의', customer:'한빛테크', icon:'📅', request:'"한빛테크 월간 점검 회의 준비해줘"', status:'done'},
-  ];
-
   (window.AAP_PACKS=window.AAP_PACKS||{}).meeting={
     id:'meeting', label:'회의',
     times:TIMES, products:PRODUCTS, work:WORK, components:COMPONENTS, compose:COMPOSE,
-    workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
+    workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN,
     stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',meeting:'Reasoning',commit:'Decision',share:'Learning'},
     extExcluded:(S)=>S.decisions['approve']==='no',
     surfaceSpec:SS,
