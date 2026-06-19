@@ -110,35 +110,16 @@ const LS_NS='aap.v1.';
 function lsGet(k,fb){ try{const v=localStorage.getItem(LS_NS+k);return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
 function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(e){} }
 
-/* APP = 코어가 책임지는 인스턴스성 모델(도메인 무관). cases=인스턴스 배열, active=열린 케이스 id
-   pack = 현재 런타임 컨텍스트(열린 케이스의 packId). 인박스는 전 팩 통합 → pack 은 '모드'가 아니라
-   '실행 뷰가 렌더 중인 유형' 이다(케이스 열 때 그 케이스 packId 로 로드). typeFilter=인박스 유형 필터. */
-const APP={cases:[], active:null, view:'inbox', pack:null, typeFilter:'all', catSel:null};
-function saveApp(){ lsSet('cases',APP.cases); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); }
+/* APP = 코어가 책임지는 인스턴스성 모델(도메인 무관). cases=인스턴스 배열, active=열린 케이스 id */
+const APP={cases:[], active:null, view:'inbox', pack:null};
+function saveApp(){ lsSet('cases',APP.cases); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); }
 function loadApp(){
   const cs=lsGet('cases',null);
   if(Array.isArray(cs)) APP.cases=cs.filter(c=>c&&c.id&&c.packId);
   APP.active=lsGet('active',null);
   const v=lsGet('view',null); if(['inbox','run','govern','domain'].includes(v))APP.view=v;
   APP.pack=lsGet('pack',null);
-  const tf=lsGet('typeFilter',null); if(typeof tf==='string')APP.typeFilter=tf;
 }
-
-/* =========================================================================
-   유형(도메인) → 색/배지 토큰 매핑 (코어 책임 · 토큰 기반 · 임의 hex ✕)
-   팩은 메타(label·id)만 제공. 색은 등록 순서에 안정적인 5타입 토큰 팔레트를 순환 배정.
-   새 팩이 register 되면 자동으로 다음 토큰을 받음(카탈로그·인박스·필터 일관). */
-const TYPE_TOKENS=['tA','tM','tS','tC','tP']; /* teal·violet·cyan·blue·amber (5타입 색 재사용) */
-const _typeTok={};            /* packId → 토큰 클래스 */
-let _typeTokSeq=0;
-function typeTok(packId){
-  if(_typeTok[packId])return _typeTok[packId];
-  _typeTok[packId]=TYPE_TOKENS[(_typeTokSeq++)%TYPE_TOKENS.length];
-  return _typeTok[packId];
-}
-function typeLabel(packId){ const p=PACKS[packId]; return p?p.label:packId; }
-/* 유형 배지 HTML(인박스 행·카탈로그 공통) */
-function typeBadge(packId){ return `<span class="ty-badge ${typeTok(packId)}">${dcText(typeLabel(packId),'pack.label')}</span>`; }
 
 /* ===== STATE = 현재 열린 케이스의 런타임 슬라이스(엔진이 직접 읽고 쓰는 뷰) =====
    케이스를 열면 케이스 객체에서 hydrate, 변경 시 케이스로 persist 해 영속화한다. */
@@ -240,10 +221,17 @@ function seedPack(key){
   });
   saveApp();
 }
+/* 팩 셀렉터로 도메인 전환 — 인박스로 이동(케이스 중심) */
+function switchPack(key){
+  setPackRefs(key); seedPack(key);
+  const sl=document.getElementById('packSel'); if(sl)sl.value=key;
+  APP.active=null; clearRun();
+  setRunBtn(false);
+  setView('inbox');
+}
 /* 케이스(인스턴스) 열기 → 런타임 STATE hydrate → 실행 뷰 */
 function openCase(id){
   const c=APP.cases.find(x=>x.id===id); if(!c)return;
-  if(!PACKS[c.packId]){ toast('이 유형은 현재 등록돼 있지 않습니다'); setView('inbox'); return; }
   if(c.packId!==APP.pack)setPackRefs(c.packId);
   APP.active=id; hydrateFromCase(c);
   clearRun(); setRunBtn(false);
@@ -272,45 +260,23 @@ function renderSeq(){
   document.querySelectorAll('#seq .snode').forEach(e=>e.onclick=()=>setSel(e.dataset.go));
 }
 
-/* ===== 통합 업무 인박스 (Phase 1.5 · 코어 · 전 도메인 케이스 한 곳 · 도메인 무관) =====
-   도메인 = 모드 ✕ → 케이스의 유형(packId) 속성 ✓. 상태 × 유형 2축.
-   상단 유형 필터 칩(전체/유형별) + 각 행 유형 배지. 팩이 등록되면 자동 편입. */
+/* ===== 업무 인박스 (Phase 1 · 코어 · CASES 기반 · 도메인 무관) ===== */
 const STATUS_ORDER=['wait','run','new','done'];
-/* 케이스 상태/진행률은 그 케이스의 팩 기준으로 산출(활성 PACK 아님) */
-function caseStatusFor(c){ return caseStatus(c); }
 function renderInbox(){
   const list=document.getElementById('inboxList'); if(!list)return;
-  /* 안전 폴백: 등록 안 된 유형(자동저작 팩은 비영속)의 케이스는 인박스에서 숨김(저장은 보존) */
-  const all=APP.cases.filter(c=>PACKS[c.packId]);
-  /* 등장 순서대로 토큰 안정 배정(필터 칩·배지 색 일관) */
-  const presentPacks=[...new Set(all.map(c=>c.packId))].filter(id=>PACKS[id]);
-  presentPacks.forEach(typeTok);
-  /* 유형 필터 칩 */
-  const fbar=document.getElementById('inboxFilter');
-  if(fbar){
-    const cnt=id=>all.filter(c=>c.packId===id).length;
-    let fh=`<button class="ty-chip ${APP.typeFilter==='all'?'on':''}" data-tf="all">전체<span class="tc-n">${all.length}</span></button>`;
-    fh+=presentPacks.map(id=>`<button class="ty-chip ${APP.typeFilter===id?'on':''} ${typeTok(id)}" data-tf="${id}"><span class="tc-dot"></span>${dcText(typeLabel(id),'pack.label')}<span class="tc-n">${cnt(id)}</span></button>`).join('');
-    fbar.innerHTML=fh;
-    fbar.querySelectorAll('[data-tf]').forEach(e=>e.onclick=()=>{APP.typeFilter=e.dataset.tf;saveApp();renderInbox();});
-  }
-  /* 유형 필터가 사라진 유형을 가리키면 전체로 폴백 */
-  if(APP.typeFilter!=='all' && !presentPacks.includes(APP.typeFilter)){ APP.typeFilter='all'; saveApp(); }
-  const cs=APP.typeFilter==='all'?all:all.filter(c=>c.packId===APP.typeFilter);
-  const sub=document.getElementById('inboxSub');
-  if(sub)sub.textContent=`${APP.typeFilter==='all'?`전 유형 ${presentPacks.length}종`:typeLabel(APP.typeFilter)} · ${cs.length}건`;
-  /* 인박스 카운트 = 전 유형 검토대기 합(통합) */
-  const navc=document.getElementById('navCnt'); if(navc){const w=all.filter(c=>caseStatusFor(c)==='wait').length;navc.textContent=w?String(w):'';}
-  if(!cs.length){ list.innerHTML=`<div class="ibx-empty">${APP.typeFilter==='all'?'아직 들어온 업무 요청이 없습니다':'이 유형의 업무가 없습니다'} — <b>＋ 새 업무 요청</b>으로 시작하세요.</div>`; return; }
-  const byStatus={}; cs.forEach(c=>{(byStatus[caseStatusFor(c)]=byStatus[caseStatusFor(c)]||[]).push(c);});
+  const cs=APP.cases.filter(c=>c.packId===APP.pack);
+  const sub=document.getElementById('inboxSub'); if(sub)sub.textContent=`${PACK.label} · ${cs.length}건`;
+  const navc=document.getElementById('navCnt'); if(navc){const w=cs.filter(c=>caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';}
+  if(!cs.length){ list.innerHTML=`<div class="ibx-empty">아직 들어온 업무 요청이 없습니다 — <b>＋ 새 업무 요청</b>으로 시작하세요.</div>`; return; }
+  const byStatus={}; cs.forEach(c=>{(byStatus[caseStatus(c)]=byStatus[caseStatus(c)]||[]).push(c);});
   let h='';
   STATUS_ORDER.forEach(s=>{ const arr=byStatus[s]; if(!arr||!arr.length)return;
     arr.sort((a,b)=>b.createdAt-a.createdAt);
     h+=`<div class="ibx-grp"><div class="ibx-gh"><span class="gh-dot st-${s}"></span>${STATUS[s].ko}<span class="gh-n">${arr.length}</span></div><div class="ibx-rows">`;
-    arr.forEach(c=>{ const pg=caseProgress(c), st=caseStatusFor(c);
+    arr.forEach(c=>{ const pg=caseProgress(c), st=caseStatus(c);
       h+=`<div class="ibx-row" data-open="${c.id}">
         <div class="ibx-ic">${c.icon||'📋'}</div>
-        <div class="ibx-main"><div class="ibx-t">${dcText(c.title,'case.title')} ${typeBadge(c.packId)}</div><div class="ibx-meta">${c.customer||typeLabel(c.packId)}${c.request?` · ${String(c.request).replace(/^["“]|["”]$/g,'').slice(0,46)}…`:''}</div></div>
+        <div class="ibx-main"><div class="ibx-t">${dcText(c.title,'case.title')}</div><div class="ibx-meta">${c.customer||PACK.label}${c.request?` · ${String(c.request).replace(/^["“]|["”]$/g,'').slice(0,46)}…`:''}</div></div>
         <div class="ibx-prog"><div class="ibx-bar"><i style="width:${pg}%"></i></div><div class="ibx-pn">${pg}%</div></div>
         <span class="ibx-st st-${st}">${STATUS[st].ko}</span>
         <span class="ibx-go">${_ICO('chevron-right')}</span></div>`;
@@ -320,33 +286,14 @@ function renderInbox(){
   list.innerHTML=h;
   list.querySelectorAll('[data-open]').forEach(e=>e.onclick=()=>openCase(e.dataset.open));
 }
-/* 새 업무 요청 = 유형(팩)을 골라 그 workload 템플릿으로 새 케이스 생성 → 통합 인박스 편입 → 실행 투입.
-   packId 미지정 시: 인박스 필터가 특정 유형이면 그 유형, 아니면 현재 런타임 팩(없으면 첫 팩). */
-let _newSeq={};
-function createCase(packId){
-  let key=packId;
-  if(!key) key=(APP.typeFilter!=='all'&&PACKS[APP.typeFilter])?APP.typeFilter:(APP.pack&&PACKS[APP.pack]?APP.pack:Object.keys(PACKS)[0]);
-  const pack=PACKS[key]; if(!pack)return;
-  const c=caseTemplate(pack);
-  _newSeq[key]=(_newSeq[key]||0)+1;
-  c.title=`${pack.workload&&pack.workload.type?pack.workload.type:pack.label} · 신규 #${_newSeq[key]}`;
+/* 새 업무 요청 = 활성 팩 workload 템플릿으로 새 케이스 인스턴스 생성 → 인박스 추가 → 실행 투입 */
+let _newSeq=0;
+function createCase(){
+  const c=caseTemplate(PACK);
+  _newSeq++; c.title=`${PACK.workload&&PACK.workload.type?PACK.workload.type:PACK.label} · 신규 #${_newSeq}`;
   APP.cases.push(c); saveApp();
   openCase(c.id);
-  toast(`새 ${pack.label} 업무 요청을 생성했습니다 — 실행 콘솔에 투입`);
-}
-/* ＋새 업무 요청 = 유형 선택 메뉴 표시(유형이 1개뿐이면 바로 생성) */
-function promptNewCase(anchor){
-  const keys=Object.keys(PACKS);
-  if(keys.length<=1){ createCase(keys[0]); return; }
-  let menu=document.getElementById('newCaseMenu');
-  if(menu){ menu.remove(); return; } /* 토글 */
-  menu=document.createElement('div'); menu.id='newCaseMenu'; menu.className='nc-menu';
-  menu.innerHTML=`<div class="ncm-h">어떤 유형의 업무인가요?</div>`+keys.map(k=>`<button class="ncm-i" data-nc="${k}"><span class="ty-badge ${typeTok(k)}">${dcText(PACKS[k].label,'pack.label')}</span><span class="ncm-d">${(PACKS[k].workload&&PACKS[k].workload.type)||''}</span></button>`).join('');
-  document.body.appendChild(menu);
-  const r=(anchor||document.getElementById('newCaseBtn')).getBoundingClientRect();
-  menu.style.top=(r.bottom+6)+'px'; menu.style.right=(window.innerWidth-r.right)+'px';
-  menu.querySelectorAll('[data-nc]').forEach(e=>e.onclick=()=>{const k=e.dataset.nc;menu.remove();createCase(k);});
-  setTimeout(()=>{const off=(ev)=>{if(!menu.contains(ev.target)){menu.remove();document.removeEventListener('mousedown',off);}};document.addEventListener('mousedown',off);},0);
+  toast('새 업무 요청을 생성했습니다 — 실행 콘솔에 투입');
 }
 
 /* ===== parallel track helper (코어 · RUN 상태 기반) ===== */
@@ -533,63 +480,37 @@ function startPlay(){
 function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);setRunBtn(false);}
 function playNext(){const ci=idxOf(STATE.sel);if(ci<WORK.length-1)setSel(WORK[ci+1].id);else stopPlay();}
 
-/* ===== 도메인 뷰 = 업무 유형 카탈로그/레지스트리 (Phase 1.5 · 모드 스위치 ✕) =====
-   플랫폼이 처리 가능한 유형 목록(=등록된 팩). 항목 클릭 시 그 유형의 실행 구조 미리보기.
-   '도메인'은 앱을 갈아타는 모드가 아니라, 처리 가능한 업무 유형의 레지스트리다. */
-function catalogPack(){ const k=APP.catSel&&PACKS[APP.catSel]?APP.catSel:Object.keys(PACKS)[0]; APP.catSel=k; return PACKS[k]; }
+/* ===== 구성 뷰 (코어 · PACK 데이터 기반) ===== */
 function renderDesign(){
-  /* 카탈로그 그리드 */
-  const cat=document.getElementById('catGrid');
-  if(cat){
-    const keys=Object.keys(PACKS);
-    cat.innerHTML=keys.map(k=>{ const p=normalizePack(PACKS[k]);
-      const steps=(p.work||[]).length, gates=(p.gates||[]).length;
-      const comps=(p.compose||[]).reduce((s,c)=>s+(+c.n||0),0);
-      const seeds=APP.cases.filter(c=>c.packId===k).length;
-      const on=k===APP.catSel;
-      return `<button class="cat-card ${on?'on':''} ${typeTok(k)}" data-cat="${k}">
-        <div class="cat-h"><span class="ty-badge ${typeTok(k)}">${dcText(p.label,'pack.label')}</span>${p.authored?'<span class="cat-auto">자동저작</span>':''}</div>
-        <div class="cat-type">${(p.workload&&p.workload.type)||p.label}</div>
-        <div class="cat-stats"><span>단계 <b>${steps}</b></span><span>구성요소 <b>${comps}</b></span><span>HITL <b>${gates}</b></span><span>인박스 <b>${seeds}</b>건</span></div>
-      </button>`;
-    }).join('');
-    cat.querySelectorAll('[data-cat]').forEach(e=>e.onclick=()=>{APP.catSel=e.dataset.cat;saveApp();renderDesign();});
-  }
-  /* 선택된 유형의 실행 구조 미리보기(구 구성 뷰 콘텐츠를 카탈로그 항목으로 흡수) */
-  const P=normalizePack(catalogPack());
-  const prev=document.getElementById('catPrevTitle');
-  if(prev)prev.innerHTML=`${typeBadge(P.id)} 실행 구조 미리보기`;
-  const wl=P.workload;
+  const wl=PACK.workload;
   document.getElementById('waBox').innerHTML=
     `<div class="wa-row full"><span class="k">요청</span><span class="req">${wl.request}</span></div>
      <div class="wa-row"><span class="k">유형</span><span>${wl.type}</span></div>
      <div class="wa-row"><span class="k">목적</span><span>${wl.purpose}</span></div>
      <div class="wa-row full"><span class="k">필요 산출물</span><span class="chips">${wl.outputs.map(o=>`<span>${o}</span>`).join('')}</span></div>
      <div class="wa-row full"><span class="k">확인 지점</span><span>${wl.gates}</span></div>`;
-  document.getElementById('composeGrid').innerHTML=P.compose.map(c=>`<div class="comp ${c.cls}"><div class="ct">${c.t}<span class="cn">${c.n}</span></div><div class="csub">${c.sub}</div><ul>${c.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('');
-  renderPlan(P);
-  document.getElementById('gatebar').innerHTML=P.gates.map(g=>`<div class="g">${g}</div>`).join('');
-  renderArchCoherence(P);
+  document.getElementById('composeGrid').innerHTML=COMPOSE.map(c=>`<div class="comp ${c.cls}"><div class="ct">${c.t}<span class="cn">${c.n}</span></div><div class="csub">${c.sub}</div><ul>${c.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('');
+  renderPlan();
+  document.getElementById('gatebar').innerHTML=PACK.gates.map(g=>`<div class="g">${g}</div>`).join('');
+  renderArchCoherence();
 }
 /* B-1: 아키텍처 정합 뷰 — 표준 런타임 = AAP 아키텍처(Loop·8계층·Trust), 도메인이 경유하는 계층 점등 */
-function renderArchCoherence(P){
-  P=P||PACK;
+function renderArchCoherence(){
   const el=document.getElementById('archMap');if(!el)return;
-  const usedL=new Set();P.work.forEach(w=>w.ops.forEach(o=>usedL.add(o.L)));
+  const usedL=new Set();WORK.forEach(w=>w.ops.forEach(o=>usedL.add(o.L)));
   const loop=LOOP.map((s,i)=>`${i>0?'<span class="lsep">→</span>':''}<span class="ls ${s==='Learning'?'lp':''}">${s}</span>`).join('');
   const layers=LAYERS.map(L=>`<div class="ac-lyr ${usedL.has(L.id)?'used':''} ${L.star?'star':''}"><span class="lc">${L.id}</span><span class="ln">${L.ko}</span>${L.star?'<span class="lkt">★ kt ds</span>':''}<span class="lcap">${L.cap}</span></div>`).join('');
   el.innerHTML=`<div class="ac-loop">${loop}</div><div class="ac-layers">${layers}</div>
     <div class="ac-trust">Trust · Security · Governance — 전 계층 공통 통제</div>
-    <div class="ac-note">표준 런타임 = 이 아키텍처. <b>${dcText(P.label,'pack.label')} Pack</b>이 경유하는 계층이 점등됩니다(${usedL.size}/8). 산업이 바뀌어도 8계층·Operating Loop·Trust는 그대로, <b>Domain Pack만 교체</b>됩니다.</div>`;
+    <div class="ac-note">표준 런타임 = 이 아키텍처. <b>${PACK.label} Pack</b>이 경유하는 계층이 점등됩니다(${usedL.size}/8). 산업이 바뀌어도 8계층·Operating Loop·Trust는 그대로, <b>Domain Pack만 교체</b>됩니다.</div>`;
 }
-function renderPlan(P){
-  P=P||PACK;
-  const PROD=P.planProduces;
+function renderPlan(){
+  const PROD=PACK.planProduces;
   const sel=w=>w.meeting?`<span class="sel-human">${_ICO('flag')}시작·종료 신호</span>`:(w.hitl?`<span class="sel-hitl">${_ICO('flag')}담당자 확인</span>`:(w.actor==='human'?`<span class="sel-human">사람 요청</span>`:`<span class="sel-auto">자동</span>`));
   const makes=w=>{const o=PROD[w.id]||[];return o.length?o.map(x=>`<b>${x}</b>`).join(' · '):'<i style="color:#94a3b8;font-style:normal">중간 처리</i>';};
   const lays=w=>[...new Set(w.ops.map(o=>o.L))].map(l=>`<span>${l}</span>`).join('');
   let h=`<div class="plan-head"><div>#</div><div>단계</div><div>만드는 산출물</div><div>사람이 선택·확인</div><div>거치는 계층</div></div>`;
-  P.work.forEach((w,i)=>{h+=`<div class="plan-row ${w.gate?'gate':''}"><div class="pr-n">${i+1}</div><div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.role}</div></div><div class="pr-make">${makes(w)}</div><div class="pr-sel">${sel(w)}</div><div class="pr-lay">${lays(w)}</div></div>`;});
+  WORK.forEach((w,i)=>{h+=`<div class="plan-row ${w.gate?'gate':''}"><div class="pr-n">${i+1}</div><div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.role}</div></div><div class="pr-make">${makes(w)}</div><div class="pr-sel">${sel(w)}</div><div class="pr-lay">${lays(w)}</div></div>`;});
   document.getElementById('planTable').innerHTML=h;
 }
 /* ===== 관리 뷰 (코어 · 거버넌스 strip + Component Registry) ===== */
@@ -616,14 +537,12 @@ function setRunBtn(running){
 }
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),2200);}
 
-/* ===== 외부 API (자동 저작 모듈이 새 팩을 등록·로드) =====
-   register: 새 유형을 레지스트리에 편입 → 유형 토큰 배정 → 카탈로그/인박스/필터 자동 반영.
-   load: 그 유형으로 케이스 시드 후 첫 케이스를 실행 콘솔에 연다(자동저작 데모 연속성). */
+/* ===== 외부 API (자동 저작 모듈이 새 팩을 등록·로드) ===== */
+function addPackOption(pack){const sl=document.getElementById('packSel');if(!sl)return;if([...sl.options].some(o=>o.value===pack.id))return;const o=document.createElement('option');o.value=pack.id;o.textContent=pack.label;sl.appendChild(o);}
 window.AAP_CORE={
-  register:(pack)=>{PACKS[pack.id]=normalizePack(pack);typeTok(pack.id);
-    if(document.getElementById('catGrid')&&STATE.view==='domain')renderDesign();
-    if(STATE.view==='inbox')renderInbox();},
-  load:(id)=>{if(!PACKS[id])return;setPackRefs(id);seedPack(id);const cs=APP.cases.filter(c=>c.packId===id);if(cs.length)openCase(cs[0].id);else createCase(id);},
+  register:(pack)=>{PACKS[pack.id]=normalizePack(pack);addPackOption(pack);},
+  /* 새 팩으로 전환 → 케이스 시드 → 첫 케이스를 실행 콘솔에 열기(자동저작 데모 연속성) */
+  load:(id)=>{if(!PACKS[id])return;setPackRefs(id);seedPack(id);const sl=document.getElementById('packSel');if(sl)sl.value=id;const cs=APP.cases.filter(c=>c.packId===id);if(cs.length)openCase(cs[0].id);else createCase();},
   has:(id)=>!!PACKS[id],
   go:(id)=>{if(activeCase()&&W(id)){STATE.sel=id;renderSeq();runStep();}},
 };
@@ -632,35 +551,34 @@ window.AAP_CORE={
 document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 document.getElementById('runBtn').onclick=()=>STATE.playing?stopPlay():startPlay();
 document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
-const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>promptNewCase(_nc);
+const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=createCase;
 const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
 const TIP=document.getElementById('tip');
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(t){TIP.textContent=t.getAttribute('data-tip');TIP.style.display='block';const r=t.getBoundingClientRect();TIP.style.left=Math.min(r.left,window.innerWidth-320)+'px';let tp=r.bottom+8;if(tp+TIP.offsetHeight>window.innerHeight)tp=r.top-TIP.offsetHeight-8;TIP.style.top=Math.max(8,tp)+'px';}else if(!e.target.closest('#tip'))TIP.style.display='none';});
 
-/* ===== boot (영속 복원 → 통합 인박스 중심) =====
-   도메인 셀렉터(모드 전환) 폐지: 인박스는 전 유형 통합. 런타임 컨텍스트는 케이스 열 때 결정. */
+/* ===== boot (영속 복원 → 인박스 중심) ===== */
 (function(){
   const q=new URLSearchParams(location.search);
   if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
   loadApp();
   const keys=Object.keys(PACKS);
-  /* 유형 토큰 안정 배정(등록 순서) — 카탈로그·인박스·필터 색 일관 */
-  keys.forEach(typeTok);
-  /* 런타임 컨텍스트 초기 팩: ?pack > 저장값 > 첫 팩 (열린 케이스 없을 때의 govern/도메인 기본) */
+  const sl=document.getElementById('packSel');
+  if(sl){sl.innerHTML=keys.map(k=>`<option value="${k}">${PACKS[k].label}</option>`).join('');
+    sl.onchange=()=>switchPack(sl.value);}
+  /* 활성 팩 결정: ?pack > 저장값 > 첫 팩 */
   const pk=q.get('pack');
   let initKey=(pk&&PACKS[pk])?pk:((APP.pack&&PACKS[APP.pack])?APP.pack:keys[0]);
+  if(sl)sl.value=initKey;
   setPackRefs(initKey);
-  APP.catSel=(APP.catSel&&PACKS[APP.catSel])?APP.catSel:initKey;
-  /* 모든 팩에 시드 보장(통합 인박스가 비어보이지 않게 · 1회) */
+  /* 모든 팩에 시드 보장(인박스가 비어보이지 않게 · 1회) */
   keys.forEach(seedPack);
   /* 뷰·케이스 복원 */
   let view=APP.view||'inbox';
   const qv=q.get('view'); if(qv&&['inbox','run','govern','domain'].includes(qv))view=qv;
   if(qv==='design')view='domain'; /* 하위호환 */
-  const qtf=q.get('type'); if(qtf&&(qtf==='all'||PACKS[qtf]))APP.typeFilter=qtf;
   const qopen=q.get('open');
   if(qopen&&APP.cases.some(c=>c.id===qopen)){openCase(qopen);}
-  else if(view==='run'&&APP.active&&APP.cases.some(c=>c.id===APP.active)){openCase(APP.active);}
+  else if(view==='run'&&APP.active&&APP.cases.some(c=>c.id===APP.active&&c.packId===initKey)){openCase(APP.active);}
   else { APP.active=null; setView(view==='run'?'inbox':view); }
 })();
 })();
