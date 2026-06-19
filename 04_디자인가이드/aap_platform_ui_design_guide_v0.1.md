@@ -230,6 +230,16 @@ background:
 - 캔버스 하단 **5타입 범례** 고정. SVG는 `currentColor` 미상속이므로 타입색은 클래스별 직접 토큰(예외: 다크 맵 노드만).
 - 적용 한계: 파이프라인 ② 등 *구성 시각화*에만. 업무 표면은 라이트 유지.
 
+### 6.5.5 시연 모드 (Guide Mode · 발표용 가이드 투어)
+운영 콘솔 화면 **위에** dim 오버레이를 얹어 한 업무 흐름을 단계별로 짚는 발표 모드(`demo.js`). 운영 모드와 같은 화면을 공유.
+- **메타 레이어 = violet, 본체 = teal**: '시연' 네비·시나리오 카드(`.demo-card` 상단 violet 그라데이션 악센트·`.demo-ic` violet)는 "메타 레이어" 신호로 violet. 단, **투어 진행 중 1차 액션·스포트라이트는 teal 브랜드**(다음 버튼=teal, 스포트라이트 ring=teal). violet 남용 ✕.
+- **시나리오 카드**: 업무 아이콘(Lucide)·업무명·한줄 설명 + **예상 흐름 칩**(`.demo-flow`: `N단계 흐름`·`사람 승인 N회`[amber]) + "▶ 시연 시작" 1차 액션. 카드 1스타일·hover lift. 상단 안내 1줄(`.sec-sub`).
+- **스포트라이트**(`.guide-spot`): dim 농도 `rgba(15,23,42,.62)`(운영 화면 가독 유지) + **teal 2px ring + 외곽 글로우**. 이동/크기 `.3s cubic-bezier` 트랜지션. 드리프트 방지 = `layoutGuide` scroll/resize 재계산(로직 불변, 시각만).
+- **말풍선**(`.guide-bubble`): 헤더 = `STEP n/N`(teal pill) + **역할 태그**(AAP 자율 실행=violet·bot 아이콘 / 사람이 승인=amber·user-check) + **진행 도트**(`.gb-dots`, 현재=teal bar·완료=teal-border·HITL=amber) + 제목 + 본문 + 푸터(다음=1차 teal / 이전·중지=ghost 보조). target을 가리키는 **꼬리(`.gb-tail`)** 4방향.
+- **커서**(`.guide-cursor`): Lucide `mouse-pointer`, 이동 트랜지션 + 은은한 펄스.
+- **HITL 스텝 강조**(키 메시지): 게이트 단계는 스포트라이트 ring·말풍선 테두리·역할 태그·진행 도트·1차 버튼을 **amber**로 전환 → "여기서 사람이 승인"을 색으로 못박음. HITL 판정 = `step.hitl` 플래그 또는 제목의 `HITL` 표기.
+- 신규 hex 0 — teal/violet/amber/상태 토큰만. dim·그라데이션은 rgba. 아이콘 추가: `circle-dot`·`user-check`·`bot`.
+
 ---
 
 ## 7. 적용 체크리스트
@@ -257,3 +267,4 @@ background:
 
 *v0.1 — 현행 v0.22 코드 역추출 기준. 데모가 진화하면 토큰·패턴 변경분을 여기 반영한다.*
 *v0.2 — `05_범용플랫폼/app/` 운영 콘솔 기준 §6.5 추가(통합 인박스·격상 파이프라인 5단계 UX·다크 엔진룸 노드 그래프). 신규 hex 0 — 5타입·상태 4색·다크 맵 토큰만. 아이콘 추가: `git-branch`(노드 그래프)·`boxes`(구성)·`workflow`.*
+*v0.3 — §6.5.5 시연 모드(Guide Mode) 시각 표준 추가(시나리오 카드·스포트라이트·말풍선 진행 도트/역할 태그/꼬리·커서·HITL amber 강조). 메타=violet·본체 액션=teal 규율. 신규 hex 0. 아이콘 추가: `circle-dot`·`user-check`·`bot`.*

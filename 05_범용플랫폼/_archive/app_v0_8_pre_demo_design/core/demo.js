@@ -22,28 +22,18 @@
     return Object.keys(P).map(k=>P[k]&&P[k].demoScenario?Object.assign({packId:k,label:P[k].label},P[k].demoScenario):null).filter(Boolean);
   }
 
-  /* HITL(사람 승인) 스텝 판정 — 시나리오 데이터에 step.hitl 우선, 없으면 제목의 'HITL' 표기 */
-  function isHitlStep(st){ return !!(st&&(st.hitl||/HITL/i.test(st.title||''))); }
-  function hitlCount(steps){ return (steps||[]).filter(isHitlStep).length; }
-
   /* ===== 시연 뷰(시나리오 선택 화면) — '시연' 네비 클릭 시 코어가 호출 ===== */
   function renderDemoView(){
     const list=document.getElementById('demoList'); if(!list)return;
     const scs=scenarios();
     if(!scs.length){ list.innerHTML='<div class="ibx-empty">등록된 시연 시나리오가 없습니다 — 업무 유형(팩)에 <b>demoScenario</b> 데이터를 추가하면 자동 편입됩니다.</div>'; return; }
-    list.innerHTML=scs.map(s=>{
-      const n=(s.steps||[]).length, h=hitlCount(s.steps);
-      return `
+    list.innerHTML=scs.map(s=>`
       <div class="demo-card">
         <div class="demo-card-h"><span class="demo-ic">${ICO(s.icon||'play-circle')}</span>
-          <div><div class="demo-t">${s.title||s.label}</div><div class="demo-ty">${s.label} 업무 시연</div></div></div>
+          <div><div class="demo-t">${s.title||s.label}</div><div class="demo-ty">${s.label} · ${(s.steps||[]).length}단계 시연</div></div></div>
         <div class="demo-desc">${s.desc||''}</div>
-        <div class="demo-flow">
-          <span class="demo-chip">${ICO('layers')}${n}단계 흐름</span>
-          ${h?`<span class="demo-chip hitl">${ICO('user-check')}사람 승인 ${h}회</span>`:''}
-        </div>
         <button class="demo-start" data-demo="${s.packId}">${ICO('play-circle')}<span class="btn-l">시연 시작</span></button>
-      </div>`;}).join('');
+      </div>`).join('');
     list.querySelectorAll('[data-demo]').forEach(e=>e.onclick=()=>startTour(e.dataset.demo));
   }
 
@@ -58,24 +48,18 @@
       <div class="guide-spot" id="guideSpot"></div>
       <div class="guide-cursor" id="guideCursor">${ICO('mouse-pointer')}</div>
       <div class="guide-bubble" id="guideBubble">
-        <div class="gb-tail" id="gbTail" aria-hidden="true"></div>
-        <div class="gb-head">
-          <span class="gb-step" id="gbStep"></span>
-          <span class="gb-tag" id="gbTag"></span>
-        </div>
-        <div class="gb-dots" id="gbDots"></div>
+        <div class="gb-step" id="gbStep"></div>
         <div class="gb-title" id="gbTitle"></div>
         <div class="gb-body" id="gbBody"></div>
         <div class="gb-foot">
           <button class="gb-btn ghost" id="gbPrev">${ICO('chevron-left')}<span class="btn-l">이전</span></button>
-          <button class="gb-btn ghost" id="gbStop">${ICO('x')}<span class="btn-l">중지</span></button>
+          <button class="gb-btn ghost" id="gbStop">중지</button>
           <button class="gb-btn primary" id="gbNext"><span class="btn-l">다음</span>${ICO('chevron-right')}</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
     const els={ ov, spot:ov.querySelector('#guideSpot'), cursor:ov.querySelector('#guideCursor'),
       bubble:ov.querySelector('#guideBubble'), step:ov.querySelector('#gbStep'),
-      tag:ov.querySelector('#gbTag'), dots:ov.querySelector('#gbDots'), tail:ov.querySelector('#gbTail'),
       title:ov.querySelector('#gbTitle'), body:ov.querySelector('#gbBody'),
       prev:ov.querySelector('#gbPrev'), next:ov.querySelector('#gbNext'), stop:ov.querySelector('#gbStop') };
     els.prev.onclick=()=>gotoStep(T.i-1);
@@ -125,18 +109,12 @@
     const st=steps[i], els=T.els;
     /* 1) 운영 화면 실제 조작 */
     applyDo(st.do);
-    /* 2) 말풍선 텍스트 갱신 + 버튼 상태 + HITL 악센트 */
-    const hitl=isHitlStep(st);
-    els.step.textContent=`STEP ${i+1} / ${steps.length}`;
-    els.tag.innerHTML=hitl?`${ICO('user-check')}<span>사람이 승인</span>`:`${ICO('bot')}<span>AAP 자율 실행</span>`;
-    els.dots.innerHTML=steps.map((s,k)=>`<i class="gb-dot${k===i?' on':''}${k<i?' done':''}${isHitlStep(s)?' hitl':''}"></i>`).join('');
+    /* 2) 말풍선 텍스트 갱신 + 버튼 상태 */
+    els.step.textContent=`${i+1} / ${steps.length}`;
     els.title.textContent=st.title||'';
     els.body.innerHTML=st.body||'';
     els.prev.style.visibility=i===0?'hidden':'visible';
     els.next.querySelector('.btn-l').textContent=(i>=steps.length-1)?'마침':'다음';
-    els.bubble.classList.toggle('hitl',hitl);
-    els.spot.classList.toggle('hitl',hitl);
-    els.cursor.classList.toggle('hitl',hitl);
     /* 3) target 가 그려진 뒤 위치 잡기(전환·애니메이션 대기).
        즉시 1회 배치(현재 가시 요소 기준) → target 준비되면 재배치(드리프트 없이 부드럽게). */
     T.curSel=st.target;
@@ -167,33 +145,20 @@
     placeBubble(r);
   }
   function placeBubble(r){
-    const els=T.els, b=els.bubble, bw=b.offsetWidth||320, bh=b.offsetHeight||180, gap=18, m=12;
+    const els=T.els, b=els.bubble, bw=b.offsetWidth||320, bh=b.offsetHeight||180, gap=16, m=12;
     const vw=window.innerWidth, vh=window.innerHeight;
-    let left,top,side;
-    if(r.right+gap+bw<=vw-m){ left=r.right+gap; top=clamp(r.top, m, vh-bh-m); side='left'; }      /* 말풍선 오른쪽 → 꼬리 왼쪽 */
-    else if(r.left-gap-bw>=m){ left=r.left-gap-bw; top=clamp(r.top, m, vh-bh-m); side='right'; }   /* 왼쪽 */
-    else if(r.bottom+gap+bh<=vh-m){ top=r.bottom+gap; left=clamp(r.left, m, vw-bw-m); side='top'; } /* 아래 */
-    else if(r.top-gap-bh>=m){ top=r.top-gap-bh; left=clamp(r.left, m, vw-bw-m); side='bottom'; }    /* 위 */
+    let left,top;
+    if(r.right+gap+bw<=vw-m){ left=r.right+gap; top=clamp(r.top, m, vh-bh-m); }      /* 오른쪽 */
+    else if(r.left-gap-bw>=m){ left=r.left-gap-bw; top=clamp(r.top, m, vh-bh-m); }   /* 왼쪽 */
+    else if(r.bottom+gap+bh<=vh-m){ top=r.bottom+gap; left=clamp(r.left, m, vw-bw-m); } /* 아래 */
+    else if(r.top-gap-bh>=m){ top=r.top-gap-bh; left=clamp(r.left, m, vw-bw-m); }    /* 위 */
     else { placeBubbleCenter(); return; }
     b.style.left=left+'px'; b.style.top=top+'px'; b.classList.remove('center');
-    b.classList.remove('tail-left','tail-right','tail-top','tail-bottom');
-    b.classList.add('tail-'+side);
-    /* 꼬리를 target 중심 쪽으로 정렬(말풍선 박스 안 좌표) */
-    if(els.tail){
-      if(side==='left'||side==='right'){
-        const ty=clamp(r.top+r.height/2-top, 14, bh-14);
-        els.tail.style.top=ty+'px'; els.tail.style.left='';
-      }else{
-        const tx=clamp(r.left+r.width/2-left, 16, bw-16);
-        els.tail.style.left=tx+'px'; els.tail.style.top='';
-      }
-    }
   }
   function placeBubbleCenter(){
     const b=T.els.bubble, bw=b.offsetWidth||320, bh=b.offsetHeight||180;
     b.style.left=((window.innerWidth-bw)/2)+'px'; b.style.top=((window.innerHeight-bh)/2)+'px';
     b.classList.add('center');
-    b.classList.remove('tail-left','tail-right','tail-top','tail-bottom');
   }
   function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
 
