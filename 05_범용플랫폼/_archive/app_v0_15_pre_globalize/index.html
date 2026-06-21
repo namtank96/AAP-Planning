@@ -105,27 +105,24 @@
     </div>
   </section>
 
-  <!-- ============ ASSETS VIEW (스튜디오 · 자산 = 전역 5타입 레지스트리, 전 도메인 팩 union) ============ -->
+  <!-- ============ ASSETS VIEW (스튜디오 · 자산 = 5타입 레지스트리, 구 govern Component Registry) ============ -->
   <section class="view" data-view="assets" hidden>
     <div class="scroll"><div class="wrapc">
-      <p class="sec-title">자산 · 조합 재료 (5타입 + Master) <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 전 도메인 팩 통합 카탈로그(중복 자산은 1개로 합산)</span></p>
+      <p class="sec-title">자산 · 조합 재료 (5타입 + Master)</p>
       <div class="master-card">
         <div class="mi" data-ic="brain"></div>
         <div><div class="mt">총괄 · 오케스트레이터 (Supervisor)</div><h3>Master Agent</h3>
-        <p>업무 맥락을 분석하고 어떤 Agent·Module·기존 솔루션·Connector·정책이 필요한지 판단해 실행 구조를 구성·지휘합니다. 사람(HITL)과 소통하는 창구이기도 합니다.</p></div>
+        <p>업무 맥락을 분석하고 어떤 Agent·모듈·솔루션·Connector·정책이 필요한지 판단해 실행 구조를 구성·지휘합니다. 사람(HITL)과 소통하는 창구이기도 합니다.</p></div>
       </div>
-      <div class="asset-scope" id="assetScope"></div>
       <div class="asset-filter" id="assetFilter"></div>
       <div class="reg" id="reg"></div>
     </div></div>
   </section>
 
-  <!-- ============ LOGS VIEW (관리 · 로그·트레이스 · 전역 집계) ============ -->
+  <!-- ============ LOGS VIEW (관리 · 로그·트레이스) ============ -->
   <section class="view" data-view="logs" hidden>
     <div class="scroll"><div class="wrapc">
-      <p class="sec-title">Run Trace · Decision Log <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 전 케이스 집계(감사·재현)</span></p>
-      <div class="log-kpis" id="logKpi"></div>
-      <div class="asset-filter" id="logCaseFilter"></div>
+      <p class="sec-title">Run Trace · Decision Log</p>
       <div class="trace" id="traceLog"></div>
     </div></div>
   </section>

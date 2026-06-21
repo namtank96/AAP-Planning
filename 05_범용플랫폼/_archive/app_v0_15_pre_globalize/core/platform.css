@@ -396,33 +396,6 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .tr-st{color:#64748b;font-size:9px;flex:0 0 auto;width:74px;}
 .tr-t{flex:1;} .tr-t b{color:#5eead4;}
 .tr-L{font-size:8px;color:#475569;flex:0 0 auto;}
-/* 전역 로그: 케이스 라벨 칩(통합 타임라인) */
-.tr-case{font-size:8.5px;font-weight:800;color:#7dd3fc;background:#162033;border-radius:5px;padding:1px 7px;flex:0 0 auto;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.tr-case.tM{color:#c4b5fd;} .tr-case.tS{color:#67e8f9;} .tr-case.tC{color:#93c5fd;} .tr-case.tP{color:#fcd34d;}
-/* 전역 로그 KPI 스트립 */
-.log-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;}
-.log-kpi{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
-.log-kpi .lk-v{font-size:24px;font-weight:800;color:var(--aap-ink);line-height:1;}
-.log-kpi .lk-k{font-size:10.5px;font-weight:700;color:var(--muted);margin-top:5px;}
-/* 자산 스코프 칩 행(전역/팩/케이스) */
-.asset-scope{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 8px;}
-/* 스코프·로그 케이스 칩은 typeTok(tA..) 토큰을 받음 → 점 색 매핑(타입 색 일관) */
-.asset-chip.tA .ac-dot{color:var(--aap);} .asset-chip.tM .ac-dot{color:var(--violet);} .asset-chip.tS .ac-dot{color:#0891b2;} .asset-chip.tC .ac-dot{color:var(--blue);} .asset-chip.tP .ac-dot{color:var(--amber);}
-.asset-chip.tA.on{color:#fff;background:var(--aap);border-color:var(--aap);} .asset-chip.tM.on{color:#fff;background:var(--violet);border-color:var(--violet);} .asset-chip.tS.on{color:#fff;background:#0891b2;border-color:#0891b2;} .asset-chip.tC.on{color:#fff;background:var(--blue);border-color:var(--blue);} .asset-chip.tP.on{color:#fff;background:var(--amber);border-color:var(--amber);}
-.asset-chip.on .ac-dot{color:#fff;}
-/* 자산 카드: 쓰는 도메인 팩(역링크) */
-.ag-used{border-top:1px solid var(--line);margin-top:9px;padding-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.ag-used .agu-k{font-size:9.5px;font-weight:800;color:var(--faint);display:inline-flex;align-items:center;gap:4px;}
-.ag-used .agu-v{display:inline-flex;gap:5px;flex-wrap:wrap;}
-.ag-use{font-size:9px;font-weight:800;color:var(--muted);background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:1px 7px;display:inline-flex;align-items:center;gap:4px;}
-.ag-use .ac-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-.ag-use.tA{color:var(--aap-ink);} .ag-use.tM{color:var(--violet);} .ag-use.tS{color:#0e7490;} .ag-use.tC{color:#1d4ed8;} .ag-use.tP{color:var(--amber-ink);}
-/* Run→자산 진입 시 1회성 강조 */
-.ag.hl{border-color:var(--aap);box-shadow:0 0 0 2px var(--aap-soft),0 4px 14px rgba(13,148,136,.18);}
-/* Run 근거 레일·조합 칩 → 자산 점프 링크 */
-.ev-link{cursor:pointer;border-bottom:1px dotted currentColor;}
-.ev-link:hover{opacity:.78;}
-.casm .ct2.ev-link{border-bottom-style:solid;}
 
 /* ===== Step B-3: 추론 루프 배지 + 동적 compose 조합 (실행 뷰 우측) ===== */
 .loopbadge{font-size:9px;font-weight:800;color:var(--violet);background:var(--violet-soft);border:1px solid var(--violet-border);border-radius:6px;padding:2px 8px;margin-bottom:8px;display:inline-block;}

@@ -654,7 +654,7 @@ function renderRight(){
       h+=`<div class="evid-row ${stt}">
         <span class="ev-dot ty${tk}"></span>
         <div class="ev-body">
-          <div class="ev-h"><span class="ev-comp ty${tk} ev-link" data-asset="${dcText(o.comp,'op.comp')}" data-atk="${tk}" data-tip="자산 카탈로그에서 이 구성요소 보기">${dcText(o.comp,'op.comp')}</span><span class="ev-tag ty${tk}">${_TYKO[tk]}</span>${badge}${parTag}</div>
+          <div class="ev-h"><span class="ev-comp ty${tk}">${dcText(o.comp,'op.comp')}</span><span class="ev-tag ty${tk}">${_TYKO[tk]}</span>${badge}${parTag}</div>
           <div class="ev-line">${o.feed} → ${val}</div>
           ${more}
         </div></div>`;
@@ -662,12 +662,10 @@ function renderRight(){
   });
   let casm='';
   if(w.id==='compose'){const lit=RUN.phase==='done'||RUN.phase==='await'||RUN.reveal>2;
-    casm=`<div class="casm"><div class="casm-h">AAP가 조합한 구성요소</div>${COMPOSE.map(c=>`<span class="ct2 ${c.cls} ${lit?'on':''} ev-link" data-asset="${dcText(c.n,'compose.n')}" data-atk="${c._tk||dcTypeKey(c.cls,'compose.cls')}" data-tip="자산 카탈로그에서 보기">${c.t} ${c.n}</span>`).join('')}</div>`;}
+    casm=`<div class="casm"><div class="casm-h">AAP가 조합한 구성요소</div>${COMPOSE.map(c=>`<span class="ct2 ${c.cls} ${lit?'on':''}">${c.t} ${c.n}</span>`).join('')}</div>`;}
   flow.innerHTML=lb+h+casm;
   if(exp)exp.innerHTML=w.explain;
   flow.querySelectorAll('[data-op]').forEach(e=>e.onclick=()=>{const k=e.dataset.op;STATE.opOpen.has(k)?STATE.opOpen.delete(k):STATE.opOpen.add(k);renderRight();});
-  /* Run→자산 양방향: 근거 레일 구성요소·조합 칩 클릭 → 자산 뷰 해당 항목 강조 */
-  flow.querySelectorAll('[data-asset]').forEach(e=>e.onclick=()=>gotoAsset(e.dataset.asset,e.dataset.atk));
 }
 
 /* ===== Run Trace (코어 · 단계 완료 시 ops 누적 = 거버넌스 증거) ===== */
@@ -784,132 +782,34 @@ function renderGovern(){
 }
 /* ===== 로그·트레이스 뷰 (관리 · Run Trace · Decision Log) ===== */
 function renderLogs(){ renderTrace(); }
-/* ===== 자산 뷰 (스튜디오 · 5타입 레지스트리 · 전역 union 카탈로그) =====
-   활성 팩 한정 ✕ → 전 팩(PACKS)의 components 를 합쳐 dedup 한 전역 자산 카탈로그.
-   같은 자산(타입+이름)은 1개로 합치고 '쓰는 도메인 팩' 목록(usedBy)을 표기.
-   스코프 칩(전역/유형/케이스) × 타입 필터(A/M/S/C/P). 코어 책임 · 도메인 무관(일반 union/dedup). */
+/* ===== 자산 뷰 (스튜디오 · 5타입 레지스트리 = 구 govern Component Registry · 타입 필터) =====
+   현재 런타임 팩의 components 를 5타입(A/M/S/C/P)으로 그룹·필터. 타입 색점은 ty* 토큰. */
 const _ASSET_T={tyA:'Agent',tyM:'Module',tyS:'기존 솔루션',tyC:'Connector',tyP:'Policy'};
 const _ASSET_ORDER=['tyA','tyM','tyS','tyC','tyP'];
-let _assetFilter='all';        /* 타입 필터: all | tyA..tyP */
-let _assetScope='global';      /* 스코프: global(전 팩) | pack:<id> | case(현재 열린 케이스 팩) */
-let _assetHL=null;             /* Run→자산 양방향 하이라이트 대상 키(타입+이름) */
-/* dedup 키 = 정규화 타입(A/M/S/C/P) + 정규화 이름(소문자·공백/괄호주석 제거).
-   raw 이름은 표시용으로 첫 등장값을 유지. */
-function _assetNorm(s){ return String(s||'').toLowerCase().replace(/\s+/g,'').replace(/\([^)]*\)/g,'').replace(/[·.,]/g,''); }
-function assetKey(a){ const tk=dcTypeKey(a.ty||a.type,'asset.ty'); return tk+'|'+_assetNorm(a.name); }
-/* 전 팩 union + dedup → [{key,tk,ty,type,ic,name,L,desc,when,data,how,asset,usedBy:[packId]}] */
-function buildAssetCatalog(){
-  const map=new Map();
-  Object.keys(PACKS).forEach(pid=>{ const p=normalizePack(PACKS[pid]);
-    (p.components||[]).forEach(a=>{ const k=assetKey(a);
-      let e=map.get(k);
-      if(!e){ const tk=dcTypeKey(a.ty||a.type,'asset.ty');
-        e={key:k,tk,ty:'ty'+tk,type:a.type||_TYKO[tk],ic:a.ic,name:a.name,L:a.L,desc:a.desc,when:a.when,data:a.data,how:a.how,asset:a.asset,usedBy:[]};
-        map.set(k,e); }
-      if(!e.usedBy.includes(pid))e.usedBy.push(pid);
-    });
-  });
-  return [...map.values()];
-}
-/* 스코프에 따라 카탈로그 필터 */
-function assetCatalogScoped(){
-  const all=buildAssetCatalog();
-  if(_assetScope==='global')return all;
-  if(_assetScope.startsWith('pack:')){ const pid=_assetScope.slice(5); return all.filter(a=>a.usedBy.includes(pid)); }
-  if(_assetScope==='case'){ const c=activeCase(); return c?all.filter(a=>a.usedBy.includes(c.packId)):all; }
-  return all;
-}
+let _assetFilter='all';
 function renderAssets(){
   const reg=document.getElementById('reg'); if(!reg)return;
-  /* 스코프 칩(전역 / 팩별 / 현재 케이스) */
-  const sbar=document.getElementById('assetScope');
-  if(sbar){
-    const c=activeCase();
-    let sh=`<button class="asset-chip ${_assetScope==='global'?'on':''}" data-as="global">전역 · 전 팩</button>`;
-    Object.keys(PACKS).forEach(pid=>{ sh+=`<button class="asset-chip ${typeTok(pid)} ${_assetScope==='pack:'+pid?'on':''}" data-as="pack:${pid}"><span class="ac-dot"></span>${dcText(typeLabel(pid),'pack.label')}</button>`; });
-    if(c)sh+=`<button class="asset-chip ${_assetScope==='case'?'on':''}" data-as="case">현재 케이스 · ${dcText(typeLabel(c.packId),'pack.label')}</button>`;
-    else if(_assetScope==='case')_assetScope='global';
-    sbar.innerHTML=sh;
-    sbar.querySelectorAll('[data-as]').forEach(e=>e.onclick=()=>{_assetScope=e.dataset.as;renderAssets();});
-  }
-  const scoped=assetCatalogScoped();
+  const comps=COMPONENTS||[];
   /* 타입 필터 칩 */
   const fbar=document.getElementById('assetFilter');
   if(fbar){
-    const cnt=t=>scoped.filter(a=>a.ty===t).length;
+    const cnt=t=>comps.filter(a=>a.ty===t).length;
     const present=_ASSET_ORDER.filter(t=>cnt(t));
     if(_assetFilter!=='all' && !present.includes(_assetFilter))_assetFilter='all';
-    let fh=`<button class="asset-chip ${_assetFilter==='all'?'on':''}" data-af="all">전체<span class="ac-n">${scoped.length}</span></button>`;
+    let fh=`<button class="asset-chip ${_assetFilter==='all'?'on':''}" data-af="all">전체<span class="ac-n">${comps.length}</span></button>`;
     fh+=present.map(t=>`<button class="asset-chip ${t} ${_assetFilter===t?'on':''}" data-af="${t}"><span class="ac-dot"></span>${_ASSET_T[t]}<span class="ac-n">${cnt(t)}</span></button>`).join('');
     fbar.innerHTML=fh;
     fbar.querySelectorAll('[data-af]').forEach(e=>e.onclick=()=>{_assetFilter=e.dataset.af;renderAssets();});
   }
-  const shown=_assetFilter==='all'?scoped:scoped.filter(a=>a.ty===_assetFilter);
-  reg.innerHTML=shown.map(a=>{
-    const used=a.usedBy.map(pid=>`<span class="ag-use ${typeTok(pid)}"><span class="ac-dot"></span>${dcText(typeLabel(pid),'pack.label')}</span>`).join('');
-    const hl=_assetHL&&_assetHL===a.key?' hl':'';
-    return `<div class="ag ${a.asset?'asset':''}${hl}" data-akey="${a.key}"><div class="ag-h"><div class="ag-ic">${a.ic}</div><div><span class="ag-type ${a.ty}">${a.type}</span><div class="ag-name">${a.name}</div></div><span class="ag-lay">${a.L} ${LK[a.L]}</span>${a.asset?'<span class="ag-kt">kt ds</span>':''}</div><div class="ag-desc">${a.desc}</div><div class="ag-meta"><div class="ag-m when"><div class="ag-mk">${_ICO('compass')}언제 쓰나</div><div class="ag-mv">${a.when}</div></div><div class="ag-m data"><div class="ag-mk">${_ICO('folder')}사용 데이터</div><div class="ag-mv">${a.data}</div></div><div class="ag-m how"><div class="ag-mk">${_ICO('settings')}수행 방식</div><div class="ag-mv">${a.how}</div></div></div><div class="ag-used"><span class="agu-k">${_ICO('workflow')}쓰는 도메인 팩</span><span class="agu-v">${used||'—'}</span></div></div>`;
-  }).join('');
-  /* Run→자산 하이라이트로 진입했으면 스크롤 + 1회성 강조 후 해제 */
-  if(_assetHL){ const t=reg.querySelector('.ag.hl'); if(t){ t.scrollIntoView({block:'center',behavior:'smooth'}); } }
-}
-/* Run 근거 레일/구성요소 → 자산 뷰로 점프(해당 자산 강조). 자산명으로 카탈로그 키 역추적(타입 무관 이름 매칭). */
-function gotoAsset(name,tk){
-  const cat=buildAssetCatalog(); const nn=_assetNorm(name);
-  let hit=cat.find(a=>a.tk===tk&&_assetNorm(a.name)===nn) || cat.find(a=>_assetNorm(a.name)===nn)
-        || cat.find(a=>a.tk===tk&&(_assetNorm(a.name).includes(nn)||nn.includes(_assetNorm(a.name))));
-  _assetScope='global';
-  if(!hit){ /* 이름 매칭 실패(근거 레일의 일반 역량 라벨) → 같은 타입으로 필터해 해당 유형 자산군으로 안내 */
-    _assetHL=null; _assetFilter=tk&&_ASSET_T['ty'+tk]?('ty'+tk):'all';
-    toast('해당 유형 자산으로 이동합니다');
-  } else { _assetHL=hit.key; _assetFilter='all'; }
-  setView('assets');
+  const shown=_assetFilter==='all'?comps:comps.filter(a=>a.ty===_assetFilter);
+  reg.innerHTML=shown.map(a=>`<div class="ag ${a.asset?'asset':''}"><div class="ag-h"><div class="ag-ic">${a.ic}</div><div><span class="ag-type ${a.ty}">${a.type}</span><div class="ag-name">${a.name}</div></div><span class="ag-lay">${a.L} ${LK[a.L]}</span>${a.asset?'<span class="ag-kt">kt ds</span>':''}</div><div class="ag-desc">${a.desc}</div><div class="ag-meta"><div class="ag-m when"><div class="ag-mk">${_ICO('compass')}언제 쓰나</div><div class="ag-mv">${a.when}</div></div><div class="ag-m data"><div class="ag-mk">${_ICO('folder')}사용 데이터</div><div class="ag-mv">${a.data}</div></div><div class="ag-m how"><div class="ag-mk">${_ICO('settings')}수행 방식</div><div class="ag-mv">${a.how}</div></div></div></div>`).join('');
 }
 
-/* B-2: Run Trace · Decision Log (관리 뷰 · 전역) — 전 케이스(APP.cases[].trace) 집계.
-   trace 는 이미 케이스별 영속(persistToCase) → 전역 로그는 새 저장소 없이 집계만(도메인 무관).
-   상단 전역 KPI(런/단계 기록·HITL·차단·케이스·유형) + 케이스 드릴다운(선택 케이스 trace, 전체=통합 타임라인). */
-let _logCase='all';   /* 로그 드릴다운: all(통합) | <caseId> */
-/* trace 항목 분류 — HITL/차단(통제)/학습 집계 키(k·t 기반·도메인 무관) */
-function _trIsHITL(e){ return e.k==='HITL'; }
-function _trIsBlock(e){ return e.k==='통제' || /차단|보류|제외|거부/.test(e.t||''); }
+/* B-2: Run Trace · Decision Log (관리 뷰) — 실행 중 누적된 자율 판단·HITL·반영 */
 function renderTrace(){
   const el=document.getElementById('traceLog');if(!el)return;
-  /* 활성 케이스의 in-flight trace 를 그 케이스에 합산(아직 persist 전일 수 있음) */
-  const ac=activeCase();
-  const cases=APP.cases.filter(c=>PACKS[c.packId]).map(c=>{
-    const tr=(ac&&c.id===ac.id)?STATE.trace:(Array.isArray(c.trace)?c.trace:[]);
-    return {c, tr};
-  });
-  /* 전역 KPI 집계 */
-  let runs=0,hitl=0,block=0,steps=0; const typeSet=new Set();
-  cases.forEach(({c,tr})=>{ if(tr.length){runs++;typeSet.add(c.packId);} steps+=tr.length; tr.forEach(e=>{ if(_trIsHITL(e))hitl++; if(_trIsBlock(e))block++; }); });
-  const kpi=document.getElementById('logKpi');
-  if(kpi){
-    kpi.innerHTML=[
-      ['실행된 케이스',runs,'기록이 있는 케이스 수'],
-      ['누적 기록',steps,'전 케이스 trace 항목 합'],
-      ['HITL 판단',hitl,'담당자 승인·확인 지점'],
-      ['차단·보류',block,'정책·거버넌스가 멈춘 지점'],
-      ['업무 유형',typeSet.size,'기록이 있는 도메인 팩 수'],
-    ].map(([k,v,t])=>`<div class="log-kpi" data-tip="${t}"><div class="lk-v">${v}</div><div class="lk-k">${k}</div></div>`).join('');
-  }
-  /* 케이스 드릴다운 필터(통합 + 기록 있는 케이스) */
-  const fbar=document.getElementById('logCaseFilter');
-  const withTrace=cases.filter(x=>x.tr.length);
-  if(fbar){
-    if(_logCase!=='all' && !withTrace.some(x=>x.c.id===_logCase))_logCase='all';
-    let fh=`<button class="asset-chip ${_logCase==='all'?'on':''}" data-lc="all">통합 타임라인<span class="ac-n">${steps}</span></button>`;
-    fh+=withTrace.map(({c,tr})=>`<button class="asset-chip ${typeTok(c.packId)} ${_logCase===c.id?'on':''}" data-lc="${c.id}"><span class="ac-dot"></span>${dcText(c.title,'case.title')}<span class="ac-n">${tr.length}</span></button>`).join('');
-    fbar.innerHTML=fh;
-    fbar.querySelectorAll('[data-lc]').forEach(e=>e.onclick=()=>{_logCase=e.dataset.lc;renderTrace();});
-  }
-  /* 타임라인 — 통합이면 전 케이스(케이스 라벨 포함), 특정 케이스면 그것만 */
-  const rows=[];
-  cases.forEach(({c,tr})=>{ if(_logCase!=='all'&&c.id!==_logCase)return;
-    tr.forEach(e=>rows.push({c,e})); });
-  if(!rows.length){el.innerHTML='<div class="tr-empty">아직 기록 없음 — Run 을 실행하거나 단계를 진행하면 자율 판단·HITL·반영이 전 케이스에 걸쳐 여기 누적됩니다(감사·재현 가능).</div>';return;}
-  el.innerHTML=rows.map(({c,e})=>`<div class="tr-line">${_logCase==='all'?`<span class="tr-case ${typeTok(c.packId)}">${dcText(c.title,'case.title')}</span>`:''}<span class="tr-st">${e.st}</span><span class="tr-k ${e.k}">${e.k}</span><span class="tr-t">${e.t}</span><span class="tr-L">${e.L}</span></div>`).join('');
+  if(!STATE.trace.length){el.innerHTML='<div class="tr-empty">아직 기록 없음 — Run 을 실행하거나 단계를 진행하면 자율 판단·HITL·반영이 여기 누적됩니다(감사·재현 가능).</div>';return;}
+  el.innerHTML=STATE.trace.map(e=>`<div class="tr-line"><span class="tr-st">${e.st}</span><span class="tr-k ${e.k}">${e.k}</span><span class="tr-t">${e.t}</span><span class="tr-L">${e.L}</span></div>`).join('');
 }
 
 /* ===== misc ===== */
