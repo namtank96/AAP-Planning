@@ -82,11 +82,7 @@ const MAX_PRIMARY=5;
 /* loadPack 시 1회: surfaceSpec/compose/components 의 색·타입 필드를 정규화(인플레이스).
    값을 검증·치환만 하고 구조는 보존 → 기존 3팩 무회귀, AI emit 팩은 토큰만 허용됨. */
 function normalizePack(pack){
-  if(!pack)return pack;
-  /* 0) 워크플로우 편집기 override 적용(있으면) — work.ops/hitl·compose 를 인플레이스 수정.
-     applyPackOverride 가 _dcDone=false 로 되돌려 아래 디자인 계약을 재적용하게 한다. */
-  if(!pack._ovApplied){ applyPackOverride(pack); pack._ovApplied=true; }
-  if(pack._dcDone)return pack;
+  if(!pack||pack._dcDone)return pack;
   /* 1) compose 5타입 (cls) */
   (pack.compose||[]).forEach(c=>{ const k=dcTypeKey(c.cls||c.type,'compose.cls'); c.cls='t'+k; c._tk=k; });
   /* 2) components 타입 (ty) */
@@ -99,37 +95,6 @@ function normalizePack(pack){
 }
 /* 함수형 status(런타임 산출)도 코어를 거치게: headSpec 에서 결과 배열의 색 토큰 정규화 */
 function dcStatusTriple(st){ if(Array.isArray(st)&&st.length>=2)st[1]=dcStatusCls(st[1]); return st; }
-
-/* =========================================================================
-   워크플로우 편집기 오버라이드 (스튜디오 경량 편집 · 영속) — 도메인 무관
-   packOverrides[packId] = { steps:{ [stepId]:{ comps:[{type,name}], hitl } } }.
-   normalizePack 직후 applyPackOverride 가 work.ops/hitl·compose 에 인플레이스 반영 →
-   실행 뷰 근거 레일·8계층·compose 칩이 편집 결과를 그대로 반영. 코어는 저장·적용만,
-   편집 UI·override 구성은 wfeditor.js(일반 로직). 팩 데이터만 수정 → 코어 도메인 무관 유지. */
-let _packOverrides=null;
-function loadOverrides(){ if(_packOverrides)return _packOverrides; _packOverrides=lsGet('packOverrides',{})||{}; return _packOverrides; }
-function saveOverrides(){ lsSet('packOverrides',_packOverrides||{}); }
-/* 원본 baseline 스냅샷(override 적용 전) — 재적용·복원이 원본에서 출발하도록(누적 방지) */
-function snapshotPack(pack){ if(pack._base)return; pack._base={ work:JSON.parse(JSON.stringify(pack.work||[])), compose:JSON.parse(JSON.stringify(pack.compose||[])), gates:JSON.parse(JSON.stringify(pack.gates||[])) }; }
-function restoreBase(pack){ if(!pack._base)return; pack.work=JSON.parse(JSON.stringify(pack._base.work)); pack.compose=JSON.parse(JSON.stringify(pack._base.compose)); pack.gates=JSON.parse(JSON.stringify(pack._base.gates)); }
-/* normalizePack 내부에서 호출 — override 가 있으면 원본 baseline 위에 적용(편집기 모듈 위임) */
-function applyPackOverride(pack){
-  snapshotPack(pack);
-  const ov=loadOverrides()[pack.id];
-  restoreBase(pack); /* 항상 원본에서 출발 → override 누적·잔존 방지 */
-  if(ov&&window.AAP_WFEDITOR&&window.AAP_WFEDITOR.applyOverride){ try{ window.AAP_WFEDITOR.applyOverride(pack,ov); }catch(e){ if(window.console)console.warn('[AAP] override 적용 실패',e); } }
-  return pack;
-}
-/* override 저장/해제 후 활성 팩 재적용 + 영향 뷰 재렌더(스튜디오 미리보기·편집기·열린 run) */
-function reapplyOverride(packId){
-  const pack=PACKS[packId]; if(!pack)return;
-  /* 원본 baseline 에서 override 재적용 → DC 재정규화(normalizePack 이 _ovApplied/_dcDone 가드로 1회 적용) */
-  pack._ovApplied=false; pack._dcDone=false; normalizePack(pack);
-  /* 활성 런타임 팩이면 참조 갱신(WORK/COMPOSE 등) */
-  if(APP.pack===packId)setPackRefs(packId);
-  if(STATE.view==='studio')renderDesign();
-  else if(STATE.view==='run'&&activeCase()&&activeCase().packId===packId){ renderSeq(); restoreStep(); }
-}
 
 /* Pack 데이터 별칭 (loadPack 에서 활성 팩으로 갱신 — 팩 교체 가능) */
 let PACK, WORK, COMPONENTS, COMPOSE, TIMES;
@@ -681,8 +646,6 @@ function renderDesign(){
   document.getElementById('composeGrid').innerHTML=P.compose.map(c=>`<div class="comp ${c.cls}"><div class="ct">${c.t}<span class="cn">${c.n}</span></div><div class="csub">${c.sub}</div><ul>${c.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('');
   renderPlan(P);
   document.getElementById('gatebar').innerHTML=P.gates.map(g=>`<div class="g">${g}</div>`).join('');
-  /* 워크플로우 편집기(경량) — 선택된 팩의 노드 그래프 시각화 + 단계별 5타입/HITL 편집 */
-  if(window.AAP_WFEDITOR)window.AAP_WFEDITOR.renderEditor(P);
   renderArchCoherence(P);
 }
 /* B-1: 아키텍처 정합 뷰 — 표준 런타임 = AAP 아키텍처(Loop·8계층·Trust), 도메인이 경유하는 계층 점등 */
@@ -763,12 +726,6 @@ window.AAP_CORE={
   load:(id)=>{if(!PACKS[id])return;setPackRefs(id);seedPack(id);const cs=APP.cases.filter(c=>c.packId===id);if(cs.length)openCase(cs[0].id);else createCase(id);},
   has:(id)=>!!PACKS[id],
   go:(id)=>{if(activeCase()&&W(id)){STATE.sel=id;renderSeq();runStep();}},
-  /* 워크플로우 편집기(wfeditor.js)용 — override 저장·조회·해제(영속) + 즉시 반영 */
-  setPackOverride:(packId,ov)=>{ loadOverrides()[packId]=ov; saveOverrides(); reapplyOverride(packId); },
-  getPackOverride:(packId)=>loadOverrides()[packId]||null,
-  hasPackOverride:(packId)=>!!loadOverrides()[packId],
-  clearPackOverride:(packId)=>{ delete loadOverrides()[packId]; saveOverrides(); reapplyOverride(packId); if(window.AAP_CORE)toast('기본값으로 복원했습니다'); },
-  toast:(m)=>toast(m),
 };
 
 /* ===== wiring ===== */
