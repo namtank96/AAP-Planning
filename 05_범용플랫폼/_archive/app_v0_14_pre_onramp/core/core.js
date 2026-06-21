@@ -375,102 +375,32 @@ function renderInbox(){
   list.querySelectorAll('[data-open]').forEach(e=>e.onclick=()=>openCase(e.dataset.open));
 }
 /* 새 업무 요청 = 유형(팩)을 골라 그 workload 템플릿으로 새 케이스 생성 → 통합 인박스 편입 → 실행 투입.
-   packId 미지정 시: 인박스 필터가 특정 유형이면 그 유형, 아니면 현재 런타임 팩(없으면 첫 팩).
-   seed(옵션)={title,request} — On-Ramp 가 사용자가 입력한 업무 설명을 케이스로 실어 보낼 때 사용(도메인 무관). */
+   packId 미지정 시: 인박스 필터가 특정 유형이면 그 유형, 아니면 현재 런타임 팩(없으면 첫 팩). */
 let _newSeq={};
-function createCase(packId,seed){
+function createCase(packId){
   let key=packId;
   if(!key) key=(APP.typeFilter!=='all'&&PACKS[APP.typeFilter])?APP.typeFilter:(APP.pack&&PACKS[APP.pack]?APP.pack:Object.keys(PACKS)[0]);
   const pack=PACKS[key]; if(!pack)return;
-  const c=caseTemplate(pack,seed&&seed.request?{request:seed.request}:null);
+  const c=caseTemplate(pack);
   _newSeq[key]=(_newSeq[key]||0)+1;
-  c.title=(seed&&seed.title)?seed.title:`${pack.workload&&pack.workload.type?pack.workload.type:pack.label} · 신규 #${_newSeq[key]}`;
+  c.title=`${pack.workload&&pack.workload.type?pack.workload.type:pack.label} · 신규 #${_newSeq[key]}`;
   APP.cases.push(c); saveApp();
   openCase(c.id);
   toast(`새 ${pack.label} 업무 요청을 생성했습니다 — 실행 콘솔에 투입`);
 }
-/* ===== On-Ramp: 업무 설명 텍스트 → 기존 등록 유형(팩) 매칭 (코어 · 도메인 무관 휴리스틱) =====
-   유형 인식 = 팩 메타(label·workload.type·purpose·outputs)와 입력 텍스트의 토큰 겹침 점수.
-   임계 미만이면 '신규 유형'으로 보고 격상 파이프라인으로 유도한다. 팩별 키워드 사전 ✕(도메인 무관). */
-function _tokens(s){ return String(s||'').toLowerCase().replace(/[^0-9a-z가-힣\s]/g,' ').split(/\s+/).filter(t=>t.length>=2); }
-function packKeywords(pack){
-  const wl=pack.workload||{};
-  return _tokens([pack.label,wl.type,wl.purpose,(wl.outputs||[]).join(' ')].join(' '));
-}
-/* 입력 텍스트 ↔ 각 팩 점수(겹친 토큰 수 / 팩 키워드 수, 0~1). 최고 점수 팩과 점수를 반환. */
-function matchPackByText(text){
-  const inTok=new Set(_tokens(text)); if(!inTok.size)return {packId:null,score:0,ranked:[]};
-  const ranked=Object.keys(PACKS).map(id=>{
-    const kw=packKeywords(PACKS[id]); if(!kw.length)return {id,score:0,hits:0};
-    let hits=0; const seen=new Set();
-    kw.forEach(k=>{ if(inTok.has(k)&&!seen.has(k)){ hits++; seen.add(k); } });
-    return {id,score:hits/Math.max(4,new Set(kw).size),hits};
-  }).sort((a,b)=>b.score-a.score);
-  /* 매칭 인정 = 겹친 토큰 ≥2 AND 점수 ≥0.14 (일반 동사 1~2개 우연 겹침은 신규로 흘려보냄 → 격상 유도) */
-  const top=ranked[0];
-  return {packId:(top&&top.hits>=2&&top.score>=0.14)?top.id:null, score:top?top.score:0, ranked};
-}
-/* ＋새 업무 요청 = On-Ramp 입구.
-   유형을 미리 고르게 하지 ✕ → '업무 설명'을 입력받아 유형을 인식한다(정형화 완화).
-   ① 입력이 기존 등록 유형과 매칭 → 그 유형으로 케이스 생성·실행(운영 루프).
-   ② 매칭 안 됨(신규/비정형) → "AAP 흐름 없음 → 격상" 안내 + 격상 파이프라인 자동 진입(구성 루프).
-   사용자가 인식 결과를 바꿀 수 있게(매칭 후보 칩 + 항상 '새 유형으로 격상' 선택지) 제공. */
-let _ncMenu=null;
-function closeNewCase(){ if(_ncMenu){ _ncMenu.remove(); _ncMenu=null; document.removeEventListener('mousedown',_ncOff,true); } }
-function _ncOff(ev){ if(_ncMenu&&!_ncMenu.contains(ev.target)&&!ev.target.closest('#newCaseBtn'))closeNewCase(); }
+/* ＋새 업무 요청 = 유형 선택 메뉴 표시(유형이 1개뿐이면 바로 생성) */
 function promptNewCase(anchor){
-  if(_ncMenu){ closeNewCase(); return; } /* 토글 */
-  const menu=document.createElement('div'); menu.id='newCaseMenu'; menu.className='nc-menu nc-onramp';
-  _ncMenu=menu;
-  menu.innerHTML=`
-    <div class="ncm-h">어떤 업무를 맡기시겠어요?</div>
-    <div class="ncm-sub">업무를 설명하면 AAP가 유형을 인식합니다. 흐름이 있으면 바로 실행, 없으면 격상으로 안내합니다.</div>
-    <textarea class="nc-ta" id="ncText" rows="3" placeholder="예) 신규 거래처 등록 심사를 맡기고 싶어요. 사업자·신용·제재 리스트를 확인하고 리스크를 판단해 승인 여부를 정해줘."></textarea>
-    <div class="nc-reco" id="ncReco"></div>
-    <div class="nc-acts" id="ncActs"></div>`;
+  const keys=Object.keys(PACKS);
+  if(keys.length<=1){ createCase(keys[0]); return; }
+  let menu=document.getElementById('newCaseMenu');
+  if(menu){ menu.remove(); return; } /* 토글 */
+  menu=document.createElement('div'); menu.id='newCaseMenu'; menu.className='nc-menu';
+  menu.innerHTML=`<div class="ncm-h">어떤 유형의 업무인가요?</div>`+keys.map(k=>`<button class="ncm-i" data-nc="${k}"><span class="ty-badge ${typeTok(k)}">${dcText(PACKS[k].label,'pack.label')}</span><span class="ncm-d">${(PACKS[k].workload&&PACKS[k].workload.type)||''}</span></button>`).join('');
   document.body.appendChild(menu);
   const r=(anchor||document.getElementById('newCaseBtn')).getBoundingClientRect();
-  menu.style.top=(r.bottom+6)+'px'; menu.style.left=Math.max(12,Math.min(r.left,window.innerWidth-440))+'px';
-  const ta=menu.querySelector('#ncText');
-  ta.oninput=()=>renderNcReco(ta.value);
-  renderNcReco('');
-  setTimeout(()=>{ ta.focus(); document.addEventListener('mousedown',_ncOff,true); },0);
-}
-/* 입력에 따라 인식 결과 + 액션을 실시간 갱신 */
-function renderNcReco(text){
-  if(!_ncMenu)return;
-  const reco=_ncMenu.querySelector('#ncReco'), acts=_ncMenu.querySelector('#ncActs');
-  const m=matchPackByText(text);
-  const matched=m.packId?PACKS[m.packId]:null;
-  if(!text.trim()){
-    reco.innerHTML=`<div class="nc-hint">${_ICO('search')} 업무를 입력하면 인식된 유형이 여기 표시됩니다.</div>`;
-    acts.innerHTML=`<button class="cp-btn ghost sm" id="ncPromoteEmpty">${_ICO('rocket')}새 유형으로 격상하기</button>`;
-    _ncMenu.querySelector('#ncPromoteEmpty').onclick=()=>ncGoPromote(text);
-    return;
-  }
-  if(matched){
-    reco.innerHTML=`<div class="nc-reco-h">인식된 유형</div>
-      <button class="nc-reco-i" id="ncMatched"><span class="ty-badge ${typeTok(matched.id)}">${dcText(matched.label,'pack.label')}</span><span class="ncm-d">${(matched.workload&&matched.workload.type)||''}</span><span class="nc-reco-go">이 유형으로 실행 ${_ICO('chevron-right')}</span></button>
-      <div class="nc-alt">다른 유형으로 보거나, 흐름이 없으면 ↓</div>`;
-    acts.innerHTML=`<button class="cp-btn ghost sm" id="ncPromote">${_ICO('rocket')}새 유형으로 격상하기</button>`;
-    _ncMenu.querySelector('#ncMatched').onclick=()=>{ const seed=ncSeed(text); closeNewCase(); createCase(matched.id,seed); };
-    _ncMenu.querySelector('#ncPromote').onclick=()=>ncGoPromote(text);
-  } else {
-    reco.innerHTML=`<div class="nc-noflow">${_ICO('alert-triangle')}<div><b>이 업무는 아직 AAP 흐름이 없습니다.</b><span>신규·비정형 업무로 보입니다 — 분해→구성→HITL→격상으로 운영 가능한 흐름을 만듭니다.</span></div></div>`;
-    acts.innerHTML=`<button class="cp-btn primary sm" id="ncPromote">${_ICO('rocket')}격상 파이프라인으로 진행${_ICO('arrow-right')}</button>`;
-    _ncMenu.querySelector('#ncPromote').onclick=()=>ncGoPromote(text);
-  }
-}
-/* 입력 텍스트 → 케이스 seed(제목·요청) */
-function ncSeed(text){ const t=String(text||'').trim(); if(!t)return null;
-  return { title:t.replace(/\s+/g,' ').slice(0,40), request:t.slice(0,160) }; }
-/* 격상 진입 — 파이프라인(있으면)에 업무 설명 전달, 없으면 자동저작 오버레이 폴백 */
-function ncGoPromote(text){
-  const t=String(text||'').trim();
-  closeNewCase();
-  if(window.AAP_PIPELINE&&window.AAP_PIPELINE.open){ window.AAP_PIPELINE.open(t||undefined); }
-  else if(window.AAP_AUTHORING_OPEN){ window.AAP_AUTHORING_OPEN(); }
-  else { toast('격상 파이프라인을 불러올 수 없습니다'); }
+  menu.style.top=(r.bottom+6)+'px'; menu.style.right=(window.innerWidth-r.right)+'px';
+  menu.querySelectorAll('[data-nc]').forEach(e=>e.onclick=()=>{const k=e.dataset.nc;menu.remove();createCase(k);});
+  setTimeout(()=>{const off=(ev)=>{if(!menu.contains(ev.target)){menu.remove();document.removeEventListener('mousedown',off);}};document.addEventListener('mousedown',off);},0);
 }
 
 /* ===== parallel track helper (코어 · RUN 상태 기반) ===== */

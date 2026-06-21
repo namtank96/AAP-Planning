@@ -175,11 +175,8 @@
   function host(){ /* 기존 authoring 오버레이를 파이프라인 셸로 재사용 */
     return $('authoring');
   }
-  /* open(seedText?) — 인박스 On-Ramp 가 매칭 실패한 업무 설명을 넘기면 그 텍스트로 분해 시작.
-     인자 없으면 샘플로 시작(스튜디오 '＋ 신규 격상' 직접 진입). */
-  function open(seedText){
-    const txt=(typeof seedText==='string'&&seedText.trim())?seedText.trim():SAMPLE;
-    initModel(txt); step=1;
+  function open(){
+    initModel(SAMPLE); step=1;
     const h=host(); if(!h)return;
     h.hidden=false;
     h.innerHTML=`<div class="auth-box pl-box">
