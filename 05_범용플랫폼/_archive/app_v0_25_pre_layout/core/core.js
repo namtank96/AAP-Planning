@@ -250,10 +250,8 @@ function lsCheckSchema(){
    '실행 뷰가 렌더 중인 유형' 이다(케이스 열 때 그 케이스 packId 로 로드). typeFilter=인박스 유형 필터. */
 /* projects[] = P4 프로젝트(케이스 묶음) 차원. 추가 레이어일 뿐 — 케이스의 projectId(옵셔널)로 느슨히 연결.
    projectsOn = '프로젝트별 보기' 토글(기본 OFF=현행 인박스 100% 유지). 둘 다 영속(도메인 무관). */
-/* collapse = 레이아웃 패널 접힘 상태(도메인 무관 · UI). 기본 전부 펼침(false). localStorage 영속(SCHEMA_VER 정합). */
-const APP={cases:[], projects:[], active:null, view:'inbox', pack:null, typeFilter:'all', catSel:null, projectsOn:false,
-  collapse:{nav:false, evid:false, wfpal:false, wfrun:false}, domTab:'overview'};
-function saveApp(){ lsSet('schema',SCHEMA_VER); lsSet('cases',APP.cases); lsSet('projects',APP.projects); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); lsSet('projectsOn',APP.projectsOn); lsSet('collapse',APP.collapse); lsSet('domTab',APP.domTab); }
+const APP={cases:[], projects:[], active:null, view:'inbox', pack:null, typeFilter:'all', catSel:null, projectsOn:false};
+function saveApp(){ lsSet('schema',SCHEMA_VER); lsSet('cases',APP.cases); lsSet('projects',APP.projects); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); lsSet('projectsOn',APP.projectsOn); }
 function loadApp(){
   lsCheckSchema();
   const cs=lsGet('cases',null);
@@ -265,8 +263,6 @@ function loadApp(){
   APP.pack=lsGet('pack',null);
   const tf=lsGet('typeFilter',null); if(typeof tf==='string')APP.typeFilter=tf;
   const po=lsGet('projectsOn',null); if(typeof po==='boolean')APP.projectsOn=po;
-  const cl=lsGet('collapse',null); if(cl&&typeof cl==='object'){ ['nav','evid','wfpal','wfrun'].forEach(k=>{ if(typeof cl[k]==='boolean')APP.collapse[k]=cl[k]; }); }
-  const dt=lsGet('domTab',null); if(['overview','ontology','arch'].includes(dt))APP.domTab=dt;
 }
 /* 프로젝트 헬퍼(도메인 무관) — id로 프로젝트 조회, 케이스의 projectId 정합성 폴백 */
 function projectById(id){ return APP.projects.find(p=>p&&p.id===id)||null; }
@@ -1394,32 +1390,6 @@ const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>promptNew
 /* 스튜디오 '＋ 신규 격상' → 격상 파이프라인(없으면 자동저작 오버레이) — 상단 '업무 격상' 버튼 흡수 */
 const _np=document.getElementById('newPromoteBtn');if(_np)_np.onclick=()=>{ if(window.AAP_PIPELINE)window.AAP_PIPELINE.open(); else if(window.AAP_AUTHORING_OPEN)window.AAP_AUTHORING_OPEN(); };
 const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
-
-/* =========================================================================
-   [COLLAPSE] 레이아웃 패널 접기 (좌 nav · run 근거 레일 · workflow 팔레트/Run)
-   상태는 APP.collapse 단일 소스에 영속(localStorage · SCHEMA_VER 정합). body 클래스로 CSS 구동.
-   접힘 토글이 demo.js 의 '#gnav [data-view]' 클릭을 막지 않게 — nav 는 폭만 줄고 버튼은 그대로 클릭 가능.
-   ========================================================================= */
-const _COL_CLS={nav:'nav-collapsed', evid:'evid-collapsed', wfpal:'wfpal-collapsed', wfrun:'wfrun-collapsed'};
-function applyCollapse(){
-  Object.keys(_COL_CLS).forEach(k=>document.body.classList.toggle(_COL_CLS[k], !!APP.collapse[k]));
-}
-function toggleCollapse(k){ if(!(k in APP.collapse))return; APP.collapse[k]=!APP.collapse[k]; applyCollapse(); saveApp(); }
-window.AAP_toggleCollapse=toggleCollapse;
-/* 정적/동적 버튼 공통 위임 — 팔레트·Run fold 는 매 렌더 재생성되므로 document 위임으로 안정 바인딩 */
-document.addEventListener('click',e=>{
-  const b=e.target.closest('#navToggle,#evidFold,#evidHandle,#wfPalFold,#wfPalHandle,#wfRunFold,#wfRunHandle'); if(!b)return;
-  const map={navToggle:'nav', evidFold:'evid', evidHandle:'evid', wfPalFold:'wfpal', wfPalHandle:'wfpal', wfRunFold:'wfrun', wfRunHandle:'wfrun'};
-  e.preventDefault(); toggleCollapse(map[b.id]);
-});
-
-/* [DOMAIN-TABS] 도메인 뷰 탭 전환(개요/온톨로지/아키텍처) — 세로 스택 → 1뷰포트 탭. 상태 영속. */
-function applyDomTab(){
-  document.querySelectorAll('#domTabs .dom-tab').forEach(t=>t.classList.toggle('on',t.dataset.domtab===APP.domTab));
-  document.querySelectorAll('.dom-pane').forEach(p=>p.classList.toggle('on',p.dataset.dompane===APP.domTab));
-}
-document.querySelectorAll('#domTabs .dom-tab').forEach(t=>t.onclick=()=>{ APP.domTab=t.dataset.domtab; applyDomTab(); saveApp(); });
-
 const TIP=document.getElementById('tip');
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(t){TIP.textContent=t.getAttribute('data-tip');TIP.style.display='block';const r=t.getBoundingClientRect();TIP.style.left=Math.min(r.left,window.innerWidth-320)+'px';let tp=r.bottom+8;if(tp+TIP.offsetHeight>window.innerHeight)tp=r.top-TIP.offsetHeight-8;TIP.style.top=Math.max(8,tp)+'px';}else if(!e.target.closest('#tip'))TIP.style.display='none';});
 
@@ -1429,7 +1399,6 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
   const q=new URLSearchParams(location.search);
   if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
   loadApp();
-  applyCollapse(); applyDomTab();  /* 레이아웃 접힘·도메인 탭 영속 복원 */
   const keys=Object.keys(PACKS);
   /* 유형 토큰 안정 배정(등록 순서) — 카탈로그·인박스·필터 색 일관 */
   keys.forEach(typeTok);

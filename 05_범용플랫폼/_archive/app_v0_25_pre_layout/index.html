@@ -10,7 +10,6 @@
 
 <!-- ===== TOP BAR (platform shell · 도메인 무관) ===== -->
 <div class="topbar">
-  <button class="nav-toggle" id="navToggle" data-ic="menu" data-tip="좌측 메뉴 접기/펼치기"></button>
   <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>운영 콘솔 · 통합 인박스</span></div>
   <div class="sp"></div>
   <span class="case-title" id="caseTitle"></span>
@@ -22,16 +21,16 @@
 <!-- ===== LEFT GLOBAL NAV (그룹형 IA · 운영/스튜디오/관리 · 도메인 무관) ===== -->
 <nav class="gnav" id="gnav">
   <div class="gnav-grp">운영</div>
-  <button class="gnav-i" data-view="inbox" data-label="인박스"><span class="gn-ic" data-ic="inbox"></span><span class="gn-l">인박스</span><span class="gn-c" id="navCnt"></span></button>
+  <button class="gnav-i" data-view="inbox"><span class="gn-ic" data-ic="inbox"></span><span class="gn-l">인박스</span><span class="gn-c" id="navCnt"></span></button>
   <div class="gnav-grp">스튜디오</div>
-  <button class="gnav-i" data-view="domain" data-label="도메인 팩"><span class="gn-ic" data-ic="boxes"></span><span class="gn-l">도메인 팩</span></button>
-  <button class="gnav-i" data-view="workflow" data-label="워크플로우"><span class="gn-ic" data-ic="workflow"></span><span class="gn-l">워크플로우</span></button>
-  <button class="gnav-i" data-view="assets" data-label="자산"><span class="gn-ic" data-ic="layers"></span><span class="gn-l">자산</span></button>
+  <button class="gnav-i" data-view="domain"><span class="gn-ic" data-ic="boxes"></span><span class="gn-l">도메인 팩</span></button>
+  <button class="gnav-i" data-view="workflow"><span class="gn-ic" data-ic="workflow"></span><span class="gn-l">워크플로우</span></button>
+  <button class="gnav-i" data-view="assets"><span class="gn-ic" data-ic="layers"></span><span class="gn-l">자산</span></button>
   <div class="gnav-grp">관리</div>
-  <button class="gnav-i" data-view="logs" data-label="로그 · 트레이스"><span class="gn-ic" data-ic="git-branch"></span><span class="gn-l">로그 · 트레이스</span></button>
-  <button class="gnav-i" data-view="govern" data-label="거버넌스 · 정책"><span class="gn-ic" data-ic="shield"></span><span class="gn-l">거버넌스 · 정책</span></button>
+  <button class="gnav-i" data-view="logs"><span class="gn-ic" data-ic="git-branch"></span><span class="gn-l">로그 · 트레이스</span></button>
+  <button class="gnav-i" data-view="govern"><span class="gn-ic" data-ic="shield"></span><span class="gn-l">거버넌스 · 정책</span></button>
   <div class="gnav-sp"></div>
-  <button class="gnav-i demo-nav" data-view="demo" data-label="시연"><span class="gn-ic" data-ic="presentation"></span><span class="gn-l">시연</span></button>
+  <button class="gnav-i demo-nav" data-view="demo"><span class="gn-ic" data-ic="presentation"></span><span class="gn-l">시연</span></button>
 </nav>
 
 <div class="views">
@@ -51,34 +50,17 @@
   <!-- ============ STUDIO VIEW (스튜디오 = 워크플로우·도메인 팩, 구 도메인) — core가 PACK 데이터로 렌더 ============ -->
   <!-- ============ DOMAIN PACK VIEW (도메인 팩 = 업무 유형 패키지) ============ -->
   <section class="view" data-view="domain" hidden>
-    <div class="dom-shell">
-      <!-- 카탈로그(유형 선택) 상단 고정 -->
-      <div class="dom-top">
-        <p class="sec-title" style="margin-top:0">도메인 팩</p>
-        <div class="catalog" id="catGrid"></div>
-      </div>
-      <!-- 하단 탭: 개요 / 온톨로지 / 아키텍처 (세로 스택 → 탭 전환으로 1뷰포트화) -->
-      <div class="dom-tabsbar" id="domTabs">
-        <button class="dom-tab on" data-domtab="overview">개요</button>
-        <button class="dom-tab" data-domtab="ontology">온톨로지 (L4)</button>
-        <button class="dom-tab" data-domtab="arch">아키텍처 정합</button>
-      </div>
-      <div class="dom-body">
-        <div class="dom-pane on" data-dompane="overview">
-          <p class="sec-title" id="catPrevTitle" style="margin-top:0">선택 유형 개요</p>
-          <p class="sec-title" style="margin-top:14px">업무 이해</p>
-          <div class="wa" id="waBox"></div>
-        </div>
-        <div class="dom-pane" data-dompane="ontology">
-          <p class="sec-title" style="margin-top:0">온톨로지 · 지식·시맨틱 (L4)</p>
-          <div class="onto" id="ontologyBox"></div>
-        </div>
-        <div class="dom-pane" data-dompane="arch">
-          <p class="sec-title" style="margin-top:0">아키텍처 정합 · Operating Loop · 8계층 · Trust</p>
-          <div class="archc" id="archMap"></div>
-        </div>
-      </div>
-    </div>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title" style="margin-top:0">도메인 팩</p>
+      <div class="catalog" id="catGrid"></div>
+      <p class="sec-title" id="catPrevTitle" style="margin-top:22px">선택 유형 개요</p>
+      <p class="sec-title" style="margin-top:14px">업무 이해</p>
+      <div class="wa" id="waBox"></div>
+      <p class="sec-title" style="margin-top:20px">온톨로지 · 지식·시맨틱 (L4)</p>
+      <div class="onto" id="ontologyBox"></div>
+      <p class="sec-title" style="margin-top:20px">아키텍처 정합 · Operating Loop · 8계층 · Trust</p>
+      <div class="archc" id="archMap"></div>
+    </div></div>
   </section>
 
   <!-- ============ WORKFLOW VIEW (워크플로우 = 풀 3패널 빌더: 팔레트·캔버스·Run/디버거) ============ -->
@@ -88,9 +70,6 @@
       <aside class="wfb-palette" id="wfPalette"></aside>
       <!-- ── 중: 캔버스 (8단계 캐논 레인 노드 그래프 + 경량 편집 · wfeditor.renderEditor) ── -->
       <div class="wfb-canvas">
-        <!-- 접힌 팔레트/Run 재오픈 핸들(캔버스 양 끝) -->
-        <button class="wfb-handle pal" id="wfPalHandle" data-tip="팔레트 펼치기"><span class="ph-i" data-ic="panel-left-open"></span><span class="ph-lab">팔레트</span></button>
-        <button class="wfb-handle run" id="wfRunHandle" data-tip="Run 펼치기"><span class="ph-i" data-ic="panel-right-open"></span><span class="ph-lab">Run</span></button>
         <div class="wfb-canvas-top">
           <div>
             <p class="sec-title" style="margin:0">워크플로우 빌더</p>
@@ -139,14 +118,11 @@
     <div class="run-main">
       <!-- 메인 = 업무가 돌아가는 도메인 화면 (PACK.surface / surfaceSpec) -->
       <section class="run-surface">
-        <button class="panel-fold" id="evidFold" data-ic="panel-right-close" data-tip="근거 레일 접기"></button>
         <div class="con-head" id="surfHead"></div>
         <div class="con-body" id="surfBody"></div>
         <!-- HITL / 결과 / 미리보기 = 업무 화면 위 오버레이 -->
         <div class="cmodal" id="cmodal"></div>
       </section>
-      <!-- 근거 레일 접힘 시 재오픈 핸들(‹) -->
-      <button class="panel-handle evid-handle" id="evidHandle" data-tip="근거 레일 펼치기"><span class="ph-i" data-ic="panel-right-open"></span><span class="ph-lab">근거</span></button>
       <!-- 우측 얇은 레일 = AAP 작동 '근거'(메인 아님). 단계별 구성요소가 무슨 근거로 무엇을 했나 -->
       <aside class="run-evid" id="runEvid">
         <div class="re-head">AAP 작동 근거 <span class="help" data-tip="이 단계를 AAP가 어떤 구성요소(Agent·Module·기존솔루션·Connector·Policy)로, 어떤 근거로 처리했는지 한 줄씩 보여줍니다. ▸로 펼치면 관여 계층·세부가 보입니다. 메인 업무 화면이 주인공이고, 이건 '왜 그렇게 돌아갔는지'의 근거입니다.">?</span></div>

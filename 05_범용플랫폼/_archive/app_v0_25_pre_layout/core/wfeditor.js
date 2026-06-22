@@ -301,7 +301,6 @@
       return `<div class="wfp-grp">${head}${body}</div>`;
     };
     host.innerHTML=`
-      <button class="panel-fold" id="wfPalFold" data-tip="팔레트 접기 — 캔버스 확대">${ICO('panel-left-close')}</button>
       <div class="wfp-head">${ICO('layers')}블록 팔레트</div>
       <div class="wfp-target">추가 대상 단계 · <b>${cur?esc(cur.label):'—'}</b><span class="wfp-target-sub">캔버스에서 단계를 클릭해 바꿉니다</span></div>
       <div class="wfp-legend"><span class="wfp-lg det">Action = 결정론</span><span class="wfp-lg llm">Use LLM = 비결정론(온톨로지 경유)</span></div>
@@ -358,7 +357,6 @@
       </div>`).join('');
     const histHtml=_runHist.length?_runHist.slice(-4).reverse().map(h=>`<div class="wfr-hist-i ${h.ok?'ok':'block'}">${ICO(h.ok?'check-circle':'alert-triangle')}${h.ts} · ${h.blocks}블록 · LLM ${h.llm}/결정론 ${h.det} · HITL ${h.gates}</div>`).join(''):'<div class="wfr-empty">아직 실행 기록 없음</div>';
     host.innerHTML=`
-      <button class="panel-fold" id="wfRunFold" data-tip="Run 접기 — 캔버스 확대">${ICO('panel-right-close')}</button>
       <div class="wfr-head">${ICO('play')}Run · 디버거<span class="wfr-sub">결정론 dry-run · 실제 LLM은 Phase3</span></div>
       <div class="wfr-input">
         <label>테스트 입력</label>
