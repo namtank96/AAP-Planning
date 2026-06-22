@@ -69,6 +69,34 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### 신규 명세 — 계약 관리 (B) 결정 설계 P1 (`aap_pack_contract_decision_v0_1.md`) (260622, aap-lead) 〔표준·정의〕
+> 배경: (B) 결정 런타임의 **첫 증명 도메인 선정**. 유저 후보 비교(계약관리/구매조달/경비지출/여신심사) 후 **계약 관리 커밋**(AskUserQuestion). 기준 = formal·포맷화·AI 실수요·**재사용 골격("규정 기반 심사·승인" 아키타입)**. voc(인바운드 트리아지)에 이은 2번째 재사용 아키타입.
+> 갭 재확인: voc 팩 판정부("보상 정책 §3-2"·한도·유형 신뢰도 0.88)도 전부 **하드코딩 문자열** — `decide()` 엔진 아님. → 계약 팩이 첫 결정론 판정 인스턴스.
+- **설계 골자**: ①케이스=계약 검토·승인 건(신규/갱신/변경) ②`caseModel` 14슬롯(유형·금액·기간·자동갱신·조항목록·배상한도·위약벌·준거법·제재매칭…, extract=manual/rule/doc/llm) ③`knowledge` 3종: lookupTables(requiredClausesByType·approvalLineByAmount·stampDutyByAmount·riskClausePatterns)·decisionTables(route: 제재→반려/필수누락·고위험·표준편차→법무검토/소액무위험→자동승인)·thresholds(renewalNotice D-30·liabilityRatio·amountAuthority) ④`decide()→verdicts[9]`(requiredClauses·templateDeviation·riskClauses·approvalLine·renewal·stampDuty·liability·sanction·route, 각 basis 추적성, route=2차 집계 판정) ⑤**명시지/암묵지 분리=데모 핵심**(필수조항·편차·결재선·만기·인지세·제재=AAP 자동 / 독소조항 실질해석·보완·체결승인=HITL) ⑥work 8단계 `@verdict:<id>.<path>` 바인딩(정적 문자열→데이터 구동) ⑦seeds mock 4건(자동승인/법무검토/반려/만기임박 — 입력만으로 4결론=theater 아님) ⑧§9 검증 시나리오(조항 추가→route 사유 변동) ⑨재사용표(knowledge·slots만 교체→구매·경비로 전이, decide 골격 유지).
+- **미구현**: **P1 설계 문서만**(코드 0). 구현=`app/packs/contract.js`(데이터) + 코어 `decide()` 훅·`@verdict` 해석·검증 러너. P1 범위=LLM 0·OCR 0·mock 데이터·§9 통과. P2=llm/RAG seam 1종, P3=계약서 OCR 1종.
+- **표준화 agent 과제**: `decide()`·verdict 스키마(`{id,inputs,output,basis,loop,gate}`)·`@verdict` 문법을 `aap_domain_pack_spec`에 정식 반영(`aap_decision_runtime_spec_v0_1.md` §11 기반). 〔표준·정의 후속〕
+
+### 신규 명세 — 결정 런타임 (B): 명시지 기반 결정론 실행 설계 v0.1 (`aap_decision_runtime_spec_v0_1.md`) (260622, aap-lead) 〔표준·정의〕
+> 배경: 유저 지적 — "'새 업무 요청'(`pipeline.js` 격상 파이프라인)이 LLM 추론이 아니라 회의 흐름과 같은 **키워드 사전→캐논 골격(theater)**이다. 암묵지는 아직 어렵다. 한 도메인의 명시지(업무 프로세스)를 넣어 처리하는 방향이 맞나?" → 확인 결과 정확(`proposeBreakdown`은 `KW` 사전 `includes()` 매칭, 코드 자체가 'Phase 3에서 LLM 교체' 명시). **유저 확정(AskUserQuestion): 도메인 커밋 전 "먼저 설계만".**
+> **핵심 분리 — (A) 저작 vs (B) 런타임**: (A)"임의 텍스트→Pack 자동 생성"은 LLM 붙여도 범위 무한·검증 불가 → **비전/티저로 유지**. 증명 대상은 (B) "한 케이스를 명시지 규칙으로 실제 판정·처리, 매 판정이 규칙+데이터로 추적·재현". **LLM 없이 가능**(손해사정 `compute()`가 레퍼런스).
+> **갭**: 현 Domain Pack=서사·UI 데이터만, `ops[].out`=하드코딩 문자열, 판정 엔진(손해사정 `compute()`)은 스키마 밖. → **결정 레이어 1개 추가**가 핵심.
+- **명세 골자**: ①"진짜로 돈다" 수용 3조건(데이터 구동·추적성·재현성) + §9 코드 검증 테스트로 theater 판별 ②L4 Case Model(타입 슬롯=규칙 입력 변수) + **CQ는 범용 엔진 ✕ 저작 검수 체크리스트** ③Knowledge Base 명시지 3종(결정 테이블·기준표·임계 규칙) + `decide(caseData,knowledge)→verdicts[]` 순수 함수(각 verdict에 `basis` 추적성 강제) ④ops `@verdict:<id>.<path>` 바인딩으로 정적 문자열→데이터 구동 ⑤LLM seam **3곳만**(추출·RAG·초안, 전부 판정 앞단·HITL 뒤, **판정엔 LLM 금지**) ⑥OCR/STT 유입 seam=mock 먼저·1종씩 swap(선결조건 ✕) ⑦HITL=verdict 소비(명시지 자동화 ↔ 암묵지 사람결정 분리).
+- **Pack 스키마 확장(§11)**: `aap_domain_pack_spec_v0_1.md` §1에 `caseModel`·`knowledge`·`decide`·`seeds[].input` 추가(하위호환 — 기존 meeting·voc는 정적 ops로 그대로, 결정 레이어는 (B) 원하는 팩만). 코어 보장 추가=`decide()` 호출·verdict 캐시·`@verdict` 해석·trace `basis` 기록.
+- **단계(도메인 커밋 후)**: P1 한 도메인 (B) 증명(caseModel·knowledge·decide 인코딩 → §9 통과, LLM 0·mock) → P2 LLM seam 1종 → P3 유입 seam 1종. 후보=손해사정(compute() 재사용 최단)/내부통제/제조 품질 quality 팩.
+- **표준화 agent 과제**: 본 §11 확장을 `aap_domain_pack_spec`에 정식 반영(결정 레이어 §11~ 신설), `@verdict` 참조 문법·verdict 스키마(`{id,inputs,output,basis,loop,gate}`) 표준화, §9 검증 러너를 도메인 무관 코어로 설계. 〔표준·정의 후속〕
+- **미구현**: 본 건은 **설계 문서만**(코드 변경 0). app/ 구현(코어 `decide` 훅·`@verdict` 해석·검증 러너)은 도메인 커밋 후 P1.
+
+### app/ 구현체 — 디자인 v0.21: 신규 surface 4종 시각 폴리시 (온톨로지 L4 · 결정론/LLM 배지 · 3패널 빌더 · 운영 콘솔 Eval/RBAC/KPI) (260622, aap-design) 〔기획·UX〕
+> 배경: 최근 기능 줄기(온톨로지 L4·결정론/LLM 블록·워크플로우 3패널 빌더·운영 콘솔 Eval/RBAC)를 빠르게 쌓아 시각이 거칠던 신규 surface를 디자인 가이드(토큰·밀도·타입 시각화)로 폴리시. **직전 v0.23 govern 항목 '남긴 후속 ④ aap-design 시각'을 소화**(Eval 게이지·RBAC hover·Agent Ops 톤·배포 칩 위계). **★시각만 — 함수·DOM id·뷰 키·data-* 불변(platform.css 끝 v0.21 블록 1곳에 집약, 마크업/JS 무수정).**
+> **백업=셸(Bash/PowerShell) cp 전면 차단 → 물리 백업 불가. 변경 파일=`app/core/platform.css`(끝에 v0.21 블록 추가)만. git 복원 `git checkout d48dd6c -- "05_범용플랫폼/app/core/platform.css"`.** 임시 파일 0.
+- **① 온톨로지 L4 섹션**(`.onto-*`) — 카드 1스타일 정합(라운드 12·옅은 그림자), 섹션 헤더 색점(객체/관계=teal·Action=green)+하단 구분선, 객체는 객체명+속성칩 1행씩 dashed 분리(위계), 관계 `em`을 aap-soft 칩으로(A —관계→ B 읽힘), Action 자동/사람확인 배지에 색점(green=자동·amber=사람확인, §5.5 게이트 규칙) → "LLM이 온톨로지 통해 접근"이 구조로 읽히게(전시 캡션 추가 ✕).
+- **② 결정론/LLM 배지**(`.ev-kind`+`.wfp-kind`/`.wfp-lg`/`.wfr-blk-kind`/`.wfr-st`) — 같은 의미 배지 전반에 작은 색점(결정론=slate 중립·LLM=violet) 일관. 제어(control) 블록은 det 취급으로 slate 점.
+- **③ 워크플로우 3패널 빌더**(`.wf-builder`/`.wfp-*`/`.wfr-*`/`.plg-task.sel`, Palantir AIP Logic 톤) — 좌 팔레트·우 Run = surf 배경+inset 경계선, 중 캔버스=흰 작업면(3패널 위계), 패널 헤더 하단 구분선 통일, 팔레트 타입 그룹 좌측 3px 타입색 띠(§5.9 부품 종류 신호)+dot 확대, 캔버스 선택 단계 노드 글로우(stroke 2.4)+라벨 강조, Run 통계 칩 색점·게이트 단계 amber 좌측 그라데이션·dry-run 버튼 글로우/disabled 위계.
+- **④ 운영 콘솔**(`.eval-*`/`.evc-*`/`.rbac-*`/`.rb-*`/`.ao-*`/`.ops-sub`, Datadog 톤) — Eval 종합점수 좌측 상태색 4px 띠, 메트릭/케이스 행 hover 들림+종합 점수 셀 상태색 배경(스캔성), RBAC 허용=green 굵은 체크(stroke 2.4)·차단=회색 dash·셀 hover, Agent Ops KPI hover 들림+값 letter-spacing, 운영 서브헤더 좌측 teal 마커.
+- **전반** — 카드 1스타일·버튼 위계·상태색 통일. **신규 hex 0**(5타입 색·상태 4색·다크 엔진룸 토큰만), **아이콘 추가 0**(기존 icons.js 세트 충분), 이모지 0. file:// 동작·외부 라이브러리 0. `color-mix` 등 신기능 미사용(보수적).
+- **검증(헤드리스·node --check·IDE 진단 권한 차단 → 정적·코드경로 검증, 브라우저 런타임 미실측 명시)**: (a)~(d) 신규 셀렉터가 전부 실제 렌더 마크업 클래스와 1:1 매칭 확인(core.js renderOntology/renderRight/renderGovern, wfeditor.js renderPalette/renderRun) — `.evc-c.sc`+tone, `.rb-cell.ok/.no`, `.wfp-grp-h.tA..ctl`, `.wfr-st.llm/det/gate` 등 출력 클래스 대조. (e) 이모지 잔존 0(내 v0.21 블록 grep=0; 기존 `content:"✓"`·코멘트 `⚑`는 사전 존재·무회귀 비대상). (f) JS 무수정 → 함수·ID·뷰키·data-* 불변 → 전 뷰/기능·P5 격리·시연 무회귀. **후속자 file:// 실측 필요**: ⓐ도메인 뷰 온톨로지 섹션 ⓑ실행 근거 레일 결정론/LLM 배지 ⓒ워크플로우 빌더 3패널 균형·팔레트 타입 띠·캔버스 선택·Run 디버거 ⓓ운영 콘솔 Eval/RBAC/KPI ⓔ전 뷰 JS 에러 0. 〔데모 한정 검증〕
+- **남긴 후속**: ① 다크 엔진룸 캔버스(`.plg-*`)의 게이트/선택 노드 SVG는 currentColor 미상속이라 색 하드코딩 유지(가이드 §6.5.4 예외 그대로) — 향후 SVG도 토큰화하려면 클래스별 직접 토큰 정리 필요. ② Eval 게이지 진입 모션(현 width 트랜지션만 — 등장 애니메이션은 보류). ③ 디자인 가이드에 §6.6 '워크플로우 빌더 3패널' 정식 절 신설(현 v0.21 changelog로만 기록). 〔aap-design 후속〕
+
 ### app/ 구현체 — govern 뷰를 운영 콘솔로 확장 (Eval + RBAC + Agent Ops · 배포 연결) v0.23 (260622, aap-platform) 〔기획·UX〕
 > 배경: 벤치마크([[reference-agentic-platform-benchmark]] SK AX **Agent Ops**[성능·품질·비용·HITL·감사 한 화면] + 메가존 **RBAC·ISO42001**)대로 '관리(govern)' 영역을 **운영 콘솔로 실체화**. 직전까지 govern 뷰는 `govStrip`(거버넌스4: Policy·Run Trace·Evaluation·Skill Library) 카드만 표시 → Eval(평가 실데이터)·RBAC(권한 매트릭스)·Agent Ops 지표(성능·비용·품질)를 섹션으로 증축. **★전부 결정론 도출 — 새 저장소 0**(`APP.cases[].trace` + 팩 work 정의 집계). 코어 도메인 무관(팩별 분기 0줄).
 > **백업=셸(Bash/PowerShell) cp·복사·삭제 및 node --check·IDE getDiagnostics 전면 차단 → 물리 백업·런타임 검증 불가. `_archive/app_v0_23_pre_opsconsole/_BACKUP_NOTE.md`(변경 파일 목록+노트). git 복원 `git checkout b9cc20d -- "05_범용플랫폼/app/"`.** 임시 파일 생성 0.

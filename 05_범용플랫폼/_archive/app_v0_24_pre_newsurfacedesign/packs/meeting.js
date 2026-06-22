@@ -57,11 +57,9 @@
       <div class="row"><div style="flex:1"><div class="nm">외부 공유 기준 정리</div><div class="why">담당 · 보안</div></div><span class="tag warn">6·30</span></div></div>`},
   };
 
-  /* ===== FLOW — 회의 도메인 단계 그래프 (Pack Contract v2 · kind/loopPhase/gate/live) =====
-     2a: 현행 8단계를 그대로 flow 로 선언(무회귀). 라벨·ops·순서 불변, 엔진 구동 메타만 추가.
-     legacy 플래그(actor·hitl·meeting·doneModal)는 wfeditor 호환을 위해 병행 유지. */
-  const FLOW=[
-   {id:'request',label:'요청 접수',role:'사람 요청',actor:'human',kind:'input',loopPhase:'Data',
+  /* ===== WORK — 8단계 (표준 런타임 문법에 매핑 · ops/detail = 회의 내용) ===== */
+  const WORK=[
+   {id:'request',label:'요청 접수',role:'사람 요청',actor:'human',
     explain:`회의 요청은 추론 루프의 시작입니다. <b>L1 경험·접근</b>(챗 UI)이 담당자의 한 줄 요청을 접수하고, <b>L4 지식·시맨틱</b>이 핵심 신호를 추출해 아직 정해지지 않은 정보를 식별합니다.`,
     ops:[{g:0,feed:'회의 요청 수신',out:'"다음주 AAP 고객사 킥오프 잡아줘"',L:'L1',comp:'코파일럿·챗 UI'},
      {g:1,feed:'핵심 신호 추출',out:'다음주·고객사·킥오프·관련 부서·제안 자료',L:'L4',comp:'온톨로지·시맨틱',
@@ -69,7 +67,7 @@
      {g:2,feed:'정해진 것/빈 것 구분',out:'참석자·일시·공유 승인 미정',L:'L4',comp:'컨텍스트 조합·근거',
       detail:odTable('미정 항목',[['참석자','미정','a'],['일시','미정','a'],['공유 자료 승인','미정','a'],['회의 목적','추정됨']])}]},
 
-   {id:'understand',label:'업무 이해',role:'AAP 분석',actor:'aap',kind:'auto',loopPhase:'Semantic',
+   {id:'understand',label:'업무 이해',role:'AAP 분석',actor:'aap',
     explain:`업무 이해는 추론 루프 <b>Semantic</b> 단계입니다. <b>L4</b>가 "킥오프"를 업무 유형으로 해석해 목적·산출물을 정의하고, <b>L7</b>이 외부 공유 정책을 답니다. AAP가 자율 수행합니다.`,
     ops:[{g:0,feed:'회의 유형 분류',out:'킥오프 회의',L:'L4',comp:'온톨로지·시맨틱',
       detail:odTable('유형 후보 (신뢰도)',[['킥오프 회의','0.92','g'],['정기 점검','0.05'],['제안 발표','0.03']])},
@@ -77,7 +75,7 @@
      {g:2,feed:'외부 공유 정책 확인',out:'외부 고객 포함 → 공유 승인 필요',L:'L7',comp:'정책 관리·통제',
       detail:odTable('정책 점검',[['외부 참석','감지됨','a'],['자료 외부 공유','승인 필요','a'],['적용 정책','외부 공유 정책 v2']])}]},
 
-   {id:'compose',label:'실행 구조 구성',role:'AAP 구성',actor:'aap',kind:'auto',loopPhase:'Reasoning',showCompose:1,
+   {id:'compose',label:'실행 구조 구성',role:'AAP 구성',actor:'aap',
     explain:`핵심 단계입니다. AAP는 Agent를 많이 띄우는 게 아니라, 업무를 작업으로 분해하고 <b>L2 설계·개발</b>·<b>L3 코어</b>에서 필요한 <b>Agent·모듈·기존 솔루션·Connector·정책</b>을 골라 운영 가능한 실행 구조로 조합합니다.`,
     ops:[{g:0,feed:'작업 분해',out:'참석자·일정·자료·안건·회의실 작업 그래프',L:'L2',comp:'설계·개발 환경',
       detail:odTable('작업 그래프 (5)',[['T1 참석자',''],['T2 일정·회의실',''],['T3 자료 수집',''],['T4 안건',''],['T5 반영·발송','']])},
@@ -87,15 +85,14 @@
      {g:3,feed:'누락·리스크 점검',out:'외부 초대·공유 리스크 표시',L:'L6',comp:'품질·근거 평가',asset:1,badge:'Antbot',
       detail:odTable('리스크 (Antbot)',[['외부 초대','검토 필요','a'],['자료 마스킹','1건','a'],['누락 Agent','없음','g']])}]},
 
-   {id:'approve',label:'계획 승인',role:'사람 확인 ①',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
-    gate:{label:'계획 승인',decisions:[{key:'yes',label:'승인',toast:'승인 · 다음 단계로 진행합니다'},{key:'no',label:'외부 제외',toast:'외부 고객 제외하고 진행'}]},
+   {id:'approve',label:'계획 승인',role:'사람 확인 ①',actor:'hitl',gate:1,hitl:1,
     explain:`<b>L3 런타임 게이트</b>가 실행 전 책임 지점을 멈춥니다. AAP가 계획안과 회의 시각 후보를 제시하고, 외부 초대·시각은 <b>사람이 결정</b>합니다. (★ HITL ①)`,
     ops:[{g:0,feed:'계획안 제시',out:'Agent·데이터·참석자·시각 후보 요약',L:'L1',comp:'코파일럿·챗 UI'},
      {g:1,feed:'회의 시각 후보 산출',out:'후보 3안 · 충돌 0',L:'L3',comp:'코어·실행 엔진',micro:['교집합','회의실 가용성'],
       detail:odTable('시각 후보 (가용)',[['6/24 14:00','7/7','g'],['6/25 10:00','6/7'],['6/26 15:00','7/7','g']])},
      {g:2,feed:'검토 게이트 보류',out:'계획 승인·시각 선택 담당자 전달',L:'L3',comp:'HITL 런타임 게이트'}]},
 
-   {id:'prepare',label:'준비 실행',role:'AAP 실행',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Action',
+   {id:'prepare',label:'준비 실행',role:'AAP 실행',actor:'aap',doneModal:1,
     explain:`승인된 계획대로 AAP가 Agent들을 자율 가동합니다. <b>L5</b>가 자료를 <b>병렬</b> 수집·OCR하고(<span class="v">AI:ON-U</span>), <b>L3 코어</b>가 참석자·일정·안건을 처리하며 <b>L7·L8</b>이 분류·반영합니다.`,
     ops:[{g:0,feed:'참석자 확정',out:'필수 5 · 외부 1',L:'L3',comp:'코어·실행 엔진'},
      {g:0,feed:'자료 수집·OCR',out:'메일 14 · 문서 6 · 정규화',L:'L5',comp:'연결·수집',asset:1,badge:'AI:ON-U',micro:['메일·문서함 커넥터'],
@@ -107,22 +104,21 @@
      {g:2,feed:'캘린더·폴더·템플릿 반영',out:'CAL-3391 · 폴더 · 템플릿',L:'L8',comp:'스토리지·DB',micro:['calendar.create()','docs.folder()'],
       detail:odTable('시스템 반영',[['캘린더','CAL-3391','g'],['회의실','ROOM-552','g'],['자료 폴더','생성','g'],['회의록 템플릿','생성','g']])}]},
 
-   {id:'meeting',label:'회의 진행',role:'사람 확인 ②',actor:'hitl',meeting:1,kind:'gate',loopPhase:'Reasoning',live:1,
+   {id:'meeting',label:'회의 진행',role:'사람 확인 ②',actor:'hitl',gate:1,meeting:1,
     explain:`회의가 진행됩니다. 담당자가 '시작/종료'를 직접 알려 실시간 Agent의 가동 시점을 통제합니다. <b>L5</b>가 발언을 수집하고 <b>L4·L3</b>가 결정·할 일을 실시간 정리합니다. (★ HITL ②)`,
     ops:[{g:0,feed:'발언·채팅 수집(STT)',out:'발언 23건',L:'L5',comp:'연결·수집',micro:['녹취·STT']},
      {g:1,feed:'결정·이슈 의미화',out:'결정 3 · 이슈 2',L:'L4',comp:'온톨로지·시맨틱',
       detail:odTable('실시간 추출',[['결정','3건','g'],['이슈','2건','a'],['할 일 후보','3건']])},
      {g:2,feed:'회의록 실시간 정리',out:'결정·할 일 후보 추출',L:'L3',comp:'코어·실행 엔진',micro:['결정/의견 구분','액션 추출']}]},
 
-   {id:'commit',label:'최종 승인',role:'사람 확인 ③',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
-    gate:{label:'최종 승인',decisions:[{key:'yes',label:'승인',toast:'승인 · 다음 단계로 진행합니다'},{key:'no',label:'수정 요청',toast:'수정 요청'}]},
+   {id:'commit',label:'최종 승인',role:'사람 확인 ③',actor:'hitl',gate:1,hitl:1,
     explain:`외부로 나가는 마지막 행동 직전, <b>L7</b>이 수신자·민감정보를 점검하고 <b>L3 런타임 게이트</b>가 발송·기록을 멈춰 담당자 최종 확인을 받습니다. (★ HITL ③)`,
     ops:[{g:0,feed:'최종 산출물 취합',out:'회의록 · 액션아이템 · 후속',L:'L3',comp:'코어·실행 엔진'},
      {g:1,feed:'발송안·리스크 표시',out:'수신자·채널·민감정보 점검 통과',L:'L7',comp:'정책 관리·통제',
       detail:odTable('발송 점검',[['수신자','6명','g'],['외부 DX팀장','포함','a'],['민감정보','0건','g'],['마스킹 누락','없음','g']])},
      {g:2,feed:'발송 게이트 보류',out:'외부 발송·KMS 기록 승인 대기',L:'L3',comp:'HITL 런타임 게이트'}]},
 
-   {id:'share',label:'공유·기록',role:'AAP 마무리',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Learning',
+   {id:'share',label:'공유·기록',role:'AAP 마무리',actor:'aap',doneModal:1,
     explain:`승인 후 AAP가 결과를 <b>병렬</b> 전달·기록하고, 이번 패턴을 <b>L7 Self-Improving</b>으로 학습 자산화해 다음 회의 정확도를 높입니다. (추론 루프 <b>Learning</b>)`,
     ops:[{g:0,feed:'채널별 발송',out:'메일·메신저 발송',L:'L3',comp:'코어·실행 엔진',micro:['mail.send()'],
       detail:odTable('발송 결과',[['메일','6명 발송','g'],['메신저','3명 발송','g'],['실패','0','g']])},
@@ -323,9 +319,8 @@
 
   (window.AAP_PACKS=window.AAP_PACKS||{}).meeting={
     id:'meeting', label:'회의',
-    times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
+    times:TIMES, products:PRODUCTS, work:WORK, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
-    io:{ inputs:[], editable:[], connectors:[] },   /* Pack Contract v2 · 2a 슬롯 예약(실동작 2c) */
     stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',meeting:'Reasoning',commit:'Decision',share:'Learning'},
     extExcluded:(S)=>S.decisions['approve']==='no',
     surfaceSpec:SS,

@@ -38,23 +38,22 @@
       <div class="row"><div style="flex:1"><div class="nm">프로모션 종료 고지 룰 개선</div><div class="why">반복 VOC 예방</div></div><span class="tag warn">학습</span></div></div>`},
   };
 
-  /* FLOW — VOC 도메인 단계 그래프 (Pack Contract v2 · 2a 무회귀 = 현행 7단계 그대로) */
-  const FLOW=[
-   {id:'request',label:'문의 접수',role:'고객 문의',actor:'human',kind:'input',loopPhase:'Data',
+  const WORK=[
+   {id:'request',label:'문의 접수',role:'고객 문의',actor:'human',
     explain:`VOC 처리는 추론 루프의 시작입니다. <b>L1 경험·접근</b>(상담 채널)이 고객 불만을 접수하고, <b>L4 지식·시맨틱</b>이 핵심 신호(불만 대상·요구)를 추출합니다.`,
     ops:[{g:0,feed:'고객 불만 수신',out:'"속도도 느린데 요금까지 과다 청구됐어요"',L:'L1',comp:'상담 채널·챗 UI'},
      {g:1,feed:'핵심 신호 추출',out:'속도 저하 · 요금 과다 · 보상 요구',L:'L4',comp:'온톨로지·시맨틱',
       detail:odTable('추출된 신호',[['대상','데이터 속도·요금'],['감정','불만/실망'],['요구','원인 설명·보상']])},
      {g:2,feed:'정해진 것/빈 것 구분',out:'원인·보상 가능 여부 미정',L:'L4',comp:'컨텍스트 조합·근거'}]},
 
-   {id:'understand',label:'문의 이해',role:'AAP 분석',actor:'aap',kind:'auto',loopPhase:'Semantic',
+   {id:'understand',label:'문의 이해',role:'AAP 분석',actor:'aap',
     explain:`<b>Semantic</b> 단계입니다. <b>L4</b>가 불만을 유형(요금·품질 복합)으로 해석하고, <b>L6</b>가 감정·긴급도를 평가하며, <b>L7</b>이 보상 한도 정책을 답니다.`,
     ops:[{g:0,feed:'문의 유형 분류',out:'요금 + 품질 복합 불만',L:'L4',comp:'온톨로지·시맨틱',
       detail:odTable('유형 (신뢰도)',[['요금+품질 복합','0.88','g'],['단순 요금','0.09'],['해지 요청','0.03']])},
      {g:1,feed:'감정·긴급도 평가',out:'불만 강도 중상 · VIP',L:'L6',comp:'감정 분석',asset:1,badge:'Antbot'},
      {g:2,feed:'보상 정책 플래그',out:'VIP 보상 한도 적용 · 승인 필요',L:'L7',comp:'정책 관리·통제'}]},
 
-   {id:'compose',label:'실행 구조 구성',role:'AAP 구성',actor:'aap',kind:'auto',loopPhase:'Reasoning',showCompose:1,
+   {id:'compose',label:'실행 구조 구성',role:'AAP 구성',actor:'aap',
     explain:`핵심 단계입니다. AAP는 Agent를 많이 띄우는 게 아니라, 업무를 작업으로 분해하고 <b>L2·L3</b>에서 필요한 <b>Agent·모듈·기존 솔루션·Connector·정책</b>을 골라 실행 구조로 조합합니다.`,
     ops:[{g:0,feed:'작업 분해',out:'이력·원인·보상·응답 작업 그래프',L:'L2',comp:'설계·개발 환경',
       detail:odTable('작업 그래프 (4)',[['T1 이력 조회',''],['T2 원인 분석',''],['T3 보상 산정',''],['T4 응답 작성','']])},
@@ -63,15 +62,14 @@
       detail:odTable('조합한 구성요소',[['Agent','5'],['Module','2'],['기존 솔루션','2'],['Connector','3'],['Policy','3']])},
      {g:3,feed:'누락·리스크 점검',out:'보상 한도·개인정보 리스크 표시',L:'L6',comp:'품질·근거 평가',asset:1,badge:'Antbot'}]},
 
-   {id:'approve',label:'대응안 승인',role:'사람 확인 ①',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
-    gate:{label:'대응안 승인',decisions:[{key:'yes',label:'승인',toast:'승인 · 다음 단계로 진행합니다'},{key:'no',label:'외부 제외',toast:'외부 고객 제외하고 진행'}]},
+   {id:'approve',label:'대응안 승인',role:'사람 확인 ①',actor:'hitl',gate:1,hitl:1,
     explain:`<b>L3 런타임 게이트</b>가 보상 결정 전 멈춥니다. AAP가 원인·보상안·보상 수준 후보를 제시하고, <b>보상 수준은 사람이 결정</b>합니다. (★ HITL ①)`,
     ops:[{g:0,feed:'대응안 제시',out:'원인 2건 · 보상안 · 응답 초안',L:'L1',comp:'상담 채널·챗 UI'},
      {g:1,feed:'보상 수준 후보 산출',out:'전액 / 부분 / 정정만',L:'L3',comp:'코어·실행 엔진',micro:['보상 정책 매칭'],
       detail:odTable('보상 옵션 (한도)',[['전액 감면','한도 내','g'],['부분 감면','표준'],['정정만','최소']])},
      {g:2,feed:'검토 게이트 보류',out:'보상 수준 선택 담당자 전달',L:'L3',comp:'HITL 런타임 게이트'}]},
 
-   {id:'prepare',label:'대응 실행',role:'AAP 실행',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Action',
+   {id:'prepare',label:'대응 실행',role:'AAP 실행',actor:'aap',doneModal:1,
     explain:`승인된 보상안대로 AAP가 자율 실행합니다. <b>L5</b>가 이력·과금을 <b>병렬</b> 조회하고, <b>L3 코어</b>가 원인 분석·보상 산정·응답 작성을 처리하며 <b>L8</b>이 CRM에 반영합니다.`,
     ops:[{g:0,feed:'고객 이력 조회',out:'VIP 2년 · 직전 VOC 1',L:'L5',comp:'연결·수집',micro:['CRM 커넥터']},
      {g:0,feed:'과금·망품질 조회',out:'과금 오류 1 · 셀 혼잡 1',L:'L5',comp:'연결·수집',micro:['과금 시스템','망품질 로그'],
@@ -81,15 +79,14 @@
      {g:2,feed:'CRM 반영·티켓 갱신',out:'TCK-20461 · 처리중',L:'L8',comp:'스토리지·DB',micro:['crm.update()'],
       detail:odTable('시스템 반영',[['티켓','TCK-20461','g'],['상태','처리중','g'],['과금 정정','예약','g']])}]},
 
-   {id:'commit',label:'발송 승인',role:'사람 확인 ②',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
-    gate:{label:'발송 승인',decisions:[{key:'yes',label:'승인',toast:'승인 · 다음 단계로 진행합니다'},{key:'no',label:'수정 요청',toast:'수정 요청'}]},
+   {id:'commit',label:'발송 승인',role:'사람 확인 ②',actor:'hitl',gate:1,hitl:1,
     explain:`고객에게 나가는 마지막 행동 직전, <b>L7</b>이 응답 문구·개인정보·보상 금액을 점검하고 <b>L3 게이트</b>가 발송을 멈춰 담당자 최종 확인을 받습니다. (★ HITL ②)`,
     ops:[{g:0,feed:'응답안 취합',out:'응답 문구 · 보상 내역',L:'L3',comp:'코어·실행 엔진'},
      {g:1,feed:'발송 점검 (PII·문구)',out:'개인정보 0 · 정책 문구 통과',L:'L7',comp:'정책 관리·통제',
       detail:odTable('발송 점검',[['수신','SMS+앱','g'],['개인정보','0건','g'],['보상 금액','한도 내','g'],['금칙어','없음','g']])},
      {g:2,feed:'발송 게이트 보류',out:'고객 발송 승인 대기',L:'L3',comp:'HITL 런타임 게이트'}]},
 
-   {id:'share',label:'처리·기록·학습',role:'AAP 마무리',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Learning',
+   {id:'share',label:'처리·기록·학습',role:'AAP 마무리',actor:'aap',doneModal:1,
     explain:`승인 후 AAP가 응답을 <b>병렬</b> 발송·기록하고, 반복 VOC 패턴을 <b>L7 Self-Improving</b>으로 학습 자산화해 다음 대응 정확도를 높입니다. (<b>Learning</b>)`,
     ops:[{g:0,feed:'응답 발송',out:'SMS·앱 알림 발송',L:'L3',comp:'코어·실행 엔진',micro:['notify.send()']},
      {g:0,feed:'티켓 종결·CRM 기록',out:'TCK-20461 종결',L:'L8',comp:'스토리지·DB',micro:['crm.close()']},
@@ -252,9 +249,8 @@
 
   (window.AAP_PACKS=window.AAP_PACKS||{}).voc={
     id:'voc', label:'VOC 대응',
-    times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
+    times:TIMES, products:PRODUCTS, work:WORK, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
-    io:{ inputs:[], editable:[], connectors:[] },   /* Pack Contract v2 · 2a 슬롯 예약(실동작 2c) */
     stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',commit:'Decision',share:'Learning'},
     extExcluded:(S)=>S.decisions['approve']==='no',
     surfaceSpec:SS,
