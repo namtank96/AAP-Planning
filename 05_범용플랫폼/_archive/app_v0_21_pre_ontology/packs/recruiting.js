@@ -351,32 +351,15 @@
     </button>`;
   }
 
-  const TABS=['파이프라인','후보','스코어카드','면접'];
-  /* 단계 기본 탭 = 파이프라인(보드). 보드가 메인 화면이고, 후보·스코어카드·면접은 사용자가
-     탭을 눌러 탐색하는 보조 뷰(원래 본문=항상 보드였던 동작 보존). */
-  const stepTab=()=>'파이프라인';
-  /* 활성 탭 = 사용자가 누른 탭(S.activeTab)이 있으면 그것(탐색), 없으면 단계 기본.
-     보드가 가시화되기 전(prepare 이전)에는 후보·스코어카드·면접 데이터가 비므로 파이프라인으로 폴백. */
-  function activeTab(C){
-    const reachedBoard=C.idxOf(C.S.sel)>=4;   /* prepare 이후 = 후보 데이터 채워짐 */
-    let t=C.S.activeTab;
-    if(!t||!TABS.includes(t))t=stepTab(C.W(C.S.sel).id);
-    if(!reachedBoard&&t!=='파이프라인')t='파이프라인';
-    return t;
-  }
   function head(C){
     const S=C.S,i=C.idxOf(S.sel),w=C.W(S.sel);
-    const stMap={request:['요건 접수','s-info'],understand:['요건 분석','s-info'],compose:['계획 구성','s-info'],
-      approve:['검토 필요','s-amber'],prepare:['스크리닝 완료','s-green'],
-      meeting:['일정 조율','s-blue'],commit:['오퍼 검토','s-amber'],share:['채용 완료','s-green']};
-    const [stt,stc]=stMap[w.id];
-    const tab=activeTab(C);
+    const map={request:['요건 접수','s-info','파이프라인'],understand:['요건 분석','s-info','파이프라인'],compose:['계획 구성','s-info','파이프라인'],
+      approve:['검토 필요','s-amber','파이프라인'],prepare:['스크리닝 완료','s-green','후보'],
+      meeting:['일정 조율','s-blue','면접'],commit:['오퍼 검토','s-amber','후보'],share:['채용 완료','s-green','후보']};
+    const [stt,stc,tab]=map[w.id];
     const known=i>=2;
     const meta=`${JOB.id} · ${JOB.team} · ${known?`${JOB.headcount}명 채용 · 지원 ${JOB.applicants}`:'요건 정의 중'}`;
-    const reachedBoard=i>=4;
-    /* 탭 클릭 전환 — 보드 가시화 전(prepare 이전)에는 후보/스코어카드/면접 비활성(데이터 없음) */
-    const tabs=TABS.map(t=>{const dis=!reachedBoard&&t!=='파이프라인';
-      return `<span class="${t===tab?'on':''}${dis?' off':''}" ${dis?'':`data-surftab="${t}"`}>${t}</span>`;}).join('');
+    const tabs=['파이프라인','후보','스코어카드','면접'].map(t=>`<span class="${t===tab?'on':''}">${t}</span>`).join('');
     return `<div class="hd-top"><span class="hd-ic">${I('briefcase')}</span>
        <div class="hd-main"><div class="hd-title">${JOB.title} <span class="hd-status ${stc}">${stt}</span></div>
        <div class="hd-meta">${meta}</div></div>
@@ -445,36 +428,9 @@
     } else {
       if((id==='prepare'||id==='share'||id==='meeting')&&working) b+=C.par(id==='prepare'?['이력서 파싱(38)','요건 매칭','스코어·랭킹','편향 점검']:(id==='meeting'?['후보 가용 조회','면접관 가용','슬롯 매칭']:['오퍼 발송','ATS 기록','온보딩 등록']));
       b+=jdStrip(C,true);
-      /* 활성 탭에 따라 surface 본문 전환(사용자가 탭을 눌러 탐색) — 기본은 단계가 정한 탭 */
-      b+=tabBody(C);
+      b+=board(C);
     }
     return b;
-  }
-  /* 탭별 surface 본문 — 파이프라인(보드)/후보(정렬 가능 카드)/스코어카드/면접 */
-  function tabBody(C){
-    const t=activeTab(C);
-    if(t==='후보')return candList(C);
-    if(t==='스코어카드')return scoreTab(C);
-    if(t==='면접')return interviewTab(C);
-    return board(C);
-  }
-  /* 후보 탭 = 전체 후보를 정렬·필터로 훑어보는 그리드(보드 컬럼 대신 평면 카드) */
-  function candList(C){
-    const tools=boardTools(C);
-    const cands=sortCands(C,CAND.slice());
-    return tools+`<div class="recr-grid">${cands.map(c=>candCard(c,C)).join('')}</div>`;
-  }
-  /* 스코어카드 탭 = 숏리스트(컷 통과) 후보의 루브릭 스코어카드 */
-  function scoreTab(C){
-    const ids=shortlistIds(C);
-    const list=(ids.length?ids:CAND.slice().sort((a,b)=>b.match-a.match).slice(0,5).map(c=>c.id));
-    return `<div class="recr-sclist">${list.map(id=>scorecard(cById(id))).join('')}</div>`;
-  }
-  /* 면접 탭 = 확정 면접 일정 + 패널 */
-  function interviewTab(C){
-    const rows=INTERVIEW.filter(iv=>shortlistIds(C).includes(iv.cid));
-    const list=(rows.length?rows:INTERVIEW);
-    return `<div class="recr-ivlist">${list.map(iv=>{const c=cById(iv.cid);return `<div class="recr-iv"><span class="recr-av">${c.ini}</span><div class="riv-main"><div class="riv-nm">${c.name} <span class="riv-ty">${iv.type}</span></div><div class="riv-meta">${iv.slot} · 패널 ${iv.panel}</div></div><span class="riv-st">${I('calendar')}확정</span></div>`;}).join('')}</div>`;
   }
   /* JD 요약 스트립(상단 직무 슬롯) */
   function jdStrip(C,known){
@@ -602,8 +558,8 @@
     },
     /* STATE 영속 키(코어 persistToCase/hydrate 가 케이스에 같이 저장) */
     persistKeys:['recrDecisions','recrSort','recrFilter'],
-    /* 케이스/단계 전환 시 초기화할 transient 키(열린 상세 모달 · 탭 탐색 선택은 단계 기본으로 리셋) */
-    transientKeys:['recrOpen','activeTab'],
+    /* 케이스 간 초기화할 transient 키(열린 상세 모달) */
+    transientKeys:['recrOpen'],
   };
 
   /* 데모용 시드 케이스(인스턴스) — 서로 다른 진행 상태 */
@@ -649,33 +605,8 @@
     ],
   };
 
-  /* 온톨로지(L4) — AAP가 추론·편집하는 의미 레이어. LLM은 이 객체들을 통해서만 데이터에 접근(통제된 reasoning). */
-  const ONTOLOGY={
-    objects:[
-      {n:'Candidate(후보)', a:['이름','경력','스킬','매칭%','상태']},
-      {n:'Job(직무)', a:['직무','필수/우대 스킬','인원','보상밴드']},
-      {n:'Application(지원)', a:['후보↔직무','매칭 점수','판정']},
-      {n:'Interview(면접)', a:['슬롯','면접관','스코어카드']},
-      {n:'Offer(오퍼)', a:['조건','상태']},
-    ],
-    relations:[
-      {t:'Candidate —<em>applies</em>→ Job'},
-      {t:'Application —<em>scored-by</em>→ 매칭(스킬·경력·도메인)'},
-      {t:'Interview —<em>for</em>→ Candidate'},
-      {t:'Offer —<em>to</em>→ Candidate'},
-    ],
-    actions:[
-      {n:'이력서 파싱·정규화', mode:'auto'},
-      {n:'매칭 점수 산출', mode:'auto'},
-      {n:'스크리닝 판정(통과/보류/탈락)', mode:'auto'},
-      {n:'숏리스트 승급', mode:'confirm'},
-      {n:'면접 확정', mode:'confirm'},
-      {n:'합격·오퍼 발송', mode:'confirm'},
-    ],
-  };
-
   (window.AAP_PACKS=window.AAP_PACKS||{}).recruiting={
-    id:'recruiting', label:'채용', ontology:ONTOLOGY,
+    id:'recruiting', label:'채용',
     times:TIMES, products:PRODUCTS, work:WORK, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
     demoScenario:DEMO_SCENARIO,

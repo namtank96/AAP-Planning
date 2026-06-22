@@ -359,7 +359,6 @@ function setView(v){
   if(v==='logs')renderLogs();
   if(v==='govern')renderGovern();
   updateCaseTitle();
-  renderRunAction();   /* 실행 진입점 버튼은 run 뷰에서만 노출 — 그 외 뷰에서 숨김 */
   saveApp();
 }
 function updateCaseTitle(){
@@ -399,16 +398,7 @@ function openCase(id){
   if(cov){ applyCaseOverlay(PACKS[c.packId], cov); _caseOvActive=c.packId; setPackRefs(c.packId); }
   APP.active=id; hydrateFromCase(c);
   clearRun(); setRunBtn(false);
-  setView('run'); renderSeq(); restoreStep(); renderRunAction(); saveApp();
-}
-/* 케이스가 '이미 실행에 진입했는가' = 첫 단계가 아니거나 어떤 결정이 누적됐거나 완료됨.
-   미진입(첫 단계 · 결정 0 · 미완료) = 요청 트리거 대기(요청 접수만 된 새 케이스) → '▶ 실행'. */
-function caseStarted(c){
-  if(!c)return false;
-  const pack=PACKS[c.packId]; if(!pack)return true;
-  if(c.done)return true;
-  if(Object.keys(c.decisions||{}).length)return true;
-  return c.sel!==pack.work[0].id;
+  setView('run'); renderSeq(); restoreStep(); saveApp();
 }
 /* 실행 뷰 이탈 시 케이스 델타 복원은 setView(v!=='run') 가드가 처리(rtBack→setView('inbox') 포함). */
 /* hydrate 된 STATE(sel/decisions/...) 로 화면을 '진행된 그 지점'에 복원(재생 ✕, 정지 상태) */
@@ -424,18 +414,13 @@ function restoreStep(){
   renderConsole(); renderRight(); afterStateChange();
 }
 
-/* ===== 업무 순서 (top bar · 직전/현재/다음 = 자동 진행 타임라인 · 클릭=되짚기) =====
-   인터랙션 모델: 사용자가 클릭해 '진행'시키는 스테퍼 ✕ → 요청 트리거 후 AAP가 자동 진행하고,
-   이 줄은 '어디까지 처리됐나'를 보여주는 타임라인. 노드 클릭 = 그 단계로 되짚기(탐색). */
+/* ===== 업무 순서 (top bar · prev/current/next) ===== */
 function renderSeq(){
   const ci=idxOf(STATE.sel);let html='';
-  /* 현재 단계가 작동 중(working)이면 active 노드에 '처리 중' 상태 표시(자동 운영 톤) */
-  const working=RUN.phase==='working';
   for(let d=-1;d<=1;d++){const i=ci+d; if(i<0||i>=WORK.length)continue;
-    const w=WORK[i];let cls='snode'+(d===0?' active':' adj')+(w.gate?' gate':'')+(d<0?' past':'')+(d===0&&working?' working':'');
+    const w=WORK[i];let cls='snode'+(d===0?' active':' adj')+(w.gate?' gate':'');
     if(d>0||(d===0&&i>0))html+=`<span class="sarrow">${_ICO('chevron-right')}</span>`;
-    const tag=d===0?`<span class="snode-st">${working?'처리 중…':(RUN.phase==='await'?'확인 대기':'완료')}</span>`:'';
-    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${w.gate?_ICO('star'):''}</span>${tag}</div>`;}
+    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${w.gate?_ICO('star'):''}</span></div>`;}
   document.getElementById('seq').innerHTML=html;
   document.getElementById('seqProg').textContent=`${ci+1} / ${WORK.length}`;
   document.querySelectorAll('#seq .snode').forEach(e=>e.onclick=()=>setSel(e.dataset.go));
@@ -712,13 +697,10 @@ function renderConsole(){
   const sb=document.getElementById('surfBody'); if(sb){ sb.innerHTML=surfBase(C); wireSurface(sb); }
   renderCModal();
 }
-/* surface 내 산출물 보기 버튼(data-dlv)·다시(replay)·탭 전환(data-surftab) 배선 — 코어 책임(도메인 무관) */
+/* surface 내 산출물 보기 버튼(data-dlv)·다시(replay) 배선 — 코어 책임(도메인 무관) */
 function wireSurface(root){
   root.querySelectorAll('[data-dlv]').forEach(e=>e.onclick=()=>openPreview(e.dataset.dlv));
   const rp=root.querySelector('#replay'); if(rp)rp.onclick=()=>{ if(STATE.playing)stopPlay(); setSel(WORK[0].id); };
-  /* surface 탭 클릭 탐색(도메인 무관) — 팩 surface 가 STATE.activeTab 을 읽어 본문 렌더.
-     탭 목록·라벨·본문은 팩 책임, 코어는 활성 탭 기록 + 재렌더만(자동 진행과 독립). */
-  root.querySelectorAll('[data-surftab]').forEach(e=>e.onclick=()=>{ STATE.activeTab=e.dataset.surftab; renderConsole(); });
   wirePackHooks(root);
 }
 /* 팩이 선언한 surface 인터랙션 배선(도메인 무관 메커니즘) — 후보 카드 클릭·정렬·결정 등.
@@ -781,9 +763,6 @@ function evidType(o){
   return 'A'; /* 기본 = Agent(전문 작업·코어 실행) */
 }
 const _TYKO={A:'Agent',M:'Module',S:'기존 솔루션',C:'Connector',P:'Policy'};
-/* 결정론 Action(Module·Connector·Policy·기존솔루션 = 규칙/온톨로지 편집) vs 비결정론 LLM(Agent = 추론).
-   op.kind 로 팩이 명시 override 가능. KEY MESSAGE: LLM은 온톨로지 통해 통제된 reasoning, 결정론은 규칙. */
-function blockKind(o,tk){ if(o&&o.kind)return o.kind==='llm'?'llm':'det'; return tk==='A'?'llm':'det'; }
 function renderRight(){
   const w=W(STATE.sel),gs=groupsOf(w);let h='';
   const lb=PACK.stepLoop?`<div class="loopbadge">추론 루프 · ${PACK.stepLoop[w.id]||'—'}</div>`:'';
@@ -811,7 +790,7 @@ function renderRight(){
       h+=`<div class="evid-row ${stt}">
         <span class="ev-dot ty${tk}"></span>
         <div class="ev-body">
-          <div class="ev-h"><span class="ev-comp ty${tk} ev-link" data-asset="${dcText(o.comp,'op.comp')}" data-atk="${tk}" data-tip="자산 카탈로그에서 이 구성요소 보기">${dcText(o.comp,'op.comp')}</span><span class="ev-tag ty${tk}">${_TYKO[tk]}</span><span class="ev-kind ${blockKind(o,tk)}" data-tip="${blockKind(o,tk)==='llm'?'비결정론 — LLM 추론(온톨로지 통해 통제)':'결정론 — 규칙·온톨로지 편집(재현 가능)'}">${blockKind(o,tk)==='llm'?'LLM':'결정론'}</span>${badge}${parTag}</div>
+          <div class="ev-h"><span class="ev-comp ty${tk} ev-link" data-asset="${dcText(o.comp,'op.comp')}" data-atk="${tk}" data-tip="자산 카탈로그에서 이 구성요소 보기">${dcText(o.comp,'op.comp')}</span><span class="ev-tag ty${tk}">${_TYKO[tk]}</span>${badge}${parTag}</div>
           <div class="ev-line">${o.feed} → ${val}</div>
           ${more}
         </div></div>`;
@@ -849,7 +828,7 @@ function revealOps(){
   },n*640+300));
 }
 /* 케이스 영속 + 인박스 카운트 갱신 (런타임 상태가 바뀐 직후) */
-function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} renderRunAction(); }
+function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} }
 function runStep(){
   clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();clearPackTransient();const w=W(STATE.sel);
   if(w.meeting){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
@@ -866,53 +845,14 @@ function decide(v){
   toast(v==='yes'?'승인 · 다음 단계로 진행합니다':(w.id==='approve'?'외부 고객 제외하고 진행':'수정 요청'));
   if(STATE.playing)RUN.playTimer=setTimeout(playNext,1500);
 }
-function setSel(id){STATE.sel=id;renderSeq();runStep();afterStateChange();renderRunAction();}
-/* ===== 요청 트리거 자동 운영 (Phase 1) — startPlay 의 자동 진행 로직 재사용, 단 '비파괴' =====
-   startPlay = 시연/Run(처음부터 재생 · 결정 초기화). startRun = 운영 진입(현재 지점부터 자동 진행,
-   누적된 결정·진행 보존). 둘 다 STATE.playing=true 로 revealOps/decide/meetingEnd 의 playNext 자동
-   진행을 타고, HITL(await)·회의(meeting)에서만 멈춘다(사람 결정 필요). 도메인 무관. */
-function startRun(){
-  const c=activeCase(); if(!c)return;
-  if(STATE.view!=='run')setView('run');
-  STATE.playing=true; setRunBtn(true);
-  const w=W(STATE.sel);
-  /* 미진입(요청 접수만) = 첫 단계부터 자동 진행. 이미 진행 중이면 현재 지점에서 '이어서'.
-     현재 단계가 HITL/회의 await 로 멈춰 있으면 다음 단계로 넘기지 않고 그 게이트 모달을 띄움(사람 결정 대기). */
-  if(RUN.phase==='await'){ renderConsole(); renderRight(); renderRunAction(); return; }
-  /* 그 외(완료/대기) = 현재 단계를 (재)실행해 자동 진행 시작. setSel 로 runStep 트리거. */
-  setSel(STATE.sel);
-}
+function setSel(id){STATE.sel=id;renderSeq();runStep();afterStateChange();}
 function startPlay(){
   if(!activeCase()){ const cs=APP.cases.filter(c=>c.packId===APP.pack); if(cs.length){openCase(cs[0].id);} else {createCase();} }
   if(STATE.view!=='run')setView('run');
   STATE.playing=true;STATE.decisions={};STATE.pickedTime=TIMES[0].t;STATE.trace=[];STATE.traced=new Set();
   const c=activeCase();if(c)c.done=false;
   setRunBtn(true);setSel(WORK[0].id);}
-function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);setRunBtn(false);renderRunAction();}
-/* 실행 진입점(runtop) — 미진입=▶ 실행 / 진행중·정지=이어서 진행 / 자동진행중=처리 중(정지 가능) / 완료=완료.
-   요청 트리거 자동 운영의 명확한 입구. 자동저작/안정 ID 무영향(런타임 전용 요소). */
-function renderRunAction(){
-  const el=document.getElementById('runAction'); if(!el)return;
-  const c=activeCase();
-  if(STATE.view!=='run'||!c){ el.innerHTML=''; el.hidden=true; return; }
-  el.hidden=false;
-  if(STATE.playing && RUN.phase==='working'){
-    el.innerHTML=`<button class="run-act working" id="runActBtn"><span class="spin sm"></span>처리 중…</button>`;
-  } else if(c.done){
-    el.innerHTML=`<button class="run-act done" id="runActBtn" disabled>${_ICO('check')}처리 완료</button>`;
-  } else if(RUN.phase==='await'){
-    el.innerHTML=`<button class="run-act await" id="runActBtn">${_ICO('user-check')}확인이 필요합니다</button>`;
-  } else {
-    const started=caseStarted(c);
-    el.innerHTML=`<button class="run-act go" id="runActBtn">${_ICO('play')}${started?'이어서 진행':'실행 / 처리 시작'}</button>`;
-  }
-  const b=el.querySelector('#runActBtn');
-  if(b&&!b.disabled)b.onclick=()=>{
-    if(STATE.playing && RUN.phase==='working'){ stopPlay(); return; }   /* 처리 중 클릭 = 정지(탐색 전환) */
-    if(RUN.phase==='await'){ STATE.playing=true; setRunBtn(true); renderRunAction(); return; } /* 게이트로 시선 유도 */
-    startRun();
-  };
-}
+function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);setRunBtn(false);}
 function playNext(){const ci=idxOf(STATE.sel);if(ci<WORK.length-1)setSel(WORK[ci+1].id);else stopPlay();}
 
 /* ===== 도메인 뷰 = 업무 유형 카탈로그/레지스트리 (Phase 1.5 · 모드 스위치 ✕) =====
@@ -963,19 +903,6 @@ function renderDesign(){
   /* 워크플로우 편집기(경량) — 선택된 팩의 노드 그래프 시각화 + 단계별 5타입/HITL 편집 */
   if(window.AAP_WFEDITOR)window.AAP_WFEDITOR.renderEditor(P);
   renderArchCoherence(P);
-  renderOntology(P);
-}
-/* 온톨로지(L4) 섹션 — 객체·관계·Action(자동/사람확인). 팩이 ontology 없으면 generic 폴백(무회귀). */
-function renderOntology(P){
-  const el=document.getElementById('ontologyBox'); if(!el)return;
-  const o=P&&P.ontology;
-  if(!o){ el.innerHTML=`<div class="onto-col full"><div class="onto-k">온톨로지</div><div class="onto-rel">이 유형은 아직 명시 온톨로지가 없습니다 — 업무 이해의 산출물·확인 지점이 의미 레이어로 작동합니다.</div></div>`; return; }
-  const objs=(o.objects||[]).map(x=>`<div class="onto-obj"><b>${dcText(x.n,'onto.obj')}</b>${(x.a||[]).map(a=>`<span>${dcText(a,'onto.attr')}</span>`).join('')}</div>`).join('');
-  const rels=(o.relations||[]).map(r=>`<div class="onto-rel">${r.t}</div>`).join('');
-  const acts=(o.actions||[]).map(a=>{const m=a.mode==='confirm'?'confirm':'auto';return `<div class="onto-act"><span class="oa-n">${dcText(a.n,'onto.act')}</span><span class="oa-m ${m}">${m==='confirm'?'사람 확인':'자동'}</span></div>`;}).join('');
-  el.innerHTML=`<div class="onto-col"><div class="onto-k">객체 (Object)</div>${objs}</div>`+
-    `<div class="onto-col"><div class="onto-k">관계 (Relation)</div>${rels}</div>`+
-    `<div class="onto-col full"><div class="onto-k">Action · 객체 편집 (자동 / 사람 확인)</div>${acts}</div>`;
 }
 /* B-1: 아키텍처 정합 뷰 — 표준 런타임 = AAP 아키텍처(Loop·8계층·Trust), 도메인이 경유하는 계층 점등 */
 function renderArchCoherence(P){

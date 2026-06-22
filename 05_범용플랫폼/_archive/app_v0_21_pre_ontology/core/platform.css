@@ -137,24 +137,6 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .snode.gate{border-color:var(--amber-border);background:var(--amber-soft);} .snode.gate.adj .role{color:var(--amber);}
 .snode.gate.active{background:#fff7ed;border-color:var(--amber);} .snode.gate.active .role,.snode.gate.active .lab{color:var(--amber-ink);}
 .sarrow{align-self:center;color:#cbd5e1;font-size:13px;}
-/* 자동 진행 톤 — 직전(past) 흐림 · 현재 working = teal 펄스 · 단계 상태 태그 */
-.snode.past{opacity:.5;} .snode.past:hover{opacity:.85;}
-.snode-st{font-size:8.5px;font-weight:800;letter-spacing:.02em;color:var(--faint);text-transform:uppercase;margin-top:1px;}
-.snode.active.working{animation:snodepulse 1.1s ease-in-out infinite;}
-.snode.active.working .snode-st{color:var(--aap);}
-.snode.active.gate .snode-st{color:var(--amber);}
-@keyframes snodepulse{0%,100%{box-shadow:0 2px 8px rgba(13,148,136,.10);}50%{box-shadow:0 0 0 3px var(--aap-soft),0 2px 10px rgba(13,148,136,.22);}}
-.spin.sm{width:11px;height:11px;border-width:2px;}
-/* 실행 진입점 버튼(runtop 우측) — 요청 트리거 자동 운영의 명확한 입구 */
-.rt-action{flex:0 0 auto;display:flex;align-items:center;margin-left:10px;}
-.run-act{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:800;padding:7px 14px;border-radius:9px;cursor:pointer;border:1px solid transparent;white-space:nowrap;}
-.run-act svg{width:14px;height:14px;}
-.run-act.go{background:var(--aap);color:#fff;box-shadow:0 2px 8px rgba(13,148,136,.22);}
-.run-act.go:hover{filter:brightness(1.06);}
-.run-act.working{background:var(--aap-soft);color:var(--aap-ink);border-color:var(--aap-border);cursor:default;}
-.run-act.await{background:var(--amber-soft);color:var(--amber-ink);border-color:var(--amber-border);}
-.run-act.await:hover{filter:brightness(.98);}
-.run-act.done{background:var(--surface,#f1f5f9);color:var(--muted);border-color:var(--border);cursor:default;}
 
 /* ===== RUN view body — 메인 = 업무가 돌아가는 도메인 화면 + 우측 얇은 AAP 근거 레일 ===== */
 .run-main{flex:1;display:flex;gap:12px;padding:12px 13px;overflow:hidden;min-height:0;}
@@ -184,23 +166,6 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .ev-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
 .ev-comp{font-size:11.5px;font-weight:800;color:var(--ink);}
 .ev-tag{font-size:8.5px;font-weight:800;padding:1px 6px;border-radius:10px;letter-spacing:.02em;}
-/* 결정론 Action vs 비결정론 LLM 블록 구분(온톨로지 L4) */
-.ev-kind{font-size:8px;font-weight:800;padding:1px 5px;border-radius:5px;letter-spacing:.02em;}
-.ev-kind.det{background:var(--surf);color:var(--slate);border:1px solid var(--border);}
-.ev-kind.llm{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet-border);}
-/* 온톨로지 섹션(도메인 팩 뷰) */
-.onto{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
-.onto-col{border:1px solid var(--border);border-radius:11px;padding:11px 13px;background:#fff;}
-.onto-col.full{grid-column:1/-1;}
-.onto-k{font-size:9.5px;font-weight:800;color:var(--faint);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;}
-.onto-obj{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:7px;}
-.onto-obj b{font-size:11.5px;font-weight:800;color:var(--ink);margin-right:5px;}
-.onto-obj span{font-size:10px;color:var(--muted);background:var(--surf);border:1px solid var(--line);border-radius:5px;padding:1px 6px;}
-.onto-rel{font-size:11px;color:var(--slate);padding:3px 0;border-top:1px solid var(--line);} .onto-rel:first-child{border-top:none;} .onto-rel em{color:var(--aap-ink);font-style:normal;font-weight:700;}
-.onto-act{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--slate);padding:4px 0;border-top:1px solid var(--line);} .onto-act:first-child{border-top:none;}
-.onto-act .oa-n{font-weight:700;flex:1;}
-.onto-act .oa-m{font-size:8.5px;font-weight:800;padding:1px 6px;border-radius:10px;}
-.onto-act .oa-m.confirm{background:var(--amber-soft);color:var(--amber);} .onto-act .oa-m.auto{background:var(--green-soft);color:var(--green);}
 .ev-tag.tyA{background:var(--type-agent-soft,#ccfbf1);color:var(--type-agent,#0d9488);} .ev-tag.tyM{background:var(--type-module-soft,#ede9fe);color:var(--type-module,#7c3aed);} .ev-tag.tyS{background:var(--type-solution-soft,#cffafe);color:var(--type-solution,#0891b2);} .ev-tag.tyC{background:var(--type-connector-soft,#dbeafe);color:var(--type-connector,#2563eb);} .ev-tag.tyP{background:var(--type-policy-soft,#fef3c7);color:var(--type-policy,#d97706);}
 .ev-badge{font-size:8.5px;font-weight:800;padding:1px 6px;border-radius:10px;background:var(--violet-soft,#ede9fe);color:var(--violet,#7c3aed);}
 .ev-par{font-size:8.5px;font-weight:800;color:var(--aap-ink);}
@@ -234,9 +199,6 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .hd-user{font-size:11px;color:var(--slate);font-weight:600;border:1px solid var(--border);border-radius:8px;padding:5px 9px;margin-left:2px;}
 .hd-tabs{display:flex;gap:16px;margin-top:10px;font-size:11.5px;color:var(--muted);font-weight:600;}
 .hd-tabs span{padding:6px 0;border-bottom:2px solid transparent;}
-.hd-tabs span[data-surftab]{cursor:pointer;transition:color .12s;}
-.hd-tabs span[data-surftab]:hover{color:var(--aap-ink);}
-.hd-tabs span.off{color:var(--faint);opacity:.5;cursor:default;}
 .hd-tabs span.on{color:var(--aap-ink);border-bottom-color:var(--aap);}
 .hd-tabs .hd-replay{margin-left:auto;color:var(--aap);cursor:pointer;font-weight:700;}
 .con-body{flex:1;padding:15px 17px;display:flex;flex-direction:column;overflow:hidden;}
@@ -983,18 +945,6 @@ textarea.au-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0
 .rsc-v{width:24px;flex:0 0 auto;text-align:right;font-weight:800;color:var(--aap-ink);}
 .rsc-risk{display:flex;align-items:flex-start;gap:7px;font-size:11px;font-weight:600;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:9px;padding:8px 11px;margin-top:11px;line-height:1.5;} .rsc-risk .ic{width:15px;height:15px;flex:0 0 auto;color:var(--amber);transform:translateY(1px);}
 .rsc-hi{font-size:11px;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:9px;padding:8px 11px;margin-top:11px;line-height:1.5;}
-/* 탭 본문(후보/스코어카드/면접 탐색 뷰) */
-.con-body .recr-grid,.con-body .recr-sclist,.con-body .recr-ivlist{flex:1 1 auto;min-height:120px;overflow:auto;}
-.recr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;}
-.recr-sclist{display:flex;flex-direction:column;gap:10px;}
-.recr-ivlist{display:flex;flex-direction:column;gap:8px;}
-.recr-iv{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--border);border-radius:11px;padding:11px 13px;}
-.riv-main{flex:1;min-width:0;}
-.riv-nm{font-size:13px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;}
-.riv-ty{font-size:9.5px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:6px;padding:1px 7px;}
-.riv-meta{font-size:11px;color:var(--muted);margin-top:2px;}
-.riv-st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:var(--green);background:var(--green-soft);border:1px solid var(--green-border,#bbf7d0);border-radius:7px;padding:4px 9px;flex:0 0 auto;}
-.riv-st svg{width:13px;height:13px;}
 /* done 모달 미니 랭킹 */
 .recr-mini{display:flex;flex-direction:column;gap:5px;margin:10px 0;}
 .rm-r{display:flex;align-items:center;gap:9px;font-size:11.5px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;}
