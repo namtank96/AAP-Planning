@@ -164,8 +164,7 @@
   }
 
   /* ── 저장: 편집 모델 → override → AAP_CORE 영속·반영 ──
-     override = { steps:{ [stepId]:{ comps:[{type,name}], hitl } } }. 코어가 적용·저장.
-     ★스튜디오(팩 맥락) = setPackOverride(공유 팩 기본). 케이스 맥락은 setCaseOverride(케이스 델타)로 분리. */
+     override = { steps:{ [stepId]:{ comps:[{type,name}], hitl } } }. 코어가 적용·저장. */
   function commit(pack){
     const ov={steps:{}};
     M.steps.forEach(s=>{ ov.steps[s.id]={ comps:s.comps.map(c=>({type:c.type,name:c.name})), hitl:!!s.hitl }; });
@@ -214,14 +213,10 @@
         w.ops=merged.length?merged:oldOps;
       }
     });
-    /* 3) compose 칩 = 전 단계 comps 합계로 재계산(스튜디오 미리보기·run casm 반영).
-       ★ov.steps 가 아니라 '적용 후 현재 work 전체'에서 집계 → 부분 델타(케이스 단위 튜닝)에서도
-         건드리지 않은 단계의 구성요소가 compose 에서 사라지지 않게(케이스 델타 = 1단계만 가질 수 있음). */
+    /* 3) compose 칩 = 전 단계 comps 합계로 재계산(스튜디오 미리보기·run casm 반영) */
     const cnt={Agent:0,Module:0,'기존 솔루션':0,Connector:0,Policy:0};
     const items={Agent:[],Module:[],'기존 솔루션':[],Connector:[],Policy:[]};
-    /* 편집기가 보여주는 것과 동일하게 '적용 후 현재 work 전체'의 단계별 구성요소에서 집계
-       (modelFromPack = 단계 내 comp 라벨 중복 제거). 부분 델타에서도 미편집 단계 보존. */
-    modelFromPack(pack).steps.forEach(s=>{ s.comps.forEach(c=>{ const k=typeMeta(c.type).k; cnt[k]++; if(items[k].length<6&&!items[k].includes(c.name))items[k].push(c.name); }); });
+    Object.keys(ov.steps).forEach(sid=>{ (ov.steps[sid].comps||[]).forEach(c=>{ const k=typeMeta(c.type).k; cnt[k]++; if(items[k].length<6&&!items[k].includes(c.name))items[k].push(c.name); }); });
     /* sub(타입 설명)은 원본 compose 에서 타입별로 보존(blank 방지) */
     const subMap={Agent:'전문 작업',Module:'재사용 기능','기존 솔루션':'Buy·Integrate',Connector:'시스템 연동',Policy:'통제·권한'};
     ((pack._base&&pack._base.compose)||pack.compose||[]).forEach(c=>{ if(c&&c.t&&c.sub)subMap[c.t]=c.sub; });
@@ -233,75 +228,6 @@
     return pack;
   }
 
-  /* ═══════════════════════════════════════════════════════════════════════
-     P5 · 케이스 단위 튜닝 패널 (run 뷰 우측 레일 · "⚑ 이 케이스 한정")
-     ───────────────────────────────────────────────────────────────────────
-     코어 renderRight 이 매 렌더 호출. 케이스 맥락(run 뷰 + 활성 케이스)에서만 펼침 UI 노출.
-     편집 = 현재 단계(selStepId)의 구성요소 add/replace/delete + HITL 토글 → 케이스 델타로 저장
-     (setCaseOverride — packOverrides 미터치). 케이스 델타가 있는 단계엔 ⚑ 배지.
-     액션: '이 케이스만 기본값 복원'(clearCaseOverride) · '이 유형 기본으로 승격'(promoteCaseOverride).
-     pack = 코어가 넘긴 '케이스 오버레이까지 적용된 활성 팩 파생본'. ═══════════════════════════════════════════════════════════════════════ */
-  let _ctOpen=false;   /* 패널 펼침 상태(케이스 간 유지 무방 — UI only) */
-  function caseSteps(pack){ return modelFromPack(pack).steps; }
-  /* 케이스 델타가 걸린 단계 id 집합 */
-  function tunedStepIds(){
-    const cov=(window.AAP_CORE&&window.AAP_CORE.getCaseOverride&&window.AAP_CORE.getCaseOverride())||null;
-    return new Set(cov&&cov.steps?Object.keys(cov.steps):[]);
-  }
-  function renderCaseTuner(pack, selStepId){
-    const host=$('caseTune'); if(!host)return;
-    const inCase=window.AAP_CORE&&window.AAP_CORE.isCaseContext&&window.AAP_CORE.isCaseContext();
-    if(!inCase){ host.innerHTML=''; host._ct=null; return; }   /* 케이스 맥락 아님 → 미표시 */
-    const steps=caseSteps(pack);
-    const cur=steps.find(s=>s.id===selStepId)||steps[0]; if(!cur){ host.innerHTML=''; return; }
-    const tuned=tunedStepIds();
-    const anyTuned=tuned.size>0;
-    const curTuned=tuned.has(cur.id);
-    /* 헤더 — 펼침 토글 + 케이스 한정 상태 */
-    let h=`<div class="ct-head ${anyTuned?'on':''}" id="ctToggle">
-        <span class="ct-flag">${ICO('flag')}</span><b>케이스 단위 튜닝</b>
-        ${anyTuned?`<span class="ct-badge">⚑ 이 케이스 한정 ${tuned.size}단계</span>`:`<span class="ct-sub">이 케이스에만 적용</span>`}
-        <span class="ct-caret">${ICO(_ctOpen?'chevron-down':'chevron-right')}</span></div>`;
-    if(_ctOpen){
-      h+=`<div class="ct-body">
-        <div class="ct-note">${ICO('info')}여기서 바꾸면 <b>이 케이스에만</b> 적용됩니다(같은 유형의 다른 케이스·팩 기본은 그대로). 변경된 단계엔 ⚑ 표시됩니다.</div>
-        <div class="ct-step ${curTuned?'tuned':''}">
-          <div class="ct-step-h"><span class="ct-step-n">${String(steps.indexOf(cur)+1).padStart(2,'0')}</span><b>${esc(cur.label)}</b>${curTuned?'<span class="ct-mini">⚑ 이 케이스 한정</span>':''}
-            ${cur.canGate?`<label class="wf-gate-tg ${cur.hitl?'on':''}" title="이 케이스에 한해 HITL 게이트 토글"><input type="checkbox" id="ctGate" ${cur.hitl?'checked':''}>${ICO('flag')}HITL</label>`:`<span class="wf-gate-na">${cur.hitl?ICO('flag')+'게이트':'—'}</span>`}
-          </div>
-          <div class="wf-comp-list">${cur.comps.map((c,ci)=>{const m=typeMeta(c.type);
-            return `<div class="pl-comp ${m.cls}"><span class="pl-comp-dot"></span><select class="pl-ty-sel" data-ci="${ci}">${TYPE_KEYS.map(k=>`<option ${k===c.type?'selected':''}>${k}</option>`).join('')}</select><div class="pl-comp-main"><input class="pl-comp-name" data-ci="${ci}" value="${esc(c.name)}"></div><button class="pl-comp-del" data-ci="${ci}" title="이 케이스에서 삭제">${ICO('trash')}</button></div>`;
-          }).join('')||'<div class="wf-comp-empty">구성요소 없음 — 아래에서 추가</div>'}
-          <button class="pl-comp-add" id="ctAdd">${ICO('plus')}구성요소 추가</button></div>
-        </div>
-        <div class="ct-acts">
-          ${anyTuned?`<button class="cp-btn ghost sm" id="ctReset">${ICO('rotate-ccw')}이 케이스만 기본값</button>
-          <button class="cp-btn primary sm" id="ctPromote">${ICO('arrow-up')}이 유형 기본으로 승격</button>`:`<span class="ct-empty-hint">아직 이 케이스 변경 없음 — 위에서 구성/게이트를 바꾸면 이 케이스에만 저장됩니다.</span>`}
-        </div></div>`;
-    }
-    host.innerHTML=h;
-    /* ── 와이어링 ── */
-    const tg=$('ctToggle'); if(tg)tg.onclick=()=>{ _ctOpen=!_ctOpen; renderCaseTuner(pack,selStepId); };
-    if(!_ctOpen)return;
-    /* 편집 = 현재 단계 모델을 케이스 델타로 머지 후 저장(setCaseOverride). pack 은 코어가 즉시 재오버레이. */
-    const saveCur=()=>{
-      const cov=(window.AAP_CORE.getCaseOverride()||{steps:{}});
-      const steps2=cov.steps?{...cov.steps}:{};
-      steps2[cur.id]={ comps:cur.comps.map(c=>({type:c.type,name:c.name})), hitl:!!cur.hitl };
-      window.AAP_CORE.setCaseOverride({steps:steps2});  /* 코어가 overlay 재적용 + restoreStep → renderRight → 이 함수 재호출 */
-    };
-    host.querySelectorAll('.pl-ty-sel').forEach(e=>e.onchange=()=>{ cur.comps[+e.dataset.ci].type=e.value; saveCur(); });
-    host.querySelectorAll('.pl-comp-name').forEach(e=>e.onchange=()=>{ cur.comps[+e.dataset.ci].name=e.value.trim()||'새 구성요소'; saveCur(); });
-    host.querySelectorAll('.pl-comp-del').forEach(e=>e.onclick=()=>{ cur.comps.splice(+e.dataset.ci,1); saveCur(); });
-    const add=$('ctAdd'); if(add)add.onclick=()=>{ cur.comps.push({type:'Agent',name:'새 구성요소'}); saveCur(); };
-    const g=$('ctGate'); if(g)g.onchange=()=>{
-      if(!g.checked){ const others=steps.filter(s=>s.id!==cur.id&&s.hitl).length; if(others===0){ g.checked=true; if(window.AAP_CORE.toast)window.AAP_CORE.toast('HITL 게이트는 최소 1개가 필요합니다'); return; } }
-      cur.hitl=g.checked; saveCur();
-    };
-    const rs=$('ctReset'); if(rs)rs.onclick=()=>{ if(window.AAP_CORE.clearCaseOverride)window.AAP_CORE.clearCaseOverride(); };
-    const pr=$('ctPromote'); if(pr)pr.onclick=()=>{ if(window.AAP_CORE.promoteCaseOverride)window.AAP_CORE.promoteCaseOverride(); };
-  }
-
   /* ── 외부 노출(코어가 사용) ── */
-  window.AAP_WFEDITOR={ renderEditor, applyOverride, modelFromPack, renderCaseTuner };
+  window.AAP_WFEDITOR={ renderEditor, applyOverride, modelFromPack };
 })();

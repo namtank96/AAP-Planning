@@ -124,48 +124,12 @@ function applyPackOverride(pack){
 function reapplyOverride(packId){
   const pack=PACKS[packId]; if(!pack)return;
   /* 원본 baseline 에서 override 재적용 → DC 재정규화(normalizePack 이 _ovApplied/_dcDone 가드로 1회 적용) */
-  pack._ovApplied=false; pack._dcDone=false; pack._caseOv=false; normalizePack(pack);
+  pack._ovApplied=false; pack._dcDone=false; normalizePack(pack);
   /* 활성 런타임 팩이면 참조 갱신(WORK/COMPOSE 등) */
   if(APP.pack===packId)setPackRefs(packId);
   if(STATE.view==='studio')renderDesign();
   else if(STATE.view==='run'&&activeCase()&&activeCase().packId===packId){ renderSeq(); restoreStep(); }
 }
-
-/* =========================================================================
-   P5 · 케이스 단위 튜닝 (case.overrides) — ★격리가 생명: 공유 PACK 오염 0
-   ───────────────────────────────────────────────────────────────────────
-   case.overrides = packOverrides 와 동일 구조 { steps:{ [stepId]:{comps,hitl} } } 의
-   '케이스 단위 델타'. 케이스 객체 안에 영속(localStorage cases[]) → 공유 팩 저장소(packOverrides)
-   와 완전 분리. 적용 순서 = 베이스라인(snapshotPack) → 팩 오버라이드(packOverrides)
-   → 케이스 델타(case.overrides) 를 '그 케이스가 열린 동안의 활성 PACK 참조에만' 얹는다.
-   케이스 전환/닫을 때 팩 레벨(베이스라인+packOverride)로 복원 → 누수 0.
-   ★ packOverrides/PACKS/COMPONENTS/WORK 에는 케이스 델타를 절대 영구 기록하지 않는다.
-   '정의 승격'(명시적 액션)일 때만 case.overrides → packOverrides 로 병합한다. */
-let _caseOvActive=null;   /* 현재 케이스 델타가 얹힌 packId (없으면 null) — 복원 추적용 */
-/* 팩을 '팩 레벨 상태'(베이스라인 + packOverrides, 케이스 델타 0)로 재구성. */
-function rebuildPackLevel(pack){
-  pack._ovApplied=false; pack._dcDone=false; pack._caseOv=false; normalizePack(pack); /* baseline+packOverride 재적용 */
-}
-/* 케이스 델타를 활성 팩 파생본에 얹는다(임시 — 떠나면 removeCaseOverlay 로 제거).
-   격리: packOverrides 미수정. 팩 레벨로 먼저 되돌린 뒤 케이스 델타만 추가 적용 → DC 재정규화. */
-function applyCaseOverlay(pack, caseOv){
-  if(!pack)return;
-  rebuildPackLevel(pack); /* 항상 팩 레벨에서 출발(이전 케이스 델타 잔존 0) */
-  if(caseOv&&caseOv.steps&&Object.keys(caseOv.steps).length&&window.AAP_WFEDITOR&&window.AAP_WFEDITOR.applyOverride){
-    try{ window.AAP_WFEDITOR.applyOverride(pack,caseOv); pack._caseOv=true; pack._dcDone=false; normalizePack(pack); /* 케이스 델타 후 DC 재정규화(_ovApplied 가드는 그대로 → packOverride 재적용 없음) */ }
-    catch(e){ if(window.console)console.warn('[AAP] case override 적용 실패',e); }
-  }
-}
-/* 케이스 델타 제거 → 팩 레벨로 복원(베이스라인 + packOverrides 만). 케이스 전환/닫을 때 호출. */
-function removeCaseOverlay(pack){ if(!pack)return; rebuildPackLevel(pack); }
-/* 활성 케이스 델타가 있으면 팩 레벨로 되돌리고 참조 갱신(케이스 전환 직전) — 누수 가드. */
-function clearActiveCaseOverlay(){
-  if(_caseOvActive&&PACKS[_caseOvActive]){ removeCaseOverlay(PACKS[_caseOvActive]); if(APP.pack===_caseOvActive)setPackRefs(_caseOvActive); }
-  _caseOvActive=null;
-}
-/* 케이스 객체의 overrides(케이스 델타) — 없으면 null. */
-function caseOverridesOf(c){ return (c&&c.overrides&&c.overrides.steps&&Object.keys(c.overrides.steps).length)?c.overrides:null; }
-function hasCaseOverlay(c){ return !!caseOverridesOf(c); }
 
 /* Pack 데이터 별칭 (loadPack 에서 활성 팩으로 갱신 — 팩 교체 가능) */
 let PACK, WORK, COMPONENTS, COMPOSE, TIMES;
@@ -312,8 +276,6 @@ function resolveDlv(k,C){const d=PACK.products[k];return {ic:d.ic,title:d.title,
 
 /* ===== view 전환 (운영 콘솔 IA: inbox / run / govern / domain) ===== */
 function setView(v){
-  /* ★P5 격리: 실행 뷰를 떠나면 케이스 델타를 팩 레벨로 복원 → 스튜디오/자산/로그는 공유 팩(케이스 델타 0) 기준. */
-  if(v!=='run'&&STATE.view==='run'&&_caseOvActive)clearActiveCaseOverlay();
   STATE.view=v; APP.view=v;
   document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   document.querySelectorAll('.view').forEach(s=>s.hidden=s.dataset.view!==v);
@@ -353,21 +315,15 @@ function seedPack(key){
   });
   saveApp();
 }
-/* 케이스(인스턴스) 열기 → 런타임 STATE hydrate → 실행 뷰
-   ★P5 격리: 이전 케이스 델타를 팩 레벨로 되돌린 뒤, 이 케이스의 델타만 활성 팩 파생본에 얹는다. */
+/* 케이스(인스턴스) 열기 → 런타임 STATE hydrate → 실행 뷰 */
 function openCase(id){
   const c=APP.cases.find(x=>x.id===id); if(!c)return;
   if(!PACKS[c.packId]){ toast('이 유형은 현재 등록돼 있지 않습니다'); setView('inbox'); return; }
-  clearActiveCaseOverlay();              /* 이전 케이스 델타 제거(누수 가드) — packOverrides 미수정 */
   if(c.packId!==APP.pack)setPackRefs(c.packId);
-  /* 적용 순서 = 베이스라인 → 팩 오버라이드 → 케이스 델타 (그 케이스 파생본에만) */
-  const cov=caseOverridesOf(c);
-  if(cov){ applyCaseOverlay(PACKS[c.packId], cov); _caseOvActive=c.packId; setPackRefs(c.packId); }
   APP.active=id; hydrateFromCase(c);
   clearRun(); setRunBtn(false);
   setView('run'); renderSeq(); restoreStep(); saveApp();
 }
-/* 실행 뷰 이탈 시 케이스 델타 복원은 setView(v!=='run') 가드가 처리(rtBack→setView('inbox') 포함). */
 /* hydrate 된 STATE(sel/decisions/...) 로 화면을 '진행된 그 지점'에 복원(재생 ✕, 정지 상태) */
 function restoreStep(){
   /* 정지(비재생) 복원 = 단계를 '완료(정착)'로 보여 AAP 작동 흐름을 기본 노출(결과 모달이 흐름을 덮지 않게).
@@ -766,8 +722,6 @@ function renderRight(){
     casm=`<div class="casm"><div class="casm-h">AAP가 조합한 구성요소</div>${COMPOSE.map(c=>`<span class="ct2 ${c.cls} ${lit?'on':''} ev-link" data-asset="${dcText(c.n,'compose.n')}" data-atk="${c._tk||dcTypeKey(c.cls,'compose.cls')}" data-tip="자산 카탈로그에서 보기">${c.t} ${c.n}</span>`).join('')}</div>`;}
   flow.innerHTML=lb+h+casm;
   if(exp)exp.innerHTML=w.explain;
-  /* P5 케이스 튜닝 패널 갱신(케이스 맥락에서만 wfeditor 가 렌더 — 도메인 무관 위임) */
-  if(window.AAP_WFEDITOR&&window.AAP_WFEDITOR.renderCaseTuner)window.AAP_WFEDITOR.renderCaseTuner(PACK,STATE.sel);
   flow.querySelectorAll('[data-op]').forEach(e=>e.onclick=()=>{const k=e.dataset.op;STATE.opOpen.has(k)?STATE.opOpen.delete(k):STATE.opOpen.add(k);renderRight();});
   /* Run→자산 양방향: 근거 레일 구성요소·조합 칩 클릭 → 자산 뷰 해당 항목 강조 */
   flow.querySelectorAll('[data-asset]').forEach(e=>e.onclick=()=>gotoAsset(e.dataset.asset,e.dataset.atk));
@@ -1041,36 +995,6 @@ window.AAP_CORE={
   getPackOverride:(packId)=>loadOverrides()[packId]||null,
   hasPackOverride:(packId)=>!!loadOverrides()[packId],
   clearPackOverride:(packId)=>{ delete loadOverrides()[packId]; saveOverrides(); reapplyOverride(packId); if(window.AAP_CORE)toast('기본값으로 복원했습니다'); },
-  /* ── P5 케이스 단위 튜닝 API (★격리: case.overrides 만 수정, packOverrides 미터치) ──
-     wfeditor 가 케이스 맥락(run 뷰·활성 케이스)에서 편집할 때 호출. setPackOverride 와 시그니처 동형. */
-  setCaseOverride:(ov)=>{ const c=activeCase(); if(!c)return;
-    c.overrides=ov; saveApp();                       /* 케이스 객체 안에 영속(공유 팩 저장소 분리) */
-    if(PACKS[c.packId]){ applyCaseOverlay(PACKS[c.packId], caseOverridesOf(c)); _caseOvActive=caseOverridesOf(c)?c.packId:null; if(c.packId===APP.pack)setPackRefs(c.packId); }
-    if(STATE.view==='run')restoreStep();             /* 실행 뷰 근거 레일·8계층·surface 갱신 */
-  },
-  getCaseOverride:()=>{ const c=activeCase(); return c?(c.overrides||null):null; },
-  hasCaseOverride:()=>hasCaseOverlay(activeCase()),
-  /* 케이스 튜닝 = 케이스 맥락(run 뷰 + 활성 케이스)에서만 가능. 스튜디오는 팩 레벨. */
-  isCaseContext:()=>STATE.view==='run'&&!!activeCase(),
-  activeCasePackId:()=>{ const c=activeCase(); return c?c.packId:null; },
-  /* 케이스 델타 비우기('이 케이스만 기본값으로 복원') — packOverrides 무영향. */
-  clearCaseOverride:()=>{ const c=activeCase(); if(!c)return;
-    delete c.overrides; saveApp();
-    if(PACKS[c.packId]){ removeCaseOverlay(PACKS[c.packId]); _caseOvActive=null; if(c.packId===APP.pack)setPackRefs(c.packId); }
-    if(STATE.view==='run')restoreStep();
-    toast('이 케이스를 유형 기본값으로 되돌렸습니다');
-  },
-  /* ★정의 승격 — 명시적 액션일 때만 케이스 델타를 packOverrides(공유 팩 기본)로 병합. 병합 후 케이스 델타 비움. */
-  promoteCaseOverride:()=>{ const c=activeCase(); const cov=caseOverridesOf(c); if(!c||!cov){ toast('이 케이스에 적용된 변경이 없습니다'); return; }
-    /* 케이스 델타 = packOverrides 와 동형(steps) → 그대로 팩 기본으로 승격(setPackOverride 재사용) */
-    const merged={ steps:{ ...((loadOverrides()[c.packId]||{}).steps||{}), ...cov.steps } };
-    loadOverrides()[c.packId]=merged; saveOverrides();
-    delete c.overrides; saveApp();                   /* 승격 후 케이스 델타 비움(이제 팩 기본이 됨) */
-    _caseOvActive=null;
-    reapplyOverride(c.packId);                        /* 팩 레벨 재적용(케이스 델타 0 상태) + 영향 뷰 재렌더 */
-    if(STATE.view==='run')restoreStep();
-    toast('이 변경을 유형(팩) 기본으로 승격했습니다 — 같은 유형의 모든 케이스에 적용됩니다');
-  },
   toast:(m)=>toast(m),
 };
 
