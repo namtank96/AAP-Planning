@@ -242,6 +242,31 @@ background:
 
 ---
 
+## 6.6 온톨로지 · 결정론/LLM 블록 · 3패널 빌더 · 운영 콘솔 (v0.21 표준 · 경쟁사 벤치마크 차용)
+
+> 출처: 경쟁사 벤치마크(Palantir AIP 온톨로지·AIP Logic 3패널·SK AX/메가존 Agent Ops·RBAC) → `memory/reference_agentic_platform_benchmark.md`. 우리 KEY MESSAGE(결정론·통제)와 정합하는 것만 차용.
+
+### 6.6.1 온톨로지 L4 시각 (도메인 팩 뷰 · Palantir 온톨로지 차용)
+- 3블록: **객체**(객체명+속성칩) · **관계**(A —<em>관계</em>→ B, 관계어 aap-soft 칩) · **Action**(자동=green 점 / 사람확인=amber 점 배지, §5.5).
+- 카드 1스타일(라운드 12·옅은 그림자), 섹션 헤더 색점(객체/관계=teal·Action=green)+구분선.
+- 메시지: "LLM은 온톨로지 통해서만 데이터 접근(통제된 reasoning)" — **전시 캡션 ✕, 구조로** 읽히게.
+
+### 6.6.2 결정론 / 비결정론(LLM) 블록 구분 (★ KEY MESSAGE 증명)
+- 모든 블록·op를 **결정론 Action**(Module·Connector·Policy·기존솔루션 = 규칙·온톨로지 편집, 재현 가능) vs **비결정론 Use LLM**(Agent = 추론)으로 표기.
+- 배지(`.ev-kind`·팔레트 `.wfp-kind`·Run `.wfr-st`): 결정론=slate 중립 점 / LLM=violet 점. 근거 레일·팔레트·Run 일관.
+- 의미: 결정론과 LLM 추론을 분리해 통제(블랙박스 ✕) — Palantir governed reasoning 정합.
+
+### 6.6.3 워크플로우 3패널 빌더 (Palantir AIP Logic 톤 · §1)
+- **좌 팔레트**(블록+5타입 자산, surf+inset, 타입 그룹 좌측 3px 타입색 띠 §5.9) / **중 캔버스**(노드 그래프, 흰 작업면, 선택 단계 글로우) / **우 Run·디버거**(dry-run·통계 칩·게이트 amber, surf+inset).
+- 3패널 위계: 중앙이 주, 좌·우는 보조 레일. 패널 헤더 하단 구분선 통일.
+- 두 경로: **로우/노코드 직접 조립** + **AI 격상**(설명→자동). 결과는 동일 워크플로우 데이터.
+
+### 6.6.4 운영 콘솔 — Eval · RBAC · Agent Ops (관리 뷰 · Datadog/Agent Ops 톤)
+- **Eval**: 종합점수 좌측 상태색 4px 띠(green≥85·amber≥60·red<60), 메트릭·케이스 행 hover, 종합 셀 상태색 배경.
+- **RBAC**: 역할(담당자/검토자/승인자/관리자)×권한 매트릭스 — 허용=green 굵은 체크·차단=회색 dash·셀 hover. 배포·정책 권한=승인자·관리자(배포 생애주기 연결).
+- **Agent Ops KPI**: 성능·비용·품질 카드(hover lift). 배포된(deployed) 팩만 거버넌스 대상.
+- 신규 hex 0(5타입·상태 토큰만), 아이콘 추가 0. **시각만 — 로직·DOM id 불변.**
+
 ## 7. 적용 체크리스트
 
 빌드/수정 시 확인:
@@ -268,4 +293,5 @@ background:
 *v0.1 — 현행 v0.22 코드 역추출 기준. 데모가 진화하면 토큰·패턴 변경분을 여기 반영한다.*
 *v0.2 — `05_범용플랫폼/app/` 운영 콘솔 기준 §6.5 추가(통합 인박스·격상 파이프라인 5단계 UX·다크 엔진룸 노드 그래프). 신규 hex 0 — 5타입·상태 4색·다크 맵 토큰만. 아이콘 추가: `git-branch`(노드 그래프)·`boxes`(구성)·`workflow`.*
 *v0.3 — §6.5.5 시연 모드(Guide Mode) 시각 표준 추가(시나리오 카드·스포트라이트·말풍선 진행 도트/역할 태그/꼬리·커서·HITL amber 강조). 메타=violet·본체 액션=teal 규율. 신규 hex 0. 아이콘 추가: `circle-dot`·`user-check`·`bot`.*
+*v0.4 — §6.6 정식 표준 절 추가(온톨로지 L4 시각·결정론/LLM 블록 구분·워크플로우 3패널 빌더·운영 콘솔 Eval/RBAC/Agent Ops). 경쟁사 벤치마크(Palantir·SK AX·메가존) 차용점을 디자인 표준으로 승격. (v0.21 changelog의 코드 적용분을 discoverable 표준 절로 정식화.)*
 *v0.21(코드 동기) — 신규 surface 4종 폴리시(platform.css 끝 v0.21 블록). 신규 hex 0 — 5타입·상태 4색·다크 엔진룸 토큰만. (1) **온톨로지 L4 섹션**: 카드 1스타일 정합(라운드 12·그림자), 섹션 헤더에 색점(객체/관계=teal·Action=green) + 하단 구분선, 객체는 객체명+속성칩 1행씩 dashed 분리, 관계 `em`을 aap-soft 칩으로(A —관계→ B 읽힘), Action 자동/사람확인 배지에 색점(green=자동·amber=사람확인, §5.5) — "LLM이 온톨로지 통해 접근"이 구조로 읽히게(전시 캡션 추가 ✕). (2) **결정론/LLM 배지**: `.ev-kind`(+팔레트 `.wfp-kind`/`.wfp-lg`·Run `.wfr-blk-kind`/`.wfr-st`)에 작은 색점(결정론=slate 중립·LLM=violet) 일관. (3) **워크플로우 3패널 빌더**(§1 Palantir AIP Logic): 좌 팔레트·우 Run = surf 배경+inset 경계선, 중 캔버스=흰 작업면(3패널 위계), 패널 헤더 하단 구분선 통일, 팔레트 타입 그룹 좌측 3px 타입색 띠(§5.9 부품 종류 신호), 캔버스 선택 단계 노드 글로우+라벨 강조, Run 통계 칩 색점·게이트 단계 amber 좌측 그라데이션·dry-run 버튼 글로우/disabled 위계. (4) **운영 콘솔**(Datadog 톤): Eval 종합점수 좌측 상태색 4px 띠, 메트릭/케이스 행 hover 들림+종합 점수 셀 상태색 배경, RBAC 허용=green 굵은 체크(stroke 2.4)·차단=회색 dash·셀 hover, Agent Ops KPI hover 들림+값 letter-spacing, 운영 서브헤더 좌측 teal 마커. 아이콘 추가 0(기존 세트 충분). ★시각만 — 함수·DOM id·뷰 키·data-* 불변.*
