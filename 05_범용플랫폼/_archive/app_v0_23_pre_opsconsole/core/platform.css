@@ -417,68 +417,6 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .gov-cell .gk{font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--faint);text-transform:uppercase;}
 .gov-cell .gv{font-size:12px;color:var(--slate);margin-top:5px;line-height:1.5;} .gov-cell .gv b{color:var(--ink);}
 
-/* ===== 운영 콘솔 (govern 뷰 확장 · Eval · RBAC · Agent Ops) — 토큰 재사용 ===== */
-.ops-sub{font-size:11px;font-weight:800;letter-spacing:.02em;color:var(--ink);margin:18px 0 9px;}
-.ops-sub:first-of-type{margin-top:4px;}
-.ops-sub-n{font-weight:500;font-size:10.5px;color:var(--muted);margin-left:6px;}
-.ops-empty{font-size:11.5px;color:var(--muted);background:var(--surf);border:1px dashed var(--border);border-radius:10px;padding:14px;}
-/* 배포 연결 표기 */
-.ops-deploy{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:11px;padding:10px 14px;margin-bottom:4px;}
-.ops-deploy .opd-k{font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--aap-ink);text-transform:uppercase;}
-.ops-deploy .opd-v{font-size:12px;color:var(--slate);} .ops-deploy .opd-v b{color:var(--aap-ink);font-size:14px;}
-.ops-deploy .opd-chip{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:#fff;border:1px solid var(--aap-border);color:var(--aap-ink);}
-.ops-deploy .opd-chip.tyM{border-color:#ddd6fe;color:var(--violet);} .ops-deploy .opd-chip.tyS{border-color:#a5f3fc;color:#0891b2;}
-.ops-deploy .opd-chip.tyC{border-color:var(--blue-border);color:var(--blue);} .ops-deploy .opd-chip.tyP{border-color:var(--amber-border);color:var(--amber);}
-.ops-deploy .opd-note{font-size:10.5px;color:var(--muted);margin-left:auto;}
-/* Eval — 전역 점수 + 게이지 */
-.eval-global{display:grid;grid-template-columns:200px 1fr;gap:12px;margin-bottom:12px;}
-.eval-score{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;}
-.eval-score.green{border-color:var(--aap-border);background:var(--green-soft);} .eval-score.amber{border-color:var(--amber-border);background:var(--amber-soft);} .eval-score.red{border-color:var(--red-border);background:var(--red-soft);}
-.eval-score .es-v{font-size:38px;font-weight:800;line-height:1;letter-spacing:-1px;color:var(--ink);}
-.eval-score.green .es-v{color:var(--green);} .eval-score.amber .es-v{color:var(--amber);} .eval-score.red .es-v{color:var(--red);}
-.eval-score .es-k{font-size:11.5px;font-weight:800;color:var(--slate);margin-top:6px;}
-.eval-score .es-sub{font-size:10px;color:var(--muted);margin-top:3px;}
-.eval-ms{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.eval-m{background:#fff;border:1px solid var(--border);border-radius:11px;padding:11px 13px;}
-.eval-m .em-h{display:flex;justify-content:space-between;align-items:baseline;}
-.eval-m .em-k{font-size:11px;font-weight:700;color:var(--slate);}
-.eval-m .em-v{font-size:16px;font-weight:800;color:var(--ink);} .eval-m .em-v i{font-size:10px;font-weight:700;margin-left:1px;color:var(--muted);font-style:normal;}
-.eval-m .em-v.green{color:var(--green);} .eval-m .em-v.amber{color:var(--amber);} .eval-m .em-v.red{color:var(--red);}
-.eval-m .em-bar{height:6px;border-radius:6px;background:var(--line);margin-top:7px;overflow:hidden;}
-.eval-m .em-bar span{display:block;height:100%;border-radius:6px;background:var(--green);} .eval-m .em-bar span.amber{background:var(--amber);} .eval-m .em-bar span.red{background:var(--red);}
-/* Eval — 케이스별 표 */
-.eval-cases{margin-bottom:4px;}
-.evc-head,.evc-row{display:grid;grid-template-columns:1fr 64px 64px 64px 64px 70px;gap:8px;align-items:center;padding:8px 12px;}
-.evc-head{font-size:9.5px;font-weight:800;letter-spacing:.03em;color:var(--faint);text-transform:uppercase;}
-.evc-head>div:not(:first-child),.evc-row>div:not(:first-child){text-align:center;}
-.evc-row{background:#fff;border:1px solid var(--border);border-radius:10px;margin-top:6px;}
-.evc-t{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink);font-weight:600;overflow:hidden;}
-.evc-t span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.evc-c{font-size:13px;font-weight:800;color:var(--slate);}
-.evc-c.green{color:var(--green);} .evc-c.amber{color:var(--amber);} .evc-c.red{color:var(--red);}
-.evc-c.sc{font-size:14px;background:var(--surf);border-radius:7px;padding:3px 0;}
-/* RBAC — 역할 × 권한 매트릭스 */
-.rbac-grid{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
-.rb-corner,.rb-ph,.rb-rh,.rb-cell{background:#fff;padding:10px 12px;font-size:11px;}
-.rb-corner{font-size:9.5px;font-weight:800;color:var(--faint);text-transform:uppercase;}
-.rb-ph{font-weight:800;color:var(--ink);text-align:center;display:flex;align-items:center;justify-content:center;gap:4px;}
-.rb-ph svg{width:13px;height:13px;color:var(--amber);} .rb-ph.gate{background:var(--amber-soft);color:var(--amber-ink);}
-.rb-rh{font-weight:700;color:var(--slate);} .rb-rh b{color:var(--ink);font-weight:800;}
-.rb-cell{text-align:center;font-weight:800;}
-.rb-cell.ok{background:var(--green-soft);color:var(--green);} .rb-cell.ok svg{width:14px;height:14px;display:inline-block;vertical-align:middle;}
-.rb-cell.no{color:var(--faint);}
-.rbac-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;} .rbac-note b{color:var(--ink);}
-/* Agent Ops KPI */
-.ao-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
-.ao-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 13px;border-top:3px solid var(--border);}
-.ao-card.perf{border-top-color:var(--blue);} .ao-card.cost{border-top-color:var(--amber);} .ao-card.qual{border-top-color:var(--aap);}
-.ao-card .ao-grp{font-size:8.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);}
-.ao-card.perf .ao-grp{color:var(--blue);} .ao-card.cost .ao-grp{color:var(--amber);} .ao-card.qual .ao-grp{color:var(--aap-ink);}
-.ao-card .ao-v{font-size:21px;font-weight:800;color:var(--ink);line-height:1.05;margin-top:6px;letter-spacing:-.5px;}
-.ao-card .ao-v i{font-size:11px;font-weight:700;color:var(--muted);font-style:normal;margin-left:1px;}
-.ao-card .ao-k{font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;}
-@media(max-width:1100px){.ao-grid{grid-template-columns:repeat(3,1fr);} .eval-global{grid-template-columns:1fr;}}
-
 [data-tip]{cursor:help;}
 #tip{position:fixed;z-index:100;max-width:300px;background:var(--ink);color:#f1f5f9;font-size:11px;line-height:1.55;padding:9px 11px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:none;pointer-events:none;}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:12px;font-weight:600;padding:11px 18px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:95;box-shadow:0 8px 24px rgba(15,23,42,.25);}
