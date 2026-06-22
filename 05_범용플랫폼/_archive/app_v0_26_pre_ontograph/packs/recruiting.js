@@ -679,30 +679,26 @@
 
   /* 온톨로지(L4) — AAP가 추론·편집하는 의미 레이어. LLM은 이 객체들을 통해서만 데이터에 접근(통제된 reasoning). */
   const ONTOLOGY={
-    /* k = 그래프 매칭용 핵심 키(영문). n = 표시명. a = 속성. on = 이 객체에 걸리는 Action 키. */
     objects:[
-      {k:'Candidate', n:'Candidate(후보)', a:['이름','경력','스킬','매칭%','상태'], on:['parse']},
-      {k:'Job', n:'Job(직무)', a:['직무','필수/우대 스킬','인원','보상밴드']},
-      {k:'Application', n:'Application(지원)', a:['후보↔직무','매칭 점수','판정'], on:['score','screen','shortlist']},
-      {k:'Interview', n:'Interview(면접)', a:['슬롯','면접관','스코어카드'], on:['interview']},
-      {k:'Offer', n:'Offer(오퍼)', a:['조건','상태'], on:['offer']},
+      {n:'Candidate(후보)', a:['이름','경력','스킬','매칭%','상태']},
+      {n:'Job(직무)', a:['직무','필수/우대 스킬','인원','보상밴드']},
+      {n:'Application(지원)', a:['후보↔직무','매칭 점수','판정']},
+      {n:'Interview(면접)', a:['슬롯','면접관','스코어카드']},
+      {n:'Offer(오퍼)', a:['조건','상태']},
     ],
-    /* from/to = objects[].k 핵심 키로 매칭. label = 엣지 라벨. t = 하위호환 display 문자열. */
     relations:[
-      {from:'Candidate', label:'applies', to:'Job', t:'Candidate —<em>applies</em>→ Job'},
-      {from:'Application', label:'scored-by', to:'Candidate', t:'Application —<em>scored-by</em>→ 매칭(스킬·경력·도메인)'},
-      {from:'Application', label:'for', to:'Job', t:'Application —<em>for</em>→ Job'},
-      {from:'Interview', label:'for', to:'Candidate', t:'Interview —<em>for</em>→ Candidate'},
-      {from:'Offer', label:'to', to:'Candidate', t:'Offer —<em>to</em>→ Candidate'},
+      {t:'Candidate —<em>applies</em>→ Job'},
+      {t:'Application —<em>scored-by</em>→ 매칭(스킬·경력·도메인)'},
+      {t:'Interview —<em>for</em>→ Candidate'},
+      {t:'Offer —<em>to</em>→ Candidate'},
     ],
-    /* key = 객체의 on[]이 참조. mode = auto(자동·green) / confirm(사람 확인·amber). */
     actions:[
-      {key:'parse', n:'이력서 파싱·정규화', mode:'auto'},
-      {key:'score', n:'매칭 점수 산출', mode:'auto'},
-      {key:'screen', n:'스크리닝 판정(통과/보류/탈락)', mode:'auto'},
-      {key:'shortlist', n:'숏리스트 승급', mode:'confirm'},
-      {key:'interview', n:'면접 확정', mode:'confirm'},
-      {key:'offer', n:'합격·오퍼 발송', mode:'confirm'},
+      {n:'이력서 파싱·정규화', mode:'auto'},
+      {n:'매칭 점수 산출', mode:'auto'},
+      {n:'스크리닝 판정(통과/보류/탈락)', mode:'auto'},
+      {n:'숏리스트 승급', mode:'confirm'},
+      {n:'면접 확정', mode:'confirm'},
+      {n:'합격·오퍼 발송', mode:'confirm'},
     ],
   };
 

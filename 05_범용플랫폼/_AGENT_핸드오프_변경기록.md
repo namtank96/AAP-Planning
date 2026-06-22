@@ -69,6 +69,15 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### app/ 구현체 — 온톨로지 그래프화 (목록 → 노드 그래프 · 객체=노드/관계=엣지/Action=배지) (`04_디자인가이드/aap_layout_improvement_spec_v0_1.md` §3) (260623, aap-platform) 〔기획·UX〕
+> 명세 §3 후속(직전 레이아웃 v0.1이 "그래프화는 후속"으로 남긴 항목) 구현. 도메인 뷰 온톨로지 탭을 목록형 → **Palantir 톤 다크 엔진룸(`.plg-*` 재사용) SVG 노드 그래프**로. 객체=노드(teal)·관계=라벨 엣지·Action=객체 배지(자동 green/사람확인 amber). 코어가 ontology 데이터로 렌더 → **도메인 무관**, ontology 없는 팩(meeting/voc)은 generic 폴백 유지(무회귀). 안정 ID `#ontologyBox` 유지·뷰 키 불변·X1 dcText 전 텍스트 적용. file:// 동작·외부 라이브러리 0.
+- **백업**: 셸 cp/PowerShell 전부 차단 → 물리 백업 `_archive/app_v0_26_pre_ontograph/` 미생성. git 복원 기준 **HEAD c8a18cb**(변경 전). 변경 파일=`packs/recruiting.js`·`core/core.js`·`core/platform.css`.
+- **[ONTOLOGY] 관계 구조화**(`packs/recruiting.js` `ONTOLOGY`) — `relations[]`를 그래프용 `{from, label, to}` 구조로 재정의(+display `t`는 하위호환 유지·목록 렌더용). 객체에 `k`(영문 핵심 키, 그래프 매칭용)·`on[]`(이 객체에 걸린 Action 키) 추가, `actions[]`에 `key` 추가(객체 `on[]`이 참조). 관계 1개 추가(`Application —for→ Job`)로 그래프 연결성 보강.
+- **[ONTOLOGY] renderOntology → SVG 노드 그래프**(`core.js`) — `#ontologyBox`에: ①**결정론적 원형 레이아웃**(객체 노드를 원 위 균등 배치·좌표 고정 산출·추가 상태 0, N=1은 중앙). ②**객체=노드**(객체명+`속성 N · Action N`+해당 객체 Action 배지 dot green/amber). ③**관계=라벨 엣지**(중심선 단축·`marker-end` 화살표·라벨 칩). ④**노드 클릭/Enter→하단 상세 패널**(속성·Action·연결 관계, 선택 노드 하이라이트 `.sel`). ⑤**그래프/목록 토글**(`_ontoView`, 목록형 보존). 폴백(ontology 없음)·X1 dcText 전 라벨 통과. `_ontoKey` 헬퍼=`k`||`n`에서 영문 키 추출.
+- **[ONTOLOGY] CSS**(`platform.css` 신규 블록) — `.onto-canvas`(radial 다크 엔진룸)·`.onto-node`(teal rect+hover/sel)·`.onto-edge`/`.onto-elbl`(엣지·라벨)·`.onto-badge`(auto green/confirm amber dot)·`.onto-detail`(다크 상세 패널)·`.onto-toolbar`/`.onto-tg`(토글)·`.onto-d-*`(상세 행). `.plg-wrap`/`.plg-canvas`/`.plg-leg` 재사용. 엔진룸 hex는 기존 `.plg-*` 컨벤션과 정합(다크 캔버스=토큰 외 hex 선례).
+- **검증**(헤드리스 Chrome/Edge·`node --check` **전부 셸/IDE 차단으로 미실측** — 정적 추적만): ①객체 5노드·관계 5엣지·Action 배지(parse/score/screen=Application·interview·offer) 매핑 정합 확인 ②노드 클릭→상세(속성·Action·관계) 핸들러 바인딩 확인 ③meeting/voc=ontology 없음→generic 폴백 분기 무변경 ④도메인 탭/레이아웃 접기/뷰 키/`#ontologyBox` ID/Pack Contract v2/P2~P5 미접촉(렌더 함수 1개+팩 데이터+CSS만 수정) ⑤JS 정적상 에러 0(타 코드 relations 형태 미참조 grep 확인). **헤드리스 실측은 환경(셸·IDE 실행 전부 차단)으로 미수행 → 유저/후속 세션 1회 실행 권장**.
+- **남긴 후속**: ① **meeting/voc 팩에 최소 ontology 추가**(현 폴백 → 그래프 표출) — 선택, 미구현(폴백 유지). ② 노드 수 많은 팩(>8)일 때 원형 레이아웃 라벨 충돌 가능 → force/격자 등 적응 레이아웃 후속. ③ 헤드리스 실측 1회(위 a~e). 〔기획·UX/후속〕
+
 ### app/ 구현체 — 레이아웃·편의성 개선 v0.1 (무스크롤·스크롤바 비표시·패널 접기·도메인 탭) (`04_디자인가이드/aap_layout_improvement_spec_v0_1.md` §1~§5) (260623, aap-platform) 〔기획·UX〕
 > 명세 §1~§5 구현. 유저 핵심=스크롤바 비표시·1뷰포트·좌 nav/우 패널 접기·직관성. **온톨로지 그래프화(§3 그래프)는 범위 밖(후속)** — 이번은 탭까지. 코어 골격·뷰 키·안정 ID·Pack Contract v2·P2~P5·demo.js **무회귀**. 신규 hex 0(토큰만)·file:// 동작·Lucide 인라인 유지.
 - **백업**: 셸 cp/PowerShell 차단 → git 복원 기준 **HEAD 86c68c0**(변경 전). 변경 파일=`core/platform.css`·`core/icons.js`·`index.html`·`core/core.js`·`core/wfeditor.js`. `_archive/app_v0_25_pre_layout/` 물리 백업은 셸 차단으로 미생성 → git 히스토리로 대체.

@@ -1010,85 +1010,17 @@ function renderDesign(){
   renderArchCoherence(P);
   renderOntology(P);
 }
-/* 온톨로지(L4) 섹션 — 객체=노드 / 관계=엣지 / Action=객체 배지의 노드 그래프(Palantir 톤·다크 엔진룸).
-   결정론적 원형 레이아웃(좌표 고정 산출·추가 상태 0). 목록형은 하단 토글로 보존.
-   팩이 ontology 없으면 generic 폴백(무회귀). */
-let _ontoView='graph';
-function _ontoKey(x){ return x.k || String(x.n||'').replace(/\(.*$/,'').trim(); }   /* 'Candidate(후보)' → 'Candidate' */
+/* 온톨로지(L4) 섹션 — 객체·관계·Action(자동/사람확인). 팩이 ontology 없으면 generic 폴백(무회귀). */
 function renderOntology(P){
   const el=document.getElementById('ontologyBox'); if(!el)return;
   const o=P&&P.ontology;
   if(!o){ el.innerHTML=`<div class="onto-col full"><div class="onto-k">온톨로지</div><div class="onto-rel">이 유형은 아직 명시 온톨로지가 없습니다 — 업무 이해의 산출물·확인 지점이 의미 레이어로 작동합니다.</div></div>`; return; }
-  const objs=o.objects||[], rels=o.relations||[], acts=o.actions||[];
-  const actByKey={}; acts.forEach(a=>{ if(a.key)actByKey[a.key]=a; });
-  /* ── 결정론적 원형 레이아웃: 객체 노드를 원 위에 균등 배치(노드 ≥1) ── */
-  const N=objs.length;
-  const W=520, H=Math.max(300, 230+N*8), cx=W/2, cy=H/2, R=Math.min(W,H)/2-90;
-  const NW=132, NH=46;
-  const pos={}; const nodes=objs.map((x,i)=>{
-    const ang=(-Math.PI/2)+(i*2*Math.PI/Math.max(1,N));
-    const x0=N===1?cx:cx+R*Math.cos(ang), y0=N===1?cy:cy+R*Math.sin(ang);
-    const k=_ontoKey(x);
-    pos[k]={x:x0,y:y0};
-    return {k,x:x0,y:y0,obj:x};
-  });
-  /* ── 엣지: from/to(핵심 키) → 좌표. 사각 노드 경계에서 출발하도록 중심선 단축 ── */
-  const edgeP=rels.map(r=>{
-    const a=pos[r.from], b=pos[r.to]; if(!a||!b)return '';
-    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1, ux=dx/len, uy=dy/len;
-    const ax=a.x+ux*(NW/2*0.55), ay=a.y+uy*(NH/2+6);
-    const bx=b.x-ux*(NW/2*0.55), by=b.y-uy*(NH/2+6);
-    const mx=(ax+bx)/2, my=(ay+by)/2;
-    const lbl=dcText(r.label||r.t||'','onto.rel');
-    return `<g class="onto-edge"><path d="M${ax.toFixed(1)},${ay.toFixed(1)} L${bx.toFixed(1)},${by.toFixed(1)}" marker-end="url(#ontoArrow)"/>`+
-      `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" class="onto-elbl">${lbl}</text></g>`;
-  }).join('');
-  /* ── 노드: 객체명 + 속성 수 + Action 배지(green=auto / amber=confirm) ── */
-  const nodeN=nodes.map((nd,i)=>{
-    const x=nd.x, y=nd.y;
-    const onAct=(nd.obj.on||[]).map(k=>actByKey[k]).filter(Boolean);
-    const badges=onAct.map((a,j)=>{ const m=a.mode==='confirm'?'confirm':'auto';
-      return `<circle class="onto-badge ${m}" cx="${(x-NW/2+12+j*13).toFixed(1)}" cy="${(y+NH/2-7).toFixed(1)}" r="4"/>`; }).join('');
-    const nm=dcText(nd.obj.n,'onto.obj');
-    return `<g class="onto-node" data-onode="${i}" tabindex="0">`+
-      `<rect x="${(x-NW/2).toFixed(1)}" y="${(y-NH/2).toFixed(1)}" width="${NW}" height="${NH}" rx="10"/>`+
-      `<text class="onto-ntl" x="${x.toFixed(1)}" y="${(y-3).toFixed(1)}">${nm}</text>`+
-      `<text class="onto-nattr" x="${x.toFixed(1)}" y="${(y+12).toFixed(1)}">속성 ${(nd.obj.a||[]).length} · Action ${onAct.length}</text>`+
-      badges+`</g>`;
-  }).join('');
-  /* ── 보조: 목록형(토글 보존) ── */
-  const listObjs=objs.map(x=>`<div class="onto-obj"><b>${dcText(x.n,'onto.obj')}</b>${(x.a||[]).map(a=>`<span>${dcText(a,'onto.attr')}</span>`).join('')}</div>`).join('');
-  const listRels=rels.map(r=>`<div class="onto-rel">${r.t||(dcText(r.from,'onto.rel')+' —<em>'+dcText(r.label,'onto.rel')+'</em>→ '+dcText(r.to,'onto.rel'))}</div>`).join('');
-  const listActs=acts.map(a=>{const m=a.mode==='confirm'?'confirm':'auto';return `<div class="onto-act"><span class="oa-n">${dcText(a.n,'onto.act')}</span><span class="oa-m ${m}">${m==='confirm'?'사람 확인':'자동'}</span></div>`;}).join('');
-  const listHtml=`<div class="onto-list"><div class="onto-col"><div class="onto-k">객체 (Object)</div>${listObjs}</div>`+
-    `<div class="onto-col"><div class="onto-k">관계 (Relation)</div>${listRels}</div>`+
-    `<div class="onto-col full"><div class="onto-k">Action · 객체 편집 (자동 / 사람 확인)</div>${listActs}</div></div>`;
-  const graphHtml=`<div class="onto-graph plg-wrap"><div class="plg-canvas onto-canvas"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet">`+
-    `<defs><marker id="ontoArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="#2dd4bf" opacity="0.55"/></marker></defs>`+
-    `<g class="onto-edges">${edgeP}</g>${nodeN}</svg></div>`+
-    `<div class="onto-detail" id="ontoDetail"><span class="onto-hint">노드를 누르면 속성·Action 상세가 표시됩니다.</span></div>`+
-    `<div class="plg-leg"><span class="plg-lg"><span class="onto-badge-leg auto"></span>자동</span><span class="plg-lg"><span class="onto-badge-leg confirm"></span>사람 확인</span><span class="plg-leg-note">객체=노드 · 관계=엣지 · 배지=객체에 걸린 Action</span></div></div>`;
-  el.innerHTML=`<div class="onto-toolbar"><button class="onto-tg ${_ontoView==='graph'?'on':''}" data-ov="graph">그래프</button><button class="onto-tg ${_ontoView==='list'?'on':''}" data-ov="list">목록</button></div>`+
-    (_ontoView==='graph'?graphHtml:listHtml);
-  /* 토글 */
-  el.querySelectorAll('.onto-tg').forEach(b=>b.onclick=()=>{ _ontoView=b.dataset.ov; renderOntology(P); });
-  /* 노드 클릭 → 상세(하단 패널) */
-  const detEl=()=>document.getElementById('ontoDetail');
-  function showDetail(i){
-    const d=detEl(); if(!d)return; const nd=nodes[i]; if(!nd)return;
-    const onAct=(nd.obj.on||[]).map(k=>actByKey[k]).filter(Boolean);
-    el.querySelectorAll('.onto-node').forEach(g=>g.classList.toggle('sel', +g.dataset.onode===i));
-    const relTxt=rels.filter(r=>r.from===nd.k||r.to===nd.k)
-      .map(r=>`<span class="onto-d-rel">${dcText(r.from,'onto.rel')} <em>${dcText(r.label,'onto.rel')}</em> ${dcText(r.to,'onto.rel')}</span>`).join('');
-    d.innerHTML=`<div class="onto-d-h">${dcText(nd.obj.n,'onto.obj')}</div>`+
-      `<div class="onto-d-row"><span class="onto-d-k">속성</span><span class="onto-d-v">${(nd.obj.a||[]).map(a=>`<span class="onto-d-attr">${dcText(a,'onto.attr')}</span>`).join('')||'—'}</span></div>`+
-      `<div class="onto-d-row"><span class="onto-d-k">Action</span><span class="onto-d-v">${onAct.map(a=>{const m=a.mode==='confirm'?'confirm':'auto';return `<span class="onto-d-act ${m}">${dcText(a.n,'onto.act')} · ${m==='confirm'?'사람 확인':'자동'}</span>`;}).join('')||'<span class="onto-hint">이 객체에 직접 걸린 Action 없음</span>'}</span></div>`+
-      `<div class="onto-d-row"><span class="onto-d-k">관계</span><span class="onto-d-v">${relTxt||'—'}</span></div>`;
-  }
-  el.querySelectorAll('.onto-node').forEach(g=>{ g.style.cursor='pointer';
-    g.onclick=()=>showDetail(+g.dataset.onode);
-    g.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); showDetail(+g.dataset.onode); } };
-  });
+  const objs=(o.objects||[]).map(x=>`<div class="onto-obj"><b>${dcText(x.n,'onto.obj')}</b>${(x.a||[]).map(a=>`<span>${dcText(a,'onto.attr')}</span>`).join('')}</div>`).join('');
+  const rels=(o.relations||[]).map(r=>`<div class="onto-rel">${r.t}</div>`).join('');
+  const acts=(o.actions||[]).map(a=>{const m=a.mode==='confirm'?'confirm':'auto';return `<div class="onto-act"><span class="oa-n">${dcText(a.n,'onto.act')}</span><span class="oa-m ${m}">${m==='confirm'?'사람 확인':'자동'}</span></div>`;}).join('');
+  el.innerHTML=`<div class="onto-col"><div class="onto-k">객체 (Object)</div>${objs}</div>`+
+    `<div class="onto-col"><div class="onto-k">관계 (Relation)</div>${rels}</div>`+
+    `<div class="onto-col full"><div class="onto-k">Action · 객체 편집 (자동 / 사람 확인)</div>${acts}</div>`;
 }
 /* B-1: 아키텍처 정합 뷰 — 표준 런타임 = AAP 아키텍처(Loop·8계층·Trust), 도메인이 경유하는 계층 점등 */
 function renderArchCoherence(P){
