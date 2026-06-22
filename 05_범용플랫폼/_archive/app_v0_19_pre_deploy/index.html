@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Platform · Workload Runtime Builder</title>
+<link rel="stylesheet" href="core/platform.css">
+</head>
+<body>
+
+<!-- ===== TOP BAR (platform shell · 도메인 무관) ===== -->
+<div class="topbar">
+  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>운영 콘솔 · 통합 인박스</span></div>
+  <div class="sp"></div>
+  <span class="case-title" id="caseTitle"></span>
+  <label class="devtg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
+</div>
+
+<div class="shell">
+
+<!-- ===== LEFT GLOBAL NAV (그룹형 IA · 운영/스튜디오/관리 · 도메인 무관) ===== -->
+<nav class="gnav" id="gnav">
+  <div class="gnav-grp">운영</div>
+  <button class="gnav-i" data-view="inbox"><span class="gn-ic" data-ic="inbox"></span><span class="gn-l">인박스</span><span class="gn-c" id="navCnt"></span></button>
+  <div class="gnav-grp">스튜디오</div>
+  <button class="gnav-i" data-view="domain"><span class="gn-ic" data-ic="boxes"></span><span class="gn-l">도메인 팩</span></button>
+  <button class="gnav-i" data-view="workflow"><span class="gn-ic" data-ic="workflow"></span><span class="gn-l">워크플로우</span></button>
+  <button class="gnav-i" data-view="assets"><span class="gn-ic" data-ic="layers"></span><span class="gn-l">자산</span></button>
+  <div class="gnav-grp">관리</div>
+  <button class="gnav-i" data-view="logs"><span class="gn-ic" data-ic="git-branch"></span><span class="gn-l">로그 · 트레이스</span></button>
+  <button class="gnav-i" data-view="govern"><span class="gn-ic" data-ic="shield"></span><span class="gn-l">거버넌스 · 정책</span></button>
+  <div class="gnav-sp"></div>
+  <button class="gnav-i demo-nav" data-view="demo"><span class="gn-ic" data-ic="presentation"></span><span class="gn-l">시연</span></button>
+</nav>
+
+<div class="views">
+
+  <!-- ============ INBOX VIEW (인박스) — core가 CASES로 렌더 ============ -->
+  <section class="view" data-view="inbox" hidden>
+    <div class="scroll"><div class="wrapc">
+      <div class="inbox-top">
+        <button class="newcase" id="newCaseBtn" data-ic="plus" data-ic-pos="pre">새 업무 요청</button>
+        <div class="inbox-proj-toggle" id="inboxProjToggle" hidden></div>
+      </div>
+      <div class="ty-filter" id="inboxFilter"></div>
+      <div class="inbox" id="inboxList"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ STUDIO VIEW (스튜디오 = 워크플로우·도메인 팩, 구 도메인) — core가 PACK 데이터로 렌더 ============ -->
+  <!-- ============ DOMAIN PACK VIEW (도메인 팩 = 업무 유형 패키지) ============ -->
+  <section class="view" data-view="domain" hidden>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title" style="margin-top:0">도메인 팩</p>
+      <div class="catalog" id="catGrid"></div>
+      <p class="sec-title" id="catPrevTitle" style="margin-top:22px">선택 유형 개요</p>
+      <p class="sec-title" style="margin-top:14px">업무 이해</p>
+      <div class="wa" id="waBox"></div>
+      <p class="sec-title" style="margin-top:20px">아키텍처 정합 · Operating Loop · 8계층 · Trust</p>
+      <div class="archc" id="archMap"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ WORKFLOW VIEW (워크플로우 = 실행 흐름 편집·시각화) ============ -->
+  <section class="view" data-view="workflow" hidden>
+    <div class="scroll"><div class="wrapc">
+      <div class="studio-top">
+        <p class="sec-title" style="margin:0">워크플로우</p>
+        <button class="newcase" id="newPromoteBtn" data-ic="plus" data-ic-pos="pre">신규 격상</button>
+      </div>
+      <p class="sec-title" style="margin-top:14px">실행 구조</p>
+      <div class="compose" id="composeGrid"></div>
+      <p class="sec-title">실행 순서</p>
+      <div class="plan" id="planTable"></div>
+      <div class="gatebar" id="gatebar"></div>
+      <p class="sec-title" style="margin-top:20px">워크플로우 편집기 <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 노드 그래프 시각화 + 단계별 구성요소·HITL 게이트 경량 편집(저장 시 실행 뷰 반영)</span></p>
+      <div class="wf-editor" id="wfEditor"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ DEMO VIEW (시연 = 시나리오 선택 → 가이드 투어 오버레이) ============ -->
+  <section class="view" data-view="demo" hidden>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title">시연 모드 · Guided Tour</p>
+      <div class="demo-grid" id="demoList"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ RUN VIEW (실행 = 업무가 돌아가는 화면 · 도메인 surface 메인) ============
+       유저 결정: 이 플랫폼(HTML) 자체가 고객이 보는 화면. 인박스에서 케이스를 열면
+       메인 = '그 업무(시나리오)가 실제로 돌아가는 화면'(채용=ATS 보드 등 surface).
+       AAP 작동 구조는 메인이 아니라 우측 얇은 '근거 레일'로 강등(단계별 1~2줄 + ▸펼침).
+       HITL/결과/미리보기 = surface 위 오버레이(#cmodal). #flow/#explain ID는 데모/안정성 위해 유지. -->
+  <section class="view" data-view="run">
+    <div class="runtop">
+      <button class="rt-back" id="rtBack" data-tip="인박스로 돌아가기">‹ 인박스</button>
+      <span class="rt-lab">업무 순서 <em>· 직전 / 현재 / 다음</em></span>
+      <div class="seq" id="seq"></div>
+      <span class="rt-prog" id="seqProg"></span>
+    </div>
+    <div class="run-main">
+      <!-- 메인 = 업무가 돌아가는 도메인 화면 (PACK.surface / surfaceSpec) -->
+      <section class="run-surface">
+        <div class="con-head" id="surfHead"></div>
+        <div class="con-body" id="surfBody"></div>
+        <!-- HITL / 결과 / 미리보기 = 업무 화면 위 오버레이 -->
+        <div class="cmodal" id="cmodal"></div>
+      </section>
+      <!-- 우측 얇은 레일 = AAP 작동 '근거'(메인 아님). 단계별 구성요소가 무슨 근거로 무엇을 했나 -->
+      <aside class="run-evid" id="runEvid">
+        <div class="re-head">AAP 작동 근거 <span class="help" data-tip="이 단계를 AAP가 어떤 구성요소(Agent·Module·기존솔루션·Connector·Policy)로, 어떤 근거로 처리했는지 한 줄씩 보여줍니다. ▸로 펼치면 관여 계층·세부가 보입니다. 메인 업무 화면이 주인공이고, 이건 '왜 그렇게 돌아갔는지'의 근거입니다.">?</span></div>
+        <!-- P5 케이스 단위 튜닝 패널 — 이 케이스에만 적용되는 구성/게이트 델타(공유 팩 미오염). wfeditor.js 가 렌더. -->
+        <div class="case-tune" id="caseTune"></div>
+        <div class="explain" id="explain"></div>
+        <div class="flow" id="flow"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ ASSETS VIEW (스튜디오 · 자산 = 전역 5타입 레지스트리, 전 도메인 팩 union) ============ -->
+  <section class="view" data-view="assets" hidden>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title">자산 · 조합 재료 (5타입 + Master) <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 전 도메인 팩 통합 카탈로그(중복 자산은 1개로 합산)</span></p>
+      <div class="master-card">
+        <div class="mi" data-ic="brain"></div>
+        <div><div class="mt">총괄 · 오케스트레이터 (Supervisor)</div><h3>Master Agent</h3>
+        <p>업무 맥락을 분석하고 어떤 Agent·Module·기존 솔루션·Connector·정책이 필요한지 판단해 실행 구조를 구성·지휘합니다. 사람(HITL)과 소통하는 창구이기도 합니다.</p></div>
+      </div>
+      <div class="asset-scope" id="assetScope"></div>
+      <div class="asset-filter" id="assetFilter"></div>
+      <div class="reg" id="reg"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ LOGS VIEW (관리 · 로그·트레이스 · 전역 집계) ============ -->
+  <section class="view" data-view="logs" hidden>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title">Run Trace · Decision Log <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 전 케이스 집계(감사·재현)</span></p>
+      <div class="log-kpis" id="logKpi"></div>
+      <div class="asset-filter" id="logCaseFilter"></div>
+      <div class="trace" id="traceLog"></div>
+    </div></div>
+  </section>
+
+  <!-- ============ GOVERN VIEW (관리 · 거버넌스·정책) ============ -->
+  <section class="view" data-view="govern" hidden>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title">거버넌스 · 정책</p>
+      <div class="gov-strip" id="govStrip"></div>
+    </div></div>
+  </section>
+
+</div>
+</div><!-- /.shell -->
+
+<div id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<!-- 자동 저작 오버레이 (업무 소스 → AI breakdown → Domain Pack 생성) -->
+<div id="authoring" class="authoring" hidden>
+  <div class="auth-box">
+    <button class="auth-x" id="authX" data-ic="x"></button>
+    <div class="auth-h"><span class="ah-ic" data-ic="plus"></span>새 업무 자동 학습 <span>AAP가 업무 설명을 스스로 분해(RFP→WBS식)해 Domain Pack을 만들고 기억합니다 — 같은 플랫폼에서 바로 작동</span></div>
+    <div class="auth-body" id="authBody"></div>
+  </div>
+</div>
+
+<!-- 도메인 팩 먼저 적재(window.AAP_PACKS) → 코어 부팅 → 자동 저작 모듈. <script src>라 file://에서도 동작 -->
+<script src="core/icons.js"></script>
+<script>
+/* 정적 chrome 아이콘 하이드레이션 — [data-ic] 요소에 인라인 SVG 주입.
+   data-ic-pos="pre" 이면 기존 텍스트 앞에 아이콘 + 라벨 래핑(버튼). */
+window.AAP_hydrateIcons=function(root){
+  (root||document).querySelectorAll('[data-ic]').forEach(function(el){
+    if(el.dataset.icDone)return;
+    var sv=window.AAP_ICON.svg(el.dataset.ic); if(!sv)return;
+    if(el.dataset.icPos==='pre'){ el.innerHTML=sv+'<span class="btn-l">'+el.textContent.trim()+'</span>'; }
+    else { el.innerHTML=sv; }
+    el.dataset.icDone='1';
+  });
+};
+document.addEventListener('DOMContentLoaded',function(){window.AAP_hydrateIcons();});
+</script>
+<script src="packs/meeting.js"></script>
+<script src="packs/voc.js"></script>
+<script src="packs/recruiting.js"></script>
+<script src="core/demo.js"></script>
+<script src="core/wfeditor.js"></script>
+<script src="core/core.js"></script>
+<script src="core/authoring.js"></script>
+<script src="core/pipeline.js"></script>
+</body>
+</html>

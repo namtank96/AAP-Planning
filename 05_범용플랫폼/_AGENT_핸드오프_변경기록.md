@@ -69,6 +69,16 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### app/ 구현체 — 도메인 팩 배포 생애주기 (draft/deployed · ★배포된 팩만 운영 편입) (260622, aap-platform) 〔기획·UX〕
+> IA v0.2 §4-2 "배포/생애주기 전 층 적용 — 배포된 것만 운영(인박스)·조합에 쓰임"의 **도메인 팩 층** 구현(자산·워크플로우 배포는 후속). 시드 팩(meeting/voc/recruiting)=기본 **deployed**, 자동저작/격상/On-Ramp로 `AAP_CORE.register`되는 신규 팩=**draft**. draft 팩 케이스는 인박스·On-Ramp 인식에서 숨겨지고, 도메인 팩 카드에서 **배포**해야 운영 편입된다. 무회귀: 통합인박스·케이스·영속·X1·8계층·HITL·자동저작·wfeditor·pipeline·On-Ramp·P2~P5(★P5 격리)·스튜디오 3분할·demo.js·채용 surfaceHooks 전부 유지.
+- **데이터 — 팩 상태 저장소**(`core/core.js`): `packStatus[packId]='draft'|'deployed'`를 localStorage `aap.v1.packStatus`에 영속(`packOverrides`와 동일 persisted-map 패턴). 헬퍼 `loadPackStatus`/`savePackStatus`/`packStatus(id)`/`setPackStatus(id,s)`/`isDeployed(id)`/`deployedPackIds()`/`ensureSeedDeployed()`. 미기록 폴백 = 시드 ID(`SEED_PACK_IDS=['meeting','voc','recruiting']`)는 deployed, 그 외 draft. 〔기획·UX〕
+- **SCHEMA_VER 3→4**: 상태 모델에 packStatus 추가 → 구 저장본 안전 초기화(`lsCheckSchema` 가드). boot에서 `ensureSeedDeployed()`로 시드 deployed 기본 재보장(미기록일 때만, 사용자가 끈 값은 보존). 〔기획·UX〕
+- **운영 필터(★배포된 팩만)**: `renderInbox`의 전 팩 통합 목록 `all`에 `&&isDeployed(c.packId)` 추가 → draft 팩 케이스는 인박스/유형 필터/카운트에서 숨김(저장은 보존). `matchPackByText`(On-Ramp 신규 업무 유형 인식)는 `Object.keys(PACKS)` → `deployedPackIds()`로 범위 축소(draft 유형은 인식 대상 제외). `afterStateChange`의 navCnt 집계에도 `isDeployed` 가드. 〔기획·UX〕
+- **register 신규=draft**(`AAP_CORE.register`): 새 팩 register 시 상태 미기록이고 시드 ID가 아니면 `setPackStatus(id,'draft')`. 재등록 팩은 기존 상태 보존. pipeline `promote`→register→load 흐름은 draft 팩으로 run 콘솔만 열림(인박스 편입은 배포 후). 〔기획·UX〕
+- **배포 UI**(`renderDesign` catGrid · `core/core.js` + `core/platform.css`): 카드에 상태 배지(`.cat-dep` deployed=green '배포됨' / draft=회색 '미배포'), draft 카드 `.is-draft`(점선 상단·옅음), 하단 `.cat-depbar`에 **배포/배포 취소** 버튼(`[data-deploy]`, rocket/rotate-ccw 아이콘). 클릭→`setPackStatus`→toast→`renderDesign`+`renderInbox` 재렌더. 카드 onclick은 `[data-deploy]` 클릭 시 무시(stopPropagation+closest 가드). 카탈로그·자산·워크플로우 뷰는 전 팩 표시 유지(스튜디오=저작 공간), 운영 게이트만 deployed. 〔기획·UX〕
+- **검증**: `node --check core.js`/`pipeline.js` PASS. **헤드리스 실측 미실행** — 이 환경에서 chrome.exe 실행이 Bash/PowerShell 모두 차단됨(임시 harness `app/_deploy_test.html` 작성했으나 구동 불가 → 내용 비우고 안내 주석만 남김, 수동 삭제 필요). 정적 추적으로 (a)배지+버튼 (b)시드 deployed (c)draft 숨김→배포 노출 (d)On-Ramp draft 제외 (e)P2~P5·스튜디오 3분할 무회귀 확인. 백업=셸 차단 → **git 복원 기준 HEAD 39e90a0** (`git checkout 39e90a0 -- 05_범용플랫폼/app/`). 〔기획·UX〕
+- **후속**: ①자산·워크플로우 배포 상태(같은 packStatus 패턴을 asset/wf 키로 확장, 배포된 자산만 조합에 노출) ②도메인 팩 세분화(업무 화면·데이터·산출물·연결 워크플로우·케이스 구성요소별 관리) ③배포↔관리/거버넌스 연결(거버넌스 뷰에서 배포 상태·이력) ④aap-design 시각 다듬기(배포 배지/버튼 톤·상태 전이 애니메이션) ⑤`app/_deploy_test.html` 수동 삭제. 〔기획·UX〕
+
 ### app/ 구현체 — P5 케이스 단위 튜닝 (case.overrides · ⚑ 이 케이스 한정 · 정의 승격 · ★공유 PACK 오염 0 격리) (260622, aap-platform) 〔기획·UX/표준·정의〕
 > 5단계 중 **P5(마지막)**. P1~P4 커밋됨(P4=abfb05c). **핵심 = ★최고 리스크인 '공유 PACK 오염' 격리**: 케이스 단위 델타(`case.overrides`)가 공유 `PACK`/`PACKS`/`COMPONENTS`/`WORK`/`packOverrides`/`pack._base` 를 **절대 영구 변경하지 않는다**. 코어=도메인 무관 유지(케이스 델타=일반 메커니즘, 팩별 분기 0 — packOverrides 와 동형 `{steps:{[id]:{comps,hitl}}}` 재사용). meeting/voc/recruiting·인박스·실행·스튜디오·시연·wfeditor 팩 편집·pipeline·On-Ramp·자동저작·X1·8계층·HITL·자산/로그 전역화(P2/P3)·프로젝트(P4) 무회귀. **백업=셸(Bash/PowerShell) cp·복사·삭제 전면 차단 + IDE 실행/진단 차단 → `_archive/app_v0_17_pre_casetune/_BACKUP_NOTE.md`(변경 파일 목록 + git 복원 `git checkout abfb05c -- 05_범용플랫폼/app/`). 물리 디렉터리 백업 권한 차단.**
 - **데이터 — `case.overrides`(케이스 단위 델타)**(`core/core.js`) — 케이스 객체 안에 영속(`saveApp`→localStorage `aap.v1.cases`, 공유 팩 저장소 `aap.v1.packOverrides` 와 분리). `caseTemplate` 은 overrides 미생성(튜닝 전까지 undefined=팩 기본). `caseOverridesOf(c)`/`hasCaseOverlay(c)` 헬퍼(steps 비었으면 null 취급). 〔기획·UX〕
@@ -92,14 +102,17 @@
 - **검증(헤드리스/셸 cp·런처·삭제 권한 차단 → `node --check`(허용분)+정적 검증, 브라우저 런타임 미실측 명시)**: (a) `node --check core/core.js` **통과**(구문 0 에러). (b) **OFF 무회귀=정적 보장**: OFF 분기는 원본 상태 그룹 루프를 그대로 옮긴 `_inboxStatusGroups(cs)` 단일 호출 + 동일 `data-open` 와이어링 → 출력 동일. (c) ON 분기=프로젝트 그룹+미배정+프로젝트 내 상태 그룹(코드 경로 리뷰). (d) 토글/projectsOn 영속=loadApp/saveApp 경로 정합. (e) projectId 없는 케이스=caseTemplate 기본 null·미배정 그룹/OFF 무영향. (f) 시드=seedProjects 1회 가드(`APP.projects.length` 체크)·packId 'recruiting'/'meeting' 매칭(확인됨). **후속자가 file://로 (a)토글 OFF=현행 인박스 그대로 (b)토글 ON=프로젝트 그룹+미배정 (c)projectId 없는 케이스 정상 (d)토글 reload 영속 (e)On-Ramp·실행·자산/로그·시연 무회귀 (f)JS 에러 0 실측 필요(미실측 — 헤드리스·런처 차단).** 임시 검증 파일 생성 0. 〔데모 한정 검증〕
 - **남긴 후속**: ① **P5 케이스 튜닝**(케이스별 자산·정책 오버라이드). ② 프로젝트 CRUD UI(현재 시드 2개 고정 — 생성/이름변경/케이스 재배정 UI 없음). ③ **aap-design 시각**: 토글 스위치 모션·프로젝트 그룹 헤더/접기·프로젝트별 진행률 롤업·미배정 그룹 위계. ④ 거버넌스(PACK.govern) 전역화(P2/P3 미포함분 잔존). 〔aap-design/후속〕
 
-### 분해·조립 프로토타입 v0.1 (별도 탐색본 · 260622) 〔기획·UX〕
-- **파일 = `03_프로토타입/D_회의/aap_meeting_runtime_compose_proto_v0_1.html`** (v0.36 복사본, 현행 데모와 분리된 탐색 프로토타입 — 본선 아님).
-- **문제의식(사용자)**: "~~회의 진행하고 싶다" 요청을 받았을 때 AAP가 **업무·역할을 구분하고 프로세스를 분해→조립(재구성)하는 과정**이 안 보임. 현행은 `compose` 단계에서 `out:'작업 그래프 T1~T5'`·`'구성요소 조합'`처럼 **결과 라벨로만 선언**, 분해물·재조립이 화면에 없음.
-- **범위 = `compose`(실행 구조 구성) 한 스텝만** 교체. 디자인 토큰·기존 8단계 데이터·다른 7단계 렌더는 **그대로**. `renderRight()`에 `if(w.id==='compose'){renderComposeCanvas();return;}` 분기 1줄, `revealOps` n=3(분해·배정·조립 3비트)만 손댐.
-- **새 데이터** `COMPOSE_TASKS[T1~T5]`(goal·필요역량·dep·owners·why[채택/탈락+이유]) + `GATES`. **새 함수** `renderComposeCanvas`/`composeGraph`/`ownerBadges`/`whyBlock`. 새 CSS는 `.cmp-*`/`.tcard`/`.gcard` 등 **스코프 한정 신규**(기존 클래스 불변).
-- **화면 = 3비트 진행형 캔버스**: ① 업무 분해(요청→T1~T5 작업 카드, goal+필요역량) → ② 역할 배정(작업별 구성요소 배지 + "왜 이 구성요소인가" 펼침=후보 채택/탈락 이유, **전부 Agent ✕** 메시지) → ③ 재조립(병렬 T1·T2·T3 → 외부 초대 게이트 → T4 → T5 → 외부 발송 게이트, 의존성·게이트 배선). 상단 **입력(한 줄 요청)→출력(작업5·구성요소6종·게이트2)** strip, 하단 **"요청이 다르면 다르게 재구성" 힌트**(Direction D 맛보기).
-- Run 재생 시 ②③ 섹션이 `.off`(흐림)에서 비트 진행에 따라 점등 → **분해 먼저 → 배정 → 조립**이 동적으로 보임. 검증: 헤드리스 렌더 OK(①②③ 전부 표출).
-- **다음 결정 대기**: 이 방향 확정 시 본선(v0.37+)에 흡수할지 / 역할(누가 실행·승인·책임 RACI) 축 추가할지 / Direction D(다른 요청=다른 구조 토글) 별도 구현할지.
+### 분해·조립 프로토타입 v0.2 (별도 탐색본 · 260622) 〔기획·UX〕
+- **파일 = `03_프로토타입/D_회의/aap_meeting_runtime_compose_proto_v0_1.html`** (v0.36 복사본, 본선과 분리된 탐색본 — 본선 아님). **`compose`(실행 구조 구성) 한 스텝만** 교체, 다른 7단계·디자인 토큰 불변.
+- **문제의식(사용자)**: "~~회의 진행하고 싶다" 요청에 AAP가 **업무·역할 구분 + 프로세스 분해→조립(재구성)** 하는 과정이 현행 데모에 안 보임(`out:'작업 그래프 T1~T5'`처럼 결과 라벨로만 선언).
+- **v0.1(폐기) = 3블록 캔버스**(① 분해 / ② 배정 / ③ 조립 별 섹션). 피드백: 흐름이 끊겨 한눈에 안 들어옴, Master 조율 모습·하위 요소 설명 빈약. → **v0.36의 단일 위→아래 흐름 프레임으로 통합**(사용자 결정: "작업=노드 통합", 설명 헤더 절대 금지).
+- **v0.2 통합 구조** = v0.36 프레임(상태 범례·Master 허브·상시 밴드·트리거 레인·병렬행+↓·두꺼운 카드) 유지 + **흐름의 노드를 작업(T1~T5) 카드로** 교체. 의존성 3계층(병렬 T1·T2·T3 → T4 → T5), Master 허브가 "요청 분해·작업별 구성요소 배정·실행 구조 조립" 조율 주체로 명시, 상단 입력→출력 strip, 하단 재구성 힌트.
+- **★카드 정보 중요도 재분배(사용자 핵심 지시)**: ▸**카드 표면 = 작업명 + 순서 있는 세부 단계(`steps[]`, 개수 가변) + 게이트**. 세부 단계는 **평이한 행동 문장**이고 **요소(Connector·OCR·Policy·Doc Gen 모듈·STT 솔루션·요약 Agent)를 문장 속에 인라인 명시**(별도 배정 배지·caps 칩·읽는데이터 칩·결과 칩 전부 제거). 결과=마지막 단계 문장에 자연 표현. ▸**모달("자세히 ▸") = 계층·상세 capability·읽는 데이터·배정 근거(왜 이 요소·채택/탈락)·판단 근거·산출물**(덜 중요·기술적인 것 전부 하향).
+- **요소 설명 위치 결정**: 사용자가 "왼쪽 고객 화면에 '회의록 Agent가 STT로…' 문구로 넣을까?" 제안 → **검토 후 기각**(고객 화면에 내부 요소명 노출=과거 걷어낸 챗봇 톤 회귀, 고객 경험 ✕ 작동원리 설명임). **대신 그 평이한 문장을 우측 카드 세부 단계로** 가져옴. **왼쪽 고객 화면은 요소명 없이 깨끗 유지**("회의록을 정리하고 있어요").
+- **청중 = BD 실무자·팀장 → (후) 본부장급**. 너무 사업/기술 한쪽 치우침 금지 → "평이한 행동 문장 + 순서"가 중간 지점. 계층코드·caps 명칭은 너무 기술적이라 모달로.
+- **코드**: `COMPOSE_FLOW[T1~T5]`(+`steps[]` 추가)·`COMPOSE_LAYERS`(의존성 3계층)·`composeNode`(헤더 작업명+상태 / `tsteps` 번호 단계 / 게이트 / 자세히 버튼)·`renderComposeCanvas`. `renderNodeModal` 에 compose 분기(tid 조회)+**"배정 근거·왜 이 구성요소" 섹션**+다중 owner 추가. `revealOps` n=3, 계층별 doing/done 점등. 새 CSS `.tsteps/.tstep/.th-nm` + 기존 `.rg-node/.gate/.band/.seqar/.par-tag` 재사용. `?node=`가 compose tid도 받게(테스트). 검증: 헤드리스 렌더 OK(T1~T5 단계·게이트·T3 모달 채택근거 전부 표출).
+- **v0.2 추가 다듬기(사용자 4지시)**: ①입력→출력 strip 제거(Master 허브 바로). ②"자세히" 버튼=텍스트 단순화 + **카드 우측 하단 absolute 고정**(`.cnode{position:relative;padding-bottom}`+`.cmore{position:absolute}`). ③**HITL 게이트 칩 제거**(실제 사람 확정은 뒤 approve/commit 단계 — compose 카드엔 불필요, 복원 쉬움). ④**세부 단계에서 요소명 제거→순수 작업 내역화** + **"구현 요소" 스트립 신설**(`impl:[[ty,cap,L]]` → 점선 아래 `[타입 배지]capability·Lx`). *무엇을 하나(steps)* ↔ *무엇으로 구현(impl)* 분리. 무게=단계가 짧아져 수용 가능, T3(요소 3개)가 최밀도. 더 가볍게=계층코드 빼거나 cap 모달 환원 옵션.
+- **다음 결정 대기**: 이 방향 본선(v0.37+) 흡수 여부 / 역할(누가 실행·승인·책임 RACI) 축 추가 / Direction D(다른 요청=다른 구조 토글) 별도 구현 / 구현 요소 스트립 무게(T3) 조정 여부.
 
 ### v0.36 (데모, 빌드 완료 · 260622)
 - **검정 narration 툴팁(#nTip) 닫기(×) 추가** — 우상단 `.nt-x` 닫기 버튼. 자동재생 중 닫으면 `STATE.narrHidden=true`로 이후 단계 narration 미표시(가이드 모드 ×는 stopGuide). Run/Guide 시작 시 리셋. 〔기획·UX〕

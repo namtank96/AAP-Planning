@@ -109,26 +109,6 @@ function dcStatusTriple(st){ if(Array.isArray(st)&&st.length>=2)st[1]=dcStatusCl
 let _packOverrides=null;
 function loadOverrides(){ if(_packOverrides)return _packOverrides; _packOverrides=lsGet('packOverrides',{})||{}; return _packOverrides; }
 function saveOverrides(){ lsSet('packOverrides',_packOverrides||{}); }
-
-/* =========================================================================
-   도메인 팩 배포 생애주기 (draft/deployed) — IA v0.2 §4-2 · 도메인 무관
-   ───────────────────────────────────────────────────────────────────────
-   packStatus[packId] = 'draft' | 'deployed'. localStorage 맵(aap.v1.packStatus).
-   ★배포된 팩만 운영(인박스·On-Ramp 매칭·조합)에 편입. draft 는 스튜디오에서만 보임.
-   시드 팩(meeting/voc/recruiting)=기본 deployed, 자동저작/격상/On-Ramp register=draft.
-   packOverrides 와 동일한 persisted-map 패턴(코어가 저장·조회만). */
-const SEED_PACK_IDS=['meeting','voc','recruiting'];   /* 시드 = 기본 deployed */
-let _packStatus=null;
-function loadPackStatus(){ if(_packStatus)return _packStatus; _packStatus=lsGet('packStatus',{})||{}; return _packStatus; }
-function savePackStatus(){ lsSet('packStatus',_packStatus||{}); }
-/* 팩 상태 — 미기록 폴백: 시드 팩=deployed, 그 외=draft(신규는 register 시 명시 기록). */
-function packStatus(id){ const m=loadPackStatus(); if(m[id]==='draft'||m[id]==='deployed')return m[id]; return SEED_PACK_IDS.includes(id)?'deployed':'draft'; }
-function setPackStatus(id,s){ if(s!=='draft'&&s!=='deployed')return; const m=loadPackStatus(); m[id]=s; savePackStatus(); }
-function isDeployed(id){ return packStatus(id)==='deployed'; }
-/* 시드 팩 deployed 기본을 1회 보장(스키마 가드 후 재시드 시점). 이미 기록된 값은 보존. */
-function ensureSeedDeployed(){ const m=loadPackStatus(); let ch=false; SEED_PACK_IDS.forEach(id=>{ if(PACKS[id]&&m[id]!=='draft'&&m[id]!=='deployed'){ m[id]='deployed'; ch=true; } }); if(ch)savePackStatus(); }
-/* 배포된 팩 id 집합(운영 편입 대상). 카탈로그·자산은 전 팩, 인박스·On-Ramp는 이 집합만. */
-function deployedPackIds(){ return Object.keys(PACKS).filter(isDeployed); }
 /* 원본 baseline 스냅샷(override 적용 전) — 재적용·복원이 원본에서 출발하도록(누적 방지) */
 function snapshotPack(pack){ if(pack._base)return; pack._base={ work:JSON.parse(JSON.stringify(pack.work||[])), compose:JSON.parse(JSON.stringify(pack.compose||[])), gates:JSON.parse(JSON.stringify(pack.gates||[])) }; }
 function restoreBase(pack){ if(!pack._base)return; pack.work=JSON.parse(JSON.stringify(pack._base.work)); pack.compose=JSON.parse(JSON.stringify(pack._base.compose)); pack.gates=JSON.parse(JSON.stringify(pack._base.gates)); }
@@ -200,7 +180,7 @@ const groupsOf=w=>[...new Set(w.ops.map(o=>o.g))].sort((a,b)=>a-b);
 const LS_NS='aap.v1.';
 /* 스키마 버전 — 상태 모델이 바뀔 때마다 올린다. 저장본 버전이 다르거나(구버전 잔재) 없으면
    aap.v1.* 를 안전 초기화·재시드 → '옛 localStorage 가 새 코드를 깨는' 문제 방지. */
-const SCHEMA_VER=4;
+const SCHEMA_VER=3;
 function lsGet(k,fb){ try{const v=localStorage.getItem(LS_NS+k);return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
 function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(e){} }
 function lsClearAll(){ try{const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf(LS_NS)===0)rm.push(k);}rm.forEach(k=>localStorage.removeItem(k));}catch(e){} }
@@ -434,9 +414,8 @@ const STATUS_ORDER=['wait','run','new','done'];
 function caseStatusFor(c){ return caseStatus(c); }
 function renderInbox(){
   const list=document.getElementById('inboxList'); if(!list)return;
-  /* 안전 폴백: 등록 안 된 유형(자동저작 팩은 비영속)의 케이스는 인박스에서 숨김(저장은 보존).
-     ★배포 생애주기: draft 팩 케이스는 인박스에서 숨김 — 배포(deployed)된 유형만 운영 편입. */
-  const all=APP.cases.filter(c=>PACKS[c.packId]&&isDeployed(c.packId));
+  /* 안전 폴백: 등록 안 된 유형(자동저작 팩은 비영속)의 케이스는 인박스에서 숨김(저장은 보존) */
+  const all=APP.cases.filter(c=>PACKS[c.packId]);
   /* 등장 순서대로 토큰 안정 배정(필터 칩·배지 색 일관) */
   const presentPacks=[...new Set(all.map(c=>c.packId))].filter(id=>PACKS[id]);
   presentPacks.forEach(typeTok);
@@ -535,8 +514,7 @@ function packKeywords(pack){
 /* 입력 텍스트 ↔ 각 팩 점수(겹친 토큰 수 / 팩 키워드 수, 0~1). 최고 점수 팩과 점수를 반환. */
 function matchPackByText(text){
   const inTok=new Set(_tokens(text)); if(!inTok.size)return {packId:null,score:0,ranked:[]};
-  /* ★배포된 팩만 매칭 대상 — draft 유형은 운영 인식에서 제외(배포해야 On-Ramp 편입) */
-  const ranked=deployedPackIds().map(id=>{
+  const ranked=Object.keys(PACKS).map(id=>{
     const kw=packKeywords(PACKS[id]); if(!kw.length)return {id,score:0,hits:0};
     let hits=0; const seen=new Set();
     kw.forEach(k=>{ if(inTok.has(k)&&!seen.has(k)){ hits++; seen.add(k); } });
@@ -828,7 +806,7 @@ function revealOps(){
   },n*640+300));
 }
 /* 케이스 영속 + 인박스 카운트 갱신 (런타임 상태가 바뀐 직후) */
-function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} }
+function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} }
 function runStep(){
   clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();clearPackTransient();const w=W(STATE.sel);
   if(w.meeting){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
@@ -869,22 +847,13 @@ function renderDesign(){
       const comps=(p.compose||[]).reduce((s,c)=>s+(+c.n||0),0);
       const seeds=APP.cases.filter(c=>c.packId===k).length;
       const on=k===APP.catSel;
-      const dep=isDeployed(k);  /* ★배포 생애주기 — deployed=운영 편입 / draft=스튜디오 한정 */
-      return `<button class="cat-card ${on?'on':''} ${typeTok(k)} ${dep?'':'is-draft'}" data-cat="${k}">
-        <div class="cat-h"><span class="ty-badge ${typeTok(k)}">${dcText(p.label,'pack.label')}</span>${p.authored?'<span class="cat-auto">자동저작</span>':''}<span class="cat-dep ${dep?'on':'off'}" data-tip="${dep?'배포됨 — 인박스·On-Ramp 운영에 편입':'미배포(draft) — 스튜디오에서만 보입니다. 배포해야 운영 편입'}">${dep?'배포됨':'미배포'}</span></div>
+      return `<button class="cat-card ${on?'on':''} ${typeTok(k)}" data-cat="${k}">
+        <div class="cat-h"><span class="ty-badge ${typeTok(k)}">${dcText(p.label,'pack.label')}</span>${p.authored?'<span class="cat-auto">자동저작</span>':''}</div>
         <div class="cat-type">${(p.workload&&p.workload.type)||p.label}</div>
         <div class="cat-stats"><span>단계 <b>${steps}</b></span><span>구성요소 <b>${comps}</b></span><span>HITL <b>${gates}</b></span><span>인박스 <b>${seeds}</b>건</span></div>
-        <div class="cat-depbar"><span class="cat-dep-act ${dep?'undeploy':'deploy'}" data-deploy="${k}">${_ICO(dep?'rotate-ccw':'rocket')}${dep?'배포 취소':'배포'}</span></div>
       </button>`;
     }).join('');
-    cat.querySelectorAll('[data-cat]').forEach(e=>e.onclick=(ev)=>{ if(ev.target.closest('[data-deploy]'))return; APP.catSel=e.dataset.cat;saveApp();renderDesign();});
-    /* 배포/배포취소 버튼 — setPackStatus 후 카탈로그·인박스 재렌더(운영 편입 토글) */
-    cat.querySelectorAll('[data-deploy]').forEach(e=>e.onclick=(ev)=>{ ev.stopPropagation();
-      const id=e.dataset.deploy, next=isDeployed(id)?'draft':'deployed';
-      setPackStatus(id,next);
-      toast(next==='deployed'?`${dcText(typeLabel(id),'pack.label')} 유형을 배포했습니다 — 인박스·On-Ramp에 편입`:`${dcText(typeLabel(id),'pack.label')} 유형 배포를 취소했습니다 — 운영에서 제외(draft)`);
-      renderDesign(); if(document.getElementById('inboxList'))renderInbox();
-    });
+    cat.querySelectorAll('[data-cat]').forEach(e=>e.onclick=()=>{APP.catSel=e.dataset.cat;saveApp();renderDesign();});
   }
   /* 선택된 유형의 실행 구조 미리보기(구 구성 뷰 콘텐츠를 카탈로그 항목으로 흡수) */
   const P=normalizePack(catalogPack());
@@ -1074,9 +1043,6 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
    load: 그 유형으로 케이스 시드 후 첫 케이스를 실행 콘솔에 연다(자동저작 데모 연속성). */
 window.AAP_CORE={
   register:(pack)=>{PACKS[pack.id]=normalizePack(pack);typeTok(pack.id);
-    /* ★신규 register(자동저작·격상·On-Ramp) = draft 기본 — 배포해야 인박스·운영 편입.
-       이미 상태가 기록된 팩(재등록)은 보존. 시드 ID는 deployed 폴백(packStatus). */
-    const _ps=loadPackStatus(); if(_ps[pack.id]!=='draft'&&_ps[pack.id]!=='deployed'&&!SEED_PACK_IDS.includes(pack.id))setPackStatus(pack.id,'draft');
     if(document.getElementById('catGrid')&&(STATE.view==='studio'||STATE.view==='domain'||STATE.view==='workflow'))renderDesign();
     if(STATE.view==='assets')renderAssets();
     if(STATE.view==='inbox')renderInbox();},
@@ -1146,8 +1112,6 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
   let initKey=(pk&&PACKS[pk])?pk:((APP.pack&&PACKS[APP.pack])?APP.pack:keys[0]);
   setPackRefs(initKey);
   APP.catSel=(APP.catSel&&PACKS[APP.catSel])?APP.catSel:initKey;
-  /* ★배포 생애주기: 시드 팩(meeting/voc/recruiting)=기본 deployed 보장(미기록일 때만) */
-  ensureSeedDeployed();
   /* 모든 팩에 시드 보장(통합 인박스가 비어보이지 않게 · 1회) */
   keys.forEach(seedPack);
   /* P4 프로젝트 시드(1회, 비어있을 때만) — 시드 케이스 생성 후라야 일부에 projectId 배정 가능 */
