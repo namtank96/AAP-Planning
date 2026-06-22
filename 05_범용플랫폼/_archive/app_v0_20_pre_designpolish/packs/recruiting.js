@@ -346,7 +346,6 @@
     const dec=(C&&C.S.recrDecisions)?C.S.recrDecisions[c.id]:null;
     return `<button class="recr-card${hasRisk(c)?' risk':''}${dec==='reject'?' rejected':''}" data-cand="${c.id}">
       <div class="rc-top"><span class="recr-av">${c.ini}</span><div class="rc-id"><div class="rc-nm">${c.name}</div><div class="rc-cur">${c.yrs}년 · ${c.cur}</div></div><span class="rc-mt">${c.match}%</span></div>
-      <div class="rc-bar" title="매칭 ${c.match}%"><i style="width:${Math.max(6,Math.min(100,c.match))}%"></i></div>
       <div class="rc-foot"><span class="rc-sc">${I('gauge')}종합 ${sc}</span>${top?`<span class="rc-flag ${top.t}">${top.ko}</span>`:`<span class="rc-ok">적합</span>`}</div>
     </button>`;
   }
@@ -390,16 +389,12 @@
 
   /* 파이프라인 보드(ATS) */
   function board(C){
-    /* 현재 진행 프런티어 = reached 된 마지막 단계(현재 단계 컬럼 하이라이트 · 표시용) */
-    const reachedKeys=STAGES.filter(st=>reached(C,st.k)).map(st=>st.k);
-    const liveKey=reachedKeys[reachedKeys.length-1]||'';
     let cols=STAGES.map(st=>{
       const on=reached(C,st.k);
       let cards=on?CAND.filter(c=>colOf(C,c)===st.k):[];
       cards=sortCands(C,cards);
       const n=on?cards.length:0;
-      const live=on&&st.k===liveKey;
-      return `<div class="recr-col${on?'':' off'}${live?' live':''}">
+      return `<div class="recr-col${on?'':' off'}">
         <div class="rcol-h"><span class="rcol-t">${st.ko}</span><span class="rcol-n">${on?n:'·'}</span></div>
         <div class="rcol-body">${on?(cards.length?cards.map(c=>candCard(c,C)).join(''):'<div class="rcol-empty">—</div>'):'<div class="rcol-empty">준비 전</div>'}</div>
       </div>`;
