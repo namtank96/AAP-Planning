@@ -127,7 +127,7 @@ function reapplyOverride(packId){
   pack._ovApplied=false; pack._dcDone=false; pack._caseOv=false; normalizePack(pack);
   /* 활성 런타임 팩이면 참조 갱신(WORK/COMPOSE 등) */
   if(APP.pack===packId)setPackRefs(packId);
-  if(STATE.view==='studio'||STATE.view==='domain'||STATE.view==='workflow')renderDesign();
+  if(STATE.view==='studio')renderDesign();
   else if(STATE.view==='run'&&activeCase()&&activeCase().packId===packId){ renderSeq(); restoreStep(); }
 }
 
@@ -180,7 +180,7 @@ const groupsOf=w=>[...new Set(w.ops.map(o=>o.g))].sort((a,b)=>a-b);
 const LS_NS='aap.v1.';
 /* 스키마 버전 — 상태 모델이 바뀔 때마다 올린다. 저장본 버전이 다르거나(구버전 잔재) 없으면
    aap.v1.* 를 안전 초기화·재시드 → '옛 localStorage 가 새 코드를 깨는' 문제 방지. */
-const SCHEMA_VER=3;
+const SCHEMA_VER=2;
 function lsGet(k,fb){ try{const v=localStorage.getItem(LS_NS+k);return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
 function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(e){} }
 function lsClearAll(){ try{const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf(LS_NS)===0)rm.push(k);}rm.forEach(k=>localStorage.removeItem(k));}catch(e){} }
@@ -207,7 +207,7 @@ function loadApp(){
   const pj=lsGet('projects',null);
   if(Array.isArray(pj)) APP.projects=pj.filter(p=>p&&p.id&&p.name);
   APP.active=lsGet('active',null);
-  let v=lsGet('view',null); if(v==='studio')v='domain'; if(['inbox','run','domain','workflow','assets','logs','govern','demo'].includes(v))APP.view=v;
+  const v=lsGet('view',null); if(['inbox','run','studio','assets','logs','govern','demo'].includes(v))APP.view=v;
   APP.pack=lsGet('pack',null);
   const tf=lsGet('typeFilter',null); if(typeof tf==='string')APP.typeFilter=tf;
   const po=lsGet('projectsOn',null); if(typeof po==='boolean')APP.projectsOn=po;
@@ -334,7 +334,7 @@ function setView(v){
   /* 시연 모드: 가이드 투어는 운영 화면 위 오버레이. 시연 뷰를 떠나도(투어가 다른 뷰를 조작 중일 땐 유지) */
   if(window.AAP_DEMO){ if(v==='demo')window.AAP_DEMO.renderDemoView(); }
   if(v==='inbox')renderInbox();
-  if(v==='studio'||v==='domain'||v==='workflow')renderDesign();
+  if(v==='studio')renderDesign();
   if(v==='assets')renderAssets();
   if(v==='logs')renderLogs();
   if(v==='govern')renderGovern();
@@ -1043,7 +1043,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
    load: 그 유형으로 케이스 시드 후 첫 케이스를 실행 콘솔에 연다(자동저작 데모 연속성). */
 window.AAP_CORE={
   register:(pack)=>{PACKS[pack.id]=normalizePack(pack);typeTok(pack.id);
-    if(document.getElementById('catGrid')&&(STATE.view==='studio'||STATE.view==='domain'||STATE.view==='workflow'))renderDesign();
+    if(document.getElementById('catGrid')&&STATE.view==='studio')renderDesign();
     if(STATE.view==='assets')renderAssets();
     if(STATE.view==='inbox')renderInbox();},
   load:(id)=>{if(!PACKS[id])return;setPackRefs(id);seedPack(id);const cs=APP.cases.filter(c=>c.packId===id);if(cs.length)openCase(cs[0].id);else createCase(id);},
@@ -1118,8 +1118,8 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
   seedProjects(); saveApp();
   /* 뷰·케이스 복원 */
   let view=APP.view||'inbox';
-  let qv=q.get('view'); if(qv==='studio'||qv==='design')qv='domain'; /* 하위호환: 구 스튜디오/디자인 → 도메인 */
-  if(qv&&['inbox','run','domain','workflow','assets','logs','govern','demo'].includes(qv))view=qv;
+  const qv=q.get('view'); if(qv&&['inbox','run','studio','assets','logs','govern','demo'].includes(qv))view=qv;
+  if(qv==='design'||qv==='domain')view='studio'; /* 하위호환: 구 도메인/디자인 → 스튜디오 */
   const qtf=q.get('type'); if(qtf&&(qtf==='all'||PACKS[qtf]))APP.typeFilter=qtf;
   const qopen=q.get('open');
   if(qopen&&APP.cases.some(c=>c.id===qopen)){openCase(qopen);}
