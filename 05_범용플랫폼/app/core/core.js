@@ -129,9 +129,10 @@ function isDeployed(id){ return packStatus(id)==='deployed'; }
 function ensureSeedDeployed(){ const m=loadPackStatus(); let ch=false; SEED_PACK_IDS.forEach(id=>{ if(PACKS[id]&&m[id]!=='draft'&&m[id]!=='deployed'){ m[id]='deployed'; ch=true; } }); if(ch)savePackStatus(); }
 /* 배포된 팩 id 집합(운영 편입 대상). 카탈로그·자산은 전 팩, 인박스·On-Ramp는 이 집합만. */
 function deployedPackIds(){ return Object.keys(PACKS).filter(isDeployed); }
-/* 원본 baseline 스냅샷(override 적용 전) — 재적용·복원이 원본에서 출발하도록(누적 방지) */
-function snapshotPack(pack){ if(pack._base)return; pack._base={ work:JSON.parse(JSON.stringify(pack.work||[])), compose:JSON.parse(JSON.stringify(pack.compose||[])), gates:JSON.parse(JSON.stringify(pack.gates||[])) }; }
-function restoreBase(pack){ if(!pack._base)return; pack.work=JSON.parse(JSON.stringify(pack._base.work)); pack.compose=JSON.parse(JSON.stringify(pack._base.compose)); pack.gates=JSON.parse(JSON.stringify(pack._base.gates)); }
+/* 원본 baseline 스냅샷(override 적용 전) — 재적용·복원이 원본에서 출발하도록(누적 방지).
+   v2: 단계 배열 baseline 은 flow(우선) 또는 work 에서 채취. */
+function snapshotPack(pack){ if(pack._base)return; pack._base={ work:JSON.parse(JSON.stringify(pack.flow||pack.work||[])), compose:JSON.parse(JSON.stringify(pack.compose||[])), gates:JSON.parse(JSON.stringify(pack.gates||[])) }; }
+function restoreBase(pack){ if(!pack._base)return; const w=JSON.parse(JSON.stringify(pack._base.work)); pack.work=w; if(pack.flow)pack.flow=w; /* flow·work 동일 참조 유지(override 인플레이스 변경이 둘 다에 반영) */ pack.compose=JSON.parse(JSON.stringify(pack._base.compose)); pack.gates=JSON.parse(JSON.stringify(pack._base.gates)); }
 /* normalizePack 내부에서 호출 — override 가 있으면 원본 baseline 위에 적용(편집기 모듈 위임) */
 function applyPackOverride(pack){
   snapshotPack(pack);
@@ -192,6 +193,37 @@ let PACK, WORK, COMPONENTS, COMPOSE, TIMES;
 const idxOf=id=>WORK.findIndex(w=>w.id===id);
 const W=id=>WORK.find(w=>w.id===id);
 const groupsOf=w=>[...new Set(w.ops.map(o=>o.g))].sort((a,b)=>a-b);
+
+/* =========================================================================
+   Pack Contract v2 · 단계 메타 접근자 (도메인 무관 · 코어가 stage.kind/loopPhase/gate/live 로 구동)
+   ───────────────────────────────────────────────────────────────────────
+   "8단계 고정·특정 id 하드코딩" 제거. 코어는 어떤 stage id 도 리터럴로 가정하지 않고,
+   아래 접근자로 단계 '종류'만 이해한다. legacy 플래그(actor·hitl·meeting·gate:1)는
+   flow 미선언 팩(또는 wfeditor override 가 number 로 되돌린 gate)도 통과하도록 폴백.
+   ========================================================================= */
+function stKind(w){ if(!w)return 'auto';
+  if(w.kind==='input'||w.kind==='auto'||w.kind==='gate')return w.kind;
+  /* legacy 폴백: actor:'human'=input · gate성 플래그=gate · 그 외=auto */
+  if(w.actor==='human')return 'input';
+  if(w.hitl||w.meeting||w.gate)return 'gate';
+  return 'auto'; }
+function stIsGate(w){ return stKind(w)==='gate'; }
+function stIsInput(w){ return stKind(w)==='input'; }
+/* 실시간 세션(회의 진행·면접 진행 등) — meetPhase 상태머신 일반화(특정 id 종속 ✕) */
+function stIsLive(w){ return !!(w&&(w.live||w.meeting)); }
+/* 완료 결과 모달 표시 단계 */
+function stHasDoneModal(w){ return !!(w&&w.doneModal); }
+/* 단계가 시각적 게이트(★)인가 — renderSeq/plan 의 별 표식·gate 클래스용(object/number 모두 truthy) */
+function stIsGateMark(w){ return !!(w&&(w.gate||stIsGate(w))); }
+/* 운영 루프 phase — flow.loopPhase 우선, 없으면 stepLoop 맵 폴백 */
+function stLoop(w){ if(!w)return ''; if(w.loopPhase)return w.loopPhase; return (PACK&&PACK.stepLoop&&PACK.stepLoop[w.id])||''; }
+/* 게이트 결정 정의(decisions[]) — 코어 토스트·결정 라벨 리터럴 제거의 핵심.
+   gate 가 object 면 그 decisions, 아니면(legacy/number) 표준 yes/no 폴백. */
+const _GATE_FALLBACK=[{key:'yes',label:'승인',toast:'승인 · 다음 단계로 진행합니다'},{key:'no',label:'수정 요청',toast:'수정 요청'}];
+function stDecisions(w){ const g=w&&w.gate; return (g&&typeof g==='object'&&Array.isArray(g.decisions)&&g.decisions.length)?g.decisions:_GATE_FALLBACK; }
+function stDecision(w,key){ return stDecisions(w).find(d=>d.key===key)||{key,label:key==='yes'?'승인':'수정 요청',toast:''}; }
+/* compose 류 '조합 구성요소(casm)' 노출 단계 표식(특정 id 하드코딩 제거) */
+function stShowsCompose(w){ return !!(w&&w.showCompose); }
 
 /* =========================================================================
    영속성 (Phase 0) — localStorage 네임스페이스 aap.v1.*
@@ -310,7 +342,7 @@ function caseStatus(c){
   const w=pack.work.find(x=>x.id===c.sel)||pack.work[0];
   const i=pack.work.findIndex(x=>x.id===c.sel);
   /* 검토대기 = 현재 단계가 HITL 게이트(승인 대기) */
-  if(w&&(w.hitl||w.meeting)&&!c.decisions[c.sel]&&!(w.meeting&&c.meetPhase==='done'))return 'wait';
+  if(w&&stIsGate(w)&&!c.decisions[c.sel]&&!(stIsLive(w)&&c.meetPhase==='done'))return 'wait';
   if(i>0||Object.keys(c.decisions).length)return 'run';
   return 'new';
 }
@@ -319,6 +351,8 @@ function caseProgress(c){ const pack=PACKS[c.packId]; if(!pack)return 0; const i
 /* STATE ↔ case 동기화 */
 function hydrateFromCase(c){
   STATE.sel=c.sel; STATE.decisions={...c.decisions}; STATE.pickedTime=c.pickedTime; STATE.meetPhase=c.meetPhase||'idle';
+  /* graceful: 팩 flow 가 바뀌어 저장된 sel 이 현재 단계에 없으면 첫 단계로 폴백(도메인 무관 · 구버전 케이스 보호) */
+  if(!c.sel || !(PACK&&PACK.work||[]).some(w=>w.id===c.sel)){ STATE.sel=(PACK&&PACK.work&&PACK.work[0]&&PACK.work[0].id)||c.sel; }
   STATE.trace=Array.isArray(c.trace)?c.trace.slice():[]; STATE.traced=new Set(c.traced||[]);
   STATE.previewK=null; STATE.baseOnly=false; STATE.opOpen=new Set(); STATE.playing=false;
   /* 팩 선언 키 복원(도메인 무관) — 매번 초기화 후 저장된 값 주입(누수 방지) */
@@ -371,7 +405,11 @@ function updateCaseTitle(){
 /* ===== Domain Pack 활성화 (같은 셸/엔진, 팩만 갈아끼움) =====
    팩 데이터 참조만 바꾼다. 케이스(인스턴스) 생성·열기는 분리(openCase/seedPack). */
 function setPackRefs(key){
-  PACK=normalizePack(PACKS[key]); WORK=PACK.work; COMPONENTS=PACK.components; COMPOSE=PACK.compose; TIMES=PACK.times;
+  PACK=normalizePack(PACKS[key]);
+  /* Pack Contract v2: 런타임 단계 배열은 flow 우선(없으면 legacy work 폴백).
+     PACK.work 는 wfeditor/snapshotPack/eval 의 기존 참조 호환을 위해 같은 배열로 정렬. */
+  WORK=PACK.flow||PACK.work; if(!PACK.work)PACK.work=WORK;
+  COMPONENTS=PACK.components; COMPOSE=PACK.compose; TIMES=PACK.times;
   APP.pack=key;
 }
 /* 팩에 데모용 케이스가 없으면 시드(서로 다른 상태). 팩이 pack.seeds 를 주면 그걸, 없으면 단일 기본 케이스 */
@@ -416,8 +454,8 @@ function restoreStep(){
   /* 정지(비재생) 복원 = 단계를 '완료(정착)'로 보여 AAP 작동 흐름을 기본 노출(결과 모달이 흐름을 덮지 않게).
      HITL await 단계는 currentCM 이 baseOnly 와 무관하게 모달을 띄움(사람 승인 필요). */
   const w=W(STATE.sel); clearRun(); STATE.previewK=null; STATE.baseOnly=true; STATE.opOpen=new Set();
-  if(w.meeting){ STATE.meetPhase=STATE.meetPhase==='done'?'done':'await_end'; RUN.phase=STATE.meetPhase==='done'?'done':'await'; }
-  else if(w.hitl){ STATE.meetPhase='idle'; RUN.phase=STATE.decisions[w.id]?'done':'await'; }
+  if(stIsLive(w)){ STATE.meetPhase=STATE.meetPhase==='done'?'done':'await_end'; RUN.phase=STATE.meetPhase==='done'?'done':'await'; }
+  else if(stIsGate(w)){ STATE.meetPhase='idle'; RUN.phase=STATE.decisions[w.id]?'done':'await'; }
   else { STATE.meetPhase='idle'; RUN.phase='done'; }
   RUN.reveal=groupsOf(w).length;
   if(!STATE.traced.has(w.id))traceStep(w);
@@ -432,10 +470,10 @@ function renderSeq(){
   /* 현재 단계가 작동 중(working)이면 active 노드에 '처리 중' 상태 표시(자동 운영 톤) */
   const working=RUN.phase==='working';
   for(let d=-1;d<=1;d++){const i=ci+d; if(i<0||i>=WORK.length)continue;
-    const w=WORK[i];let cls='snode'+(d===0?' active':' adj')+(w.gate?' gate':'')+(d<0?' past':'')+(d===0&&working?' working':'');
+    const w=WORK[i],gm=stIsGateMark(w);let cls='snode'+(d===0?' active':' adj')+(gm?' gate':'')+(d<0?' past':'')+(d===0&&working?' working':'');
     if(d>0||(d===0&&i>0))html+=`<span class="sarrow">${_ICO('chevron-right')}</span>`;
     const tag=d===0?`<span class="snode-st">${working?'처리 중…':(RUN.phase==='await'?'확인 대기':'완료')}</span>`:'';
-    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${w.gate?_ICO('star'):''}</span>${tag}</div>`;}
+    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${gm?_ICO('star'):''}</span>${tag}</div>`;}
   document.getElementById('seq').innerHTML=html;
   document.getElementById('seqProg').textContent=`${ci+1} / ${WORK.length}`;
   document.querySelectorAll('#seq .snode').forEach(e=>e.onclick=()=>setSel(e.dataset.go));
@@ -740,10 +778,10 @@ function currentCM(){
   const hk=PACK.surfaceHooks;
   if(hk&&hk.currentCM){ const k=hk.currentCM(STATE); if(k)return k; }
   const w=W(STATE.sel);
-  if(STATE.baseOnly && w.doneModal)return null;
-  if(w.meeting){if(STATE.meetPhase==='await_start')return 'meetingStart';if(STATE.meetPhase!=='idle')return 'meetingLive';}
-  if(w.hitl && RUN.phase==='await')return 'hitl';
-  if(w.doneModal && RUN.phase==='done')return 'done';
+  if(STATE.baseOnly && stHasDoneModal(w))return null;
+  if(stIsLive(w)){if(STATE.meetPhase==='await_start')return 'meetingStart';if(STATE.meetPhase!=='idle')return 'meetingLive';}
+  if(stIsGate(w) && RUN.phase==='await')return 'hitl';
+  if(stHasDoneModal(w) && RUN.phase==='done')return 'done';
   return null;
 }
 function renderCModal(){
@@ -786,10 +824,11 @@ const _TYKO={A:'Agent',M:'Module',S:'기존 솔루션',C:'Connector',P:'Policy'}
 function blockKind(o,tk){ if(o&&o.kind)return o.kind==='llm'?'llm':'det'; return tk==='A'?'llm':'det'; }
 function renderRight(){
   const w=W(STATE.sel),gs=groupsOf(w);let h='';
-  const lb=PACK.stepLoop?`<div class="loopbadge">추론 루프 · ${PACK.stepLoop[w.id]||'—'}</div>`:'';
+  const _lp=stLoop(w);
+  const lb=_lp?`<div class="loopbadge">추론 루프 · ${_lp}</div>`:'';
   const flow=document.getElementById('flow'),exp=document.getElementById('explain');
   if(!flow)return;
-  if(w.meeting && STATE.meetPhase==='await_start'){
+  if(stIsLive(w) && STATE.meetPhase==='await_start'){
     flow.innerHTML=lb+`<div class="evid-row wait">회의 시작 신호 대기 — 사람이 실시간 Agent 가동 시점을 통제합니다 (HITL ②)</div>`;
     if(exp)exp.innerHTML=w.explain;return;
   }
@@ -818,7 +857,7 @@ function renderRight(){
     });
   });
   let casm='';
-  if(w.id==='compose'){const lit=RUN.phase==='done'||RUN.phase==='await'||RUN.reveal>2;
+  if(stShowsCompose(w)){const lit=RUN.phase==='done'||RUN.phase==='await'||RUN.reveal>2;
     casm=`<div class="casm"><div class="casm-h">AAP가 조합한 구성요소</div>${COMPOSE.map(c=>`<span class="ct2 ${c.cls} ${lit?'on':''} ev-link" data-asset="${dcText(c.n,'compose.n')}" data-atk="${c._tk||dcTypeKey(c.cls,'compose.cls')}" data-tip="자산 카탈로그에서 보기">${c.t} ${c.n}</span>`).join('')}</div>`;}
   flow.innerHTML=lb+h+casm;
   if(exp)exp.innerHTML=w.explain;
@@ -842,8 +881,8 @@ function revealOps(){
   for(let i=1;i<=n;i++)RUN.timers.push(setTimeout(()=>{RUN.reveal=i;renderConsole();renderRight();},i*640));
   RUN.timers.push(setTimeout(()=>{
     RUN.reveal=n;traceStep(w);
-    if(w.meeting&&STATE.meetPhase==='in_meeting'){STATE.meetPhase='await_end';RUN.phase='await';renderConsole();renderRight();}
-    else if(w.hitl){RUN.phase='await';renderConsole();renderRight();}
+    if(stIsLive(w)&&STATE.meetPhase==='in_meeting'){STATE.meetPhase='await_end';RUN.phase='await';renderConsole();renderRight();}
+    else if(stIsGate(w)){RUN.phase='await';renderConsole();renderRight();}
     else{RUN.phase='done';renderConsole();renderRight();if(STATE.playing)RUN.playTimer=setTimeout(playNext,1700);}
     afterStateChange();
   },n*640+300));
@@ -852,7 +891,7 @@ function revealOps(){
 function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} renderRunAction(); }
 function runStep(){
   clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();clearPackTransient();const w=W(STATE.sel);
-  if(w.meeting){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
+  if(stIsLive(w)){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
   else{STATE.meetPhase='idle';startWorking();}
 }
 function meetingStart(){STATE.meetPhase='in_meeting';startWorking();}
@@ -861,9 +900,11 @@ function decide(v){
   const w=W(STATE.sel);STATE.decisions[w.id]=v;RUN.phase='done';
   /* 팩이 HITL 결정을 도메인 surface 상태로 번역(도메인 무관 hook) — 예: 오퍼 승인→보드 offer 배치 */
   if(PACK.surfaceHooks&&PACK.surfaceHooks.decideHook){ try{PACK.surfaceHooks.decideHook(STATE,v,w.id);}catch(e){} }
-  STATE.trace.push({st:w.label,t:'담당자 결정 · '+(v==='yes'?'승인':(w.id==='approve'?'외부 제외':'수정 요청')),L:'L7',k:'HITL'});
+  /* 결정 라벨·토스트는 단계 gate.decisions 에서(코어 리터럴 id 참조 제거 — Pack Contract v2) */
+  const dec=stDecision(w,v);
+  STATE.trace.push({st:w.label,t:'담당자 결정 · '+(dec.label||v),L:'L7',k:'HITL'});
   renderConsole();renderRight();afterStateChange();
-  toast(v==='yes'?'승인 · 다음 단계로 진행합니다':(w.id==='approve'?'외부 고객 제외하고 진행':'수정 요청'));
+  toast(dec.toast||dec.label||'');
   if(STATE.playing)RUN.playTimer=setTimeout(playNext,1500);
 }
 function setSel(id){STATE.sel=id;renderSeq();runStep();afterStateChange();renderRunAction();}
@@ -991,11 +1032,11 @@ function renderArchCoherence(P){
 function renderPlan(P){
   P=P||PACK;
   const PROD=P.planProduces;
-  const sel=w=>w.meeting?`<span class="sel-human">${_ICO('flag')}시작·종료 신호</span>`:(w.hitl?`<span class="sel-hitl">${_ICO('flag')}담당자 확인</span>`:(w.actor==='human'?`<span class="sel-human">사람 요청</span>`:`<span class="sel-auto">자동</span>`));
+  const sel=w=>stIsLive(w)?`<span class="sel-human">${_ICO('flag')}시작·종료 신호</span>`:(stIsGate(w)?`<span class="sel-hitl">${_ICO('flag')}담당자 확인</span>`:(stIsInput(w)?`<span class="sel-human">사람 요청</span>`:`<span class="sel-auto">자동</span>`));
   const makes=w=>{const o=PROD[w.id]||[];return o.length?o.map(x=>`<b>${x}</b>`).join(' · '):'<i style="color:#94a3b8;font-style:normal">중간 처리</i>';};
   const lays=w=>[...new Set(w.ops.map(o=>o.L))].map(l=>`<span>${l}</span>`).join('');
   let h=`<div class="plan-head"><div>#</div><div>단계</div><div>만드는 산출물</div><div>사람이 선택·확인</div><div>거치는 계층</div></div>`;
-  P.work.forEach((w,i)=>{h+=`<div class="plan-row ${w.gate?'gate':''}"><div class="pr-n">${i+1}</div><div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.role}</div></div><div class="pr-make">${makes(w)}</div><div class="pr-sel">${sel(w)}</div><div class="pr-lay">${lays(w)}</div></div>`;});
+  P.work.forEach((w,i)=>{h+=`<div class="plan-row ${stIsGateMark(w)?'gate':''}"><div class="pr-n">${i+1}</div><div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.role}</div></div><div class="pr-make">${makes(w)}</div><div class="pr-sel">${sel(w)}</div><div class="pr-lay">${lays(w)}</div></div>`;});
   document.getElementById('planTable').innerHTML=h;
 }
 /* =========================================================================
@@ -1029,8 +1070,8 @@ function _caseEval(c){
   /* 근거 충족도 = 도달 단계 중 근거(trace ops)를 남긴 비율 */
   const evidence=_opsClamp(stepsRan/reachedN*100);
   /* HITL 게이트(도달분) — work.hitl/meeting/gate, 처리 = decisions 또는 done */
-  const hitlReached=reached.filter(w=>w.hitl||w.meeting||w.gate);
-  const hitlDone=hitlReached.filter(w=>(c.decisions&&c.decisions[w.id])||(w.meeting&&c.meetPhase==='done')||c.done).length;
+  const hitlReached=reached.filter(w=>stIsGate(w));
+  const hitlDone=hitlReached.filter(w=>(c.decisions&&c.decisions[w.id])||(stIsLive(w)&&c.meetPhase==='done')||c.done).length;
   const policy=hitlReached.length?_opsClamp(hitlDone/hitlReached.length*100):100;
   /* 실행 성공률 = 완료면 100, 아니면 진행률 */
   const exec=c.done?100:_opsClamp(caseProgress(c));

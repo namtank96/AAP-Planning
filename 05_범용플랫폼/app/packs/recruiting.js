@@ -186,19 +186,22 @@
   };
 
   /* =======================================================================
-     FLOW — 채용 도메인 단계 그래프 (Pack Contract v2 · kind/loopPhase/gate)
-     2a: 현행 8단계 그대로(무회귀). stage id(meeting 등)·라벨·ops 불변 — 정통화는 2b.
+     FLOW — 채용 도메인 단계 그래프 (Pack Contract v2 · 2b 정통화)
+     회의 틀(request/understand/compose/approve/prepare/meeting/commit/share) 탈피.
+     채용 네이티브 9단계: intake→analyze→design→[shortlist_gate]→screen→
+     [interview_gate]→evaluate→[offer_gate]→record. 게이트 3 · 면접은 조율(gate)과
+     평가(auto) 분리(회의처럼 live 세션 ✕). screen 에서 후보 보류/탈락 분기(colOf).
      ======================================================================= */
   const FLOW=[
-   {id:'request',label:'채용 요건 접수',role:'채용 요청',actor:'human',kind:'input',loopPhase:'Data',
-    explain:`채용 요건 접수는 추론 루프의 시작입니다. <b>L1 경험·접근</b>(채용 요청 폼)이 현업의 채용 요청을 접수하고, <b>L4 지식·시맨틱</b>이 직무·인원·필수역량 신호를 추출합니다.`,
+   {id:'intake',label:'요건 접수',role:'채용 요청',actor:'human',kind:'input',loopPhase:'Data',
+    explain:`요건 접수는 추론 루프의 시작입니다. <b>L1 경험·접근</b>(채용 요청 폼)이 현업의 채용 요청을 접수하고, <b>L4 지식·시맨틱</b>이 직무·인원·필수역량 신호를 추출합니다.`,
     ops:[{g:0,feed:'채용 요청 수신',out:'"백엔드 개발자 2명, 4~8년차로 충원해줘"',L:'L1',comp:'채용 요청 폼·챗 UI'},
      {g:1,feed:'핵심 신호 추출',out:'직무·인원·연차·필수 스택',L:'L4',comp:'온톨로지·시맨틱',
       detail:odTable('추출된 신호',[['직무','백엔드 개발자'],['인원','2명'],['연차','경력 4~8년'],['필수 스택','Java/Kotlin·Spring·MSA']])},
      {g:2,feed:'정해진 것/빈 것 구분',out:'우대요건·스크리닝 기준 미정',L:'L4',comp:'컨텍스트 조합·근거',
       detail:odTable('미정 항목',[['우대요건','초안 필요','a'],['스크리닝 컷','미정','a'],['면접 패널','미정','a'],['보상밴드','승인 필요','a']])}]},
 
-   {id:'understand',label:'요건 분석',role:'AAP 분석',actor:'aap',
+   {id:'analyze',label:'요건 분석',role:'AAP 분석',actor:'aap',kind:'auto',loopPhase:'Semantic',
     explain:`요건 분석은 추론 루프 <b>Semantic</b> 단계입니다. <b>L4</b>가 요청을 표준 직무 모델로 해석해 JD 초안을 만들고 매칭 가중(스킬·경력·도메인)을 정의하며, <b>L7</b>이 채용 시 적용할 차별금지·개인정보 정책을 답니다.`,
     ops:[{g:0,feed:'직무 유형 매핑',out:'백엔드(서버) · 시니어',L:'L4',comp:'온톨로지·시맨틱',
       detail:odTable('직무 매핑 (신뢰도)',[['백엔드 개발(서버)','0.93','g'],['플랫폼 엔지니어','0.05'],['풀스택','0.02']])},
@@ -207,7 +210,7 @@
      {g:2,feed:'채용 정책 확인',out:'차별금지·PII → 보호속성 평가 제외',L:'L7',comp:'정책 관리·통제',
       detail:odTable('정책 점검',[['보호속성(성·연령·출신)','평가 제외','a'],['개인정보','마스킹 처리','a'],['적용 정책','채용 차별금지 v2']])}]},
 
-   {id:'compose',label:'스크리닝 계획·구성',role:'AAP 구성',actor:'aap',
+   {id:'design',label:'스크리닝 설계',role:'AAP 구성',actor:'aap',kind:'auto',loopPhase:'Reasoning',showCompose:1,
     explain:`핵심 단계입니다. AAP는 Agent를 많이 띄우는 게 아니라, 채용 업무를 작업으로 분해하고 <b>L2 설계·개발</b>·<b>L3 코어</b>에서 필요한 <b>Agent·모듈·기존 ATS·Connector·정책</b>을 골라 운영 가능한 스크리닝 실행 구조로 조합합니다.`,
     ops:[{g:0,feed:'작업 분해',out:'파싱·매칭·랭킹·일정·평가취합 그래프',L:'L2',comp:'설계·개발 환경',
       detail:odTable('작업 그래프 (5)',[['T1 이력서 파싱',''],['T2 요건 매칭',''],['T3 랭킹·스코어',''],['T4 면접 일정',''],['T5 평가 취합·반영','']])},
@@ -217,26 +220,28 @@
      {g:3,feed:'누락·편향 점검',out:'편향·요건 누락 리스크 표시',L:'L6',comp:'품질·근거 평가',asset:1,badge:'Antbot',
       detail:odTable('리스크 (Antbot)',[['편향 신호','평가 제외 확인','g'],['요건 누락','없음','g'],['스코어 일관성','검증','g']])}]},
 
-   {id:'approve',label:'숏리스트 기준 승인',role:'사람 확인 ①',actor:'hitl',gate:1,hitl:1,
+   {id:'shortlist_gate',label:'숏리스트 기준 승인',role:'사람 확인 ①',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
+    gate:{label:'숏리스트 기준 승인',decisions:[{key:'yes',label:'이 기준으로 스크리닝',toast:'숏리스트 컷 확정 · 스크리닝을 시작합니다'},{key:'no',label:'컷 좁히기(≥90)',toast:'컷을 ≥90으로 좁혀 진행합니다'}]},
     explain:`<b>L3 런타임 게이트</b>가 스크리닝 실행 전 책임 지점을 멈춥니다. AAP가 스크리닝 계획과 숏리스트 컷 후보를 제시하고, <b>숏리스트 기준(컷)은 채용담당이 결정</b>합니다. (★ HITL ①)`,
     ops:[{g:0,feed:'스크리닝 계획 제시',out:'파싱·매칭 방식 · 평가 항목 요약',L:'L1',comp:'채용 콘솔·챗 UI'},
      {g:1,feed:'숏리스트 컷 후보 산출',out:`엄격 ${cutCount(90)} / 표준 ${cutCount(85)} / 넓게 ${cutCount(80)}`,L:'L3',comp:'코어·실행 엔진',micro:['컷 시뮬레이션'],
       detail:odTable('컷 후보 (통과수)',[['match ≥ 90',cutCount(90)+'명','g'],['match ≥ 85',cutCount(85)+'명'],['match ≥ 80',cutCount(80)+'명']])},
      {g:2,feed:'검토 게이트 보류',out:'숏리스트 기준 선택 담당자 전달',L:'L3',comp:'HITL 런타임 게이트'}]},
 
-   {id:'prepare',label:'이력서 파싱·매칭·랭킹',role:'AAP 실행',actor:'aap',doneModal:1,
-    explain:`승인된 기준대로 AAP가 Agent들을 자율 가동합니다. <b>L5</b>가 이력서를 <b>병렬</b> 수집·OCR 파싱하고(<span class="v">AI:ON-U</span>), <b>L3 코어</b>가 스킬·경력·도메인 가중 매칭·스코어링·랭킹을 수행하며 <b>L6·L7</b>이 편향 점검·정규화합니다.`,
+   {id:'screen',label:'이력서 수집·스크리닝',role:'AAP 실행',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Action',
+    explain:`승인된 기준대로 AAP가 Agent들을 자율 가동합니다. <b>L5</b>가 이력서를 <b>병렬</b> 수집·OCR 파싱하고(<span class="v">AI:ON-U</span>), <b>L3 코어</b>가 스킬·경력·도메인 가중 매칭·스코어링·랭킹을 수행하며 후보를 통과/<b>보류</b>/<b>탈락</b>으로 분기합니다. <b>L6·L7</b>이 편향 점검·정규화합니다.`,
     ops:[{g:0,feed:'이력서 수집·OCR 파싱',out:`${JOB.applicants}건 파싱·정규화`,L:'L5',comp:'연결·수집',asset:1,badge:'AI:ON-U',micro:['ATS 커넥터','OCR'],
       detail:odTable('파싱 결과',[['이력서','38건'],['OCR 정규화','완료','g'],['경력·스킬 추출','완료','g'],['중복·스팸 제거','4건']])},
      {g:0,feed:'JD 요건 매칭 (스킬·경력·도메인)',out:'3축 가중 매칭',L:'L3',comp:'코어·실행 엔진',micro:['요건 매칭']},
-     {g:1,feed:'스코어링·랭킹',out:`상위 ${JOB.screened}명 랭킹`,L:'L3',comp:'코어·실행 엔진',micro:['가중합 50/30/20'],
+     {g:1,feed:'스코어링·랭킹·분기',out:`상위 ${JOB.screened}명 랭킹 · 통과/보류/탈락`,L:'L3',comp:'코어·실행 엔진',micro:['가중합 50/30/20'],
       detail:odTable('랭킹 (매칭% / 종합)',CAND.slice().sort((a,b)=>b.match-a.match).slice(0,5).map((c,i)=>[c.name,`${c.match} / ${totalScore(c)}`,i<2?'g':'']))},
      {g:1,feed:'편향·PII 점검',out:'보호속성 평가 제외 · PII 마스킹',L:'L7',comp:'정책 관리·통제',
       detail:odTable('편향 점검',[['성별·연령·출신','평가 미반영','g'],['사진·신상','마스킹','g'],['스코어 근거','요건 기반만','g']])},
      {g:2,feed:'스코어카드·리포트 반영',out:'스코어카드 10 · 통과/보류/탈락 분류',L:'L8',comp:'스토리지·DB',micro:['ats.write()'],
       detail:odTable('시스템 반영',[['스코어카드','10명 생성','g'],['스크리닝 리포트','생성','g'],['ATS 단계','스크리닝 통과','g']])}]},
 
-   {id:'meeting',label:'면접 일정 조율',role:'사람 확인 ②',actor:'hitl',gate:1,hitl:1,
+   {id:'interview_gate',label:'면접 조율',role:'사람 확인 ②',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
+    gate:{label:'면접 일정·패널 확인',decisions:[{key:'yes',label:'일정 확정·안내 발송',toast:'면접 일정 확정 · 후보 안내를 발송합니다'},{key:'no',label:'일정 조정 요청',toast:'일정 조정을 요청합니다'}]},
     explain:`숏리스트 후보의 면접을 잡습니다. <b>L5</b>가 후보·면접관 캘린더를 교차해 충돌 없는 슬롯을 산출하고, <b>L3 코어</b>가 초대를 구성합니다. 외부(후보)로 안내가 나가므로 <b>담당자가 일정·패널을 확인</b>합니다. (★ HITL ②)`,
     ops:[{g:0,feed:'면접관·후보 가용 조회',out:'양측 캘린더 교차',L:'L5',comp:'연결·수집',micro:['캘린더 Connector'],
       detail:odTable('가용 교차',[['후보 가용','3명 응답','g'],['면접관','오세훈·이서영·CTO','g'],['충돌','0','g']])},
@@ -244,16 +249,26 @@
       detail:odTable('면접 슬롯',[['정유진','6/24 14:00','g'],['박서준','6/24 16:00','g'],['이하늘','6/25 10:00','g']])},
      {g:2,feed:'안내 게이트 보류',out:'일정·패널 확인 담당자 전달',L:'L3',comp:'HITL 런타임 게이트'}]},
 
-   {id:'commit',label:'합격·오퍼 승인',role:'사람 확인 ③',actor:'hitl',gate:1,hitl:1,
+   {id:'evaluate',label:'면접 평가 취합',role:'AAP 실행',actor:'aap',kind:'auto',loopPhase:'Action',
+    explain:`면접이 끝나면 AAP가 면접관 스코어카드를 <b>병렬</b>로 모아 정합성을 점검하고, <b>L3 코어</b>가 합격 후보와 오퍼 패키지 초안을 정리합니다. <b>L7</b>이 보상밴드·차별금지를 사전 점검해 다음 게이트에 올립니다. (추론 루프 <b>Action</b>)`,
+    ops:[{g:0,feed:'면접 스코어카드 취합',out:'면접관 평가 정합성 점검',L:'L3',comp:'코어·실행 엔진',micro:['평가 취합'],
+      detail:odTable('평가 취합',[['스코어카드 수집',INTERVIEW.length+'건','g'],['평가 정합성','검증','g'],['최종 합격 후보','정유진','g']])},
+     {g:1,feed:'합격 판정·오퍼안 정리',out:'합격 후보 · 오퍼 패키지 초안',L:'L3',comp:'코어·실행 엔진',
+      detail:odTable('합격·오퍼안',[['최종 합격','정유진','g'],['종합 평가','우수','g'],['헤드카운트','1 / 2 충원']])},
+     {g:2,feed:'보상·정책 사전 점검',out:'보상밴드 내 · 차별금지 통과',L:'L7',comp:'정책 관리·통제',asset:1,badge:'Antbot',
+      detail:odTable('사전 점검 (Antbot)',[['기본급','밴드 상한 내','g'],['헤드카운트','승인 범위','g'],['차별금지','통과','g'],['처우 형평','검증','g']])}]},
+
+   {id:'offer_gate',label:'합격·오퍼 승인',role:'사람 확인 ③',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
+    gate:{label:'합격·오퍼 승인',decisions:[{key:'yes',label:'승인·오퍼 발송',toast:'오퍼 승인 · 발송합니다'},{key:'no',label:'처우 하향(밴드 하한)',toast:'처우를 밴드 하한으로 조정합니다'}]},
     explain:`후보에게 오퍼가 나가는 마지막 행동 직전, <b>L7</b>이 보상밴드·헤드카운트·차별금지를 점검하고 <b>L3 런타임 게이트</b>가 오퍼 발송을 멈춰 담당자·현업 리드의 최종 승인을 받습니다. (★ HITL ③)`,
-    ops:[{g:0,feed:'면접 평가 취합',out:'합격 후보 · 오퍼 패키지',L:'L3',comp:'코어·실행 엔진',
-      detail:odTable('평가 취합',[['최종 합격','정유진','g'],['종합 평가','우수','g'],['헤드카운트','1 / 2 충원']])},
+    ops:[{g:0,feed:'합격 후보·오퍼 패키지 제시',out:'오퍼 처우·조건 요약',L:'L1',comp:'채용 콘솔·챗 UI',
+      detail:odTable('오퍼안',[['최종 합격','정유진','g'],['기본급',OFFER.base,'g'],['입사',OFFER.start]])},
      {g:1,feed:'오퍼 점검 (보상·정책)',out:'보상밴드 내 · 차별금지 통과',L:'L7',comp:'정책 관리·통제',
       detail:odTable('오퍼 점검',[['기본급','밴드 상한 내','g'],['헤드카운트','승인 범위','g'],['차별금지','통과','g'],['처우 형평','검증','g']])},
      {g:2,feed:'발송 게이트 보류',out:'오퍼 발송·기록 승인 대기',L:'L3',comp:'HITL 런타임 게이트'}]},
 
-   {id:'share',label:'공유·기록·학습',role:'AAP 마무리',actor:'aap',doneModal:1,
-    explain:`승인 후 AAP가 결과를 <b>병렬</b> 전달·기록하고, 이번 채용 패턴을 <b>L7 Self-Improving</b>으로 학습 자산화해 다음 포지션의 매칭 정확도를 높입니다. (추론 루프 <b>Learning</b>)`,
+   {id:'record',label:'기록·학습',role:'AAP 마무리',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Learning',
+    explain:`승인 후 AAP가 결과를 <b>병렬</b> 전달·기록하고 ATS·온보딩에 반영하며, 이번 채용 패턴을 <b>L7 Self-Improving</b>으로 학습 자산화해 다음 포지션의 매칭 정확도를 높입니다. (추론 루프 <b>Learning</b>)`,
     ops:[{g:0,feed:'오퍼·결과 발송',out:'합격 안내 · 불합격 통지',L:'L3',comp:'코어·실행 엔진',micro:['mail.send()'],
       detail:odTable('발송 결과',[['오퍼 레터','정유진 발송','g'],['면접 안내','3명 발송','g'],['불합격 통지','정중 안내','g']])},
      {g:0,feed:'ATS 기록·단계 갱신',out:'채용 파이프라인 단계 반영',L:'L8',comp:'스토리지·DB',micro:['ats.update()']},
@@ -294,7 +309,7 @@
     outputs:['직무 기술서(JD)','스크리닝 리포트','후보 비교표','면접 일정','오퍼 패키지'],
     gates:'숏리스트 기준 승인 · 면접 일정 확인 · 합격·오퍼 승인 (책임이 걸린 곳만 담당자 확인 · HITL 3회)',
   };
-  const PLAN_PRODUCES={request:[],understand:['JD 초안'],compose:['실행 구조(계획안)'],approve:['스크리닝 계획','숏리스트 컷 후보 3안'],prepare:['스크리닝 리포트·스코어카드·후보 비교표'],meeting:['면접 일정'],commit:['합격 판정·오퍼 패키지'],share:['오퍼 발송·ATS 기록·학습 자산']};
+  const PLAN_PRODUCES={intake:[],analyze:['JD 초안'],design:['실행 구조(계획안)'],shortlist_gate:['스크리닝 계획','숏리스트 컷 후보 3안'],screen:['스크리닝 리포트·스코어카드·후보 비교표'],interview_gate:['면접 일정'],evaluate:['합격 판정·오퍼 패키지(초안)'],offer_gate:['오퍼 승인'],record:['오퍼 발송·ATS 기록·학습 자산']};
   const GATES=['★ HITL ① 숏리스트 기준(컷) 승인','★ HITL ② 면접 일정·패널 확인','★ HITL ③ 합격·오퍼 발송 승인'];
   const GOVERN=[
     {k:'Policy',v:'차별금지·보상밴드·PII 정책. 책임 지점은 <b>자동 실행 차단</b> 후 담당자 확인.'},
@@ -313,16 +328,22 @@
     {k:'shortlist',ko:'숏리스트'},
     {k:'interview',ko:'면접'},
     {k:'offer',ko:'오퍼'},
+    {k:'hold',ko:'보류·탈락'},
   ];
-  /* 현재 단계(sel)에 따라 후보 파이프라인이 어디까지 가시화됐는지(결정론) */
+  /* ── 단계 위치 판정 = stage id 기준(코어 idxOf 로 순서만, 숫자 임계값 금지) ──
+     보드 가시화 = screen 단계 도달부터(이력서 수집·스크리닝 완료 시점). */
+  const SCREEN_ID='screen', INTERVIEW_ID='interview_gate', EVAL_ID='evaluate', OFFER_ID='offer_gate';
+  const atOrAfter=(C,id)=>C.idxOf(C.S.sel)>=C.idxOf(id);
+  /* 보드가 채워졌나(후보 데이터 노출) = screen 단계 이상 */
+  function boardReady(C){ return atOrAfter(C,SCREEN_ID); }
+  /* 현재 단계(sel)에 따라 후보 파이프라인 컬럼이 가시화됐는지(결정론) */
   function reached(C,stageK){
-    const i=C.idxOf(C.S.sel);
-    if(stageK==='screened'||stageK==='shortlist')return i>=4;   /* prepare 완료부터 */
-    if(stageK==='interview')return i>=5;                         /* meeting 부터 */
-    if(stageK==='offer')return i>=6;                             /* commit 부터 */
+    if(stageK==='screened'||stageK==='shortlist'||stageK==='hold')return boardReady(C);   /* screen 부터 */
+    if(stageK==='interview')return atOrAfter(C,INTERVIEW_ID);                              /* interview_gate 부터 */
+    if(stageK==='offer')return atOrAfter(C,OFFER_ID);                                      /* offer_gate 부터 */
     return false;
   }
-  /* 컷 기준(엄격/표준/넓게) → 숏리스트 후보 id 집합. ex(컷 좁힘)도 반영 = '담당자 결정'이 화면에 */
+  /* 컷 기준(엄격/표준/넓게) → 숏리스트 후보 id 집합. ex(컷 좁힘=≥90)도 반영 = '담당자 결정'이 화면에 */
   function cutThreshold(C){
     if(C.ex)return 90;
     const pt=C.S.pickedTime||'';
@@ -332,14 +353,17 @@
     const th=cutThreshold(C);
     return CAND.filter(c=>c.match>=th).sort((a,b)=>b.match-a.match).map(c=>c.id);
   }
-  /* 후보의 표시 컬럼 — 진행 + 담당자 결정(reject/advance) 반영 */
+  /* 후보의 표시 컬럼 — 진행(stage id) + 담당자 결정(reject/advance) 반영.
+     screen 단계 분기: 컷 미달(드롭 판정) 후보는 '보류·탈락' 컬럼으로 자동 분기. */
   function colOf(C,c){
     const dec=(C.S.recrDecisions||{})[c.id];
-    if(dec==='reject')return 'screened';            /* 탈락 처리 → 통과 풀로 강등 표시 */
-    const i=C.idxOf(C.S.sel), sids=shortlistIds(C);
-    if((i>=6||dec==='offer') && c.id===OFFER.cid)return 'offer';
-    if((i>=5||dec==='interview') && sids.includes(c.id))return 'interview';
+    if(dec==='reject')return 'hold';                /* 담당자 탈락 처리 → 보류·탈락 컬럼 */
+    const sids=shortlistIds(C);
+    if((atOrAfter(C,OFFER_ID)||dec==='offer') && c.id===OFFER.cid)return 'offer';
+    if((atOrAfter(C,INTERVIEW_ID)||dec==='interview') && sids.includes(c.id))return 'interview';
     if(dec==='shortlist'||sids.includes(c.id))return 'shortlist';
+    /* 컷 미달 = 스크리닝에서 탈락/보류로 자동 분기(보드에 분기 가시화) */
+    if(screenVerdict(c).k==='drop')return 'hold';
     return 'screened';
   }
   function candCard(c,C){
@@ -359,7 +383,7 @@
   /* 활성 탭 = 사용자가 누른 탭(S.activeTab)이 있으면 그것(탐색), 없으면 단계 기본.
      보드가 가시화되기 전(prepare 이전)에는 후보·스코어카드·면접 데이터가 비므로 파이프라인으로 폴백. */
   function activeTab(C){
-    const reachedBoard=C.idxOf(C.S.sel)>=4;   /* prepare 이후 = 후보 데이터 채워짐 */
+    const reachedBoard=boardReady(C);   /* screen 이후 = 후보 데이터 채워짐 */
     let t=C.S.activeTab;
     if(!t||!TABS.includes(t))t=stepTab(C.W(C.S.sel).id);
     if(!reachedBoard&&t!=='파이프라인')t='파이프라인';
@@ -367,14 +391,14 @@
   }
   function head(C){
     const S=C.S,i=C.idxOf(S.sel),w=C.W(S.sel);
-    const stMap={request:['요건 접수','s-info'],understand:['요건 분석','s-info'],compose:['계획 구성','s-info'],
-      approve:['검토 필요','s-amber'],prepare:['스크리닝 완료','s-green'],
-      meeting:['일정 조율','s-blue'],commit:['오퍼 검토','s-amber'],share:['채용 완료','s-green']};
-    const [stt,stc]=stMap[w.id];
+    const stMap={intake:['요건 접수','s-info'],analyze:['요건 분석','s-info'],design:['스크리닝 설계','s-info'],
+      shortlist_gate:['검토 필요','s-amber'],screen:['스크리닝 완료','s-green'],
+      interview_gate:['일정 조율','s-blue'],evaluate:['평가 취합','s-info'],offer_gate:['오퍼 검토','s-amber'],record:['채용 완료','s-green']};
+    const [stt,stc]=stMap[w.id]||['진행','s-info'];
     const tab=activeTab(C);
-    const known=i>=2;
+    const known=atOrAfter(C,'design');   /* JD·요건 정의됨 = 분석 이후(design~) */
     const meta=`${JOB.id} · ${JOB.team} · ${known?`${JOB.headcount}명 채용 · 지원 ${JOB.applicants}`:'요건 정의 중'}`;
-    const reachedBoard=i>=4;
+    const reachedBoard=boardReady(C);
     /* 탭 클릭 전환 — 보드 가시화 전(prepare 이전)에는 후보/스코어카드/면접 비활성(데이터 없음) */
     const tabs=TABS.map(t=>{const dis=!reachedBoard&&t!=='파이프라인';
       return `<span class="${t===tab?'on':''}${dis?' off':''}" ${dis?'':`data-surftab="${t}"`}>${t}</span>`;}).join('');
@@ -422,29 +446,29 @@
         <div class="rcol-body">${on?(cards.length?cards.map(c=>candCard(c,C)).join(''):'<div class="rcol-empty">—</div>'):'<div class="rcol-empty">준비 전</div>'}</div>
       </div>`;
     }).join('');
-    const tools=C.idxOf(C.S.sel)>=4?boardTools(C):'';
+    const tools=boardReady(C)?boardTools(C):'';
     return tools+`<div class="recr-board">${cols}</div>`;
   }
 
   function base(C){
     const S=C.S,R=C.R,w=C.W(S.sel),id=w.id,working=R.phase==='working';
-    const stMap={request:working?'채용 요청을 받고 있어요…':'요건 접수됨 · 분석 시작',understand:working?'AAP가 요건을 분석하고 있어요':'JD·요건·가중 정리됨',
-      compose:working?'AAP가 스크리닝 계획을 구성하고 있어요':'스크리닝 계획 준비됨',approve:working?'스크리닝 계획을 정리하고 있어요':'숏리스트 기준 확인 대기',
-      prepare:working?'이력서를 파싱·매칭·랭킹하고 있어요':'스크리닝 완료 · 후보 카드를 눌러 상세를 보세요',meeting:working?'면접 일정을 조율하고 있어요':'면접 일정 확인 대기',
-      commit:working?'평가를 취합하고 있어요':'오퍼 승인 대기',share:working?'결과를 발송·기록하고 있어요':'채용 완료'};
-    let b=`<div class="ws-status">${working?'<span class="spin"></span>':''}${stMap[id]}</div>`;
-    if(id==='request'){
+    const stMap={intake:working?'채용 요청을 받고 있어요…':'요건 접수됨 · 분석 시작',analyze:working?'AAP가 요건을 분석하고 있어요':'JD·요건·가중 정리됨',
+      design:working?'AAP가 스크리닝 계획을 구성하고 있어요':'스크리닝 계획 준비됨',shortlist_gate:working?'스크리닝 계획을 정리하고 있어요':'숏리스트 기준 확인 대기',
+      screen:working?'이력서를 수집·파싱·매칭·랭킹하고 있어요':'스크리닝 완료 · 후보 카드를 눌러 상세를 보세요',interview_gate:working?'면접 일정을 조율하고 있어요':'면접 일정 확인 대기',
+      evaluate:working?'면접 평가를 취합하고 있어요':'평가 취합 완료 · 오퍼안 준비됨',offer_gate:working?'오퍼안을 정리하고 있어요':'오퍼 승인 대기',record:working?'결과를 발송·기록하고 있어요':'채용 완료'};
+    let b=`<div class="ws-status">${working?'<span class="spin"></span>':''}${stMap[id]||(working?'처리 중…':'완료')}</div>`;
+    if(id==='intake'){
       b+=`<div class="ws-req">${WORKLOAD.request}</div>`;
       b+=jdStrip(C,false);
-    } else if(id==='understand'){
+    } else if(id==='analyze'){
       const done=!working;
       b+=`<div class="ws-overview ${done?'show':''}"><div class="ov-row"><span>직무</span><b>${JOB.title}</b></div><div class="ov-row"><span>인원</span><b>${JOB.headcount}명 · ${JOB.level}</b></div><div class="ov-row"><span>필수</span><b>${JOB.must.join(' · ')}</b></div><div class="ov-row"><span>우대</span><b>${JOB.plus.join(' · ')}</b></div><div class="ov-row"><span>매칭 가중</span><b>스킬 ${JOB.weight.skill} · 경력 ${JOB.weight.career} · 도메인 ${JOB.weight.domain}</b></div></div>`;
       b+=jdStrip(C,true);
-    } else if(id==='compose'){
+    } else if(id==='design'){
       b+=C.par(['이력서 파싱','요건 매칭','랭킹·스코어','면접 일정']);
       b+=board(C);
     } else {
-      if((id==='prepare'||id==='share'||id==='meeting')&&working) b+=C.par(id==='prepare'?['이력서 파싱(38)','요건 매칭','스코어·랭킹','편향 점검']:(id==='meeting'?['후보 가용 조회','면접관 가용','슬롯 매칭']:['오퍼 발송','ATS 기록','온보딩 등록']));
+      if((id==='screen'||id==='record'||id==='interview_gate'||id==='evaluate')&&working) b+=C.par(id==='screen'?['이력서 파싱(38)','요건 매칭','스코어·랭킹','편향 점검']:(id==='interview_gate'?['후보 가용 조회','면접관 가용','슬롯 매칭']:(id==='evaluate'?['스코어카드 취합','합격 판정','보상·정책 점검']:['오퍼 발송','ATS 기록','온보딩 등록'])));
       b+=jdStrip(C,true);
       /* 활성 탭에 따라 surface 본문 전환(사용자가 탭을 눌러 탐색) — 기본은 단계가 정한 탭 */
       b+=tabBody(C);
@@ -480,7 +504,7 @@
   /* JD 요약 스트립(상단 직무 슬롯) */
   function jdStrip(C,known){
     return `<div class="recr-jd"><div class="rjd-l"><span class="rjd-ic">${I('briefcase')}</span><div><div class="rjd-t">${JOB.title}</div><div class="rjd-s">${known?`필수 ${JOB.must.length} · 우대 ${JOB.plus.length} · 가중 ${JOB.weight.skill}/${JOB.weight.career}/${JOB.weight.domain}`:'요건 정의 중'}</div></div></div>
-      <div class="rjd-r"><span class="rjd-stat"><b>${JOB.headcount}</b>채용</span><span class="rjd-stat"><b>${C.idxOf(C.S.sel)>=4?JOB.screened:JOB.applicants}</b>${C.idxOf(C.S.sel)>=4?'통과':'지원'}</span><button class="wl-go" data-dlv="jd">JD 보기</button></div></div>`;
+      <div class="rjd-r"><span class="rjd-stat"><b>${JOB.headcount}</b>채용</span><span class="rjd-stat"><b>${boardReady(C)?JOB.screened:JOB.applicants}</b>${boardReady(C)?'통과':'지원'}</span><button class="wl-go" data-dlv="jd">JD 보기</button></div></div>`;
   }
 
   /* 후보 상세(클릭 모달) — 이력서 요약 · 점수 분해(스킬/경력/도메인) · 플래그 · 근거 · 결정 버튼 */
@@ -489,15 +513,15 @@
     const dec=(C.S.recrDecisions||{})[c.id];
     const bars=bd.map(b=>`<div class="cd-bd-row"><span class="cd-bd-k">${b.k} <em>×${b.w}</em></span><span class="cd-bd-bar"><i style="width:${b.raw}%"></i></span><span class="cd-bd-raw">${b.raw}</span><span class="cd-bd-c">+${b.contrib}</span><span class="cd-bd-sub">${b.sub}</span></div>`).join('');
     const flagH=fs.length?`<div class="cd-flags">${fs.map(f=>`<span class="cd-flag ${f.t}">${f.ko}</span>`).join('')}</div>`:'';
-    /* 단계에 따라 가능한 결정: prepare(4)=숏리스트/탈락, meeting(5)=면접확정/탈락, commit+(6)=오퍼 */
-    const i=C.idxOf(C.S.sel);
+    /* 단계에 따라 가능한 결정(stage id 기준): screen=숏리스트/탈락,
+       interview_gate~evaluate=면접확정/탈락, offer_gate~=오퍼/제외 */
     let acts='';
-    if(i===4){
-      acts=`<button class="cp-btn primary sm" data-rdec="shortlist" data-cid="${c.id}">숏리스트 승급</button><button class="cp-btn ghost sm" data-rdec="reject" data-cid="${c.id}">탈락 처리</button>`;
-    } else if(i===5){
-      acts=`<button class="cp-btn primary sm" data-rdec="interview" data-cid="${c.id}">면접 확정</button><button class="cp-btn ghost sm" data-rdec="reject" data-cid="${c.id}">탈락 처리</button>`;
-    } else if(i>=6){
+    if(atOrAfter(C,OFFER_ID)){
       acts=`<button class="cp-btn primary sm" data-rdec="offer" data-cid="${c.id}">오퍼 대상</button><button class="cp-btn ghost sm" data-rdec="reject" data-cid="${c.id}">제외</button>`;
+    } else if(atOrAfter(C,INTERVIEW_ID)){
+      acts=`<button class="cp-btn primary sm" data-rdec="interview" data-cid="${c.id}">면접 확정</button><button class="cp-btn ghost sm" data-rdec="reject" data-cid="${c.id}">탈락 처리</button>`;
+    } else if(atOrAfter(C,SCREEN_ID)){
+      acts=`<button class="cp-btn primary sm" data-rdec="shortlist" data-cid="${c.id}">숏리스트 승급</button><button class="cp-btn ghost sm" data-rdec="reject" data-cid="${c.id}">탈락 처리</button>`;
     }
     const decBadge=dec?`<span class="cd-dec ${dec}">${({shortlist:'숏리스트',interview:'면접',offer:'오퍼',reject:'탈락'})[dec]} 처리됨</span>`:'';
     return `<button class="cmodal-back" data-cback>${I('chevron-left')}보드로</button>
@@ -525,7 +549,7 @@
     const S=C.S,sel=S.sel,ex=C.ex;
     if(kind==='cand'){ const c=cById(S.recrOpen); return c?candDetail(c,C):''; }
     if(kind==='hitl'){
-      if(sel==='approve'){
+      if(sel==='shortlist_gate'){
         const th=cutThreshold(C), n=CAND.filter(c=>c.match>=th).length;
         const times=C.times.map((t,i)=>`<button class="rv-time ${t.t===S.pickedTime?'sel':''}" data-time="${i}">${t.t.split(' · ')[0]}<span>${t.t.split(' · ')[1]||''}</span></button>`).join('');
         const top=CAND.slice().sort((a,b)=>b.match-a.match).slice(0,3).map(c=>`${c.name} ${c.match}%`).join(' · ');
@@ -537,7 +561,7 @@
           </div>
           <div class="cmodal-actions"><button class="cp-btn primary" data-yes>이 기준으로 스크리닝</button><button class="cp-btn ghost" data-no>컷 좁히기(≥90)</button></div>`;
       }
-      if(sel==='meeting'){
+      if(sel==='interview_gate'){
         return `<div class="cmodal-h">면접 일정을 확인해 주세요</div><div class="cmodal-sub">AAP가 후보·면접관 캘린더를 교차해 충돌 0 슬롯을 잡았어요. 일정·패널을 확인하세요.</div>
           <div class="rv">
             ${INTERVIEW.filter(iv=>shortlistIds(C).includes(iv.cid)).map(iv=>{const c=cById(iv.cid);return `<div class="rv-sec"><div class="rv-k"><span class="recr-av sm">${c.ini}</span>${c.name} · ${iv.type}</div><div class="rv-sum">${iv.slot} · 패널 ${iv.panel}</div></div>`;}).join('')}
@@ -545,7 +569,7 @@
           </div>
           <div class="cmodal-actions"><button class="cp-btn primary" data-yes>일정 확정·안내 발송</button><button class="cp-btn ghost" data-no>일정 조정 요청</button></div>`;
       }
-      if(sel==='commit'){
+      if(sel==='offer_gate'){
         const c=cById(OFFER.cid);
         return `<div class="cmodal-h">합격·오퍼를 승인할까요?</div><div class="cmodal-sub">후보에게 나가는 마지막 단계예요. 합격 후보·오퍼 처우를 확인하세요.</div>
           ${scorecard(c)}
@@ -557,7 +581,7 @@
       }
     }
     if(kind==='done'){
-      if(sel==='prepare'){
+      if(sel==='screen'){
         const top=CAND.slice().sort((a,b)=>b.match-a.match).slice(0,3);
         const pass=CAND.filter(c=>screenVerdict(c).k==='pass').length, hold=CAND.filter(c=>screenVerdict(c).k==='hold').length, drop=CAND.filter(c=>screenVerdict(c).k==='drop').length;
         return `<button class="cmodal-x" data-close>${I('x')}</button><div class="cmodal-h done">스크리닝이 끝났어요 <span class="cp-check">${I('check')}</span></div>
@@ -566,7 +590,7 @@
           <div class="mt-foot">${I('check')} 편향·PII 점검 통과 · 후보 카드를 눌러 점수 분해를 보세요 <button class="wl-go" data-dlv="compare" style="margin-left:6px">비교표</button></div></div>
           <div class="cmodal-actions"><button class="cp-btn primary" data-close>확인</button></div>`;
       }
-      if(sel==='share'){
+      if(sel==='record'){
         const c=cById(OFFER.cid);
         return `<button class="cmodal-x" data-close>${I('x')}</button><div class="cmodal-h done">채용 처리 완료 <span class="cp-check">${I('check')}</span></div>
           <div class="done-list"><div class="dn-row"><span class="dn-ic">${I('award')}</span>${c.name} 합격 — 오퍼 레터 발송</div>
@@ -598,8 +622,8 @@
     },
     /* HITL 게이트 결정을 보드 상태로 (decide 후 코어가 호출). v=yes/no */
     decideHook:(S,v,sel)=>{
-      if(sel==='approve' && v==='yes'){ /* 표준 컷 확정 — 숏리스트 자동 배치 */ }
-      if(sel==='commit' && v==='yes'){ S.recrDecisions=S.recrDecisions||{}; S.recrDecisions[OFFER.cid]='offer'; }
+      if(sel==='shortlist_gate' && v==='yes'){ /* 표준 컷 확정 — 숏리스트 자동 배치 */ }
+      if(sel==='offer_gate' && v==='yes'){ S.recrDecisions=S.recrDecisions||{}; S.recrDecisions[OFFER.cid]='offer'; }
     },
     /* STATE 영속 키(코어 persistToCase/hydrate 가 케이스에 같이 저장) */
     persistKeys:['recrDecisions','recrSort','recrFilter'],
@@ -609,8 +633,8 @@
 
   /* 데모용 시드 케이스(인스턴스) — 서로 다른 진행 상태 */
   const SEEDS=[
-    {title:'백엔드 개발자 2명 채용', customer:'플랫폼개발팀 · JD-2041', icon:'💼', request:WORKLOAD.request, atStep:'approve', pickedTime:'표준 · match ≥ 85'},
-    {title:'프로덕트 디자이너 채용', customer:'디자인팀 · JD-2052', icon:'💼', request:'"프로덕트 디자이너 1명 채용해줘. 포트폴리오 1차 스크리닝부터."', atStep:'request'},
+    {title:'백엔드 개발자 2명 채용', customer:'플랫폼개발팀 · JD-2041', icon:'💼', request:WORKLOAD.request, atStep:'shortlist_gate', pickedTime:'표준 · match ≥ 85'},
+    {title:'프로덕트 디자이너 채용', customer:'디자인팀 · JD-2052', icon:'💼', request:'"프로덕트 디자이너 1명 채용해줘. 포트폴리오 1차 스크리닝부터."', atStep:'intake'},
     {title:'데이터 분석가 채용 마감', customer:'데이터팀 · JD-2030', icon:'💼', request:'"데이터 분석가 1명, 오퍼까지 진행해줘."', status:'done'},
   ];
 
@@ -626,24 +650,27 @@
       {do:{view:'inbox'}, target:'#inboxList, #gnav [data-view="inbox"]',
        title:'한 인박스로 여러 업무가 들어옵니다',
        body:'채용·VOC·회의 등 여러 유형의 요청이 하나의 통합 인박스로 들어옵니다. 채용 건을 열어 AAP가 이 요청을 어떻게 처리하는지 따라가 보겠습니다.'},
-      {do:{open:1, go:'understand'}, target:'#seq',
+      {do:{open:1, go:'analyze'}, target:'#seq',
        title:'AAP가 요청을 요건으로 분해합니다',
        body:'"백엔드 2명 충원" 한 문장을 AAP가 직무·인원·연차·필수 스택으로 분해하고, 매칭 가중(스킬·경력·도메인)과 차별금지·개인정보 정책까지 자율로 달아 실행 흐름을 세웁니다.'},
-      {do:{go:'compose'}, target:'#flow',
+      {do:{go:'design'}, target:'#flow',
        title:'필요한 구성요소를 골라 조합합니다',
-       body:'AAP는 Agent를 많이 띄우는 게 아닙니다. 이력서 파싱·요건 매칭 Agent, OCR·편향 점검 Module, 기존 ATS, 캘린더 Connector, 차별금지 Policy를 업무에 맞게 골라 실행 구조로 조합합니다.'},
-      {do:{go:'approve'}, target:'#cmodal .cmodal-card',
+       body:'AAP는 Agent를 많이 띄우는 게 아닙니다. 이력서 파싱·요건 매칭 Agent, OCR·편향 점검 Module, 기존 ATS, 캘린더 Connector, 차별금지 Policy를 업무에 맞게 골라 스크리닝 실행 구조로 조합합니다.'},
+      {do:{go:'shortlist_gate'}, target:'#cmodal .cmodal-card',
        title:'책임이 걸린 지점은 사람이 정합니다 (HITL ①)',
        body:'AAP가 스크리닝 계획과 숏리스트 컷 후보(엄격/표준/넓게)를 제시합니다. 어느 기준으로 거를지 — 숏리스트 컷은 채용담당이 직접 정하는 첫 번째 게이트입니다.'},
-      {do:{go:'prepare'}, target:'.con-body .recr-board',
-       title:'승인된 기준대로 AAP가 자율 실행합니다',
-       body:'담당자가 정한 기준대로 AAP가 이력서 38건을 병렬 파싱·매칭·랭킹하고 편향·PII를 점검합니다. 후보 파이프라인 보드가 채워지고, 후보 카드를 누르면 점수 분해(스킬·경력·도메인)와 판정 근거가 보입니다.'},
-      {do:{go:'meeting'}, target:'#cmodal .cmodal-card',
+      {do:{go:'screen'}, target:'.con-body .recr-board',
+       title:'승인된 기준대로 AAP가 자율 실행·분기합니다',
+       body:'담당자가 정한 기준대로 AAP가 이력서 38건을 병렬 수집·파싱·매칭·랭킹하고 편향·PII를 점검합니다. 후보 파이프라인 보드가 채워지고 통과/보류·탈락으로 자동 분기됩니다. 후보 카드를 누르면 점수 분해(스킬·경력·도메인)와 판정 근거가 보입니다.'},
+      {do:{go:'interview_gate'}, target:'#cmodal .cmodal-card',
        title:'외부로 나가는 안내는 사람이 확인합니다 (HITL ②)',
        body:'AAP가 후보·면접관 캘린더를 교차해 충돌 0 슬롯을 잡았습니다. 후보에게 안내가 나가는 단계라, 일정·패널을 담당자가 확인한 뒤 발송합니다.'},
-      {do:{go:'commit'}, target:'#cmodal .cmodal-card',
+      {do:{go:'evaluate'}, target:'#seq',
+       title:'면접이 끝나면 평가를 취합합니다',
+       body:'AAP가 면접관 스코어카드를 모아 정합성을 점검하고 합격 후보·오퍼 패키지 초안을 정리합니다. 보상밴드·차별금지를 사전 점검해 다음 승인 게이트에 올립니다.'},
+      {do:{go:'offer_gate'}, target:'#cmodal .cmodal-card',
        title:'오퍼 발송 직전, 최종 승인을 받습니다 (HITL ③)',
-       body:'AAP가 평가를 취합하고 보상밴드·헤드카운트·차별금지를 점검했습니다. 후보에게 오퍼가 나가는 마지막 행동은 담당자·현업 리드의 최종 승인으로 멈춰 둡니다.'},
+       body:'후보에게 오퍼가 나가는 마지막 행동은 담당자·현업 리드의 최종 승인으로 멈춰 둡니다. 보상밴드·헤드카운트·차별금지가 점검된 오퍼안을 확인하고 승인합니다.'},
       {do:{view:'logs'}, target:'#traceLog',
        title:'모든 판단이 기록되고 학습으로 남습니다',
        body:'요청→파싱→매칭→사람 승인→오퍼까지 전 구간이 Run Trace에 남아 감사·재현이 가능합니다. 이번 채용 패턴은 다음 포지션의 매칭 정확도를 높이는 학습 자산이 됩니다.'},
@@ -677,11 +704,12 @@
 
   (window.AAP_PACKS=window.AAP_PACKS||{}).recruiting={
     id:'recruiting', label:'채용', ontology:ONTOLOGY,
-    times:TIMES, products:PRODUCTS, work:WORK, components:COMPONENTS, compose:COMPOSE,
+    times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
     demoScenario:DEMO_SCENARIO,
-    stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',meeting:'Decision',commit:'Decision',share:'Learning'},
-    extExcluded:(S)=>S.decisions['approve']==='no',
+    io:{ inputs:[], editable:[], connectors:[] },   /* Pack Contract v2 · 2a 슬롯 예약(실동작 2c) */
+    stepLoop:{intake:'Data',analyze:'Semantic',design:'Reasoning',shortlist_gate:'Decision',screen:'Action',interview_gate:'Decision',evaluate:'Action',offer_gate:'Decision',record:'Learning'},
+    extExcluded:(S)=>S.decisions['shortlist_gate']==='no',   /* 컷 좁히기(≥90) = ex(엄격 컷) */
     /* (b) 함수형 surface — ATS 화면을 코어 generic 렌더 대신 이 팩이 직접 그린다 */
     surface:{head, base, cmodal},
     /* 도메인 인터랙션 훅(코어가 일반 메커니즘으로 호출) */

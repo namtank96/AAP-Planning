@@ -1090,7 +1090,7 @@ textarea.au-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0
 .rjd-r{display:flex;align-items:center;gap:12px;flex:0 0 auto;}
 .rjd-stat{font-size:10px;color:var(--faint);font-weight:700;display:flex;flex-direction:column;align-items:center;line-height:1.1;} .rjd-stat b{font-size:15px;font-weight:900;color:var(--aap-ink);}
 /* 파이프라인 보드 = 단계별 컬럼 */
-.recr-board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.recr-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;}
 .recr-col{border:1px solid var(--border);border-radius:11px;background:#fff;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
 .recr-col.off{background:var(--surf);opacity:.6;}
 .rcol-h{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--surf);}
