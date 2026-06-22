@@ -69,6 +69,25 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### app/ 구현체 — P4 프로젝트 계층 (APP.projects + case.projectId + 인박스 프로젝트별 보기 토글) (260622, aap-platform) 〔기획·UX〕
+> 5단계 중 **P4**(P1~P3 자산·로그 전역화는 직전 커밋, 핸드오프 기준 `3b2ec68` / 프롬프트 명시 `df162c7` — 두 값 병기). **핵심 = 격리**: 프로젝트는 케이스 묶음(포트폴리오) **추가 레이어일 뿐**, 통합 인박스·상태·유형·On-Ramp·케이스 실행·영속 로직 미변경. **토글 OFF(기본)=현행 인박스 100% 유지**. P5(케이스 튜닝)는 범위 밖. **코어=도메인 무관 유지**(projects/projectId=일반 메커니즘, 팩별 분기 0 — 시드 배정만 packId='recruiting'/'meeting' 매칭, 없으면 미배정). meeting/voc/recruiting·인박스·실행·스튜디오·시연·wfeditor·pipeline·On-Ramp·자동저작·X1·8계층·HITL·자산/로그 전역화(P2/P3) 무회귀. **백업=셸 cp/PowerShell·삭제 전면 차단 → `_archive/app_v0_16_pre_projects/_BACKUP_NOTE.md`(변경 파일 목록 + git 복원 `git checkout 3b2ec68 -- 05_범용플랫폼/app/`). 물리 디렉터리 백업 권한 차단.**
+- **데이터 — `APP.projects[]` + `case.projectId?`**(`core/core.js`) — `APP` 에 `projects:[]`·`projectsOn:false` 추가. `saveApp`/`loadApp` 가 `projects`·`projectsOn` 영속(localStorage `aap.v1.projects`·`aap.v1.projectsOn`, 타입 검증 폴백). `caseTemplate` 가 `seed.projectId` 를 옵셔널로 받아 `case.projectId`(기본 null=미배정) 세팅 — 기존 호출(projectId 없음) 무회귀. `createCase` 가 seed 에 request/projectId 있으면 caseTemplate 으로 전달(둘 다 없으면 기존 경로). `projectById`(헬퍼)·`seedProjects`(1회·비어있을 때만: '2026 상반기 채용'·'대한제조 도입' 2개 시드 + recruiting 시드 케이스→채용 프로젝트, meeting 시드 1건→도입 프로젝트 느슨 배정). boot 에서 `seedPack` 직후 `seedProjects()`+`saveApp()` 호출. 〔기획·UX〕
+- **인박스 프로젝트별 보기 토글**(`core/core.js` `renderInbox`·신규 `_inboxStatusGroups`, `index.html`) — 인박스 상단(`#inboxProjToggle`, 프로젝트 1개+ 있을 때만 노출)에 **'프로젝트별 보기' 스위치 토글**(`.proj-tg`). **OFF(기본)** = `_inboxStatusGroups(cs)` 직접 호출 = **현행 상태 그룹 마크업과 바이트 동일**(원본 루프를 헬퍼로 그대로 추출 — 무회귀 보장). **ON** = 프로젝트별 그룹(각 프로젝트 헤더 `.ibx-ph`[이름·건수·검토대기 N] + 프로젝트 안에서 `_inboxStatusGroups` 재사용해 기존 상태 그룹 유지) + projectId 없거나 삭제된 프로젝트 가리키는 케이스는 **'미배정'** 그룹. 유형 필터(typeFilter)와 직교(필터 적용된 cs 위에서 그룹). 토글 상태 localStorage 영속. 〔기획·UX〕
+- **격리 원칙** — projectId 없는 케이스 정상 동작(미배정 또는 OFF 시 영향 0). 토글 OFF 가 안전 기본값. 프로젝트는 추가 레이어 — caseStatus/caseProgress/openCase/On-Ramp/영속/X1 미터치. 〔기획·UX〕
+- **CSS**(`core/platform.css`) — `.inbox-proj-toggle`·`.proj-tg`(+`.ptg-sw` 스위치 on 모션)·`.ibx-proj`·`.ibx-ph`(`.ph-ic/.ph-name/.ph-n/.ph-wait`)·`.ibx-pbody` 추가. 색=aap teal·amber·surface 토큰 재사용, 신규 hex 0. 〔기획·UX〕
+- **코어 도메인 무관 유지** — projects/projectId/토글 전부 일반 메커니즘. 안정 ID(`#inboxList`/`#inboxFilter`/`#newCaseBtn`)·뷰 키·demo.js 타깃·X1·자산/로그 전역화 미터치. file:// 동작·외부 라이브러리 0·Lucide 인라인·자기설명 캡션 ✕. 〔표준·정의〕
+- **검증(헤드리스/셸 cp·런처·삭제 권한 차단 → `node --check`(허용분)+정적 검증, 브라우저 런타임 미실측 명시)**: (a) `node --check core/core.js` **통과**(구문 0 에러). (b) **OFF 무회귀=정적 보장**: OFF 분기는 원본 상태 그룹 루프를 그대로 옮긴 `_inboxStatusGroups(cs)` 단일 호출 + 동일 `data-open` 와이어링 → 출력 동일. (c) ON 분기=프로젝트 그룹+미배정+프로젝트 내 상태 그룹(코드 경로 리뷰). (d) 토글/projectsOn 영속=loadApp/saveApp 경로 정합. (e) projectId 없는 케이스=caseTemplate 기본 null·미배정 그룹/OFF 무영향. (f) 시드=seedProjects 1회 가드(`APP.projects.length` 체크)·packId 'recruiting'/'meeting' 매칭(확인됨). **후속자가 file://로 (a)토글 OFF=현행 인박스 그대로 (b)토글 ON=프로젝트 그룹+미배정 (c)projectId 없는 케이스 정상 (d)토글 reload 영속 (e)On-Ramp·실행·자산/로그·시연 무회귀 (f)JS 에러 0 실측 필요(미실측 — 헤드리스·런처 차단).** 임시 검증 파일 생성 0. 〔데모 한정 검증〕
+- **남긴 후속**: ① **P5 케이스 튜닝**(케이스별 자산·정책 오버라이드). ② 프로젝트 CRUD UI(현재 시드 2개 고정 — 생성/이름변경/케이스 재배정 UI 없음). ③ **aap-design 시각**: 토글 스위치 모션·프로젝트 그룹 헤더/접기·프로젝트별 진행률 롤업·미배정 그룹 위계. ④ 거버넌스(PACK.govern) 전역화(P2/P3 미포함분 잔존). 〔aap-design/후속〕
+
+### 분해·조립 프로토타입 v0.1 (별도 탐색본 · 260622) 〔기획·UX〕
+- **파일 = `03_프로토타입/D_회의/aap_meeting_runtime_compose_proto_v0_1.html`** (v0.36 복사본, 현행 데모와 분리된 탐색 프로토타입 — 본선 아님).
+- **문제의식(사용자)**: "~~회의 진행하고 싶다" 요청을 받았을 때 AAP가 **업무·역할을 구분하고 프로세스를 분해→조립(재구성)하는 과정**이 안 보임. 현행은 `compose` 단계에서 `out:'작업 그래프 T1~T5'`·`'구성요소 조합'`처럼 **결과 라벨로만 선언**, 분해물·재조립이 화면에 없음.
+- **범위 = `compose`(실행 구조 구성) 한 스텝만** 교체. 디자인 토큰·기존 8단계 데이터·다른 7단계 렌더는 **그대로**. `renderRight()`에 `if(w.id==='compose'){renderComposeCanvas();return;}` 분기 1줄, `revealOps` n=3(분해·배정·조립 3비트)만 손댐.
+- **새 데이터** `COMPOSE_TASKS[T1~T5]`(goal·필요역량·dep·owners·why[채택/탈락+이유]) + `GATES`. **새 함수** `renderComposeCanvas`/`composeGraph`/`ownerBadges`/`whyBlock`. 새 CSS는 `.cmp-*`/`.tcard`/`.gcard` 등 **스코프 한정 신규**(기존 클래스 불변).
+- **화면 = 3비트 진행형 캔버스**: ① 업무 분해(요청→T1~T5 작업 카드, goal+필요역량) → ② 역할 배정(작업별 구성요소 배지 + "왜 이 구성요소인가" 펼침=후보 채택/탈락 이유, **전부 Agent ✕** 메시지) → ③ 재조립(병렬 T1·T2·T3 → 외부 초대 게이트 → T4 → T5 → 외부 발송 게이트, 의존성·게이트 배선). 상단 **입력(한 줄 요청)→출력(작업5·구성요소6종·게이트2)** strip, 하단 **"요청이 다르면 다르게 재구성" 힌트**(Direction D 맛보기).
+- Run 재생 시 ②③ 섹션이 `.off`(흐림)에서 비트 진행에 따라 점등 → **분해 먼저 → 배정 → 조립**이 동적으로 보임. 검증: 헤드리스 렌더 OK(①②③ 전부 표출).
+- **다음 결정 대기**: 이 방향 확정 시 본선(v0.37+)에 흡수할지 / 역할(누가 실행·승인·책임 RACI) 축 추가할지 / Direction D(다른 요청=다른 구조 토글) 별도 구현할지.
+
 ### v0.36 (데모, 빌드 완료 · 260622)
 - **검정 narration 툴팁(#nTip) 닫기(×) 추가** — 우상단 `.nt-x` 닫기 버튼. 자동재생 중 닫으면 `STATE.narrHidden=true`로 이후 단계 narration 미표시(가이드 모드 ×는 stopGuide). Run/Guide 시작 시 리셋. 〔기획·UX〕
 - **검정 툴팁 ↔ '상태' 범례 아래 설명(rg-expl) 중복 표출 해결** — 같은 `w.guide`를 둘 다 보여 중복 → **상호 배타**: 재생/가이드 중(툴팁 표시)엔 rg-expl 숨김, 비재생·툴팁 닫음 시엔 rg-expl 표시(renderRight 조건 + stopPlay·닫기 시 재렌더). 〔기획·UX〕

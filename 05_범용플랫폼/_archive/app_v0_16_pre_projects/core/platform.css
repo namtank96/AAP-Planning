@@ -99,23 +99,6 @@ body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malg
 .st-wait{background:var(--amber-soft);color:var(--amber);} .gh-dot.st-wait{background:var(--amber);}
 .st-done{background:var(--green-soft);color:var(--green);} .gh-dot.st-done{background:var(--green);}
 .ibx-empty{font-size:12px;color:var(--faint);padding:24px;text-align:center;border:1px dashed var(--border);border-radius:12px;}
-/* P4 프로젝트별 보기 토글 + 프로젝트 그룹 (추가 레이어 · 토글 OFF=현행) */
-.inbox-proj-toggle{flex:0 0 auto;}
-.proj-tg{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:#fff;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--slate);padding:7px 12px;border-radius:9px;cursor:pointer;transition:.12s;}
-.proj-tg:hover{border-color:var(--aap-border);color:var(--aap-ink);}
-.proj-tg .ptg-sw{position:relative;width:26px;height:15px;border-radius:20px;background:var(--line);flex:0 0 auto;transition:.15s;}
-.proj-tg .ptg-sw::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:.15s;}
-.proj-tg.on{border-color:var(--aap-border);color:var(--aap-ink);background:var(--aap-soft,#f0fdfa);}
-.proj-tg.on .ptg-sw{background:var(--aap);}
-.proj-tg.on .ptg-sw::after{left:13px;}
-.ibx-proj{margin-bottom:22px;}
-.ibx-ph{display:flex;align-items:center;gap:9px;padding:0 2px 10px;margin-bottom:4px;border-bottom:1px solid var(--line);}
-.ibx-ph .ph-ic{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-size:11px;background:var(--aap-soft,#f0fdfa);color:var(--aap);flex:0 0 auto;}
-.ibx-ph .ph-ic.none{background:var(--surf);color:var(--faint);}
-.ibx-ph .ph-name{font-size:13px;font-weight:800;color:var(--ink);}
-.ibx-ph .ph-n{font-size:10.5px;font-weight:800;color:var(--muted);background:var(--surf);border-radius:20px;padding:1px 8px;}
-.ibx-ph .ph-wait{margin-left:auto;font-size:10px;font-weight:800;color:var(--amber);background:var(--amber-soft);border-radius:20px;padding:3px 10px;}
-.ibx-pbody{display:flex;flex-direction:column;gap:16px;}
 
 /* run-top back */
 .rt-back{border:1px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;color:var(--slate);padding:5px 11px;border-radius:8px;cursor:pointer;flex:0 0 auto;}

@@ -148,37 +148,15 @@ function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(
 /* APP = 코어가 책임지는 인스턴스성 모델(도메인 무관). cases=인스턴스 배열, active=열린 케이스 id
    pack = 현재 런타임 컨텍스트(열린 케이스의 packId). 인박스는 전 팩 통합 → pack 은 '모드'가 아니라
    '실행 뷰가 렌더 중인 유형' 이다(케이스 열 때 그 케이스 packId 로 로드). typeFilter=인박스 유형 필터. */
-/* projects[] = P4 프로젝트(케이스 묶음) 차원. 추가 레이어일 뿐 — 케이스의 projectId(옵셔널)로 느슨히 연결.
-   projectsOn = '프로젝트별 보기' 토글(기본 OFF=현행 인박스 100% 유지). 둘 다 영속(도메인 무관). */
-const APP={cases:[], projects:[], active:null, view:'inbox', pack:null, typeFilter:'all', catSel:null, projectsOn:false};
-function saveApp(){ lsSet('cases',APP.cases); lsSet('projects',APP.projects); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); lsSet('projectsOn',APP.projectsOn); }
+const APP={cases:[], active:null, view:'inbox', pack:null, typeFilter:'all', catSel:null};
+function saveApp(){ lsSet('cases',APP.cases); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); }
 function loadApp(){
   const cs=lsGet('cases',null);
   if(Array.isArray(cs)) APP.cases=cs.filter(c=>c&&c.id&&c.packId);
-  const pj=lsGet('projects',null);
-  if(Array.isArray(pj)) APP.projects=pj.filter(p=>p&&p.id&&p.name);
   APP.active=lsGet('active',null);
   const v=lsGet('view',null); if(['inbox','run','studio','assets','logs','govern','demo'].includes(v))APP.view=v;
   APP.pack=lsGet('pack',null);
   const tf=lsGet('typeFilter',null); if(typeof tf==='string')APP.typeFilter=tf;
-  const po=lsGet('projectsOn',null); if(typeof po==='boolean')APP.projectsOn=po;
-}
-/* 프로젝트 헬퍼(도메인 무관) — id로 프로젝트 조회, 케이스의 projectId 정합성 폴백 */
-function projectById(id){ return APP.projects.find(p=>p&&p.id===id)||null; }
-/* 시드 프로젝트(데모용 · 1회, 비어있을 때만). 기존 시드 케이스 일부에 projectId 부여(없어도 무방=미배정) */
-function seedProjects(){
-  if(APP.projects.length)return;
-  APP.projects=[
-    {id:'pj-recruit-2026h1', name:'2026 상반기 채용'},
-    {id:'pj-daehan-onboard', name:'대한제조 도입'},
-  ];
-  /* 기존 시드 케이스 일부를 프로젝트에 느슨히 배정(매칭되는 게 없으면 그대로 미배정) */
-  let r=0;
-  APP.cases.forEach(c=>{
-    if(c.projectId)return;
-    if(c.packId==='recruiting'){ c.projectId='pj-recruit-2026h1'; }
-    else if(c.packId==='meeting' && r<1){ c.projectId='pj-daehan-onboard'; r++; }
-  });
 }
 
 /* =========================================================================
@@ -212,7 +190,6 @@ function caseTemplate(pack,seed){
   const wl=pack.workload||{}, ss=pack.surfaceSpec||{};
   return {
     id:newId(), packId:pack.id,
-    projectId:(seed&&seed.projectId)||null,  /* P4 옵셔널 — 없으면 미배정(정상 동작) */
     title:(seed&&seed.title)||ss.title||wl.type||pack.label,
     customer:(seed&&seed.customer)||ss.customer||'',
     icon:(seed&&seed.icon)||ss.icon||'📋',
@@ -378,40 +355,7 @@ function renderInbox(){
   if(sub)sub.textContent=`${APP.typeFilter==='all'?`전 유형 ${presentPacks.length}종`:typeLabel(APP.typeFilter)} · ${cs.length}건`;
   /* 인박스 카운트 = 전 유형 검토대기 합(통합) */
   const navc=document.getElementById('navCnt'); if(navc){const w=all.filter(c=>caseStatusFor(c)==='wait').length;navc.textContent=w?String(w):'';}
-  /* P4 '프로젝트별 보기' 토글 — 프로젝트가 1개 이상 있을 때만 노출. OFF(기본)=현행 100% 유지 */
-  const ptg=document.getElementById('inboxProjToggle');
-  if(ptg){
-    if(APP.projects.length){
-      ptg.hidden=false;
-      ptg.innerHTML=`<button class="proj-tg ${APP.projectsOn?'on':''}" id="projTgBtn" data-tip="프로젝트별로 케이스를 묶어 봅니다. 끄면 기존 상태별 보기로 돌아갑니다."><span class="ptg-sw"></span>프로젝트별 보기</button>`;
-      const b=ptg.querySelector('#projTgBtn'); if(b)b.onclick=()=>{ APP.projectsOn=!APP.projectsOn; saveApp(); renderInbox(); };
-    } else { ptg.hidden=true; ptg.innerHTML=''; }
-  }
   if(!cs.length){ list.innerHTML=`<div class="ibx-empty">${APP.typeFilter==='all'?'아직 들어온 업무 요청이 없습니다':'이 유형의 업무가 없습니다'} — <b>＋ 새 업무 요청</b>으로 시작하세요.</div>`; return; }
-  let h;
-  if(APP.projectsOn && APP.projects.length){
-    /* ON = 프로젝트별 그룹(미배정은 '미배정'). 프로젝트 안에서 기존 상태 그룹 유지 */
-    h='';
-    const groups=APP.projects.map(p=>({key:p.id,name:p.name,arr:cs.filter(c=>c.projectId===p.id)}))
-      .filter(g=>g.arr.length);
-    const unassigned=cs.filter(c=>!c.projectId||!projectById(c.projectId));
-    if(unassigned.length)groups.push({key:'__none__',name:'미배정',arr:unassigned,none:true});
-    groups.forEach(g=>{
-      const wait=g.arr.filter(c=>caseStatusFor(c)==='wait').length;
-      h+=`<div class="ibx-proj"><div class="ibx-ph"><span class="ph-ic ${g.none?'none':''}">${g.none?'·':'▣'}</span><span class="ph-name">${dcText(g.name,'project.name')}</span><span class="ph-n">${g.arr.length}</span>${wait?`<span class="ph-wait">검토대기 ${wait}</span>`:''}</div><div class="ibx-pbody">`;
-      h+=_inboxStatusGroups(g.arr);
-      h+=`</div></div>`;
-    });
-  } else {
-    /* OFF(기본) = 현행 그대로(상태 그룹) */
-    h=_inboxStatusGroups(cs);
-  }
-  list.innerHTML=h;
-  list.querySelectorAll('[data-open]').forEach(e=>e.onclick=()=>openCase(e.dataset.open));
-}
-/* 상태(검토대기·진행·접수·완료) 그룹 마크업 — 현행 인박스 렌더를 그대로 헬퍼화(무회귀).
-   토글 OFF=전체, ON=각 프로젝트 안에서 재사용. */
-function _inboxStatusGroups(cs){
   const byStatus={}; cs.forEach(c=>{(byStatus[caseStatusFor(c)]=byStatus[caseStatusFor(c)]||[]).push(c);});
   let h='';
   STATUS_ORDER.forEach(s=>{ const arr=byStatus[s]; if(!arr||!arr.length)return;
@@ -427,7 +371,8 @@ function _inboxStatusGroups(cs){
     });
     h+=`</div></div>`;
   });
-  return h;
+  list.innerHTML=h;
+  list.querySelectorAll('[data-open]').forEach(e=>e.onclick=()=>openCase(e.dataset.open));
 }
 /* 새 업무 요청 = 유형(팩)을 골라 그 workload 템플릿으로 새 케이스 생성 → 통합 인박스 편입 → 실행 투입.
    packId 미지정 시: 인박스 필터가 특정 유형이면 그 유형, 아니면 현재 런타임 팩(없으면 첫 팩).
@@ -437,9 +382,7 @@ function createCase(packId,seed){
   let key=packId;
   if(!key) key=(APP.typeFilter!=='all'&&PACKS[APP.typeFilter])?APP.typeFilter:(APP.pack&&PACKS[APP.pack]?APP.pack:Object.keys(PACKS)[0]);
   const pack=PACKS[key]; if(!pack)return;
-  /* seed 에 request/projectId 가 있으면 caseTemplate 으로 전달(옵셔널 — 무회귀) */
-  const tseed=(seed&&(seed.request||seed.projectId))?{request:seed.request,projectId:seed.projectId}:null;
-  const c=caseTemplate(pack,tseed);
+  const c=caseTemplate(pack,seed&&seed.request?{request:seed.request}:null);
   _newSeq[key]=(_newSeq[key]||0)+1;
   c.title=(seed&&seed.title)?seed.title:`${pack.workload&&pack.workload.type?pack.workload.type:pack.label} · 신규 #${_newSeq[key]}`;
   APP.cases.push(c); saveApp();
@@ -1025,8 +968,6 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
   APP.catSel=(APP.catSel&&PACKS[APP.catSel])?APP.catSel:initKey;
   /* 모든 팩에 시드 보장(통합 인박스가 비어보이지 않게 · 1회) */
   keys.forEach(seedPack);
-  /* P4 프로젝트 시드(1회, 비어있을 때만) — 시드 케이스 생성 후라야 일부에 projectId 배정 가능 */
-  seedProjects(); saveApp();
   /* 뷰·케이스 복원 */
   let view=APP.view||'inbox';
   const qv=q.get('view'); if(qv&&['inbox','run','studio','assets','logs','govern','demo'].includes(qv))view=qv;
