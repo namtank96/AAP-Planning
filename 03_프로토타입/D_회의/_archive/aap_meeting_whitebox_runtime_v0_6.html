@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP 작동 원리 데모 · 회의 업무 (v0.6)</title>
+<style>
+  :root{
+    --bg:#f8fafc; --surface:#ffffff; --soft:#f9fafb; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#2563eb; --accent-soft:#eff6ff; --accent-line:#bfdbfe;
+    --success:#16a34a; --success-soft:#f0fdf4; --warning:#d97706; --warning-soft:#fffbeb;
+    --danger:#dc2626; --danger-soft:#fef2f2; --navy:#0f172a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:var(--bg);color:var(--text);font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .app{display:grid;grid-template-rows:auto auto 1fr;height:100vh;overflow:hidden;}
+  .internal{display:none;} body.dev-on .internal{display:inline;}
+
+  /* Header */
+  .hdr{background:var(--navy);color:#e2e8f0;height:54px;padding:0 20px;display:flex;align-items:center;gap:14px;}
+  .hdr .title{font-weight:700;font-size:15.5px;color:#fff;}
+  .hdr .bar{color:#475569;}
+  .hdr .seg{font-size:12.5px;color:#cbd5e1;}
+  .hdr .spacer{flex:1;}
+  .hdr select{font-size:12px;background:#1e293b;color:#fff;border:1px solid #334155;border-radius:6px;padding:3px 7px;}
+  .hdr .tg{font-size:12px;color:#cbd5e1;display:flex;align-items:center;gap:6px;cursor:pointer;}
+  .hdr .hbtn{font-size:12px;padding:5px 11px;border:1px solid #334155;border-radius:7px;background:#1e293b;color:#e2e8f0;cursor:pointer;}
+
+  /* Step bar (6 groups) */
+  .stepbar{background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:9px 20px;}
+  .ph{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--muted);font-size:12.5px;}
+  .ph .pn{width:22px;height:22px;border-radius:50%;background:var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;}
+  .ph.done{color:#374151;} .ph.done .pn{background:var(--success);color:#fff;}
+  .ph.active{color:var(--text);font-weight:700;} .ph.active .pn{background:var(--accent);color:#fff;box-shadow:0 0 0 4px var(--accent-soft);}
+  .ph-line{flex:1;height:2px;background:var(--line);margin:0 9px;}
+  .ph-line.done{background:var(--success);}
+  .ph-nav{margin-left:auto;display:flex;gap:7px;}
+  .btn{font-size:12px;padding:6px 13px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;color:var(--text);}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .btn:disabled{opacity:.4;cursor:default;}
+  .btn.sm{padding:4px 10px;font-size:11.5px;}
+
+  /* Main split */
+  .main{display:grid;grid-template-columns:68% 32%;gap:14px;padding:14px;overflow:hidden;}
+
+  /* ===== LEFT console ===== */
+  .console{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden;display:flex;flex-direction:column;}
+  .cbar{padding:11px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;background:var(--soft);}
+  .cbar .cnm{font-weight:700;font-size:14px;}
+  .cbar .cmeta{font-size:12px;color:var(--muted);}
+  .cbar .csp{flex:1;}
+  .cbar .cstat{font-size:11.5px;font-weight:700;padding:3px 11px;border-radius:20px;background:#eef2f7;color:#475569;}
+  .cbar .cstat.wait{background:var(--warning-soft);color:var(--warning);}
+  .cbar .cstat.run{background:var(--accent-soft);color:var(--accent);}
+  .cbar .cstat.done{background:var(--success-soft);color:var(--success);}
+  .cbar .cbtn{font-size:11.5px;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;}
+
+  .crail{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);overflow-x:auto;}
+  .cr{font-size:11px;color:#9ca3af;white-space:nowrap;display:flex;align-items:center;gap:5px;cursor:pointer;}
+  .cr .crd{width:7px;height:7px;border-radius:50%;background:var(--line);}
+  .cr.done{color:var(--muted);} .cr.done .crd{background:var(--success);}
+  .cr.active{color:var(--accent);font-weight:700;} .cr.active .crd{background:var(--accent);}
+  .cr-sep{width:14px;height:1px;background:var(--line);margin:0 5px;flex:0 0 auto;}
+
+  .cbody{flex:1;overflow:auto;padding:16px;position:relative;}
+  .blk{border:1px solid var(--line);border-radius:13px;background:#fff;padding:12px 14px;margin-bottom:12px;transition:box-shadow .2s, border-color .2s, transform .2s;}
+  .blk.empty{border-style:dashed;background:#fcfcfd;}
+  .blk.spot{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft),0 10px 28px rgba(37,99,235,.10);}
+  .blk-h{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .blk-t{font-weight:700;font-size:13.5px;}
+  .blk-chip{margin-left:auto;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 9px;}
+  .blk-chip.empty{background:#f3f4f6;color:#9ca3af;}
+  .blk-chip.ready{background:var(--accent-soft);color:var(--accent);}
+  .blk-chip.review{background:var(--warning-soft);color:var(--warning);}
+  .blk-chip.done{background:var(--success-soft);color:var(--success);}
+  .blk-chip.save{background:#fff7ed;color:#b45309;}
+  .blk-empty{font-size:12px;color:#9ca3af;}
+  .blk-body{font-size:12.5px;}
+  .row{border:1px solid var(--line);border-radius:9px;padding:7px 10px;margin-bottom:6px;background:#fff;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .sub{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--soft);}
+  .sub-h{font-size:11px;color:#9ca3af;font-weight:700;margin-bottom:4px;}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px;}
+  .tbl td{border-bottom:1px solid var(--line);padding:4px 6px;vertical-align:top;}
+  .tbl td.r{color:var(--muted);}
+  .pill{display:inline-block;font-size:11px;border-radius:20px;padding:2px 10px;margin:0 4px 4px 0;font-weight:600;}
+  .pill.auto{background:var(--success-soft);color:var(--success);}
+  .pill.rev{background:var(--warning-soft);color:var(--warning);}
+  .pill.block{background:var(--danger-soft);color:var(--danger);}
+  .chk{display:flex;gap:9px;align-items:flex-start;padding:7px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:5px;font-size:12px;}
+  .chk small{color:var(--muted);}
+  .dlist{list-style:none;padding:0;margin:0;}
+  .dlist li{font-size:12px;padding:6px 9px;border-radius:8px;margin-bottom:4px;background:var(--success-soft);border:1px solid #bbf7d0;}
+  .dlist li::before{content:"✓ ";color:var(--success);font-weight:700;}
+  .dlist li.wait{background:var(--warning-soft);border-color:#fde68a;} .dlist li.wait::before{content:"⏳ ";}
+
+  /* cursor + spotlight bubble */
+  #cursor{position:fixed;z-index:55;pointer-events:none;transition:left .45s cubic-bezier(.4,0,.2,1),top .45s cubic-bezier(.4,0,.2,1);filter:drop-shadow(0 2px 3px rgba(0,0,0,.3));}
+  #bubble{position:fixed;z-index:55;max-width:300px;background:var(--navy);color:#f1f5f9;font-size:12px;line-height:1.55;padding:10px 13px;border-radius:11px;box-shadow:0 10px 30px rgba(0,0,0,.22);transition:left .45s,top .45s;}
+  #bubble::before{content:"";position:absolute;top:-6px;left:18px;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid var(--navy);}
+
+  /* ===== RIGHT structure ===== */
+  .arch{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden;padding:14px 15px;display:flex;flex-direction:column;}
+  .arch-h{font-weight:700;font-size:14px;}
+  .arch-s{font-size:11.5px;color:var(--muted);margin-bottom:11px;}
+  .arch-map{flex:1;overflow:auto;min-height:0;position:relative;padding-left:14px;}
+  .nd{border:1px solid var(--line);border-radius:11px;background:#fff;padding:6px 11px;transition:.2s;}
+  .nd .nd-ko{font-weight:700;font-size:12px;display:flex;align-items:center;gap:7px;}
+  .nd .nd-ko .ndd{width:8px;height:8px;border-radius:50%;background:#cbd5e1;}
+  .nd .nd-en{font-size:9px;color:#cbd5e1;margin-left:15px;}
+  body.dev-on .nd .nd-en{color:#9ca3af;}
+  .nd.idle{opacity:.45;}
+  .nd.done .ndd{background:var(--success);}
+  .nd.active{border-color:var(--accent-line);background:var(--accent-soft);box-shadow:0 4px 14px rgba(37,99,235,.12);}
+  .nd.active .nd-ko{color:#1d4ed8;} .nd.active .ndd{background:var(--accent);}
+  .vln{height:11px;width:2px;background:var(--line);margin:0 auto;}
+  .vln.on{background:var(--accent);}
+  .core{border:1px solid #dbeafe;border-radius:12px;background:#fbfcff;padding:9px;}
+  .core-t{font-size:9.5px;font-weight:700;color:#94a3b8;letter-spacing:.04em;margin-bottom:7px;}
+  .core-g{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .cn{border:1px solid var(--line);border-radius:9px;background:#fff;padding:6px 9px;transition:.2s;}
+  .cn.span{grid-column:1/-1;}
+  .cn .cn-ko{font-weight:700;font-size:11.5px;}
+  .cn .cn-en{font-size:9px;color:#cbd5e1;}
+  body.dev-on .cn .cn-en{color:#9ca3af;}
+  .cn.idle{opacity:.45;} .cn.done .cn-ko{color:#374151;}
+  .cn.active{border-color:var(--accent-line);background:var(--accent-soft);color:#1d4ed8;box-shadow:0 3px 10px rgba(37,99,235,.12);}
+  .cmini{font-size:10px;color:#cbd5e1;text-align:center;margin:2px 0;}
+  .foundation{margin-top:11px;border:1px solid var(--line);border-radius:9px;background:var(--soft);padding:6px 11px;font-size:10.5px;color:var(--muted);text-align:center;transition:.2s;}
+  .foundation.active{background:#1e293b;color:#cbd5e1;border-color:#1e293b;}
+  .looprail{position:absolute;left:0;top:96px;bottom:64px;width:12px;border:2px solid var(--line);border-right:none;border-radius:8px 0 0 8px;}
+  .looprail.on{border-color:var(--accent);}
+  .looprail .ll{position:absolute;left:-2px;top:38%;transform:rotate(-90deg);transform-origin:left;font-size:8px;color:#cbd5e1;white-space:nowrap;}
+  .looprail.on .ll{color:var(--accent);font-weight:700;}
+  .arch-foot{flex:0 0 auto;margin-top:11px;display:flex;gap:8px;}
+
+  /* Drawer */
+  #drawer{position:fixed;top:0;right:0;width:380px;max-width:92vw;height:100vh;background:#fff;box-shadow:-12px 0 40px rgba(15,23,42,.18);z-index:80;transform:translateX(100%);transition:transform .28s ease;overflow:auto;padding:20px 22px;}
+  #drawer.open{transform:translateX(0);}
+  #drawer h4{margin:0;font-size:16px;}
+  #drawer .dclose{float:right;cursor:pointer;color:#9ca3af;font-size:20px;}
+  #drawer .dl{font-size:10.5px;color:#9ca3af;font-weight:700;margin:13px 0 3px;}
+  #drawer .dv{font-size:12.5px;color:#374151;}
+  #drawer .dv.need{background:var(--warning-soft);border-left:3px solid var(--warning);border-radius:5px;padding:7px 9px;color:#92400e;}
+  #drawer .dev{font-family:"Consolas",monospace;font-size:11.5px;color:#64748b;}
+
+  /* Timeline modal */
+  #tlmodal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:90;}
+  #tlmodal .box{background:#fff;border-radius:18px;width:560px;max-width:92vw;max-height:86vh;overflow:auto;padding:22px 24px;box-shadow:0 24px 64px rgba(0,0,0,.3);}
+  #tlmodal h4{margin:0 0 12px;font-size:16px;}
+  #tlmodal .mclose{float:right;cursor:pointer;color:#9ca3af;font-size:20px;}
+  .tli{display:flex;gap:11px;padding:7px 0;border-bottom:1px solid var(--line);}
+  .tli .tn{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .tli .tt{font-size:13px;font-weight:600;}
+  .tli .tlog{font-size:11px;color:#64748b;font-family:"Consolas",monospace;margin-top:2px;}
+
+  [data-help]{cursor:help;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <span class="title">AAP 작동 원리 데모</span><span class="bar">|</span><span class="seg">회의 업무</span>
+    <div class="spacer"></div>
+    <select id="dpkSel">
+      <option value="meeting">회의 업무</option>
+      <option value="claim" disabled>손해사정 (준비 중)</option>
+      <option value="control" disabled>내부통제 (준비 중)</option>
+    </select>
+    <button class="hbtn" id="tlBtn">처리 과정 보기</button>
+    <label class="tg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
+  </header>
+
+  <nav class="stepbar" id="stepbar"></nav>
+
+  <div class="main">
+    <section class="console">
+      <div class="cbar" id="cbar"></div>
+      <div class="crail" id="crail"></div>
+      <div class="cbody" id="cbody"></div>
+    </section>
+    <section class="arch">
+      <div class="arch-h">AAP 구조</div>
+      <div class="arch-s">선택한 업무 화면 뒤에서 작동하는 구조입니다.</div>
+      <div class="arch-map" id="archmap"></div>
+      <div class="arch-foot"><button class="btn sm" id="drawerBtn">상세 보기</button></div>
+    </section>
+  </div>
+</div>
+
+<svg id="cursor" width="22" height="22" viewBox="0 0 24 24"><path d="M4 2l6.5 17 2.3-6.7 6.7-2.3z" fill="#0f172a" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg>
+<div id="bubble"></div>
+
+<div id="drawer"></div>
+<div id="tlmodal"><div class="box" id="tlbox"></div></div>
+
+<script>
+/* ===== 표준 객체(코드 내부) ===== */
+const STANDARD_RUNTIME=['request','workEvent','contextPackage','candidateSets','coordinationResult',
+  'executionPackage','hitlDecision','writebackResult','postProcessResult','runTrace','skillUpdate'];
+
+/* 상단 6 그룹 */
+const PHASES=[{l:'준비',s:[0,1,2,3]},{l:'검토',s:[4,5]},{l:'반영',s:[6]},{l:'회의 중',s:[7]},{l:'회의 후',s:[8,9]},{l:'재사용',s:[10,11]}];
+/* 콘솔 내부 12 세부 단계 */
+const RAIL=['요청 확인','업무 이해','자료 확인','준비안 작성','검토 항목 분리','담당자 확인','시스템 반영','회의 진행 보조','회의 후 정리','후속 업무 등록','다음 업무에 재사용','처리 과정 보기'];
+
+/* 우측 노드 (짧은 한국어 + 작은 영어) */
+const NODE={
+  custenv:{ko:'고객 업무 환경', en:'Customer Environment'},
+  service:{ko:'사용자 화면', en:'Service Experience'},
+  data:{ko:'자료 연결', en:'Data & Inputs'},
+  semantic:{ko:'업무 이해', en:'Business Semantic'},
+  agent:{ko:'작업 조율', en:'Agent Core'},
+  coord:{ko:'검토 기준', en:'Coordination'},
+  hitl:{ko:'담당자 확인', en:'Review'},
+  action:{ko:'시스템 반영', en:'Action · Writeback'},
+  learning:{ko:'재사용', en:'Operational Learning'},
+};
+
+const DOMAIN_PACKS={meeting:buildMeeting(), claim:{_ph:1,name:'손해사정'}, control:{_ph:1,name:'내부통제'}};
+let activeDomain='meeting';
+function dev(o){return `<span class="internal"> · ${o}</span>`;}
+
+function buildMeeting(){
+  const meta={console:'회의 업무 콘솔', customer:'대한제조그룹', type:'킥오프 회의', owner:'홍길동'};
+  const request='다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘.';
+
+  /* 영속 블록 — 단계가 진행되며 채워짐 */
+  const BLK={
+    req:{title:'요청', fill:0, chip:()=>'접수', body:()=>`<div class="row">${request}</div>`},
+    understood:{title:'AAP가 이해한 업무', fill:1, chip:()=>'정리됨', spotObj:'Meeting Event',
+      body:()=>`<div class="row"><b>킥오프 회의 준비</b>${dev('Meeting Event')}</div>
+        <div class="row">목적 · 착수 범위·역할·일정·보안 조건 정리</div>
+        <div class="row">확인 필요 · 외부 고객 초대 · 자료 공유</div>`},
+    materials:{title:'관련 자료', fill:2, chip:()=>'확인됨',
+      body:()=>`<table class="tbl"><tr><td>관련 메일</td><td class="r">14건</td></tr><tr><td>이전 회의록</td><td class="r">6/10 소개 미팅</td></tr><tr><td>제안·아키텍처 자료</td><td class="r">6건</td></tr><tr><td>관련 부서 후보</td><td class="r">5개</td></tr></table>`},
+    prep:{title:'회의 준비안', fill:3, chip:()=>'준비됨',
+      body:()=>`<div class="grid2">
+        <div class="sub"><div class="sub-h">참석자</div>필수 5 · 외부 2 · 선택 2</div>
+        <div class="sub"><div class="sub-h">일정</div>6/24·25·26 (3안)</div>
+        <div class="sub"><div class="sub-h">자료</div>제안·아키텍처·회의록·Q&A (5)</div>
+        <div class="sub"><div class="sub-h">안건</div>목적→적용→데이터→매핑→보안→다음 (6)</div></div>`},
+    review:{title:'확인 필요', fill:4, chip:s=>s>=5?'확인됨':'검토',
+      body:s=>`<div class="row"><span class="pill auto">바로 처리</span> 자료 폴더·안건 초안·회의록 템플릿</div>
+        <div class="row"><span class="pill rev">담당자 확인</span> 참석자·외부 초대·자료 공유·문구</div>
+        <div class="row"><span class="pill block">공유 제한</span> 내부 상세 자료 외부 공유 제외</div>
+        ${s>=5?`<label class="chk"><input type="checkbox" checked> 외부 고객 초대·자료 공유 승인</label>
+        <label class="chk"><input type="checkbox" checked> 내부 상세 자료 제외</label>
+        <div><button class="btn primary sm">확인하고 실행 준비</button></div>`:''}`},
+    writeback:{title:'시스템 반영', fill:6, chip:()=>'완료', spotObj:'Writeback',
+      body:()=>`<ul class="dlist"><li>캘린더 등록 · 회의실 예약</li><li>화상 링크 · 자료 폴더 · 회의록 템플릿</li><li class="wait">고객 초대 메일 · 발송 대기</li></ul>`},
+    during:{title:'회의 진행', fill:7, chip:()=>'진행 중',
+      body:()=>`<div class="row">안건 진행 1/6 · 참석 6/7 (1명 지연)</div>
+        <div class="row">결정 후보 · PoC 범위는 회의 업무부터 검토</div>
+        <div class="row">할 일 후보 · 그룹웨어 API 목록 공유</div>`},
+    after:{title:'회의 후 정리', fill:8, chip:()=>'정리됨',
+      body:()=>`<div class="row">회의록 · 결정 3 · 보류 2 · 리스크 1</div>
+        <table class="tbl"><tr><td>고객 IT기획</td><td class="r">API 목록 / 6·28</td></tr><tr><td>KT DS AI</td><td class="r">데모 초안 / 7·2</td></tr></table>`},
+    reuse:{title:'다음 업무에 재사용', fill:10, chip:()=>'저장됨', spotObj:'Skill Update',
+      body:()=>`<div class="row">킥오프 회의 준비 패턴</div>
+        <div class="row">참석자 추천 기준 · 자료 묶음 패턴</div>
+        <div class="row">처리 과정 보기 <button class="btn sm" id="reuseTl" style="float:right">▶ 보기</button></div>`},
+  };
+  const ORDER=['req','understood','materials','prep','review','writeback','during','after','reuse'];
+
+  const steps=[
+   {spot:'req', status:'요청 접수', sc:'', bubble:'요청을 접수했습니다. 아직 바로 실행하지 않고 필요한 정보를 확인합니다.', active:['service'], foundation:false,
+    drawer:{now:'요청 접수', refs:'사용자 요청', aap:'사용자 화면', result:'처리 시작', need:'', obj:'Raw Request'}},
+   {spot:'understood', status:'준비 중', sc:'', bubble:'회의 요청을 킥오프 회의 준비 업무로 정리했습니다.', active:['semantic'], edges:['service-semantic'], foundation:false,
+    drawer:{now:'회의 업무 이해', refs:'사용자 요청·이전 회의록·고객 메일', aap:'업무 이해', result:'회의 준비 방향', need:'외부 초대·자료 공유는 담당자 확인', obj:'Meeting Event'}},
+   {spot:'materials', status:'준비 중', sc:'', bubble:'회의 준비에 필요한 자료와 근거를 확인했습니다.', active:['custenv','data'], edges:['custenv-data'], foundation:false,
+    drawer:{now:'관련 자료 확인', refs:'메일·문서·고객 정보·조직도·캘린더', aap:'고객 업무 환경 · 자료 연결', result:'관련 자료 묶음', need:'', obj:'Context Package'}},
+   {spot:'prep', status:'준비 중', sc:'', bubble:'참석자, 일정, 자료, 안건 후보를 준비했습니다.', active:['data','semantic','agent'], edges:['data-agent','semantic-agent'], foundation:false,
+    drawer:{now:'준비안 작성', refs:'회의 업무·관련 자료·조직도·캘린더', aap:'업무 이해 · 자료 연결 · 작업 조율', result:'참석자·일정·자료·안건 후보', need:'', obj:'Candidate Set'}},
+   {spot:'review', status:'준비 중', sc:'', bubble:'바로 처리할 일과 담당자 확인이 필요한 일을 나눴습니다.', active:['coord'], edges:['agent-coord'], foundation:false,
+    drawer:{now:'검토 항목 분리', refs:'후보안·정책 기준', aap:'검토 기준', result:'실행 전 점검 결과', need:'참석자·외부 초대·자료 공유', obj:'Coordination Result'}},
+   {spot:'review', status:'승인 대기', sc:'wait', bubble:'외부 초대와 자료 공유는 담당자가 직접 확인합니다.', active:['hitl'], edges:['coord-hitl'], foundation:true,
+    drawer:{now:'담당자 확인', refs:'회의 준비안·점검 결과', aap:'담당자 확인', result:'담당자 확인 결과', need:'이 확인이 끝나야 외부 발송 진행', obj:'Human Review Decision'}},
+   {spot:'writeback', status:'실행 중', sc:'run', bubble:'확인된 내용을 캘린더·회의실·문서함·메일에 반영했습니다.', active:['action'], edges:['hitl-action'], foundation:false,
+    drawer:{now:'시스템 반영', refs:'승인된 회의 준비안', aap:'시스템 반영', result:'실행 결과', need:'초대 메일 발송은 승인 후', obj:'Action Result'}},
+   {spot:'during', status:'회의 중', sc:'run', bubble:'회의 중 발언과 진행 상태를 업무 기록으로 정리합니다.', active:['service','semantic','agent'], edges:[], foundation:false,
+    drawer:{now:'회의 진행 보조', refs:'발언·채팅·안건 진행', aap:'사용자 화면 · 업무 이해 · 작업 조율', result:'결정·할 일 후보', need:'', obj:'Raw Meeting Record'}},
+   {spot:'after', status:'회의 후', sc:'run', bubble:'회의 내용을 회의록과 후속 할 일로 정리합니다.', active:['semantic','coord','action'], edges:[], foundation:true,
+    drawer:{now:'회의 후 정리', refs:'회의 기록·결정·발언', aap:'업무 이해 · 검토 기준 · 시스템 반영', result:'회의록·후속 할 일', need:'회의록 확정은 담당자 확인', obj:'Official Minutes'}},
+   {spot:'after', status:'회의 후', sc:'run', bubble:'회의 결과를 후속 업무 시스템에 연결합니다.', active:['action'], edges:[], foundation:false,
+    drawer:{now:'후속 업무 등록', refs:'후속 할 일·담당자·기한', aap:'시스템 반영', result:'할 일 등록·후속 메일·다음 회의 후보', need:'', obj:'Action Item Set'}},
+   {spot:'reuse', status:'완료', sc:'done', bubble:'이번 처리 경험을 다음 회의 준비에 재사용합니다.', active:['learning'], edges:['action-learning','learning-semantic'], foundation:true, loop:true,
+    drawer:{now:'다음 업무에 재사용', refs:'처리 이력·담당자 수정·회의 결과', aap:'재사용', result:'업무 패턴 저장', need:'', obj:'Skill Update'}},
+   {spot:'reuse', status:'완료', sc:'done', bubble:'처리 과정을 단계별로 다시 볼 수 있습니다.', active:[], edges:[], foundation:false, openTl:true,
+    drawer:{now:'처리 과정 보기', refs:'전체 처리 단계', aap:'처리 이력', result:'단계별 재생', need:'', obj:'Run Trace'}},
+  ];
+  /* 처리 과정(Timeline) — 친숙 라벨 + 개발자 로그 */
+  const timeline=[
+    ['요청 접수','Raw request captured'],['관련 자료 확인','Context package created'],['회의 업무 이해','Meeting Event generated'],
+    ['참석자·일정·자료 준비','Candidate set created'],['확인 필요 항목 분리','Coordination result assembled'],['담당자 확인','Human review completed'],
+    ['캘린더·문서함 반영','Writeback completed'],['회의 진행 보조','Meeting record captured'],['회의 후 할 일 정리','Action items generated'],
+    ['후속 업무 등록','To-do registered'],['다음 업무에 재사용','Skill update candidate created'],['처리 과정 보기','Run trace available'],
+  ];
+  return {meta,request,BLK,ORDER,steps,timeline};
+}
+
+/* ===== state ===== */
+let cur=0, target=null;
+(function(){const q=new URLSearchParams(location.search);const s=parseInt(q.get('step'),10);
+  const n=DOMAIN_PACKS[activeDomain].steps.length;if(!isNaN(s)&&s>=0&&s<n)cur=s;
+  if(q.get('dev')==='1'){document.body.classList.add('dev-on');}})();
+function P(){return DOMAIN_PACKS[activeDomain];}
+function phaseOf(i){return PHASES.findIndex(p=>p.s.includes(i));}
+function goNext(){if(cur<P().steps.length-1){cur++;render();}}
+function goPrev(){if(cur>0){cur--;render();}}
+
+/* ===== render ===== */
+function renderStepBar(){
+  const el=document.getElementById('stepbar');el.innerHTML='';const cp=phaseOf(cur);
+  PHASES.forEach((p,i)=>{
+    if(i>0){const ln=document.createElement('div');ln.className='ph-line'+(i<=cp?' done':'');el.appendChild(ln);}
+    const it=document.createElement('div');it.className='ph '+(i===cp?'active':(i<cp?'done':''));
+    it.innerHTML=`<span class="pn">${i+1}</span><span>${p.l}</span>`;it.onclick=()=>{cur=p.s[0];render();};el.appendChild(it);
+  });
+  const nav=document.createElement('div');nav.className='ph-nav';
+  nav.innerHTML=`<button class="btn" id="pv">◀ 이전</button><button class="btn primary" id="nx">다음 ▶</button>`;
+  el.appendChild(nav);
+  document.getElementById('pv').onclick=goPrev;document.getElementById('nx').onclick=goNext;
+  document.getElementById('pv').disabled=cur===0;document.getElementById('nx').disabled=cur===P().steps.length-1;
+}
+
+function renderConsole(){
+  const p=P(),st=p.steps[cur],m=p.meta;
+  document.getElementById('cbar').innerHTML=
+    `<span class="cnm">${m.console}</span><span class="cmeta">· ${m.customer} · ${m.type}</span>
+     <span class="csp"></span><span class="cstat ${st.sc}">${st.status}</span><span class="cmeta">담당 ${m.owner}</span>
+     <button class="cbtn" id="cDrawer">상세</button>`;
+  const cr=document.getElementById('crail');cr.innerHTML='';
+  RAIL.forEach((lb,i)=>{
+    if(i>0){const s=document.createElement('div');s.className='cr-sep';cr.appendChild(s);}
+    const e=document.createElement('div');e.className='cr '+(i===cur?'active':(i<cur?'done':''));
+    e.innerHTML=`<span class="crd"></span>${lb}`;e.onclick=()=>{cur=i;render();};cr.appendChild(e);
+  });
+  const body=document.getElementById('cbody');let h='';
+  p.ORDER.forEach(k=>{
+    const b=p.BLK[k];const filled=cur>=b.fill;const spot=st.spot===k;
+    const chip=filled?b.chip(cur):'분석 전';
+    const chipCls=!filled?'empty':(k==='review'&&cur<5?'review':(k==='reuse'?'save':(k==='writeback'||k==='after'?'done':'ready')));
+    h+=`<div class="blk ${filled?'':'empty'} ${spot?'spot':''}" data-spot="${k}">
+      <div class="blk-h"><span class="blk-t">${b.title}</span><span class="blk-chip ${chipCls}">${chip}</span></div>
+      ${filled?`<div class="blk-body">${b.body(cur)}</div>`:`<div class="blk-empty">분석 전</div>`}</div>`;
+  });
+  body.innerHTML=h;
+  document.getElementById('cDrawer').onclick=openDrawer;
+  const rt=document.getElementById('reuseTl');if(rt)rt.onclick=openTimeline;
+}
+
+function renderArch(){
+  const st=P().steps[cur];const act=new Set(st.active);const done=new Set();
+  for(let i=0;i<cur;i++)P().steps[i].active.forEach(k=>done.add(k));
+  const cls=k=>act.has(k)?'active':(done.has(k)?'done':'idle');
+  const vln=on=>`<div class="vln${on?' on':''}"></div>`;
+  const node=k=>{const N=NODE[k];return `<div class="nd ${cls(k)}"><div class="nd-ko"><span class="ndd"></span>${N.ko}</div><div class="nd-en">${N.en}</div></div>`;};
+  const cn=k=>{const N=NODE[k];return `<div class="cn ${cls(k)}${k==='agent'||k==='hitl'?' span':''}"><div class="cn-ko">${N.ko}</div><div class="cn-en">${N.en}</div></div>`;};
+  let html=`<div class="looprail ${st.loop?'on':''}"><span class="ll">재사용 → 업무 이해</span></div>`;
+  html+=node('custenv')+vln(act.has('data')||done.has('data'))+node('service')+vln(true);
+  html+=`<div class="core"><div class="core-t">AAP CORE</div><div class="core-g">${cn('data')}${cn('semantic')}</div><div class="cmini">▼</div>${cn('agent')}<div class="cmini">▼</div>${cn('coord')}${cn('hitl')}</div>`;
+  html+=vln(act.has('action')||done.has('action'))+node('action')+vln(act.has('learning')||done.has('learning'))+node('learning');
+  html+=`<div class="foundation ${st.foundation?'active':''}">보안 · 권한 · 기록 · 모든 단계에 적용</div>`;
+  document.getElementById('archmap').innerHTML=html;
+}
+
+/* cursor + bubble */
+function placeGuide(){
+  const st=P().steps[cur];const t=document.querySelector(`.blk[data-spot="${st.spot}"]`);
+  document.querySelectorAll('.blk.spot').forEach(e=>{if(e!==t)e.classList.remove('spot');});
+  if(!t){document.getElementById('cursor').style.opacity=0;document.getElementById('bubble').style.opacity=0;return;}
+  target=t; t.classList.add('spot');
+  try{t.scrollIntoView({block:'center',behavior:'instant'});}catch(e){t.scrollIntoView();}
+  requestAnimationFrame(()=>requestAnimationFrame(positionGuide));
+  setTimeout(positionGuide,90);
+}
+function positionGuide(){
+  if(!target)return;const r=target.getBoundingClientRect();
+  const cur_=document.getElementById('cursor');const bub=document.getElementById('bubble');
+  cur_.style.opacity=1;bub.style.opacity=1;
+  cur_.style.left=(r.right-30)+'px';cur_.style.top=(r.top+22)+'px';
+  bub.textContent=P().steps[cur].bubble;
+  let bl=Math.min(r.left+14, window.innerWidth-330);let bt=r.bottom+10;
+  if(bt+70>window.innerHeight) bt=r.top-72;
+  bub.style.left=bl+'px';bub.style.top=bt+'px';
+}
+
+/* Drawer */
+function openDrawer(){
+  const d=P().steps[cur].drawer;
+  document.getElementById('drawer').innerHTML=
+    `<span class="dclose" onclick="document.getElementById('drawer').classList.remove('open')">×</span>
+     <h4>상세</h4>
+     <div class="dl">현재 업무</div><div class="dv">${d.now}</div>
+     <div class="dl">참고한 정보</div><div class="dv">${d.refs}</div>
+     <div class="dl">AAP 내부 처리</div><div class="dv">${d.aap}</div>
+     <div class="dl">생성된 결과</div><div class="dv">${d.result}</div>
+     ${d.need?`<div class="dl">확인 필요</div><div class="dv need">${d.need}</div>`:''}
+     <div class="internal"><div class="dl">Internal</div><div class="dv dev">object: ${d.obj}</div></div>`;
+  document.getElementById('drawer').classList.add('open');
+}
+
+/* Timeline */
+function openTimeline(){
+  const tl=P().timeline;const d=document.body.classList.contains('dev-on');
+  document.getElementById('tlbox').innerHTML=
+    `<span class="mclose" onclick="document.getElementById('tlmodal').style.display='none'">×</span>
+     <h4>처리 과정</h4>`+
+    tl.map((t,i)=>`<div class="tli"><span class="tn">${i+1}</span><div><div class="tt">${t[0]}</div>${d?`<div class="tlog">[log] ${t[1]}</div>`:''}</div></div>`).join('');
+  document.getElementById('tlmodal').style.display='flex';
+}
+document.getElementById('tlmodal').onclick=e=>{if(e.target.id==='tlmodal')e.currentTarget.style.display='none';};
+
+function render(){renderStepBar();renderConsole();renderArch();placeGuide();}
+
+document.getElementById('devToggle').onchange=e=>{document.body.classList.toggle('dev-on',e.target.checked);};
+document.getElementById('dpkSel').onchange=e=>{activeDomain=e.target.value;cur=0;render();};
+document.getElementById('tlBtn').onclick=openTimeline;
+document.getElementById('drawerBtn').onclick=openDrawer;
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')goNext();if(e.key==='ArrowLeft')goPrev();
+  if(e.key==='Escape'){document.getElementById('tlmodal').style.display='none';document.getElementById('drawer').classList.remove('open');}});
+document.getElementById('cbody')&&document.addEventListener('scroll',()=>positionGuide(),true);
+window.addEventListener('resize',()=>positionGuide());
+
+if(new URLSearchParams(location.search).get('dev')==='1'){const c=document.getElementById('devToggle');if(c)c.checked=true;}
+render();
+</script>
+</body>
+</html>

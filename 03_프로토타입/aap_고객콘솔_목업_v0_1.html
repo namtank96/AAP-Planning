@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고객 콘솔 목업 (Side A · 채용) · v0.1</title>
+<style>
+  :root{
+    --bg:#eef2f7; --surface:#ffffff; --surf:#f8fafc; --ink:#0f172a; --slate:#334155;
+    --muted:#64748b; --faint:#94a3b8; --border:#e4e9f0; --line:#eef2f6;
+    --teal:#0d9488; --teal-ink:#0f766e; --teal-soft:#f0fdfa; --teal-bd:#99f6e4;
+    --amber:#d97706; --amber-soft:#fffbeb; --amber-bd:#fde68a; --amber-ink:#92400e;
+    --blue:#2563eb; --blue-soft:#eff6ff; --green:#16a34a; --green-soft:#f0fdf4;
+    --red:#dc2626; --red-soft:#fef2f2; --violet:#7c3aed; --violet-soft:#f5f3ff;
+    --shadow:0 6px 22px rgba(15,23,42,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* ===== 제품 상단바 (고객 제품 · AAP 브랜딩 아님) ===== */
+  .top{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:14px;padding:0 20px;background:#fff;border-bottom:1px solid var(--border);}
+  .brand{display:flex;align-items:center;gap:9px;}
+  .brand .mk{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;}
+  .brand b{font-size:15px;letter-spacing:-.3px;} .brand .sub{font-size:11px;color:var(--faint);margin-left:1px;}
+  .top .nav{display:flex;gap:2px;margin-left:10px;}
+  .top .nav a{font-size:13px;font-weight:600;color:var(--muted);padding:7px 12px;border-radius:9px;text-decoration:none;}
+  .top .nav a.on{background:var(--surf);color:var(--ink);font-weight:700;}
+  .sp{flex:1;}
+  .search{display:flex;align-items:center;gap:7px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:7px 12px;width:230px;color:var(--faint);font-size:12.5px;}
+  .aap-tg{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--slate);cursor:pointer;user-select:none;border:1px solid var(--border);border-radius:10px;padding:6px 11px;background:#fff;}
+  .aap-tg .sw{width:30px;height:17px;border-radius:20px;background:#cbd5e1;position:relative;transition:.2s;flex:0 0 auto;}
+  .aap-tg .sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:.2s;}
+  .aap-tg.on{color:var(--teal-ink);border-color:var(--teal-bd);background:var(--teal-soft);} .aap-tg.on .sw{background:var(--teal);} .aap-tg.on .sw::after{left:15px;}
+  .me{display:flex;align-items:center;gap:8px;} .me .av{width:30px;height:30px;border-radius:50%;background:#dbe3ee;color:#475569;font-weight:700;font-size:12px;display:grid;place-items:center;} .me .nm{font-size:12.5px;font-weight:600;} .me .rl{font-size:10.5px;color:var(--faint);}
+
+  /* ===== 본체 ===== */
+  .wrap{flex:1;display:flex;min-height:0;}
+  .main{flex:1;overflow:auto;padding:22px 28px;}
+  .canvas{max-width:1020px;margin:0 auto;}
+
+  /* 잡 헤더 */
+  .jh{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .jh .ic{width:42px;height:42px;border-radius:11px;background:var(--teal-soft);color:var(--teal-ink);display:grid;place-items:center;}
+  .jh h1{font-size:20px;font-weight:800;margin:0;letter-spacing:-.3px;}
+  .jh .meta{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .jh .st{margin-left:auto;font-size:12px;font-weight:700;color:var(--green);background:var(--green-soft);border:1px solid #bbf7d0;border-radius:20px;padding:5px 13px;display:flex;align-items:center;gap:6px;}
+  .jh .st::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);}
+
+  /* 지금 결정할 일 = 히어로 */
+  .deck{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+  .deck-h{display:flex;align-items:center;gap:9px;padding:14px 18px 11px;}
+  .deck-h .t{font-size:14.5px;font-weight:800;} .deck-h .c{font-size:11px;font-weight:800;color:#fff;background:var(--amber);border-radius:20px;padding:2px 9px;}
+  .deck-h .hint{margin-left:auto;font-size:11.5px;color:var(--faint);}
+  .q{display:flex;align-items:center;gap:15px;padding:14px 18px;border-top:1px solid var(--line);}
+  .q .qn{width:24px;height:24px;border-radius:50%;background:var(--amber-soft);color:var(--amber-ink);font-weight:800;font-size:12px;display:grid;place-items:center;flex:0 0 auto;}
+  .q .qmain{flex:1;min-width:0;}
+  .q .qt{font-size:14px;font-weight:700;}
+  .q .qd{font-size:12px;color:var(--muted);margin-top:2px;}
+  .q .qd b{color:var(--slate);font-weight:700;}
+  .q .qbtn{font-size:13px;font-weight:700;font-family:inherit;border:1px solid var(--teal);background:var(--teal);color:#fff;border-radius:10px;padding:9px 18px;cursor:pointer;flex:0 0 auto;}
+  .q .qbtn.ghost{background:#fff;color:var(--teal-ink);}
+  .q .qpill{font-size:11px;font-weight:700;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-radius:7px;padding:3px 9px;}
+
+  /* AAP가 처리해둔 것 (녹임 · 제품 상태 톤) */
+  .handled{display:flex;align-items:center;gap:11px;background:linear-gradient(180deg,#fbfffe,#fff);border:1px solid var(--teal-bd);border-radius:13px;padding:12px 16px;margin-bottom:20px;}
+  .handled .hi{width:30px;height:30px;border-radius:9px;background:var(--teal-soft);color:var(--teal-ink);display:grid;place-items:center;flex:0 0 auto;}
+  .handled .ht{font-size:11px;font-weight:800;color:var(--teal-ink);letter-spacing:.02em;}
+  .handled .hsteps{font-size:12.5px;color:var(--slate);margin-top:2px;}
+  .handled .hsteps i{font-style:normal;color:var(--teal-ink);font-weight:700;}
+  .handled .hmore{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--teal);background:none;border:none;font-family:inherit;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
+
+  /* 후보 (간결) */
+  .sec-h{display:flex;align-items:center;gap:10px;margin:0 2px 11px;}
+  .sec-h .st{font-size:14px;font-weight:800;} .sec-h .cnt{font-size:12px;color:var(--faint);}
+  .sec-h .sort{margin-left:auto;display:flex;gap:3px;}
+  .sec-h .sort button{font-size:11.5px;font-weight:700;font-family:inherit;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:8px;padding:5px 11px;cursor:pointer;}
+  .sec-h .sort button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .cands{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:13px;padding:13px 14px;cursor:pointer;transition:.15s;}
+  .card:hover{box-shadow:var(--shadow);border-color:var(--teal-bd);}
+  .card .ct{display:flex;align-items:center;gap:9px;}
+  .card .av{width:34px;height:34px;border-radius:9px;background:#e8edf4;color:#475569;font-weight:700;font-size:13px;display:grid;place-items:center;flex:0 0 auto;}
+  .card .nm{font-size:13.5px;font-weight:700;} .card .cur{font-size:11px;color:var(--muted);}
+  .card .mt{margin-left:auto;text-align:right;} .card .mtn{font-size:15px;font-weight:800;color:var(--teal-ink);} .card .mtl{font-size:9px;color:var(--faint);font-weight:700;}
+  .card .bar{height:5px;border-radius:4px;background:var(--surf);margin:11px 0 9px;overflow:hidden;} .card .bar i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#0d9488);}
+  .card .fl{display:flex;align-items:center;justify-content:space-between;}
+  .card .sig{font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;}
+  .sig.ok{color:var(--green);background:var(--green-soft);} .sig.warn{color:var(--amber);background:var(--amber-soft);} .sig.risk{color:var(--red);background:var(--red-soft);}
+  .card .sc{font-size:11px;color:var(--faint);font-weight:700;}
+
+  /* ===== AAP 작동 보기 = 우측 드로어 (토글) ===== */
+  .drawer{width:0;flex:0 0 0;background:#0b1220;color:#e2e8f0;overflow:hidden;transition:width .25s cubic-bezier(.4,0,.2,1);}
+  .drawer.open{width:380px;flex:0 0 380px;border-left:1px solid #1e293b;}
+  .dwin{width:380px;height:100%;overflow:auto;padding:18px 18px 28px;}
+  .dw-h{display:flex;align-items:center;gap:8px;margin-bottom:4px;} .dw-h .di{width:26px;height:26px;border-radius:8px;background:#0f766e;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;}
+  .dw-h b{font-size:14px;} .dw-x{margin-left:auto;background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;font-family:inherit;}
+  .dw-sub{font-size:11.5px;color:#94a3b8;margin-bottom:16px;line-height:1.5;}
+  .dw-sec{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#5eead4;margin:18px 0 8px;}
+  .dw-sec:first-of-type{margin-top:6px;}
+  /* 분해 → 배정 */
+  .dt{border:1px solid #1e293b;border-radius:10px;padding:9px 11px;margin-bottom:7px;background:#0f1729;}
+  .dt-h{display:flex;align-items:center;gap:7px;} .dt-id{font-size:9px;font-weight:800;color:#0b1220;background:#5eead4;border-radius:5px;padding:1px 6px;} .dt-nm{font-size:12.5px;font-weight:700;}
+  .dt-own{margin-left:auto;font-size:10px;font-weight:700;color:#5eead4;}
+  .dt-d{font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.45;}
+  /* 통제점 */
+  .gate{display:flex;align-items:center;gap:8px;font-size:12px;border:1px solid #3f2d12;background:#1c1408;border-radius:9px;padding:8px 11px;margin-bottom:6px;color:#fcd9a8;}
+  .gate .gd{width:7px;height:7px;border-radius:50%;background:#f59e0b;flex:0 0 auto;}
+  /* 로그 */
+  .log{font-size:11.5px;color:#cbd5e1;padding:5px 0;border-top:1px solid #16203400;display:flex;gap:8px;}
+  .log b{color:#5eead4;font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;}
+
+  .ic-svg{width:18px;height:18px;stroke-width:1.7;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+  .foot{text-align:center;font-size:10.5px;color:var(--faint);margin-top:26px;}
+</style>
+</head>
+<body>
+
+<!-- 고객 제품 상단바 — 'AAP' 브랜딩 아님. 고객의 채용 도구. -->
+<div class="top">
+  <div class="brand"><span class="mk">채</span><b>채용 콘솔</b><span class="sub">플랫폼개발팀</span></div>
+  <div class="nav"><a class="on" href="#">진행 중</a><a href="#">후보 풀</a><a href="#">일정</a><a href="#">분석</a></div>
+  <div class="sp"></div>
+  <div class="search"><svg class="ic-svg" style="width:15px;height:15px" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>후보·직무 검색</div>
+  <div class="aap-tg" id="aapTg"><span class="sw"></span>AAP 작동 보기</div>
+  <div class="me"><div class="av">이</div><div><div class="nm">이서연</div><div class="rl">채용팀</div></div></div>
+</div>
+
+<div class="wrap">
+  <main class="main">
+    <div class="canvas">
+
+      <!-- 직무 헤더 -->
+      <div class="jh">
+        <div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+        <div>
+          <h1>백엔드 개발자 2명</h1>
+          <div class="meta">플랫폼개발팀 · 경력 4~8년 · 지원 38명</div>
+        </div>
+        <div class="st">스크리닝 완료</div>
+      </div>
+
+      <!-- ★ 지금 결정할 일 (히어로 · 행동 주도) -->
+      <div class="deck">
+        <div class="deck-h"><span class="t">지금 결정할 일</span><span class="c">3</span><span class="hint">나머지는 AAP가 처리해 뒀어요</span></div>
+        <div class="q">
+          <span class="qn">1</span>
+          <div class="qmain"><div class="qt">숏리스트 기준 정하기</div><div class="qd">지원 <b>38명</b> → 현재 컷 <b>매칭 ≥ 85%</b>면 <b>6명</b>. 기준을 정하면 면접 대상이 확정돼요.</div></div>
+          <span class="qpill">컷 ≥ 85% · 6명</span>
+          <button class="qbtn">기준 정하기</button>
+        </div>
+        <div class="q">
+          <span class="qn">2</span>
+          <div class="qmain"><div class="qt">면접 일정 확인</div><div class="qd"><b>3건</b> 제안됨 · 면접관·후보 캘린더 교차 <b>충돌 0</b>. 확인하면 후보에게 안내가 나가요.</div></div>
+          <span class="qpill">6/24~25 · 3건</span>
+          <button class="qbtn ghost">확인</button>
+        </div>
+        <div class="q">
+          <span class="qn">3</span>
+          <div class="qmain"><div class="qt">오퍼 승인</div><div class="qd">정유진 · 기본급 <b>7,200만</b> · 보상밴드 내 · 차별금지 점검 통과. 외부로 나가는 마지막 단계예요.</div></div>
+          <span class="qpill">대기</span>
+          <button class="qbtn ghost">검토</button>
+        </div>
+      </div>
+
+      <!-- AAP가 처리해둔 것 (녹임 · 제품 상태 한 줄) -->
+      <div class="handled">
+        <div class="hi"><svg class="ic-svg" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div>
+          <div class="ht">자동으로 처리됨</div>
+          <div class="hsteps">이력서 <i>38건</i> 수집·파싱 · 스킬/경력/도메인 <i>매칭·랭킹</i> · <i>편향·개인정보</i> 점검 완료</div>
+        </div>
+        <button class="hmore" id="handledMore">어떻게 했는지 보기 →</button>
+      </div>
+
+      <!-- 후보 (간결) -->
+      <div class="sec-h">
+        <span class="st">후보</span><span class="cnt">매칭순 · 상위 8명</span>
+        <div class="sort"><button class="on">매칭순</button><button>종합순</button><button>경력순</button></div>
+      </div>
+      <div class="cands">
+        <div class="card"><div class="ct"><span class="av">정</span><div><div class="nm">정유진</div><div class="cur">6년 · 쿠팡</div></div><div class="mt"><div class="mtn">96%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:96%"></i></div><div class="fl"><span class="sig ok">추천</span><span class="sc">종합 84</span></div></div>
+        <div class="card"><div class="ct"><span class="av">이</span><div><div class="nm">이하늘</div><div class="cur">8년 · 네이버</div></div><div class="mt"><div class="mtn">91%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:91%"></i></div><div class="fl"><span class="sig warn">역할 차이</span><span class="sc">종합 78</span></div></div>
+        <div class="card"><div class="ct"><span class="av">박</span><div><div class="nm">박서준</div><div class="cur">5년 · 토스</div></div><div class="mt"><div class="mtn">89%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:89%"></i></div><div class="fl"><span class="sig ok">적합</span><span class="sc">종합 82</span></div></div>
+        <div class="card"><div class="ct"><span class="av">한</span><div><div class="nm">한도윤</div><div class="cur">6년 · 당근</div></div><div class="mt"><div class="mtn">87%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:87%"></i></div><div class="fl"><span class="sig ok">적합</span><span class="sc">종합 80</span></div></div>
+        <div class="card"><div class="ct"><span class="av">임</span><div><div class="nm">임재훈</div><div class="cur">7년 · 쿠팡</div></div><div class="mt"><div class="mtn">86%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:86%"></i></div><div class="fl"><span class="sig warn">중복 지원</span><span class="sc">종합 79</span></div></div>
+        <div class="card"><div class="ct"><span class="av">강</span><div><div class="nm">강지아</div><div class="cur">7년 · 카카오</div></div><div class="mt"><div class="mtn">85%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:85%"></i></div><div class="fl"><span class="sig ok">적합</span><span class="sc">종합 76</span></div></div>
+        <div class="card"><div class="ct"><span class="av">서</span><div><div class="nm">서나윤</div><div class="cur">5년 · 무신사</div></div><div class="mt"><div class="mtn">82%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:82%"></i></div><div class="fl"><span class="sig">보류</span><span class="sc">종합 75</span></div></div>
+        <div class="card"><div class="ct"><span class="av">최</span><div><div class="nm">최민수</div><div class="cur">4년 · 배민</div></div><div class="mt"><div class="mtn">74%</div><div class="mtl">매칭</div></div></div><div class="bar"><i style="width:74%"></i></div><div class="fl"><span class="sig warn">경력 하한</span><span class="sc">종합 73</span></div></div>
+      </div>
+
+      <div class="foot">목업 v0.1 · Side A 고객 운영 콘솔 (정지 화면) · 더미데이터 · app/ 미접촉 standalone</div>
+    </div>
+  </main>
+
+  <!-- AAP 작동 보기 = 우측 드로어 (기본 닫힘) -->
+  <aside class="drawer" id="drawer">
+    <div class="dwin">
+      <div class="dw-h"><span class="di">A</span><b>AAP가 한 일</b><button class="dw-x" id="dwX">×</button></div>
+      <div class="dw-sub">이 채용 업무를 AAP가 어떻게 분해·실행했는지. 평소엔 숨겨져 있고, 필요할 때만 봅니다.</div>
+
+      <div class="dw-sec">업무 분해 · 구성요소 배정</div>
+      <div class="dt"><div class="dt-h"><span class="dt-id">T1</span><span class="dt-nm">이력서 수집·파싱</span><span class="dt-own">Connector · OCR</span></div><div class="dt-d">메일·문서함에서 38건 수집 → 스캔 문서 글자 인식·정규화</div></div>
+      <div class="dt"><div class="dt-h"><span class="dt-id">T2</span><span class="dt-nm">요건 매칭·랭킹</span><span class="dt-own">Agent</span></div><div class="dt-d">스킬·경력·도메인 50/30/20 가중으로 매칭% 산출·랭킹</div></div>
+      <div class="dt"><div class="dt-h"><span class="dt-id">T3</span><span class="dt-nm">편향·개인정보 점검</span><span class="dt-own">Policy</span></div><div class="dt-d">성별·연령·출신 등 보호속성 평가 제외 · PII 마스킹</div></div>
+      <div class="dt"><div class="dt-h"><span class="dt-id">T4</span><span class="dt-nm">면접 일정 조율</span><span class="dt-own">Agent · 캘린더</span></div><div class="dt-d">후보·면접관 캘린더 교차 → 충돌 0 슬롯 3건</div></div>
+
+      <div class="dw-sec">사람이 결정할 통제점 (HITL)</div>
+      <div class="gate"><span class="gd"></span>숏리스트 기준 — 자동 진행 안 함</div>
+      <div class="gate"><span class="gd"></span>면접 일정 확인 — 외부 안내 전</div>
+      <div class="gate"><span class="gd"></span>오퍼 승인 — 외부 발송 전</div>
+
+      <div class="dw-sec">처리 로그</div>
+      <div class="log"><b>09:02</b><span>이력서 38건 수집·OCR 파싱 완료</span></div>
+      <div class="log"><b>09:05</b><span>요건 매칭·랭킹 — 상위 10명 산출</span></div>
+      <div class="log"><b>09:06</b><span>편향 점검 통과 · PII 마스킹 적용</span></div>
+      <div class="log"><b>09:07</b><span>숏리스트 컷 후보 제시 — 사람 결정 대기</span></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const drawer=document.getElementById('drawer'), tg=document.getElementById('aapTg');
+  function setDrawer(on){drawer.classList.toggle('open',on);tg.classList.toggle('on',on);}
+  tg.onclick=()=>setDrawer(!drawer.classList.contains('open'));
+  document.getElementById('dwX').onclick=()=>setDrawer(false);
+  document.getElementById('handledMore').onclick=()=>setDrawer(true);
+</script>
+</body>
+</html>

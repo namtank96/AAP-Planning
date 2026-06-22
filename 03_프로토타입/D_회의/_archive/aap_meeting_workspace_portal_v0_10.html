@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Workspace · 회의 준비 (v0.10)</title>
+<style>
+  :root{
+    --bg:#f8fafc; --surface:#ffffff; --soft:#f9fafb; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#2563eb; --accent-soft:#eff6ff; --accent-line:#bfdbfe;
+    --success:#16a34a; --success-soft:#f0fdf4; --warning:#d97706; --warning-soft:#fffbeb;
+    --danger:#dc2626; --danger-soft:#fef2f2; --navy:#0f172a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:var(--bg);color:var(--text);font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .app{display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden;}
+  .internal{display:none;} body.dev-on .internal{display:block;}
+
+  /* Header */
+  .hdr{background:var(--navy);color:#e2e8f0;height:52px;padding:0 18px;display:flex;align-items:center;gap:12px;}
+  .hdr .brand{font-weight:700;font-size:15px;color:#fff;}
+  .hdr .sub{font-size:11.5px;color:#94a3b8;}
+  .hdr .spacer{flex:1;}
+  .hdr .hbtn{font-size:12px;padding:6px 12px;border:1px solid #334155;border-radius:8px;background:#1e293b;color:#e2e8f0;cursor:pointer;}
+  .hdr .hbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .hdr .tg{font-size:12px;color:#cbd5e1;display:flex;align-items:center;gap:6px;cursor:pointer;}
+
+  /* 3-col portal */
+  .portal{display:grid;grid-template-columns:208px 1fr 320px;overflow:hidden;}
+  /* sidebar */
+  .side{background:#fff;border-right:1px solid var(--line);padding:14px 12px;overflow:auto;}
+  .side .snew{display:block;width:100%;text-align:left;font-size:12.5px;font-weight:700;padding:9px 11px;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft);border-radius:9px;cursor:pointer;margin-bottom:12px;}
+  .side .sgrp{font-size:10px;color:#9ca3af;font-weight:700;margin:12px 4px 5px;}
+  .side .sitem{font-size:12.5px;padding:8px 11px;border-radius:8px;color:#374151;cursor:pointer;display:flex;gap:8px;align-items:center;}
+  .side .sitem:hover{background:var(--soft);}
+  .side .sitem.active{background:var(--accent-soft);color:var(--accent);font-weight:700;}
+  .side .sic{width:7px;height:7px;border-radius:2px;background:#cbd5e1;}
+  .side .sitem.active .sic{background:var(--accent);}
+
+  /* center workspace */
+  .work{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+  .wtop{padding:11px 18px;border-bottom:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:10px;}
+  .wtop .wt{font-weight:700;font-size:14px;}
+  .wtop .wmeta{font-size:11.5px;color:var(--muted);}
+  .wtop .wsp{flex:1;}
+  .wtop .wstat{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--accent-soft);color:var(--accent);}
+  .thread{flex:1;overflow:auto;padding:18px 20px;}
+  .msg{margin-bottom:16px;display:flex;}
+  .msg.user{justify-content:flex-end;}
+  .bubble-u{background:var(--accent);color:#fff;border-radius:14px 14px 4px 14px;padding:11px 15px;font-size:13.5px;max-width:75%;}
+  .msg.ai{flex-direction:column;align-items:flex-start;gap:11px;width:100%;}
+  .ai-intro{font-size:12.5px;color:var(--muted);}
+  .card{width:100%;border:1px solid var(--line);border-radius:14px;background:#fff;padding:13px 15px;box-shadow:0 1px 3px rgba(15,23,42,.03);}
+  .card-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .card-t{font-weight:700;font-size:13.5px;}
+  .card-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--accent-soft);color:var(--accent);}
+  .card-badge.warn{background:var(--warning-soft);color:var(--warning);}
+  .card-badge.ok{background:var(--success-soft);color:var(--success);}
+  .info-btn{margin-left:auto;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .info-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .row{border:1px solid var(--line);border-radius:9px;padding:7px 11px;margin-bottom:6px;font-size:12.5px;background:#fff;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .sub{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--soft);font-size:12px;}
+  .sub-h{font-size:10.5px;color:#9ca3af;font-weight:700;margin-bottom:3px;}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px;}
+  .tbl td{border-bottom:1px solid var(--line);padding:4px 6px;vertical-align:top;}
+  .tbl td.r{color:var(--muted);}
+  .pill{display:inline-block;font-size:11px;border-radius:20px;padding:2px 10px;margin:0 4px 4px 0;font-weight:600;}
+  .pill.auto{background:var(--success-soft);color:var(--success);}
+  .pill.rev{background:var(--warning-soft);color:var(--warning);}
+  .pill.block{background:var(--danger-soft);color:var(--danger);}
+  .chk{display:flex;gap:9px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:5px;font-size:12px;}
+  .chk small{color:var(--muted);}
+  .action-buttons{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{font-size:12px;padding:7px 13px;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:pointer;color:var(--text);}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .btn.sm{padding:5px 10px;font-size:11.5px;}
+  .dlist{list-style:none;padding:0;margin:0;}
+  .dlist li{font-size:12px;padding:6px 9px;border-radius:8px;margin-bottom:4px;background:var(--success-soft);border:1px solid #bbf7d0;}
+  .dlist li::before{content:"✓ ";color:var(--success);font-weight:700;}
+  .dlist li.wait{background:var(--warning-soft);border-color:#fde68a;} .dlist li.wait::before{content:"⏳ ";}
+
+  /* capture strip */
+  .capwrap{flex:0 0 auto;border-top:1px solid var(--line);background:#fff;padding:9px 16px;}
+  .cap-h{font-size:10.5px;color:#9ca3af;font-weight:700;margin-bottom:6px;}
+  .capture-strip{display:flex;gap:8px;overflow-x:auto;}
+  .capture{flex:0 0 auto;width:96px;border:1px solid var(--line);border-radius:9px;background:var(--soft);padding:6px;cursor:pointer;text-align:center;}
+  .capture.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
+  .cap-mini{height:40px;border-radius:6px;background:#fff;border:1px solid var(--line);margin-bottom:5px;position:relative;overflow:hidden;}
+  .cap-mini::before{content:"";position:absolute;left:6px;top:6px;right:6px;height:6px;border-radius:3px;background:#e5e7eb;}
+  .cap-mini::after{content:"";position:absolute;left:6px;top:16px;width:50%;height:5px;border-radius:3px;background:#eef2f7;}
+  .capture.active .cap-mini::before{background:var(--accent-line);}
+  .cap-label{font-size:10.5px;font-weight:600;color:#374151;}
+  .capture.active .cap-label{color:var(--accent);}
+
+  /* X-ray */
+  .xray{background:#fff;border-left:1px solid var(--line);padding:14px;overflow:auto;}
+  .xh{font-weight:700;font-size:13.5px;margin-bottom:2px;}
+  .xs{font-size:11px;color:var(--muted);margin-bottom:11px;}
+  .xmap{position:relative;padding-left:13px;margin-bottom:13px;}
+  .nd{border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px 10px;}
+  .nd .nk{font-weight:700;font-size:11.5px;display:flex;align-items:center;gap:6px;}
+  .nd .nk .ndd{width:8px;height:8px;border-radius:50%;background:#cbd5e1;}
+  .nd .ne{font-size:9px;color:#cbd5e1;margin-left:14px;}
+  body.dev-on .nd .ne{color:#9ca3af;}
+  .nd.idle{opacity:.45;} .nd.done .ndd{background:var(--success);}
+  .nd.active{border-color:var(--accent-line);background:var(--accent-soft);} .nd.active .nk{color:#1d4ed8;} .nd.active .ndd{background:var(--accent);}
+  .vln{height:9px;width:2px;background:var(--line);margin:0 auto;} .vln.on{background:var(--accent);}
+  .core{border:1px solid #dbeafe;border-radius:11px;background:#fbfcff;padding:8px;}
+  .core-t{font-size:9px;font-weight:700;color:#94a3b8;letter-spacing:.04em;margin-bottom:6px;}
+  .core-g{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .cn{border:1px solid var(--line);border-radius:8px;background:#fff;padding:5px 8px;}
+  .cn.span{grid-column:1/-1;}
+  .cn .ck{font-weight:700;font-size:11px;} .cn .ce{font-size:8.5px;color:#cbd5e1;}
+  body.dev-on .cn .ce{color:#9ca3af;}
+  .cn.idle{opacity:.45;} .cn.done .ck{color:#374151;}
+  .cn.active{border-color:var(--accent-line);background:var(--accent-soft);} .cn.active .ck{color:#1d4ed8;}
+  .cmini{font-size:9px;color:#cbd5e1;text-align:center;}
+  .foundation{margin-top:9px;border:1px solid var(--line);border-radius:8px;background:var(--soft);padding:5px 10px;font-size:10px;color:var(--muted);text-align:center;}
+  .foundation.active{background:#1e293b;color:#cbd5e1;border-color:#1e293b;}
+  .xsec{border-top:1px solid var(--line);padding-top:10px;margin-top:4px;}
+  .xl{font-size:10px;color:#9ca3af;font-weight:700;margin:9px 0 2px;}
+  .xv{font-size:12px;color:#374151;}
+  .xv.need{background:var(--warning-soft);border-left:3px solid var(--warning);border-radius:4px;padding:5px 8px;color:#92400e;}
+
+  /* INFO popover */
+  #pop{position:fixed;z-index:70;width:280px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 16px 44px rgba(15,23,42,.18);padding:13px 15px;display:none;}
+  #pop h5{margin:0 0 8px;font-size:13px;}
+  #pop .pclose{float:right;cursor:pointer;color:#9ca3af;}
+  #pop .pl{font-size:10px;color:#9ca3af;font-weight:700;margin:9px 0 3px;}
+  #pop .pv{font-size:11.5px;color:#374151;}
+  #pop ul{margin:0;padding-left:15px;font-size:11.5px;color:#374151;}
+  #pop ul li{margin-bottom:1px;}
+  #pop .pdev{font-family:"Consolas",monospace;font-size:11px;color:#64748b;}
+
+  /* Guide Mode */
+  #gSpot{position:fixed;z-index:100;border-radius:13px;box-shadow:0 0 0 9999px rgba(15,23,42,.55);border:2px solid var(--accent);transition:all .32s cubic-bezier(.4,0,.2,1);pointer-events:none;display:none;}
+  #gCursor{position:fixed;z-index:102;pointer-events:none;transition:left .35s,top .35s;display:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));}
+  #gBubble{position:fixed;z-index:102;width:300px;background:#fff;border-radius:13px;box-shadow:0 18px 50px rgba(0,0,0,.3);padding:14px 16px;display:none;transition:left .35s,top .35s;}
+  #gBubble .gn{font-size:10.5px;color:var(--accent);font-weight:700;}
+  #gBubble .gt{font-size:14px;font-weight:700;margin:1px 0 5px;}
+  #gBubble .gtx{font-size:12.5px;color:#374151;line-height:1.6;}
+  #gBubble .gctl{display:flex;gap:7px;margin-top:12px;align-items:center;}
+  #gBubble .gctl .spacer{flex:1;}
+
+  /* Timeline modal */
+  #tl{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:90;}
+  #tl .box{background:#fff;border-radius:18px;width:560px;max-width:92vw;max-height:84vh;overflow:auto;padding:22px 24px;}
+  #tl h4{margin:0 0 12px;font-size:16px;} #tl .mclose{float:right;cursor:pointer;color:#9ca3af;font-size:20px;}
+  .tli{display:flex;gap:11px;padding:7px 0;border-bottom:1px solid var(--line);}
+  .tli .tn{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .tli .tt{font-size:13px;font-weight:600;} .tli .tg{font-size:11px;color:#64748b;font-family:"Consolas",monospace;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <span class="brand">AAP Workspace</span><span class="sub">회의 준비 · 회의록 작성</span>
+    <div class="spacer"></div>
+    <button class="hbtn primary" id="guideBtn">처리 흐름 보기</button>
+    <button class="hbtn" id="tlBtn">처리 과정</button>
+    <label class="tg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
+  </header>
+
+  <div class="portal">
+    <!-- sidebar -->
+    <aside class="side">
+      <button class="snew">＋ 새 회의록</button>
+      <div class="sgrp">회의</div>
+      <div class="sitem active"><span class="sic"></span>회의 준비</div>
+      <div class="sitem"><span class="sic"></span>최근 회의</div>
+      <div class="sgrp">자료</div>
+      <div class="sitem"><span class="sic"></span>프로젝트 자료</div>
+      <div class="sitem"><span class="sic"></span>공유 문서함</div>
+    </aside>
+
+    <!-- center workspace -->
+    <section class="work">
+      <div class="wtop"><span class="wt">AAP 고객사 킥오프 회의</span><span class="wmeta">· 대한제조그룹 · 담당 홍길동</span><span class="wsp"></span><span class="wstat">회의 준비</span></div>
+      <div class="thread" id="thread"></div>
+      <div class="capwrap">
+        <div class="cap-h">화면 흐름</div>
+        <div class="capture-strip" id="capStrip"></div>
+      </div>
+    </section>
+
+    <!-- X-ray -->
+    <aside class="xray xray-panel">
+      <div class="xh">AAP 구조</div>
+      <div class="xs">현재 업무 화면 뒤에서 작동하는 구조입니다.</div>
+      <div class="xmap" id="xmap"></div>
+      <div class="xsec" id="xinfo"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- overlays -->
+<div id="pop"></div>
+<div id="gSpot"></div>
+<svg id="gCursor" width="22" height="22" viewBox="0 0 24 24"><path d="M4 2l6.5 17 2.3-6.7 6.7-2.3z" fill="#0f172a" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg>
+<div id="gBubble"></div>
+<div id="tl"><div class="box" id="tlbox"></div></div>
+
+<script>
+/* 우측 노드 (짧은 라벨) */
+const NODE={
+  custenv:{ko:'고객 업무 환경',en:'Customer Environment'}, service:{ko:'사용자 화면',en:'Service Experience'},
+  data:{ko:'자료 연결',en:'Data & Inputs'}, semantic:{ko:'업무 이해',en:'Business Semantic'},
+  agent:{ko:'작업 조율',en:'Agent Core'}, coord:{ko:'검토 기준',en:'Coordination'},
+  hitl:{ko:'담당자 확인',en:'Review'}, action:{ko:'시스템 반영',en:'Action · Writeback'}, learning:{ko:'재사용',en:'Operational Learning'},
+};
+
+/* SCENE = 워크스페이스 요소 (명사형 라벨) */
+const SCENES={
+  request:{sel:'.user-message', label:'요청', cap:true,
+    bubble:'한 줄 요청에서 회의 준비 업무가 시작됩니다. AAP는 바로 예약하지 않고 필요한 자료와 확인 항목을 먼저 찾습니다.',
+    active:['service'], foundation:false,
+    x:{설명:'요청을 접수합니다.', 근거:'사용자 요청', 결과:'처리 시작', 확인:''},
+    info:{확인사항:['요청 문장 분석','부족한 정보 식별'],담당자확인:['요청 의도 확인'],변경영향:['회의 준비 시작'],처리이력:['요청 접수'],dev:'Raw Request'}},
+  intent:{sel:'.meeting-intent-card', label:'준비', cap:false,
+    bubble:'요청을 킥오프 회의 준비 업무로 정리합니다. 목적, 참석자, 자료, 확인 항목이 함께 잡힙니다.',
+    active:['semantic'], foundation:false,
+    x:{설명:'회의 준비 업무로 정리합니다.', 근거:'요청 · 이전 회의록', 결과:'회의 목적 · 준비물', 확인:'외부 초대 · 자료 공유'},
+    info:{확인사항:['회의 유형 · 킥오프','목적 · 범위·역할·일정·보안'],담당자확인:['외부 고객 포함 여부'],변경영향:['필요 준비물 확정'],처리이력:['회의 업무 이해'],dev:'Meeting Event'}},
+  materials:{sel:'.material-card', label:'자료', cap:true,
+    bubble:'메일, 이전 회의록, 제안 자료, 조직도에서 회의 준비에 필요한 근거를 모읍니다.',
+    active:['custenv','data'], foundation:false,
+    x:{설명:'관련 자료를 모읍니다.', 근거:'메일 · 문서 · 조직도', 결과:'자료 묶음', 확인:''},
+    info:{확인사항:['AAP 제안 자료','이전 회의록','고객 Q&A','보안 검토사항','내부 상세 아키텍처 자료'],담당자확인:['외부 공유 가능 자료','제외할 내부 자료','마스킹 필요 여부'],변경영향:['자료 폴더 구성','외부 공유 링크 생성','첨부 자료 확정'],처리이력:['관련 문서 조회','공유 제한 자료 식별','자료 묶음 생성'],dev:'Context Package'}},
+  package:{sel:'.meeting-package-card', label:'준비안', cap:true,
+    bubble:'참석자, 일정, 자료, 안건 후보가 하나의 회의 준비 카드로 정리됩니다.',
+    active:['data','semantic','agent'], foundation:false,
+    x:{설명:'참석자·일정·자료·안건 후보를 준비합니다.', 근거:'회의 업무 · 자료 묶음', 결과:'회의 준비 카드', 확인:''},
+    info:{확인사항:['이전 회의 참석자','최근 메일 참여자','조직도상 필수 역할','보안 담당 포함 필요'],담당자확인:['필수 참석자 확정','선택 참석자 제외 여부','외부 고객 참석 여부'],변경영향:['캘린더 초대 대상 확정','자료 공유 범위 확정','초대 메일 수신자 확정'],처리이력:['참석자 후보 생성','외부 참석자 확인 필요 표시'],dev:'Candidate Set'}},
+  review:{sel:'.review-panel', label:'확인', cap:true,
+    bubble:'외부 초대와 자료 공유처럼 책임이 있는 항목은 담당자가 확인합니다.',
+    active:['coord','hitl'], foundation:true,
+    x:{설명:'확인 항목을 분리합니다.', 근거:'후보 · 정책 기준', 결과:'확인 결과', 확인:'외부 초대 · 자료 공유'},
+    info:{확인사항:['외부 참석자 포함','외부 공유 자료 포함','고객 발송 문구 포함','내부 자료 일부 포함'],담당자확인:['초대 대상','공유 자료 범위','발송 문구','내부 자료 제외 여부'],변경영향:['캘린더 초대 가능','메일 발송 준비','자료 접근 권한 설정'],처리이력:['확인 필요 항목 분리','외부 공유 제한 적용','담당자 확인 대기'],dev:'Human Review Decision'}},
+  action:{sel:'.action-buttons', label:'반영', cap:true,
+    bubble:'확인된 항목만 캘린더, 문서함, 메일 초안에 반영됩니다.',
+    active:['action'], foundation:false,
+    x:{설명:'확인된 항목을 반영합니다.', 근거:'승인된 준비안', 결과:'캘린더 · 문서함 · 메일', 확인:'초대 메일 발송 승인'},
+    info:{확인사항:['승인된 참석자·자료'],담당자확인:['초대 메일 발송 시점'],변경영향:['캘린더 등록','회의실 예약','자료 폴더 생성','메일 초안'],처리이력:['업무 시스템 반영'],dev:'Action Result'}},
+  minutes:{sel:'.minutes-doc', label:'회의록', cap:true,
+    bubble:'회의 중 기록은 결정사항과 후속 할 일로 정리됩니다.',
+    active:['semantic','coord','action'], foundation:true,
+    x:{설명:'회의록·후속 할 일로 정리합니다.', 근거:'회의 기록', 결과:'회의록 · 후속 할 일', 확인:'회의록 확정'},
+    info:{확인사항:['회의 중 발언 기록','결정사항 후보','보류사항','후속 할 일 후보','담당자·기한 후보'],담당자확인:['공식 결정사항 문구','후속 할 일 담당자','기한','고객 공유용 표현'],변경영향:['공식 회의록 확정','후속 할 일 등록','후속 메일 초안 생성','다음 회의 준비 패턴 저장'],처리이력:['회의록 초안 생성','후속 할 일 후보 생성','담당자 수정 반영'],dev:'Official Minutes'}},
+  reuse:{sel:'.reuse-card', label:'재사용', cap:true,
+    bubble:'이번 처리 경험은 다음 킥오프 회의의 추천 기준과 템플릿으로 저장됩니다.',
+    active:['learning'], foundation:true, loop:true,
+    x:{설명:'다음 업무에 재사용합니다.', 근거:'처리 이력 · 담당자 수정', 결과:'업무 패턴', 확인:''},
+    info:{확인사항:['반복 가능한 준비 패턴'],담당자확인:['저장 범위'],변경영향:['추천 기준 개선','템플릿 저장'],처리이력:['업무 패턴 저장 후보'],dev:'Skill Update'}},
+  xray:{sel:'.xray-panel', label:'구조', cap:false,
+    bubble:'오른쪽은 현재 화면 뒤에서 작동하는 AAP 구조입니다. 선택한 업무 요소에 따라 작동 영역이 점등됩니다.',
+    active:[], foundation:false, x:{설명:'AAP 구조를 보여줍니다.', 근거:'전체 작동 경로', 결과:'점등 구조', 확인:''}, info:null},
+};
+const GUIDE_ORDER=['request','intent','materials','package','review','action','minutes','reuse','xray'];
+const CAP_ORDER=['request','materials','package','review','action','minutes','reuse'];
+const TIMELINE=[['요청 접수','Raw request captured'],['관련 자료 확인','Context package created'],['회의 업무 이해','Meeting Event generated'],['참석자·일정·자료 준비','Candidate set created'],['확인 필요 항목 분리','Coordination result assembled'],['담당자 확인','Human review completed'],['캘린더·문서함 반영','Writeback completed'],['회의 후 정리','Action items generated'],['다음 업무에 재사용','Skill update candidate created']];
+
+const STATE={scene:'package', guideOn:false, guideStep:0};
+const REQUEST='다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘.';
+
+/* ===== build workspace (영속 포털) ===== */
+function buildThread(){
+  document.getElementById('thread').innerHTML=`
+   <div class="msg user"><div class="bubble-u user-message">${REQUEST}</div></div>
+   <div class="msg ai">
+     <div class="ai-intro">회의 준비를 정리했습니다.</div>
+     <div class="card meeting-intent-card" data-scene="intent">
+       <div class="card-h"><span class="card-t">회의 준비</span><span class="card-badge">킥오프</span><button class="info-btn" data-info="intent">i</button></div>
+       <div class="row">목적 · 착수 범위·역할·일정·보안 조건 정리</div>
+       <div class="row">필요 준비물 · 참석자·일정·자료·안건·회의록 템플릿</div>
+       <div class="row">확인 필요 · 외부 고객 초대 · 자료 공유</div></div>
+     <div class="card material-card" data-scene="materials">
+       <div class="card-h"><span class="card-t">자료</span><span class="card-badge ok">확인됨</span><button class="info-btn" data-info="materials">i</button></div>
+       <table class="tbl"><tr><td>관련 메일</td><td class="r">14건</td></tr><tr><td>이전 회의록</td><td class="r">6/10 소개 미팅</td></tr><tr><td>제안·아키텍처 자료</td><td class="r">6건</td></tr><tr><td>관련 부서</td><td class="r">5개</td></tr></table></div>
+     <div class="card meeting-package-card" data-scene="package">
+       <div class="card-h"><span class="card-t">회의 준비안</span><span class="card-badge">준비됨</span><button class="info-btn" data-info="package">i</button></div>
+       <div class="grid2">
+         <div class="sub"><div class="sub-h">참석자</div>필수 5 · 외부 2 · 선택 2</div>
+         <div class="sub"><div class="sub-h">일정</div>6/24·25·26 (3안)</div>
+         <div class="sub"><div class="sub-h">자료</div>제안·아키텍처·회의록·Q&A (5)</div>
+         <div class="sub"><div class="sub-h">안건</div>목적→적용→데이터→매핑→보안→다음 (6)</div></div></div>
+   </div>
+   <div class="msg ai">
+     <div class="card review-panel" data-scene="review">
+       <div class="card-h"><span class="card-t">확인</span><span class="card-badge warn">담당자 확인</span><button class="info-btn" data-info="review">i</button></div>
+       <div class="row"><span class="pill auto">바로 처리</span> 자료 폴더·안건 초안·회의록 템플릿</div>
+       <div class="row"><span class="pill rev">담당자 확인</span> 참석자·외부 초대·자료 공유·문구</div>
+       <div class="row"><span class="pill block">공유 제한</span> 내부 상세 자료 외부 공유 제외</div>
+       <label class="chk"><input type="checkbox" checked> 외부 고객 초대·자료 공유 승인</label>
+       <label class="chk"><input type="checkbox" checked> 내부 상세 자료 제외 <small>(마스킹)</small></label></div>
+     <div class="action-buttons">
+       <button class="btn primary">확인하고 반영</button><button class="btn">폴더 만들기</button><button class="btn">캘린더 초안</button><button class="btn">회의록 확정</button></div>
+   </div>
+   <div class="msg ai">
+     <div class="card minutes-doc" data-scene="minutes">
+       <div class="card-h"><span class="card-t">회의록</span><span class="card-badge">초안</span><button class="info-btn" data-info="minutes">i</button></div>
+       <div class="row">결정 3 · 보류 2 · 리스크 1</div>
+       <table class="tbl"><tr><td>고객 IT기획</td><td class="r">API 목록 / 6·28</td></tr><tr><td>KT DS AI</td><td class="r">데모 초안 / 7·2</td></tr></table></div>
+     <div class="card reuse-card" data-scene="reuse">
+       <div class="card-h"><span class="card-t">재사용</span><span class="card-badge ok">저장됨</span><button class="info-btn" data-info="reuse">i</button></div>
+       <div class="row">킥오프 회의 준비 패턴 · 참석자 추천 기준 · 자료 묶음 패턴</div></div>
+   </div>`;
+  // info buttons
+  document.querySelectorAll('.info-btn').forEach(b=>b.onclick=e=>{e.stopPropagation();openPop(b,b.getAttribute('data-info'));});
+  // card click → setScene
+  document.querySelectorAll('.card[data-scene]').forEach(c=>c.onclick=()=>setScene(c.getAttribute('data-scene')));
+}
+
+function buildCapStrip(){
+  const el=document.getElementById('capStrip');
+  el.innerHTML=CAP_ORDER.map(k=>`<button class="capture${STATE.scene===k?' active':''}" data-cap="${k}"><div class="cap-mini"></div><div class="cap-label">${SCENES[k].label}</div></button>`).join('');
+  el.querySelectorAll('.capture').forEach(b=>b.onclick=()=>{setScene(b.getAttribute('data-cap'));});
+}
+
+/* ===== X-ray ===== */
+function renderXray(){
+  const sc=SCENES[STATE.scene];const act=new Set(sc.active);
+  // done = earlier scenes in CAP order
+  const idx=CAP_ORDER.indexOf(STATE.scene);const done=new Set();
+  for(let i=0;i<idx;i++)(SCENES[CAP_ORDER[i]].active||[]).forEach(k=>done.add(k));
+  const cls=k=>act.has(k)?'active':(done.has(k)?'done':'idle');
+  const vln=on=>`<div class="vln${on?' on':''}"></div>`;
+  const node=k=>{const N=NODE[k];return `<div class="nd ${cls(k)}"><div class="nk"><span class="ndd"></span>${N.ko}</div><div class="ne">${N.en}</div></div>`;};
+  const cn=k=>{const N=NODE[k];return `<div class="cn ${cls(k)}${k==='agent'||k==='hitl'?' span':''}"><div class="ck">${N.ko}</div><div class="ce">${N.en}</div></div>`;};
+  let h=node('custenv')+vln(act.has('data')||done.has('data'))+node('service')+vln(true);
+  h+=`<div class="core"><div class="core-t">AAP CORE</div><div class="core-g">${cn('data')}${cn('semantic')}</div><div class="cmini">▼</div>${cn('agent')}<div class="cmini">▼</div>${cn('coord')}${cn('hitl')}</div>`;
+  h+=vln(act.has('action')||done.has('action'))+node('action')+vln(act.has('learning')||done.has('learning'))+node('learning');
+  h+=`<div class="foundation ${sc.foundation?'active':''}">보안 · 권한 · 기록</div>`;
+  document.getElementById('xmap').innerHTML=h;
+  const x=sc.x;
+  document.getElementById('xinfo').innerHTML=
+    `<div class="xl">작동 설명</div><div class="xv">${x.설명}</div>
+     <div class="xl">근거</div><div class="xv">${x.근거}</div>
+     <div class="xl">결과</div><div class="xv">${x.결과}</div>
+     ${x.확인?`<div class="xl">확인</div><div class="xv need">${x.확인}</div>`:''}`;
+}
+
+function setScene(k){
+  STATE.scene=k;
+  document.querySelectorAll('.capture').forEach(b=>b.classList.toggle('active',b.getAttribute('data-cap')===k));
+  renderXray();
+}
+
+/* ===== INFO popover ===== */
+function openPop(btn,key){
+  const sc=SCENES[key];if(!sc||!sc.info){return;} setScene(key);
+  const I=sc.info;
+  const sec=(t,a)=>`<div class="pl">${t}</div><ul>${a.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  document.getElementById('pop').innerHTML=
+    `<span class="pclose" onclick="document.getElementById('pop').style.display='none'">×</span>
+     <h5>${sc.label}</h5>
+     ${sec('AAP 확인 사항',I.확인사항)}${sec('담당자 확인',I.담당자확인)}${sec('변경 영향',I.변경영향)}${sec('처리 이력',I.처리이력)}
+     <div class="internal"><div class="pl">내부 처리</div><div class="pv pdev">object: ${I.dev}</div></div>`;
+  const p=document.getElementById('pop');p.style.display='block';
+  const r=btn.getBoundingClientRect();
+  let left=r.right+10;if(left+280>window.innerWidth)left=r.left-290;
+  let top=r.top;if(top+p.offsetHeight>window.innerHeight)top=window.innerHeight-p.offsetHeight-12;
+  p.style.left=Math.max(8,left)+'px';p.style.top=Math.max(8,top)+'px';
+}
+document.addEventListener('click',e=>{const p=document.getElementById('pop');if(p.style.display==='block'&&!p.contains(e.target)&&!e.target.closest('.info-btn'))p.style.display='none';});
+
+/* ===== Guide Mode ===== */
+function startGuide(){STATE.guideOn=true;STATE.guideStep=0;document.getElementById('gSpot').style.display='block';document.getElementById('gCursor').style.display='block';document.getElementById('gBubble').style.display='block';gotoGuide(0);}
+function stopGuide(){STATE.guideOn=false;['gSpot','gCursor','gBubble'].forEach(id=>document.getElementById(id).style.display='none');}
+function gotoGuide(i){
+  if(i<0||i>=GUIDE_ORDER.length)return;STATE.guideStep=i;
+  const key=GUIDE_ORDER[i];const sc=SCENES[key];setScene(key==='xray'?STATE.scene:key);
+  const t=document.querySelector(sc.sel);if(!t){return;}
+  try{t.scrollIntoView({block:'center',behavior:'instant'});}catch(e){t.scrollIntoView();}
+  GUIDE_TARGET=t;
+  requestAnimationFrame(()=>requestAnimationFrame(positionGuide));setTimeout(positionGuide,90);
+  const b=document.getElementById('gBubble');
+  b.innerHTML=`<div class="gn">${i+1} / ${GUIDE_ORDER.length}</div><div class="gt">${sc.label}</div><div class="gtx">${sc.bubble}</div>
+    <div class="gctl"><button class="btn sm" ${i===0?'disabled':''} id="gPrev">이전</button><div class="spacer"></div>
+    <button class="btn sm" id="gStop">중지</button><button class="btn sm primary" id="gNext">${i===GUIDE_ORDER.length-1?'완료':'다음'}</button></div>`;
+  document.getElementById('gPrev').onclick=()=>gotoGuide(i-1);
+  document.getElementById('gStop').onclick=stopGuide;
+  document.getElementById('gNext').onclick=()=>{i===GUIDE_ORDER.length-1?stopGuide():gotoGuide(i+1);};
+}
+let GUIDE_TARGET=null;
+function positionGuide(){
+  if(!STATE.guideOn||!GUIDE_TARGET)return;const r=GUIDE_TARGET.getBoundingClientRect();
+  const sp=document.getElementById('gSpot');
+  sp.style.left=(r.left-6)+'px';sp.style.top=(r.top-6)+'px';sp.style.width=(r.width+12)+'px';sp.style.height=(r.height+12)+'px';
+  const cu=document.getElementById('gCursor');cu.style.left=(r.right-30)+'px';cu.style.top=(r.top+24)+'px';
+  const b=document.getElementById('gBubble');
+  let bl=r.right+18;if(bl+300>window.innerWidth)bl=r.left-318;if(bl<8)bl=8;
+  let bt=r.top;if(bt+b.offsetHeight>window.innerHeight)bt=window.innerHeight-b.offsetHeight-12;
+  b.style.left=bl+'px';b.style.top=Math.max(8,bt)+'px';
+}
+
+/* ===== Timeline ===== */
+function openTimeline(){
+  const d=document.body.classList.contains('dev-on');
+  document.getElementById('tlbox').innerHTML=`<span class="mclose" onclick="document.getElementById('tl').style.display='none'">×</span><h4>처리 과정</h4>`+
+    TIMELINE.map((t,i)=>`<div class="tli"><span class="tn">${i+1}</span><div><div class="tt">${t[0]}</div>${d?`<div class="tg">[log] ${t[1]}</div>`:''}</div></div>`).join('');
+  document.getElementById('tl').style.display='flex';
+}
+document.getElementById('tl').onclick=e=>{if(e.target.id==='tl')e.currentTarget.style.display='none';};
+
+document.getElementById('guideBtn').onclick=()=>STATE.guideOn?stopGuide():startGuide();
+document.getElementById('tlBtn').onclick=openTimeline;
+document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
+window.addEventListener('resize',positionGuide);
+document.addEventListener('scroll',()=>{if(STATE.guideOn)positionGuide();},true);
+document.addEventListener('keydown',e=>{if(!STATE.guideOn)return;if(e.key==='ArrowRight')gotoGuide(STATE.guideStep+1);if(e.key==='ArrowLeft')gotoGuide(STATE.guideStep-1);if(e.key==='Escape')stopGuide();});
+
+buildThread();buildCapStrip();renderXray();
+(function(){const q=new URLSearchParams(location.search);if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
+  if(q.get('guide')==='1'){startGuide();const g=parseInt(q.get('g'),10);if(!isNaN(g))gotoGuide(g);}
+  const s=q.get('scene');if(s&&SCENES[s])setScene(s);})();
+</script>
+</body>
+</html>

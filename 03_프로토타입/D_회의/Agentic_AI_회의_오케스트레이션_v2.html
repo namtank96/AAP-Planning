@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>회의로 이해하는 Agentic AI · Master Agent 동작 원리</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+        },
+        fontFamily: { sans: ['Pretendard','Apple SD Gothic Neo','Malgun Gothic','sans-serif'] },
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  html { scroll-behavior: smooth; }
+  .tab-btn.active { background:#4f46e5; color:#fff; }
+  .tab-panel[hidden] { display:none; }
+  .conn::after { content:''; position:absolute; left:50%; top:100%; width:2px; height:1.75rem; background:linear-gradient(#a5b4fc,#c7d2fe); transform:translateX(-50%); }
+  .fade-in { animation:fade .4s ease both; }
+  @keyframes fade { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+  @keyframes agpulse { 0%,100%{box-shadow:0 0 0 0 rgba(79,70,229,.45)} 50%{box-shadow:0 0 0 7px rgba(79,70,229,0)} }
+  .ag-active{ animation:agpulse 1.15s ease-out infinite; }
+  .flow-dot{width:13px;height:13px;border-radius:50%;background:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.22),0 0 14px 2px rgba(99,102,241,.65);position:relative}
+  .flow-dot::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(99,102,241,.55);animation:flowping 1.25s cubic-bezier(.2,.6,.4,1) infinite}
+  @keyframes flowping{0%{transform:scale(.55);opacity:.85}100%{transform:scale(1.7);opacity:0}}
+  .lscn.active{ background:#4f46e5; color:#fff; }
+  .lspd.active{ background:#4f46e5; color:#fff; border-color:#4f46e5; }
+  #live-log::-webkit-scrollbar{width:8px} #live-log::-webkit-scrollbar-thumb{background:#334155;border-radius:8px}
+  #live-map{background:linear-gradient(0deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/36px 36px,linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/36px 36px,#0b1220}
+  .map-node{position:absolute;transform:translate(-50%,-50%);z-index:4;width:84px}
+  .mn-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:6px 7px;transition:all .3s;box-shadow:0 3px 10px rgba(0,0,0,.35);position:relative}
+  .mn-type{position:absolute;top:-5px;right:-5px;width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 2px #0b1220;z-index:6}
+  .map-node:not(.on):not(.done):not(.ready):not(.live) .mn-card{opacity:.5}
+  .mn-top{display:flex;align-items:center;gap:5px}
+  .mn-ic2{width:22px;height:22px;border-radius:7px;background:#0f172a;display:grid;place-items:center;font-size:12px;flex:none}
+  .mn-name{font-size:9px;font-weight:700;color:#e2e8f0;line-height:1.1}
+  .mn-bottom{display:flex;align-items:center;gap:4px;margin-top:4px}
+  .mn-dot{width:5px;height:5px;border-radius:50%;background:#64748b;flex:none}
+  .mn-st{font-size:7.5px;color:#94a3b8;font-weight:600}
+  #lm-body::-webkit-scrollbar{width:8px} #lm-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+  .map-node.on .mn-card{border-color:#6366f1;background:#312e81;box-shadow:0 0 0 4px rgba(99,102,241,.28),0 4px 14px rgba(0,0,0,.4)}
+  .map-node.on .mn-dot{background:#818cf8} .map-node.on .mn-st{color:#c7d2fe}
+  .map-node.done .mn-card{border-color:#10b981;background:#053b2e}
+  .map-node.done .mn-dot{background:#34d399} .map-node.done .mn-st{color:#6ee7b7}
+  .map-node.ready .mn-card{border-color:#f59e0b;border-style:dashed;background:#3a2c0a}
+  .map-node.ready .mn-dot{background:#fbbf24} .map-node.ready .mn-st{color:#fcd34d}
+  .map-node.live .mn-card{border-color:#22d3ee;background:#06363f;box-shadow:0 0 0 3px rgba(34,211,238,.22)}
+  .map-node.live .mn-dot{background:#22d3ee;animation:livedot 1s ease-in-out infinite} .map-node.live .mn-st{color:#67e8f9}
+  @keyframes livedot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+  .ed-row button{opacity:.6} .ed-row:hover button{opacity:1}
+  /* ===== ④ 시스템 구성도 (architecture) ===== */
+  .az{border-radius:16px;border-width:2px;border-style:solid;padding:14px 14px 16px}
+  .zttl{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;flex-wrap:wrap}
+  .zsub{font-size:11px;font-weight:600;opacity:.8;margin-left:2px}
+  .dup{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:800;padding:1px 7px;border-radius:999px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;white-space:nowrap}
+  .acard{background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:7px 9px;line-height:1.18}
+  .acard .at{font-size:12px;color:#1e293b;font-weight:700;display:block}
+  .acard .as{font-size:9.5px;color:#94a3b8;margin-top:1px;display:block;letter-spacing:.01em}
+  .aconn{width:2px;height:15px;margin:4px auto;background:#94a3b8;border-radius:2px;position:relative}
+  .aconn::before,.aconn::after{content:'';position:absolute;left:50%;bottom:-1px;width:7px;height:7px;border-right:2px solid #94a3b8;border-bottom:2px solid #94a3b8;transform:translateX(-50%) rotate(45deg)}
+  .secband{border-radius:11px;color:#fff;font-weight:800;padding:9px 12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px 10px;flex-wrap:wrap;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  .swband{border-radius:11px;background:#0f172a;color:#e2e8f0;font-weight:700;padding:8px 12px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px 12px;flex-wrap:wrap;border:1px solid #334155}
+  .lyr{display:flex;gap:10px;align-items:stretch}
+  .lyr-h{width:140px;flex:none;border-radius:12px;padding:10px;color:#fff;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .lyr-h .lnum{display:flex;align-items:center;gap:7px}
+  .lyr-h .lnb{width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:13px;font-weight:800;flex:none}
+  .lyr-h .lk{font-size:13px;font-weight:800;line-height:1.12}
+  .lyr-h .lrole{font-size:9px;font-weight:700;line-height:1.25;background:rgba(255,255,255,.2);border-radius:6px;padding:3px 6px}
+  .lyr-b{flex:1;min-width:0;border:1px solid #e2e8f0;border-radius:12px;background:#fff;padding:9px 11px}
+  @media (max-width:640px){ .lyr{flex-direction:column} .lyr-h{width:auto;flex-direction:row;align-items:center;gap:8px} .lyr-h .lrole{margin-left:auto} }
+  .loopstep{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #c7d2fe;border-radius:999px;padding:4px 11px;font-size:11.5px;font-weight:700;color:#4338ca}
+  /* ===== ⑤ 데이터 흐름 시뮬레이터 ===== */
+  #fx-wrap{overflow:hidden;box-sizing:border-box;padding:10px;border-radius:16px;border:1px solid #1e293b;background:
+    linear-gradient(0deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/40px 40px,
+    linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/40px 40px,#0b1220}
+  #fx-holder{margin:0 auto;overflow:hidden;position:relative}
+  #fx-graph{position:relative;transform-origin:top left}
+  .fx-zone{position:absolute;top:0;bottom:0;z-index:1}
+  .fx-zlbl{position:absolute;top:9px;font-size:10px;font-weight:800;letter-spacing:.04em;z-index:3}
+  .fx-pipes{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+  .fx-node{position:absolute;transform:translate(-50%,-50%);width:116px;z-index:4;cursor:default}
+  .fx-card{background:#0f1a2c;border:1px solid #24344d;border-radius:11px;padding:7px 8px;box-shadow:0 4px 14px rgba(0,0,0,.4);transition:border-color .3s,box-shadow .3s}
+  .fx-card.master{border-color:#6366f1;background:#1a1f4d;box-shadow:0 0 0 3px rgba(99,102,241,.25)}
+  .fx-card.busy{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.2)}
+  .fx-card.ext{border-style:dashed;border-color:#3b5680;background:#0c1626}
+  .fx-node.gate{width:62px}
+  .fx-gcard{background:#0f1a2c;border:1px solid #2b3a52;border-radius:9px;padding:6px 3px 5px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.4)}
+  .fx-gcard .fx-ic{margin:0 auto}
+  .fx-gnm{font-size:7.5px;font-weight:800;color:#cbd5e1;line-height:1.05;margin-top:3px}
+  .fx-top{display:flex;align-items:center;gap:5px}
+  .fx-ic{width:22px;height:22px;border-radius:7px;background:#1e293b;display:grid;place-items:center;font-size:12px;flex:none}
+  .fx-nm{font-size:9.5px;font-weight:800;color:#e2e8f0;line-height:1.1}
+  .fx-rl{font-size:7.5px;color:#64748b;font-weight:700;margin-top:1px}
+  .fx-val{display:flex;align-items:baseline;gap:3px;margin-top:5px}
+  .fx-v{font-size:15px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:#f1f5f9}
+  .fx-u{font-size:8px;color:#94a3b8;font-weight:700}
+  .fx-bar{height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:5px}
+  .fx-bar i{display:block;height:100%;border-radius:3px;transition:width .3s}
+  .fx-st{display:flex;align-items:center;gap:4px;margin-top:4px}
+  .fx-dot{width:5px;height:5px;border-radius:50%;flex:none}
+  .fx-sl{font-size:7.5px;font-weight:700}
+  .fx-plbl{position:absolute;transform:translate(-50%,-50%);font-size:8px;font-weight:800;padding:1px 6px;border-radius:999px;background:#0b1220;border:1px solid #334155;color:#cbd5e1;z-index:3;white-space:nowrap}
+  .fx-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px 10px;text-align:center}
+  .fx-kpi .kv{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .fx-kpi .ku{font-size:9px;font-weight:700;color:#94a3b8;margin-left:2px}
+  .fx-kpi .kl{font-size:10px;color:#64748b;font-weight:600;margin-top:3px}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+<!-- ===== Header / Nav ===== -->
+<header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-brand-600 text-white grid place-items-center text-lg shadow-sm">🧠</div>
+        <div>
+          <p class="font-bold leading-tight">회의로 이해하는 Agentic AI</p>
+          <p class="text-xs text-slate-500 leading-tight">Master Agent 동작 원리</p>
+        </div>
+      </div>
+      <nav class="hidden sm:flex items-center gap-1 text-sm font-semibold">
+        <button data-tab="flow"    class="tab-btn active px-4 py-2 rounded-lg transition">① 전체 흐름</button>
+        <button data-tab="agents"  class="tab-btn px-4 py-2 rounded-lg transition hover:bg-slate-100">② Agent & 도구</button>
+        <button data-tab="live" class="tab-btn px-4 py-2 rounded-lg transition hover:bg-slate-100">③ 라이브 동작</button>
+        <button data-tab="arch" class="tab-btn px-4 py-2 rounded-lg transition hover:bg-slate-100">④ 시스템 구성도</button>
+        <button data-tab="data" class="tab-btn px-4 py-2 rounded-lg transition hover:bg-slate-100">⑤ 데이터 흐름</button>
+      </nav>
+    </div>
+    <!-- mobile tabs -->
+    <nav class="sm:hidden flex gap-1 text-xs font-semibold pb-3">
+      <button data-tab="flow"     class="tab-btn active flex-1 px-2 py-2 rounded-lg">① 흐름</button>
+      <button data-tab="agents"   class="tab-btn flex-1 px-2 py-2 rounded-lg bg-slate-100">② Agent·도구</button>
+      <button data-tab="live" class="tab-btn flex-1 px-2 py-2 rounded-lg bg-slate-100">③ 라이브</button>
+      <button data-tab="arch" class="tab-btn flex-1 px-2 py-2 rounded-lg bg-slate-100">④ 구성도</button>
+      <button data-tab="data" class="tab-btn flex-1 px-2 py-2 rounded-lg bg-slate-100">⑤ 데이터</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="bg-gradient-to-b from-white to-slate-50 border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+    <span class="inline-block text-xs font-bold tracking-wide text-brand-700 bg-brand-100 px-3 py-1 rounded-full">AGENTIC AI</span>
+    <h1 class="mt-4 text-2xl sm:text-4xl font-extrabold leading-snug">
+      <span class="text-brand-600">Master Agent</span>는 <span class="underline decoration-brand-300 decoration-4">유능한 비서실장</span>입니다.
+    </h1>
+    <p class="mt-4 text-slate-600 max-w-3xl leading-relaxed">
+      요청을 받아 <b>맥락을 파악</b>하고, <b>필요한 전문가(Agent)</b>를 부르고, <b>사람에게 한번 확인(HITL)</b>받은 뒤 일을 처리하는 과정.
+    </p>
+  </div>
+</section>
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+
+<!-- =========================================================
+     ① 전체 처리 흐름
+========================================================== -->
+<section id="tab-flow" class="tab-panel fade-in" data-panel="flow">
+  <div class="mb-8">
+    <h2 class="text-xl sm:text-2xl font-extrabold">① 전체 처리 흐름</h2>
+    <p class="text-slate-600 mt-1">AX 컨설팅팀 <b>현대영 책임</b>님이 “<b>한국무역협회 차세대 AX 무역플랫폼 구축사업</b> 제안서 작성 회의”를 여는 상황으로 따라가 봅니다.</p>
+  </div>
+
+  <!-- actors legend -->
+  <div class="flex flex-wrap gap-3 mb-8 text-sm">
+    <span class="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>사람 (현대영 책임 · HITL)</span>
+    <span class="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1"><span class="w-2.5 h-2.5 rounded-full bg-brand-600"></span>Master Agent</span>
+    <span class="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>실행 · 결과</span>
+  </div>
+
+  <!-- 구성요소 4유형 콜아웃 -->
+  <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-5">
+    <p class="text-sm font-bold text-slate-800">🧩 짚고 가기 — Master가 부리는 것은 모두 'Agent'가 아닙니다</p>
+    <p class="text-slate-600 text-sm mt-1">편의상 'Agent'라 통칭하지만, 실제 구성은 성격이 다릅니다. <b>진짜 추론하는 Agent</b>가 있고, 그 아래에서 <b>도구</b>로 호출되는 <b>엔진·모델 / 커넥터 / 스킬</b>이 있습니다. 이 흐름은 Master Agent가 이 둘을 함께 지휘하는 <b>2계층 구조</b>입니다.</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-3 text-[12px]">
+      <div class="rounded-lg border-l-4 p-2.5" style="border-left-color:#7c3aed;background:#faf5ff"><b style="color:#6d28d9">🤖 Agent (자율)</b><p class="text-slate-600 mt-0.5">자료수집·참석자추천·제안서·분석·회의록·품질검증·바이브코딩</p></div>
+      <div class="rounded-lg border-l-4 p-2.5" style="border-left-color:#e11d48;background:#fff1f2"><b style="color:#be123c">🧠 엔진·모델</b><p class="text-slate-600 mt-0.5">녹취(STT)·통역/번역·지식 임베딩</p></div>
+      <div class="rounded-lg border-l-4 p-2.5" style="border-left-color:#0284c7;background:#f0f9ff"><b style="color:#0369a1">🔌 커넥터(연동)</b><p class="text-slate-600 mt-0.5">일정조율·회의실예약·알림전달·KMS기록</p></div>
+      <div class="rounded-lg border-l-4 p-2.5" style="border-left-color:#d97706;background:#fffbeb"><b style="color:#b45309">⚙️ 스킬·모듈</b><p class="text-slate-600 mt-0.5">액션아이템·발표자료·후속관리·보안컴플라이언스</p></div>
+    </div>
+  </div>
+
+  <!-- vertical flow -->
+  <div class="relative max-w-5xl mx-auto space-y-7">
+
+    <article class="conn relative bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center font-bold">1</div>
+        <div>
+          <div class="flex items-center gap-2"><span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">사람 요청</span></div>
+          <h3 class="font-bold mt-1">회의 소집 요청</h3>
+          <p class="text-slate-600 text-sm mt-1">현대영 책임님이 “<b>한국무역협회 차세대 AX 무역플랫폼 구축사업</b> 제안서 작성 회의를 열어줘”라고 Master Agent에게 요청합니다.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="conn relative bg-white rounded-2xl border border-brand-200 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-brand-100 text-brand-700 grid place-items-center font-bold">2</div>
+        <div class="flex flex-col md:flex-row md:items-stretch gap-5 flex-1 min-w-0">
+          <div class="flex-1 min-w-0">
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded self-start">Master Agent · 맥락 분석</span>
+            <h3 class="font-bold mt-1.5">무슨 회의인지 이해하기</h3>
+            <p class="text-slate-600 text-sm mt-1">요청한 <b>회의의 종류·목적·내용</b>이 무엇인지 맥락을 분석합니다. (예: 제안서 작성 → 고객/마감/산출물 파악)</p>
+            <!-- 분석 절차 -->
+            <div class="mt-4">
+              <p class="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">분석 절차 · Master Agent가 하는 일</p>
+              <ol class="space-y-2.5">
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">1</span><span><b>발화 파싱</b> · 요청 문장을 뜯어 회의 유형어("제안서·킥오프"), 고객사명, 산출물, 일정 표현 같은 핵심 키워드와 개체명을 뽑아냅니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">2</span><span><b>의도 분류</b> · 뽑아낸 단서로 이 회의가 어떤 종류인지(제안·킥오프·주간보고·설계리뷰·의사결정 등) 목적 카테고리를 추정합니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">3</span><span><b>개체 해소</b> · "한국무역협회·현대영 책임·AX 무역플랫폼"처럼 언급된 대상을 사내 인사·조직·프로젝트 DB와 매칭해 실제 누구·무엇인지 확정합니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">4</span><span><b>맥락 보강</b> · 요청에 빠진 정보(고객·마감·산출물)를 과거 회의 이력과 KMS 문서를 조회해 채워 넣습니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">5</span><span><b>슬롯 채우기</b> · 누가·언제·어디서·무엇을·왜·어떻게(6하원칙)로 구조화하고, 비어 있는 항목은 추가로 확인할 대상으로 표시합니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">6</span><span><b>신뢰도 판단</b> · 분류·정리 결과의 확신도를 따져, 불확실하면 사람에게 다시 물어(HITL) 잘못된 가정으로 진행되는 것을 막습니다.</span></li>
+              </ol>
+              <p class="mt-2.5 text-[12px] text-brand-700 font-semibold">→ 회의 유형 확정 후 ③ 계획 수립 단계로 전달</p>
+            </div>
+          </div>
+          <div class="md:w-72 shrink-0 md:border-l md:border-slate-200 md:pl-5 flex flex-col">
+            <p class="text-[11px] font-semibold text-slate-400 tracking-wide mb-2.5">맥락 분석에 쓰는 단서</p>
+            <ul class="space-y-2.5">
+              <li class="text-[13px] text-slate-700 leading-snug"><span class="text-[11px] text-slate-400">①</span>요청 프롬프트 <b>단어 기반 추정</b></li>
+              <li class="text-[13px] text-slate-700 leading-snug"><span class="text-[11px] text-slate-400">②</span>KT ds <b>회의별 요청 문구 학습</b> <span class="text-slate-400">(사내 암묵지)</span></li>
+              <li class="text-[13px] text-slate-700 leading-snug"><span class="text-[11px] text-slate-400">③</span><b>회의 특화 sLLM</b> 참고</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="conn relative bg-white rounded-2xl border border-brand-200 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-brand-100 text-brand-700 grid place-items-center font-bold">3</div>
+        <div class="flex flex-col md:flex-row md:items-stretch gap-5 flex-1 min-w-0">
+          <div class="flex-1 min-w-0">
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded self-start">Master Agent · 계획 수립</span>
+            <h3 class="font-bold mt-1.5">필요한 데이터 · 필요한 Agent 확인</h3>
+            <p class="text-slate-600 text-sm mt-1">회의를 잘 치르려면 <b>어떤 자료(데이터)</b>가 필요하고 <b>어떤 전문가(Agent)</b>를 불러야 하는지, 각각 <b>왜</b> 필요한지 근거를 들어 정리합니다.</p>
+            <!-- 계획 절차 -->
+            <div class="mt-4">
+              <p class="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">계획 절차 · Master Agent가 하는 일</p>
+              <ol class="space-y-2.5">
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">1</span><span><b>작업 분해</b> · 확정된 회의 유형을 표준 작업 목록으로 펼칩니다. (예: 제안 회의 → 자료수집·제안서작성·일정조율·회의실·참석자추천 …)</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">2</span><span><b>필요 데이터 식별</b> · 각 작업에 어떤 근거·과거 산출물이 필요한지 정의하고, KMS에서 관련도순으로 자료 후보를 추려냅니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">3</span><span><b>Agent 매핑</b> · 각 작업을 담당 Agent에 배정하고, "왜 이 Agent가 필요한지" 근거를 함께 붙입니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">4</span><span><b>실행 순서·의존성 정렬</b> · Agent 간 선후관계(예: 자료수집 → 제안서작성)와 동시에 돌려도 되는 작업(병렬)을 구분해 실행 순서를 짭니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">5</span><span><b>리소스·제약 산정</b> · 참석 인원·장비·근무 위치 조건을 따져 회의실 후보와 가능한 회의 시각 후보를 계산하고, 필수/선택 참석자를 추천합니다.</span></li>
+                <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold grid place-items-center mt-1">6</span><span><b>누락·리스크 점검 후 계획안 패키징</b> · 빠진 Agent·데이터·참석자가 없는지 검증하고, 외부 발송·권한 같은 리스크를 표시한 뒤, 사람이 추가·제외·시각 선택을 할 수 있는 형태로 요약합니다.</span></li>
+              </ol>
+              <p class="mt-2.5 text-[12px] text-brand-700 font-semibold">→ 계획안을 ④ HITL① 계획 승인으로 넘김</p>
+            </div>
+          </div>
+          <div class="md:w-72 shrink-0 md:border-l md:border-slate-200 md:pl-5 flex flex-col gap-4">
+            <div>
+              <p class="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">선정 기준</p>
+              <div class="space-y-1.5 text-[12px] text-slate-700 leading-snug">
+                <p><b class="text-brand-700">자료</b> · 목적에 맞는 근거를 KMS 관련도순으로</p>
+                <p><b class="text-brand-700">Agent</b> · 회의 유형별 필수 작업을 담당자에 매핑</p>
+              </div>
+            </div>
+            <div>
+              <p class="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">예시 · 7명인데 10인실?</p>
+              <div class="space-y-1.5 text-[13px] text-slate-700 leading-snug">
+                <p><span class="text-slate-400">인원</span> 7명+여유석 → 8인 이상</p>
+                <p><span class="text-slate-400">장비</span> 타지역 참석 → <b>화상 카메라</b> 보유실</p>
+                <p><span class="text-slate-400">위치</span> 여러 층 근무 → 동선 최소 중간 층</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- HITL highlight -->
+    <article class="conn relative bg-amber-50 rounded-2xl border-2 border-amber-300 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-amber-200 text-amber-800 grid place-items-center font-bold">4</div>
+        <div>
+          <span class="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">★ HITL ① · 계획 승인</span>
+          <h3 class="font-bold mt-1">“이대로 진행할까요?”</h3>
+          <p class="text-slate-700 text-sm mt-1">실행 전에 현대영 책임님에게 <b>분석·계획을 보여주고</b> 확인받습니다. 추가하거나 제외할 <b>Agent·데이터</b>가 있는지 물어보고, <b>후보 회의 시각 중 하나를 사람이 직접 선택</b>합니다.</p>
+          <!-- 주고받는 과정 -->
+          <div class="mt-3 rounded-xl bg-white/70 border border-amber-200 p-3.5">
+            <p class="text-[11px] font-semibold text-amber-700 tracking-wide mb-2.5">주고받는 과정 · <span class="text-brand-700">🧠 Agent</span> ↔ <span class="text-emerald-700">🧑 사람</span></p>
+            <ol class="space-y-2.5">
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">1</span><span><b class="text-brand-700">🧠 Agent · 계획안 제시</b> — 불러올 Agent 목록, 쓸 데이터, 회의 시각 후보, 회의실, 참석자를 한눈에 보도록 요약해 보여줍니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">2</span><span><b class="text-brand-700">🧠 Agent · 수정 옵션 제공</b> — 추가하거나 제외할 Agent·데이터를 고를 수 있게 선택지를 함께 띄웁니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold grid place-items-center mt-1">3</span><span><b class="text-emerald-700">🧑 사람 · 검토 & 수정</b> — 계획을 살펴보고 빠진 것/불필요한 것을 직접 추가·제외합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold grid place-items-center mt-1">4</span><span><b class="text-emerald-700">🧑 사람 · 회의 시각 선택</b> — 후보 시각 중 하나를 직접 선택합니다. (자동 확정이 아니라 사람이 결정)</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">5</span><span><b class="text-brand-700">🧠 Agent · 수정 반영 & 재검증</b> — 사람이 바꾼 내용을 계획에 반영하고, 그로 인한 의존성·누락·충돌을 다시 점검합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-300 text-amber-900 text-[10px] font-bold grid place-items-center mt-1">6</span><span><b class="text-amber-800">🧑→🧠 승인 → 실행 트리거</b> — 사람이 "이대로 진행"하면 계획을 확정해 ⑤ 실행으로 넘기고, 보류·반려하면 계획 단계로 되돌려 다시 다듬습니다.</span></li>
+            </ol>
+          </div>
+          <p class="text-amber-800 text-xs mt-2.5 font-semibold">→ 사람이 통제권을 쥐는 핵심 단계 (Human In The Loop)</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="conn relative bg-white rounded-2xl border border-emerald-200 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center font-bold">5</div>
+        <div>
+          <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">사람 승인 → 실행</span>
+          <h3 class="font-bold mt-1">현대영 책임님 동의 후 실행 시작</h3>
+          <p class="text-slate-600 text-sm mt-1">승인을 받은 Master Agent가 계획대로 Agent들을 가동합니다. (녹취·회의록·통역 등 회의 중 Agent는 6단계에서 가동되고, 여기선 <b>회의 전 준비 작업</b>이 중심입니다.)</p>
+          <!-- 실행 절차 -->
+          <div class="mt-4">
+            <p class="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">실행 절차 · Master Agent가 하는 일</p>
+            <ol class="space-y-2.5">
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">1</span><span><b>실행 계획 전개</b> · 승인된 계획을 실행 가능한 작업 그래프로 펼치고, 각 Agent에 목표·입력·제약을 주입합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">2</span><span><b>Agent 가동(디스패치)</b> · 의존성 순서대로 Agent를 호출하고, 동시에 돌려도 되는 작업은 병렬로 실행합니다. (일정조율·회의실 예약·참석자 확정·자료수집 등)</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">3</span><span><b>데이터 공급</b> · 각 Agent가 일하는 데 필요한 자료를 KMS·RAG로 찾아 전달합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">4</span><span><b>결과 핸드오프</b> · 앞 Agent의 산출물을 다음 Agent의 입력으로 연결합니다. (예: 자료수집 결과 → 제안서 초안 작성)</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">5</span><span><b>진행 모니터링 & 예외 처리</b> · 각 Agent의 상태를 추적하고, 실패·지연·빈 결과가 생기면 재시도·대체하거나 사람에게 알립니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">6</span><span><b>중간 산출물 취합</b> · 회의 시각 확정·초대장 발송·회의실 예약·사전자료/제안서 초안 등 생성물을 모아 회의 준비 완료 상태로 만듭니다.</span></li>
+            </ol>
+            <p class="mt-2.5 text-[12px] text-emerald-700 font-semibold">→ 회의 준비 완료 후 ⑥ HITL② 회의 시작으로</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="conn relative bg-amber-50 rounded-2xl border-2 border-amber-300 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-amber-200 text-amber-800 grid place-items-center font-bold">6</div>
+        <div>
+          <span class="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">★ HITL ② · 회의 시작·종료</span>
+          <h3 class="font-bold mt-1">회의 소집 → 진행 → 종료</h3>
+          <p class="text-slate-700 text-sm mt-1">회의가 소집되어 진행되고 마무리됩니다. 이때 <b>현대영 책임님이 “회의를 시작한다 / 끝났다”를 직접 알려</b> 녹취·회의록 Agent의 가동 시점을 사람이 통제합니다.</p>
+          <!-- 주고받는 과정 -->
+          <div class="mt-3 rounded-xl bg-white/70 border border-amber-200 p-3.5">
+            <p class="text-[11px] font-semibold text-amber-700 tracking-wide mb-2.5">주고받는 과정 · <span class="text-brand-700">🧠 Agent</span> ↔ <span class="text-emerald-700">🧑 사람</span></p>
+            <ol class="space-y-2.5">
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold grid place-items-center mt-1">1</span><span><b class="text-emerald-700">🧑 사람 · 회의 시작 신호</b> — "회의를 시작한다"고 직접 알려, 실시간 Agent의 가동 시점을 통제합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">2</span><span><b class="text-brand-700">🧠 Agent · 실시간 Agent 가동</b> — 신호를 받아 녹취(STT)·통역·회의록 Agent를 동시에 켜서 발언을 실시간으로 전사·번역·정리합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">3</span><span><b class="text-brand-700">🧠 Agent · 실시간 처리·구조화</b> — 전사 텍스트를 안건·결정·미결·액션 항목으로 구조화하고, 회의 중 쟁점이 생기면 자료수집 Agent를 추가로 호출합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold grid place-items-center mt-1">4</span><span><b class="text-emerald-700">🧑 사람 · 진행 중 개입(선택)</b> — 안건 추가·자료 요청·발표자료 표시 등 회의 맥락을 직접 입력해 흐름을 조정합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold grid place-items-center mt-1">5</span><span><b class="text-emerald-700">🧑 사람 · 회의 종료 신호</b> — "회의가 끝났다"고 직접 알려, 실시간 Agent를 정지시킵니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-300 text-amber-900 text-[10px] font-bold grid place-items-center mt-1">6</span><span><b class="text-amber-800">🧠 Agent · 종료 처리 & 산출물 정리</b> — 녹취·회의록을 마감하고 회의록 초안·액션아이템을 정리해, ⑦ 최종 승인 준비를 마칩니다.</span></li>
+            </ol>
+          </div>
+          <p class="text-amber-800 text-xs mt-2.5 font-semibold">→ 회의 진행 맥락을 사람이 직접 입력 (Human In The Loop)</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="conn relative bg-amber-50 rounded-2xl border-2 border-amber-300 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-amber-200 text-amber-800 grid place-items-center font-bold">7</div>
+        <div>
+          <span class="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">★ HITL ③ · 최종 실행 승인</span>
+          <h3 class="font-bold mt-1">“메일 발송·KMS 기록을 수행할까요?”</h3>
+          <p class="text-slate-700 text-sm mt-1">외부로 나가는 마지막 행동(<b>메일 발송</b>·<b>KMS 기록</b>) 직전에 현대영 책임님에게 다시 한번 확인받습니다. 사람이 승인해야 실제로 전송·기록됩니다.</p>
+          <!-- 주고받는 과정 -->
+          <div class="mt-3 rounded-xl bg-white/70 border border-amber-200 p-3.5">
+            <p class="text-[11px] font-semibold text-amber-700 tracking-wide mb-2.5">주고받는 과정 · <span class="text-brand-700">🧠 Agent</span> ↔ <span class="text-emerald-700">🧑 사람</span></p>
+            <ol class="space-y-2.5">
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">1</span><span><b class="text-brand-700">🧠 Agent · 최종 산출물 모으기</b> — 회의록·제안서·액션아이템 등 외부로 나갈 결과물을 한데 정리합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">2</span><span><b class="text-brand-700">🧠 Agent · 발송안 제시</b> — 누구에게(수신자), 어떤 채널(메일·메신저)로, 어디 KMS에 기록할지 발송·기록 계획을 함께 보여줍니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold grid place-items-center mt-1">3</span><span><b class="text-brand-700">🧠 Agent · 미리보기 & 리스크 표시</b> — 누구에게 무엇이 가는지 미리보기를 제공하고, 외부 수신자·민감정보 등 되돌리기 어려운 리스크를 플래그합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold grid place-items-center mt-1">4</span><span><b class="text-emerald-700">🧑 사람 · 내용·수신자 검토 & 수정</b> — 산출물·수신자·문구를 최종 확인하고 필요하면 고칩니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold grid place-items-center mt-1">5</span><span><b class="text-emerald-700">🧑 사람 · 최종 승인 / 반려</b> — "메일 발송·KMS 기록을 수행"을 승인하거나 보류·반려합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-amber-300 text-amber-900 text-[10px] font-bold grid place-items-center mt-1">6</span><span><b class="text-amber-800">🧠 Agent · 승인 결과 처리</b> — 승인 시에만 실제 전송·기록(⑧단계)을 트리거하고, 반려 시 수정 단계로 되돌립니다.</span></li>
+            </ol>
+          </div>
+          <p class="text-amber-800 text-xs mt-2.5 font-semibold">→ 되돌리기 어려운 행동 직전의 안전장치 (Human In The Loop)</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="relative bg-white rounded-2xl border border-emerald-200 p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center font-bold">8</div>
+        <div>
+          <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">결과 전달 · 기록</span>
+          <h3 class="font-bold mt-1">참석자에게 공유 · KMS에 기록</h3>
+          <p class="text-slate-600 text-sm mt-1">승인을 받은 뒤 회의 결과가 <b>각 참석자에게 전달</b>되고, 관련 <b>KMS 페이지에 자동 기록</b>됩니다.</p>
+          <!-- 마무리 절차 -->
+          <div class="mt-4">
+            <p class="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">마무리 절차 · Master Agent가 하는 일</p>
+            <ol class="space-y-2.5">
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">1</span><span><b>채널별 발송</b> · 각 참석자·이해관계자에게 결과물을 메일·메신저 등 대상에 맞는 채널로 전달합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">2</span><span><b>KMS 자동 기록</b> · 산출물을 관련 KMS 공간에 분류·태깅하고 메타데이터와 함께 등록해 검색 가능한 조직 자산으로 남깁니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">3</span><span><b>액션아이템 등록·후속 예약</b> · 회의에서 정해진 할 일을 담당자·기한과 함께 등록하고, 후속 미팅 예약·마감 리마인더를 설정합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">4</span><span><b>전달 결과 확인</b> · 발송 성공/실패와 열람 여부를 추적하고, 실패 시 재시도합니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">5</span><span><b>완료 보고 & 링크 회신</b> · 현대영 책임님에게 "공유 완료 + KMS 기록 위치(링크)"를 회신해 마무리를 알립니다.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-700 leading-relaxed"><span class="shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold grid place-items-center mt-1">6</span><span><b>자산화·학습 반영</b> · 이번 회의 유형·요청 문구·산출물 패턴을 사내 암묵지/이력으로 축적해, 다음 회의의 ② 맥락 분석 정확도를 높입니다. <span class="text-emerald-700 font-semibold">(피드백 루프)</span></span></li>
+            </ol>
+            <p class="mt-2.5 text-[12px] text-emerald-700 font-semibold">↩ 축적된 학습이 ② 맥락 분석의 단서로 되돌아가 전체 흐름이 선순환합니다.</p>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="max-w-3xl mx-auto mt-10 bg-brand-50 border border-brand-200 rounded-2xl p-5 text-sm text-slate-700">
+    <b class="text-brand-700">💡 한 줄 요약</b> · 요청(1) → 이해(2) → 계획(3) → <b>HITL① 계획 승인(4)</b> → 승인·실행(5) → <b>HITL② 회의 시작·종료(6)</b> → <b>HITL③ 최종 승인(7)</b> → 결과 공유·기록(8).
+    이 표준 흐름 위에서 <b>사람의 확인(HITL)이 3번</b> 들어가며, ③번 <b>라이브 동작</b> 탭에서 이 흐름이 실제 Agent들과 함께 동작하는 모습을 봅니다.
+  </div>
+</section>
+
+<!-- =========================================================
+     ② Agent 목록
+========================================================== -->
+<section id="tab-agents" class="tab-panel" data-panel="agents" hidden>
+  <div class="mb-6">
+    <h2 class="text-xl sm:text-2xl font-extrabold">② Agent & 도구 (Agent · 엔진 · 커넥터 · 스킬)</h2>
+    <p class="text-slate-600 mt-1">Master Agent가 회의를 위해 불러 쓰는 <b>구성 요소들</b>입니다. 편의상 'Agent'라 부르지만, 실제로는 <b>자율 판단하는 Agent</b>와 그 아래에서 도구로 쓰이는 <b>엔진·모델 / 커넥터 / 스킬</b>로 나뉩니다.</p>
+  </div>
+
+  <!-- Master Agent feature card -->
+  <div class="mb-8 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white p-6 shadow-md">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-white/15 grid place-items-center text-2xl">🧠</div>
+      <div>
+        <p class="text-xs font-bold text-brand-100">총괄 · 오케스트레이터</p>
+        <h3 class="text-lg font-extrabold">Master Agent</h3>
+      </div>
+    </div>
+    <p class="text-brand-100 text-sm mt-3">회의의 맥락을 분석하고, 어떤 Agent와 데이터가 필요한지 판단해 <b>전체를 지휘</b>합니다. 사람(HITL)과 소통하는 창구이기도 합니다.</p>
+  </div>
+
+  <!-- worker agents grid -->
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" id="agent-grid"></div>
+</section>
+
+<!-- =========================================================
+     ③ 라이브 동작 (오케스트레이션 대시보드)
+========================================================== -->
+<section id="tab-live" class="tab-panel" data-panel="live" hidden>
+  <div class="mb-5">
+    <h2 class="text-xl sm:text-2xl font-extrabold">③ 라이브 동작 · 오케스트레이션 대시보드</h2>
+  </div>
+
+  <!-- controls -->
+  <div class="flex flex-wrap items-center gap-2 mb-5">
+    <div class="flex gap-1 bg-white border border-slate-200 rounded-lg p-1">
+      <button data-scn="0" class="lscn active px-3 py-1.5 rounded-md text-sm font-semibold">🗓️ 일반 회의</button>
+      <button data-scn="1" class="lscn px-3 py-1.5 rounded-md text-sm font-semibold">🔁 주간 반복</button>
+      <button data-scn="2" class="lscn px-3 py-1.5 rounded-md text-sm font-semibold">🚀 킥오프</button>
+    </div>
+    <button id="live-play" class="px-4 py-2 rounded-lg text-sm font-bold bg-brand-600 text-white shadow-sm">▶ 재생</button>
+    <button id="live-reset" class="px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-200">↺ 리셋</button>
+    <div class="flex gap-1 ml-1">
+      <button data-spd="1" class="lspd active px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-xs font-bold">1×</button>
+      <button data-spd="2" class="lspd px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-xs font-bold">2×</button>
+    </div>
+    <div class="ml-auto flex gap-3 text-xs text-slate-500">
+      <span>활성 <b id="m-active" class="text-brand-600">0</b></span>
+      <span>명령 <b id="m-cmd" class="text-slate-700">0</b></span>
+      <span>산출물 <b id="m-out" class="text-amber-600">0</b></span>
+    </div>
+  </div>
+
+  <!-- Master status -->
+  <div class="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white p-4 sm:p-5 shadow-md mb-4">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-white/15 grid place-items-center text-2xl">🧠</div>
+      <div class="min-w-0">
+        <p class="text-[11px] font-bold text-brand-100">총괄 · Master Agent (오케스트레이터)</p>
+        <p class="font-extrabold text-base sm:text-lg leading-tight" id="master-status">대기 중 — [▶ 재생]을 누르면 동작합니다</p>
+      </div>
+      <span class="ml-auto w-3 h-3 rounded-full bg-emerald-300" id="master-dot"></span>
+    </div>
+  </div>
+
+  <!-- interaction panel (HITL 승인/수정 · 시각 선택 · 회의 시작/종료) -->
+  <div id="act-panel" class="hidden mb-4 rounded-2xl border-2 p-4 sm:p-5 fade-in"></div>
+
+  <!-- 4-layer legend -->
+  <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px]">
+    <span class="font-bold text-slate-500 mr-1">동작 4단계</span>
+    <span class="inline-flex items-center gap-1 font-semibold text-indigo-600">🧠 Master</span>
+    <span class="text-slate-300">→</span>
+    <span class="inline-flex items-center gap-1 font-semibold text-fuchsia-600">🧭 근거·맥락 확인</span>
+    <span class="text-slate-400 text-[11px]">(왜 이 Agent?)</span>
+    <span class="text-slate-300">→</span>
+    <span class="inline-flex items-center gap-1 font-semibold text-sky-600">➡️ Agent 가동</span>
+    <span class="text-slate-300">→</span>
+    <span class="inline-flex items-center gap-1 font-semibold text-teal-600">⚙️ 데이터·근거로 동작</span>
+    <span class="text-slate-400 text-[11px]">(무엇으로 어떻게?)</span>
+    <span class="text-slate-300">→</span>
+    <span class="inline-flex items-center gap-1 font-semibold text-amber-600">⬅️ 응답·산출물</span>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-4">
+    <!-- orchestration map -->
+    <div>
+      <p class="text-xs font-bold text-slate-500 mb-2 h-9 flex items-end leading-tight">🗺️ 오케스트레이션 맵</p>
+      <div id="live-map" class="relative rounded-2xl border border-slate-700 overflow-hidden" style="height:500px">
+        <svg class="absolute inset-0" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" id="map-svg"></svg>
+        <div class="absolute inset-0" id="map-nodes"></div>
+        <div class="absolute" style="left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;text-align:center">
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-800 text-white grid place-items-center text-2xl shadow-xl ring-4 ring-brand-500/40">🧠</div>
+          <p class="text-[10px] font-extrabold text-brand-300 mt-1">Master Agent</p>
+        </div>
+        <div id="map-token" class="absolute" style="left:50%;top:50%;transform:translate(-50%,-50%);transition:left .55s cubic-bezier(.5,.1,.4,1),top .55s cubic-bezier(.5,.1,.4,1);z-index:7;pointer-events:none">
+          <div class="flow-dot"></div>
+        </div>
+        <div id="data-token" class="absolute" style="left:50%;top:50%;transform:translate(-50%,-50%);transition:left .6s ease,top .6s ease,opacity .25s;z-index:7;opacity:0;pointer-events:none">
+          <div class="px-2 py-0.5 rounded-full bg-sky-500 text-white text-[9px] font-bold shadow tracking-wide">DATA</div>
+        </div>
+      </div>
+      <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-slate-500">
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#6366f1"></span>동작</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.3)"></span>상시·병렬 동작 <span class="text-slate-400">(회의 중 녹취·통역·회의록·보안)</span></span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#10b981"></span>완료</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24"></span>대기 예정</span>
+        <span class="inline-flex items-center gap-1">🔁 <b class="font-semibold">선행→후행</b> 의존 전달</span>
+      </div>
+      <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-slate-500">
+        <span class="font-semibold text-slate-400">유형(노드 우상단 점)</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#7c3aed"></span>🤖 Agent</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#e11d48"></span>🧠 엔진·모델</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#0284c7"></span>🔌 커넥터</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#d97706"></span>⚙️ 스킬·모듈</span>
+      </div>
+      <input type="file" id="att-file" class="hidden" />
+    </div>
+    <!-- live log -->
+    <div>
+      <p class="text-xs font-bold text-slate-500 mb-2 h-9 flex items-end leading-tight">📡 실시간 동작 로그</p>
+      <div class="rounded-2xl bg-slate-900 text-slate-100 p-4 overflow-y-auto" id="live-log" style="height:500px">
+        <div id="log-body" class="space-y-1.5 text-[12.5px] leading-relaxed"><p class="text-slate-500 text-xs">재생을 누르면 메시지가 흐릅니다…</p></div>
+      </div>
+    </div>
+  </div>
+  <!-- outputs (full width) -->
+  <div class="mt-4 rounded-2xl bg-white border border-slate-200 p-4">
+    <p class="text-xs font-bold text-slate-500 mb-3">📦 생성된 산출물</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3" id="live-outputs"><span class="text-xs text-slate-400 placeholder col-span-full">아직 없음 — 재생하면 Agent들이 산출물을 만듭니다</span></div>
+  </div>
+
+  <!-- modal (그룹웨어 인력 검색 · 회의실 선택) -->
+  <div id="live-modal" class="hidden fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg max-h-[82vh] flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between p-4 border-b border-slate-200">
+        <p id="lm-title" class="font-bold text-slate-800"></p>
+        <button id="lm-close" class="w-8 h-8 rounded-lg border border-slate-200 grid place-items-center hover:bg-slate-100">✕</button>
+      </div>
+      <div class="p-3 border-b border-slate-200" id="lm-search-wrap"><input id="lm-search" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="이름·팀·직급 검색 (예: 김, 데이터분석팀, 책임)"></div>
+      <div id="lm-body" class="overflow-y-auto p-3 grow"></div>
+      <div class="p-3 border-t border-slate-200 text-xs text-slate-400" id="lm-foot"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     ④ 시스템 아키텍처 / 구성도
+========================================================== -->
+<section id="tab-arch" class="tab-panel" data-panel="arch" hidden>
+  <div class="mb-5">
+    <h2 class="text-xl sm:text-2xl font-extrabold">④ 시스템 아키텍처 · 구성도</h2>
+    <p class="text-slate-600 mt-1">앞에서 정리한 <b>Master Agent와 18종 구성요소</b>가 실제로 어디에 놓여 동작하는지를, <b>가. 네트워크·보안 배치 구성도</b>와 <b>나. Agentic AI Platform 8계층 논리 아키텍처</b> 두 관점으로 표현합니다.</p>
+  </div>
+
+  <!-- 범례 -->
+  <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-4">
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px]">
+      <span class="font-bold text-slate-500">보안 구역</span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:#fecaca;border:1px solid #f87171"></span>🌐 외부망 (Untrusted)</span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:#fde68a;border:1px solid #f59e0b"></span>🟧 DMZ (완충 구간)</span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:#bfdbfe;border:1px solid #3b82f6"></span>🟦 내부망 (Trusted)</span>
+      <span class="text-slate-300">|</span>
+      <span class="dup">⧉ 2중화</span><span class="text-slate-500">= 이중화(HA)·Active/Standby</span>
+      <span class="inline-flex items-center gap-1.5"><span style="font-size:13px">🔥</span> 방화벽</span>
+      <span class="inline-flex items-center gap-1.5"><span style="font-size:13px">🛡️</span> 웹방화벽(WAF)</span>
+      <span class="inline-flex items-center gap-1.5"><span style="font-size:13px">⇄</span> 스위치</span>
+      <span class="inline-flex items-center gap-1.5"><span style="font-size:13px">🚨</span> IDS/IPS</span>
+      <span class="inline-flex items-center gap-1.5"><span style="font-size:13px">🔒</span> VPN</span>
+      <span class="inline-flex items-center gap-1.5"><span style="font-size:13px">🔀</span> 망분리/망연계</span>
+      <span class="inline-flex items-center gap-1.5"><span style="font-size:13px">🏢</span> 백업/DR 센터</span>
+    </div>
+  </div>
+
+  <!-- Execution Loop 배너 -->
+  <div class="mb-7 rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-[11px] font-extrabold text-brand-700 bg-white border border-brand-200 rounded-lg px-3 py-2">⟳ Execution Loop</span>
+      <span class="loopstep">📥 Data</span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">🔗 Semantic</span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">🧠 Reasoning</span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">⚖️ Decision</span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">▶ Action</span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">📈 Learning</span>
+    </div>
+  </div>
+
+  <!-- ===================== 가. 네트워크 구성도 ===================== -->
+  <div class="mb-3 flex items-center gap-2">
+    <h3 class="text-lg font-extrabold text-slate-800">가. 네트워크 · 보안 배치 구성도</h3>
+    <span class="text-[12px] text-slate-400 hidden sm:inline">— 외부망 → DMZ → 내부망 (방화벽 2단 · 전 구간 2중화)</span>
+  </div>
+  <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-6 mb-10">
+
+    <!-- 외부망 -->
+    <div class="az" style="border-color:#f87171;background:#fef2f2">
+      <div class="zttl" style="color:#b91c1c">🌐 외부망 <span class="zsub">External / Untrusted Network · Internet</span></div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+        <div class="acard"><span class="at">👤 임직원·사용자</span><span class="as">PC·모바일 · 사외 접속</span></div>
+        <div class="acard"><span class="at">🏢 고객 / 외부</span><span class="as">한국무역협회 · 메일 수신</span></div>
+        <div class="acard"><span class="at">🤖 외부 LLM·SaaS</span><span class="as">LLM Provider · 그룹웨어 API</span></div>
+        <div class="acard"><span class="at">📡 채널</span><span class="as">Portal·Teams·Slack·Voice·Email·API</span></div>
+      </div>
+    </div>
+
+    <div class="aconn"></div>
+    <div class="text-center text-[11px] font-bold text-slate-500 mb-1">인터넷 전용회선 <span class="dup">⧉ 2중화</span> (메인/백업 ISP) · 🔒 HTTPS/TLS 1.3 (443)</div>
+    <div class="aconn"></div>
+
+    <!-- VPN 게이트웨이 -->
+    <div class="secband" style="background:#0891b2">🔒 VPN 게이트웨이 · 사외·재택 임직원 원격접속(SSL-VPN) <span class="dup" style="background:#fff;border-color:#fff;color:#0e7490">⧉ ×2 2중화</span> <span class="text-cyan-100 font-semibold text-[11px]">· 인증·암호화 터널로만 진입</span></div>
+
+    <div class="aconn"></div>
+
+    <!-- 1차 방화벽 -->
+    <div class="secband" style="background:#dc2626">🔥 1차 방화벽 · Perimeter Firewall <span class="dup" style="background:#fff;border-color:#fff;color:#b91c1c">⧉ ×2 2중화 (Active/Standby)</span></div>
+
+    <div class="aconn"></div>
+
+    <!-- IDS/IPS -->
+    <div class="secband" style="background:#7c3aed">🚨 IDS / IPS · 침입탐지·침입방지 시스템 <span class="dup" style="background:#fff;border-color:#fff;color:#6d28d9">⧉ ×2 2중화</span> <span class="text-violet-100 font-semibold text-[11px]">· 이상행위·악성 트래픽 실시간 탐지·차단</span></div>
+
+    <div class="aconn"></div>
+
+    <!-- DMZ -->
+    <div class="az" style="border-color:#f59e0b;background:#fffbeb">
+      <div class="zttl" style="color:#b45309">🟧 DMZ <span class="zsub">완충 구간 · 외부 노출 서비스만 배치 (논리 L1 경험/접근 계층의 노출 지점)</span></div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+        <div class="acard" style="border-color:#fcd34d"><span class="at">⚖️ L4/L7 로드밸런서 <span class="dup">⧉ 2중화</span></span><span class="as">트래픽 분산 · SSL 종단</span></div>
+        <div class="acard" style="border-color:#fb923c"><span class="at">🛡️ 웹방화벽 WAF <span class="dup">⧉ 2중화</span></span><span class="as">웹 공격 차단 · OWASP Top10</span></div>
+        <div class="acard" style="border-color:#fcd34d"><span class="at">🔀 Reverse Proxy</span><span class="as">API Gateway / SDK · 인증 게이트</span></div>
+        <div class="acard" style="border-color:#fcd34d"><span class="at">🖥️ 웹 프론트엔드 노드</span><span class="as">에이전트 포털·챗 UI (L1만 외부 노출)</span></div>
+      </div>
+      <p class="text-[10.5px] text-amber-700/90 mt-2">↳ 외부 요청은 반드시 DMZ의 WAF·프록시를 거쳐서만 내부망으로 전달됩니다. (직접 진입 차단)</p>
+    </div>
+
+    <div class="aconn"></div>
+
+    <!-- 2차 방화벽 -->
+    <div class="secband" style="background:#dc2626">🔥 2차 방화벽 · Internal Firewall <span class="dup" style="background:#fff;border-color:#fff;color:#b91c1c">⧉ ×2 2중화 (Active/Standby)</span></div>
+
+    <div class="aconn"></div>
+
+    <!-- 망분리 / 망연계 -->
+    <div class="secband" style="background:#0f766e">🔀 망분리 · 망연계 게이트웨이 <span class="dup" style="background:#fff;border-color:#fff;color:#0f766e">⧉ 2중화</span> <span class="text-teal-100 font-semibold text-[11px]">· 인터넷망 ↔ 업무망(폐쇄망) 물리/논리 분리 · 자료 무해화(CDR)로만 데이터 이동</span></div>
+
+    <div class="aconn"></div>
+
+    <!-- 코어 스위치 -->
+    <div class="swband">⇄ 코어 스위치 · L3 Core Switch <span class="dup" style="background:#1e293b;border-color:#475569;color:#fcd34d">⧉ ×2 2중화 (Stacking)</span> <span class="text-slate-400 font-semibold">+ 분배 스위치(Distribution) · VLAN 세그먼테이션</span></div>
+
+    <div class="aconn"></div>
+
+    <!-- 내부망 -->
+    <div class="az" style="border-color:#3b82f6;background:#eff6ff">
+      <div class="zttl" style="color:#1d4ed8">🟦 내부망 (업무망·폐쇄망) <span class="zsub">Internal Trusted Network · 망분리된 업무 영역 · 논리 L3~L8 실 동작</span></div>
+
+      <!-- App / Runtime Zone -->
+      <div class="mt-3 rounded-xl border-2 p-3" style="border-color:#a5b4fc;background:#fff">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <p class="text-[12.5px] font-extrabold text-brand-700">🟪 애플리케이션 · 에이전트 런타임 Zone <span class="font-semibold text-slate-400">· Container / Kubernetes (논리 L3)</span></p>
+          <span class="dup">⧉ 멀티노드 클러스터 2중화</span>
+        </div>
+        <p class="text-[10.5px] text-slate-500 mt-1.5">🧑‍💼 <b>이중 접근 경로</b> — 사내 임직원은 <b>업무망에서 사내 포털로 직접 접속</b>(DMZ 우회), 사외 임직원은 <b>VPN → DMZ(WAF·API GW)</b>를 거쳐 접속합니다. 임직원 중심 사용 환경.</p>
+        <p class="text-[10.5px] text-slate-500 mt-1">🔗 <b>내부 통신</b> — Master ↔ Agent는 <b>A2A 프로토콜</b>, Agent ↔ 도구·데이터는 <b>MCP</b>, 내부 서비스 간은 <b>gRPC · mTLS(Service Mesh)</b>로 통신합니다. (아래 「다. 연동·통신 방식」 참조)</p>
+        <!-- Master + 코어 -->
+        <div class="grid sm:grid-cols-3 gap-2 mt-2.5">
+          <div class="rounded-lg p-2.5 text-white" style="background:linear-gradient(135deg,#4f46e5,#3730a3)">
+            <p class="text-[11px] font-extrabold">🧠 Master Agent</p>
+            <p class="text-[10px] text-brand-100 mt-0.5 leading-snug">오케스트레이터 · Supervisor / Task Routing / A2A 협업</p>
+          </div>
+          <div class="rounded-lg border border-amber-300 bg-amber-50 p-2.5">
+            <p class="text-[11px] font-extrabold text-amber-800">✅ HITL 검토 게이트</p>
+            <p class="text-[10px] text-amber-700 mt-0.5 leading-snug">Runtime Review / Approval Gate (3회 승인)</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+            <p class="text-[11px] font-extrabold text-slate-700">🛡️ 가드레일 · 도구 실행</p>
+            <p class="text-[10px] text-slate-500 mt-0.5 leading-snug">정책/권한 검사 · 입출력 필터 · 도구 호출/검증</p>
+          </div>
+        </div>
+        <!-- 18종 Agent chips (②번 탭 데이터 재사용) -->
+        <p class="text-[10.5px] font-bold text-slate-400 mt-3 mb-1.5">회의 구성요소 18종 · ②번 탭에서 정리한 Agent·엔진·커넥터·스킬이 이 런타임 위에서 동작</p>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2" id="arch-agent-chips"></div>
+      </div>
+
+      <!-- AI / Data Zone -->
+      <div class="grid md:grid-cols-2 gap-2 mt-2">
+        <div class="rounded-xl border-2 p-3" style="border-color:#f9a8d4;background:#fff">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <p class="text-[12.5px] font-extrabold" style="color:#be185d">🟥 AI · 모델 Zone <span class="font-semibold text-slate-400">(논리 L4 지식/시맨틱)</span></p>
+            <span class="dup">⧉ GPU 노드 2중화</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 mt-2.5">
+            <div class="acard" style="border-color:#f9a8d4"><span class="at">🖥️ 컴퓨팅 / GPU</span><span class="as">Compute / GPU 서버 풀</span></div>
+            <div class="acard" style="border-color:#f9a8d4"><span class="at">🚪 모델 게이트웨이</span><span class="as">내부 라우팅 · LLM/sLLM Provider</span></div>
+            <div class="acard" style="border-color:#f9a8d4"><span class="at">🔗 온톨로지·지식그래프</span><span class="as">Semantic Model · Knowledge Graph</span></div>
+            <div class="acard" style="border-color:#f9a8d4"><span class="at">🎯 컨텍스트 조합 (RAG)</span><span class="as">Context Assembly · 근거 검색</span></div>
+          </div>
+        </div>
+        <div class="rounded-xl border-2 p-3" style="border-color:#67e8f9;background:#fff">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <p class="text-[12.5px] font-extrabold" style="color:#0e7490">🟦 데이터 Zone <span class="font-semibold text-slate-400">(논리 L5 데이터/연동)</span></p>
+            <span class="dup">⧉ DB 2중화 (복제·Failover)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 mt-2.5">
+            <div class="acard" style="border-color:#67e8f9"><span class="at">🗄️ RDB / 스토리지</span><span class="as">Active ⇄ Standby 실시간 복제</span></div>
+            <div class="acard" style="border-color:#67e8f9"><span class="at">🧮 Vector / Graph DB</span><span class="as">임베딩 인덱스 · 하이브리드 스토어</span></div>
+            <div class="acard" style="border-color:#67e8f9"><span class="at">🗂️ KMS · 지식 자산</span><span class="as">문서·제안서·회의록 보관</span></div>
+            <div class="acard" style="border-color:#67e8f9"><span class="at">🔌 데이터 커넥터</span><span class="as">DB·API·SaaS·파일/이벤트 수집</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 거버넌스 / 운영 Zone -->
+      <div class="rounded-xl border-2 p-3 mt-2" style="border-color:#cbd5e1;background:#fff">
+        <p class="text-[12.5px] font-extrabold text-slate-600">🟫 거버넌스 · 평가 · 운영 Zone <span class="font-semibold text-slate-400">(논리 L6 품질/평가 · L7 컨트롤/거버넌스)</span></p>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2.5">
+          <div class="acard"><span class="at">📊 품질/근거 평가</span><span class="as">Grounding · RAI/편향</span></div>
+          <div class="acard"><span class="at">📈 성능/비용 모니터링</span><span class="as">관측성 Observability</span></div>
+          <div class="acard"><span class="at">🔐 정책·권한 통제</span><span class="as">RBAC · Agent Access</span></div>
+          <div class="acard"><span class="at">🕵️ 개인정보·감사</span><span class="as">Privacy · 감사 로그</span></div>
+          <div class="acard"><span class="at">🚀 사용량·배포 거버넌스</span><span class="as">Usage / Deployment Gov.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="aconn"></div>
+
+    <!-- L8 인프라 푸터 -->
+    <div class="secband" style="background:linear-gradient(90deg,#334155,#475569)">🏗️ 플랫폼 인프라 계층 (L8) · 하이브리드 <span class="text-slate-200 font-semibold text-[12px]">🏢 온프레미스(On-prem) + ☁️ 클라우드(Cloud) · 컨테이너/K8s · 네트워크/보안</span></div>
+
+    <!-- 백업 / DR 센터 -->
+    <div class="mt-4 flex items-stretch gap-2">
+      <div class="hidden sm:flex flex-col items-center justify-center text-[10px] font-bold text-slate-400 px-1"><span>주센터</span><span class="text-lg leading-none my-0.5">⇅</span><span>DR 복제</span></div>
+      <div class="az flex-1" style="border-color:#94a3b8;background:#f8fafc;border-style:dashed">
+        <div class="zttl" style="color:#475569">🏢 백업 · 재해복구(DR) 센터 <span class="zsub">Disaster Recovery Site · 주센터와 물리적으로 분리된 별도 센터 (지역 이중화)</span></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+          <div class="acard"><span class="at">🗄️ DB 실시간 복제</span><span class="as">주센터 ⇄ DR 동기/준동기</span></div>
+          <div class="acard"><span class="at">💾 백업 스토리지</span><span class="as">일·주 단위 백업 · 보관주기 관리</span></div>
+          <div class="acard"><span class="at">🔁 장애 절체 Failover</span><span class="as">RTO/RPO 기준 자동 전환</span></div>
+          <div class="acard"><span class="at">🧯 업무연속성 BCP</span><span class="as">재해 시에도 서비스 지속</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 나. 논리 8계층 ===================== -->
+  <div class="mb-3 flex items-center gap-2">
+    <h3 class="text-lg font-extrabold text-slate-800">나. 논리 아키텍처 — Agentic AI Platform 8계층</h3>
+    <span class="text-[12px] text-slate-400 hidden sm:inline">— 기업 업무를 처음부터 끝까지 수행하는 Enterprise Agentic AI Platform</span>
+  </div>
+
+  <!-- 8계층이 유기적으로 동작하는 순서 -->
+  <div class="rounded-2xl border border-brand-200 bg-brand-50/60 p-4 mb-4">
+    <p class="text-[12px] font-extrabold text-brand-700 mb-2.5">⚙️ 8계층은 이렇게 유기적으로 맞물려 동작합니다 — 요청 한 건이 흐르는 순서</p>
+    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-2">
+      <span class="loopstep">① 요청 진입 <b class="text-brand-700">L1</b></span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">② 계획·오케스트레이션 <b class="text-brand-700">L3</b></span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">③ 지식·데이터 조회 <b class="text-brand-700">L4·L5</b></span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">④ 추론·도구실행·생성 <b class="text-brand-700">L3</b></span><span class="text-brand-300 font-bold">→</span>
+      <span class="loopstep">⑤ 응답 <b class="text-brand-700">L1</b></span>
+    </div>
+    <div class="mt-3 grid sm:grid-cols-2 gap-x-5 gap-y-1 text-[11.5px] text-slate-600">
+      <p>🧠 <b class="text-brand-700">L3 실행환경이 중심(허브)</b> — 나머지 계층을 불러 씁니다.</p>
+      <p>🚪 <b>L1</b>은 사람과 닿는 <b>창구</b>(입구·출구).</p>
+      <p>📚 <b>L4·L5</b>는 엔진이 끌어다 쓰는 <b>지식·데이터 공급원</b>.</p>
+      <p>🏗️ <b>L8 인프라</b>가 전 계층을 <b>떠받치는 토대</b>.</p>
+      <p>🧰 <b>L2 설계</b>는 런타임 전에 <b>Agent·도구를 만들어 등록</b>.</p>
+      <p>📊🛡️ <b>L6 평가·L7 거버넌스</b>가 이 과정을 <b>상시 감시·통제</b>.</p>
+    </div>
+  </div>
+
+  <div class="space-y-2.5" id="arch-layers"></div>
+
+  <!-- ===================== 다. 연동·통신 방식 ===================== -->
+  <div class="mt-10 mb-3 flex items-center gap-2">
+    <h3 class="text-lg font-extrabold text-slate-800">다. 구성요소 간 연동 · 통신 방식</h3>
+    <span class="text-[12px] text-slate-400 hidden sm:inline">— 누가 누구와 · 어떤 프로토콜 · 어떤 보안으로 통신하는가</span>
+  </div>
+
+  <!-- 프로토콜 범례 -->
+  <div class="rounded-2xl border border-slate-200 bg-white p-4 mb-3">
+    <p class="text-[11px] font-bold text-slate-400 mb-2">통신 프로토콜 · 표준</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-[12px]">
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#ef4444;background:#fef2f2"><b style="color:#b91c1c">🔒 HTTPS / TLS 1.3</b><span class="text-slate-500"> · 외부 구간 암호화(443)</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#3b82f6;background:#eff6ff"><b style="color:#1d4ed8">🔁 REST / GraphQL</b><span class="text-slate-500"> · 동기 API 호출</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#0ea5e9;background:#f0f9ff"><b style="color:#0369a1">⚡ gRPC</b><span class="text-slate-500"> · 내부 고성능 RPC</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#7c3aed;background:#f5f3ff"><b style="color:#6d28d9">🔗 MCP</b><span class="text-slate-500"> · Agent ↔ 도구·데이터 표준 연결</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#4f46e5;background:#eef2ff"><b style="color:#4338ca">🤝 A2A</b><span class="text-slate-500"> · Agent 간 협업(Agent-to-Agent)</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#d97706;background:#fffbeb"><b style="color:#b45309">📨 Event · Kafka</b><span class="text-slate-500"> · 비동기 이벤트·스트리밍</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#0d9488;background:#f0fdfa"><b style="color:#0f766e">🗄️ SQL · Vector API</b><span class="text-slate-500"> · DB 질의</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#059669;background:#ecfdf5"><b style="color:#047857">🔑 OAuth2/JWT · mTLS</b><span class="text-slate-500"> · 인증·상호 TLS</span></div>
+      <div class="rounded-lg border-l-4 px-2.5 py-1.5" style="border-left-color:#64748b;background:#f8fafc"><b style="color:#475569">🚧 망연계(CDR)</b><span class="text-slate-500"> · 망분리 단방향·무해화</span></div>
+    </div>
+  </div>
+
+  <!-- 연동 관계표 -->
+  <div class="rounded-2xl border border-slate-200 bg-white overflow-x-auto mb-2">
+    <table class="w-full text-left border-collapse" style="min-width:760px">
+      <thead>
+        <tr class="bg-slate-100 text-[11px] text-slate-500 font-bold">
+          <th class="px-3 py-2.5">구간 (From → To)</th>
+          <th class="px-3 py-2.5">통신 방식</th>
+          <th class="px-3 py-2.5">보안 · 인증</th>
+          <th class="px-3 py-2.5">용도</th>
+        </tr>
+      </thead>
+      <tbody class="text-[12px] text-slate-700 divide-y divide-slate-100">
+        <tr><td class="px-3 py-2"><b>임직원(사외)</b> → 포털·챗 UI(DMZ)</td><td class="px-3 py-2"><span class="font-bold text-rose-600">HTTPS/TLS 1.3</span></td><td class="px-3 py-2">WAF · OAuth2</td><td class="px-3 py-2 text-slate-500">화면 접속</td></tr>
+        <tr><td class="px-3 py-2"><b>임직원(사내)</b> → 사내 포털(업무망)</td><td class="px-3 py-2"><span class="font-bold text-rose-600">HTTPS(내부)</span></td><td class="px-3 py-2">SSO · RBAC</td><td class="px-3 py-2 text-slate-500">직접 접속(DMZ 우회)</td></tr>
+        <tr><td class="px-3 py-2">API Gateway → <b>Master Agent</b></td><td class="px-3 py-2"><span class="font-bold text-blue-600">REST</span> / <span class="font-bold text-sky-600">gRPC</span></td><td class="px-3 py-2">JWT · mTLS</td><td class="px-3 py-2 text-slate-500">요청 라우팅</td></tr>
+        <tr class="bg-indigo-50/40"><td class="px-3 py-2"><b>Master</b> ↔ <b>Agent</b></td><td class="px-3 py-2"><span class="font-bold text-indigo-600">A2A 프로토콜</span></td><td class="px-3 py-2">mTLS · RBAC</td><td class="px-3 py-2 text-slate-500">작업 분배·협업</td></tr>
+        <tr class="bg-violet-50/40"><td class="px-3 py-2"><b>Agent</b> ↔ 도구·커넥터</td><td class="px-3 py-2"><span class="font-bold text-violet-600">MCP</span></td><td class="px-3 py-2">토큰 · 정책 검사</td><td class="px-3 py-2 text-slate-500">도구 호출(읽기/쓰기)</td></tr>
+        <tr><td class="px-3 py-2"><b>Agent</b> → 모델 GW → LLM/sLLM</td><td class="px-3 py-2"><span class="font-bold text-purple-600">REST(OpenAI 호환)</span></td><td class="px-3 py-2">mTLS · API Key</td><td class="px-3 py-2 text-slate-500">프롬프트·추론</td></tr>
+        <tr><td class="px-3 py-2"><b>Agent</b> ↔ RDB · Vector · KMS</td><td class="px-3 py-2"><span class="font-bold text-teal-600">SQL · gRPC · Vector API</span></td><td class="px-3 py-2">TLS · 계정 권한</td><td class="px-3 py-2 text-slate-500">데이터 조회·기록</td></tr>
+        <tr><td class="px-3 py-2"><b>Agent</b> → 외부 SaaS · 외부 LLM</td><td class="px-3 py-2"><span class="font-bold text-slate-600">REST + Egress Proxy</span></td><td class="px-3 py-2">TLS · OAuth2</td><td class="px-3 py-2 text-slate-500">그룹웨어·클라우드</td></tr>
+        <tr class="bg-slate-50"><td class="px-3 py-2">인터넷망 ↔ 업무망</td><td class="px-3 py-2"><span class="font-bold text-slate-600">망연계(CDR)</span></td><td class="px-3 py-2">단방향 · 무해화</td><td class="px-3 py-2 text-slate-500">자료 반입/반출</td></tr>
+        <tr><td class="px-3 py-2">내부 서비스 전체</td><td class="px-3 py-2"><span class="font-bold text-emerald-600">Service Mesh(mTLS)</span></td><td class="px-3 py-2">상호 인증 · 제로트러스트</td><td class="px-3 py-2 text-slate-500">서비스 간 통신</td></tr>
+        <tr><td class="px-3 py-2">이벤트 · 감사 로그</td><td class="px-3 py-2"><span class="font-bold text-amber-600">Event Bus / Kafka</span></td><td class="px-3 py-2">TLS</td><td class="px-3 py-2 text-slate-500">비동기 · 관측성</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="text-[11px] text-slate-400 mb-2">※ 모든 통신은 기본적으로 암호화(TLS)·상호 인증(mTLS)·최소권한(RBAC)을 전제로 하는 <b>제로트러스트</b> 원칙을 따릅니다. 이 연동이 실제로 흐르는 모습은 <b>⑤ 데이터 흐름</b> 탭에서 확인할 수 있습니다.</p>
+
+  <div class="mt-8 rounded-2xl bg-brand-50 border border-brand-200 p-5 text-sm text-slate-700">
+    <b class="text-brand-700">💡 두 그림의 관계</b> · <b>가. 네트워크 구성도</b>는 "어디에 무엇이 물리적으로 놓이고 어떻게 보호되는가"(외부망–DMZ–내부망, 방화벽·WAF·스위치·2중화)를, <b>나. 8계층 논리 아키텍처</b>는 "기능이 어떤 층으로 쌓이는가"를 보여줍니다. ②번 탭의 <b>18종 Agent·도구</b>는 내부망 <b>L3 에이전트 런타임</b> 위에서 동작하며, <b>L1 접근 계층</b>만 DMZ로 노출됩니다.
+  </div>
+</section>
+
+<!-- =========================================================
+     ⑤ 데이터 흐름 시뮬레이터 (live data-flow)
+========================================================== -->
+<section id="tab-data" class="tab-panel" data-panel="data" hidden>
+  <div class="mb-2">
+    <h2 class="text-xl sm:text-2xl font-extrabold">⑤ 데이터 흐름 시뮬레이터</h2>
+    <p class="text-slate-600 mt-1">④ 시스템 구성도가 <b>실제 동작할 때 데이터가 어떻게 흐르는지</b>를 움직임으로 보여줍니다. 임직원이 <b>사외(외부망·VPN→DMZ)</b> 또는 <b>사내(내부망·업무망에서 직접)</b>로 요청하면 <b>Master Agent → 각 Agent → LLM·DB → 사람 승인 → 결과 전달</b>로 흐르며, 각 지점의 <b>처리량·토큰·QPS·응답시간이 실시간으로 변합니다.</b></p>
+  </div>
+
+  <!-- 현재 단계 내레이션 -->
+  <div id="fx-caption" class="mb-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-800">▶ [재생]을 누르면 데이터가 흐르기 시작합니다.</div>
+
+  <!-- 컨트롤 -->
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    <button id="fx-play" class="px-4 py-2 rounded-lg text-sm font-bold bg-brand-600 text-white shadow-sm">⏸ 일시정지</button>
+    <button id="fx-reset" class="px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-200">↺ 리셋</button>
+    <div class="flex gap-1 ml-1">
+      <button data-fspd="1" class="fx-spd px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-xs font-bold">1×</button>
+      <button data-fspd="2" class="fx-spd active px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-xs font-bold">2×</button>
+      <button data-fspd="4" class="fx-spd px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-xs font-bold">4×</button>
+    </div>
+    <label class="flex items-center gap-2 ml-2 text-xs font-semibold text-slate-500">요청량(부하)
+      <input id="fx-load" type="range" min="1" max="20" value="6" class="w-32 sm:w-44 accent-brand-600">
+      <b id="fx-loadv" class="text-brand-600 w-12">6 req/s</b>
+    </label>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4" id="fx-kpis"></div>
+
+  <!-- 범례 -->
+  <div class="mb-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px]">
+    <span class="font-bold text-slate-500">흐르는 데이터</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#5BC2FF"></span>요청(req)</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:#818cf8"></span>명령(cmd)</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#22d3ee"></span>질의(query)</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#2dd4bf"></span>데이터(RAG)</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#c084fc"></span>프롬프트/추론(LLM)</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#34d399"></span>승인(HITL)</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:#fbbf24"></span>산출물(out)</span>
+    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:#94a3b8"></span>외부호출(egress)</span>
+    <span class="text-slate-400">· 작은 칩 = 통과 보안장비(채널·VPN·방화벽·IDS/IPS·LB·WAF·API GW·망분리·스위치)</span>
+  </div>
+
+  <!-- 줌 컨트롤 -->
+  <div class="flex items-center justify-end gap-2 mb-2 max-w-6xl mx-auto px-4 sm:px-6">
+    <span class="text-[11px] font-semibold text-slate-400 mr-1">확대/축소</span>
+    <button id="fx-zoomout" class="w-8 h-8 rounded-lg border border-slate-200 bg-white font-bold text-slate-600 hover:bg-slate-50">－</button>
+    <button id="fx-zoomfit" class="px-2.5 h-8 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50">⤢ 맞춤</button>
+    <span id="fx-zoomlbl" class="text-xs font-bold text-brand-600 w-12 text-center">100%</span>
+    <button id="fx-zoomin" class="w-8 h-8 rounded-lg border border-slate-200 bg-white font-bold text-slate-600 hover:bg-slate-50">＋</button>
+  </div>
+
+  <!-- 캔버스 -->
+  <div id="fx-wrap"><div id="fx-holder"><div id="fx-graph"></div></div></div>
+  <p class="text-[11px] text-slate-400 mt-2 px-4 sm:px-6 max-w-6xl mx-auto">※ 화면 너비에 맞춰 <b>외부망부터 데이터 Zone까지 한 화면에 자동으로</b> 들어옵니다(가로 스크롤 없음). 좌측 외부망(사외)·내부망(사내)에서 발생한 요청이 보안구간을 지나 Master Agent로 모이고, LLM·DB를 거쳐 HITL 승인 후 결과로 나옵니다.</p>
+</section>
+
+</main>
+
+<footer class="border-t border-slate-200 bg-white">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
+    <span>회의로 이해하는 Agentic AI · Master Agent 동작 원리</span>
+    <span>비전공자용 설명 자료</span>
+  </div>
+</footer>
+
+<script>
+/* ---------- main tab switching ---------- */
+const tabs = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+tabs.forEach(btn => btn.addEventListener('click', () => {
+  const t = btn.dataset.tab;
+  tabs.forEach(b => { const on = b.dataset.tab === t;
+    b.classList.toggle('active', on);
+    b.classList.toggle('bg-slate-100', !on && b.closest('nav').classList.contains('sm:hidden'));
+  });
+  panels.forEach(p => {
+    const on = p.dataset.panel === t;
+    p.hidden = !on;
+    if (on) { p.classList.remove('fade-in'); void p.offsetWidth; p.classList.add('fade-in'); }
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}));
+
+/* ---------- ② agent cards (PLACEHOLDER — replace with image) ---------- */
+const AGENTS = [
+  { id:'sched',    icon:'🗓️', name:'일정 조율 Agent',   role:'회의 잡기',   desc:'참석자들의 빈 시간을 찾아 회의 시각을 정하고 초대장을 보냅니다.',
+    when:'Master가 "회의를 열어야 한다"고 판단하면 가장 먼저 호출. 시각·초대장 확정이 필요할 때.',
+    data:'그룹웨어 캘린더, 참석자 가용시간·근무시간, 회의실 가용 현황, 초대장 템플릿',
+    how:'참석자 일정을 교차 비교해 빈 시간 후보를 산출 → 사람이 시각 선택 → 확정 시각으로 초대장 초안 작성·발송.' },
+  { id:'room',     icon:'🚪', name:'회의실 예약 Agent', role:'회의실 예약', desc:'회의 규모·시간에 맞는 회의실을 찾아 예약합니다. (화상장비·인원 고려)',
+    when:'오프라인·하이브리드 회의로 물리 공간이 필요하다고 판단될 때.',
+    data:'회의실 마스터(동/층/인실/TV/에어컨/화상장비), 시간대별 예약 현황',
+    how:'인원수·시간·장비 요구를 조건으로 회의실 DB를 필터링 → 조건 충족 최소 회의실을 매칭·예약.' },
+  { id:'attendee', icon:'👥', name:'참석자 추천 Agent', role:'사람 찾기',   desc:'회의 주제에 꼭 필요한 사람을 조직/역할 기준으로 추천합니다.',
+    when:'주최자가 참석자를 특정하지 않았거나, 주제상 필수 인원 누락이 의심될 때.',
+    data:'인사·조직도, 역할(R&R) 매핑, 과거 동일 주제 회의 참석 이력',
+    how:'회의 목적을 조직도·역할·과거 이력과 매칭 → 필수/선택 참석자를 근거와 함께 추천.' },
+  { id:'research', icon:'🔎', name:'자료 수집 Agent',   role:'데이터 검색', desc:'KMS·과거 자료에서 회의에 필요한 근거 자료를 찾아옵니다. (RAG)',
+    when:'문서 작성·의사결정에 근거가 필요할 때. 회의 전 사전 자료 + 회의 중 쟁점 발생 시 추가 호출.',
+    data:'KMS 문서, 과거 제안서·회의록, 외부 시장·경쟁사 리포트 (벡터 임베딩)',
+    how:'질의를 벡터 검색(RAG)으로 관련 문서 검색 → 관련도 순 정렬, 출처를 함께 제시.' },
+  { id:'proposal', icon:'📝', name:'제안서 작성 Agent', role:'문서 작성',   desc:'수집된 자료를 바탕으로 제안서 초안을 만듭니다.',
+    when:'회의 산출물로 제안서·문서가 필요할 때(제안 회의·킥오프 등).',
+    data:'자료 수집 Agent의 수집 자료, 회의 결정사항(회의록), 사내 제안서 표준 템플릿·수주 사례',
+    how:'수집 자료와 결정사항을 표준 템플릿 목차에 채워 LLM으로 제안서 초안 생성.' },
+  { id:'minutes',  icon:'🗒️', name:'회의록 작성 Agent', role:'기록',       desc:'회의 내용을 실시간으로 정리해 회의록 초안을 만듭니다.',
+    when:'회의가 실제로 시작되어 발언이 발생할 때(STT·통역과 동시 가동).',
+    data:'STT 전사 텍스트, 통역·번역 텍스트, 회의 안건(어젠다)',
+    how:'실시간 전사·번역 텍스트를 입력받아 안건·결정·미결·액션 항목으로 구조화·요약.' },
+  { id:'analysis', icon:'📊', name:'분석 Agent',        role:'분석',        desc:'데이터를 요약·비교해 의사결정에 필요한 인사이트를 뽑습니다.',
+    when:'비교·평가·리스크 판단 등 정량/논리 분석이 필요한 회의일 때.',
+    data:'수집 자료, 정량 데이터(시장·실적), 비교·평가 기준',
+    how:'데이터를 통계·비교 처리해 핵심 인사이트와 리스크를 도출, 분석 요약 생성.' },
+  { id:'action',   icon:'✅', name:'액션아이템 Agent',  role:'할 일 관리',  desc:'회의에서 정해진 할 일을 담당자·기한과 함께 정리합니다.',
+    when:'회의에서 할 일·결정사항이 도출됐을 때(회의 종료 후).',
+    data:'회의록(결정·미결 항목), 참석자 R&R, 캘린더(기한 산정)',
+    how:'회의록에서 할 일을 추출 → 담당자·기한을 매핑해 추적 가능한 액션 리스트로 정리.' },
+  { id:'notify',   icon:'📨', name:'알림·전달 Agent',   role:'공유',        desc:'결과물을 각 참석자에게 메일/메신저로 전달합니다.',
+    when:'최종 산출물을 참석자·이해관계자에게 공유해야 할 때(최종 승인 후).',
+    data:'참석자 연락처·채널, 최종 산출물, 발송 채널 설정',
+    how:'대상별 채널(메일·메신저)로 결과물과 요약을 자동 발송, 전달 결과 회신.' },
+  { id:'kms',      icon:'🗂️', name:'KMS 기록 Agent',    role:'보관',        desc:'최종 결과를 관련 KMS 페이지에 자동으로 등록합니다.',
+    when:'결과를 조직 자산으로 보관·검색 가능하게 남겨야 할 때(최종 승인 후).',
+    data:'최종 산출물, KMS 분류 체계·접근 권한, 태그 규칙',
+    how:'산출물을 관련 KMS 공간에 분류·태깅 → 메타데이터와 함께 자동 등록.' },
+  { id:'stt',      icon:'🎤', name:'녹취·STT Agent',    role:'실시간 전사', desc:'회의 음성을 발언자별로 실시간 텍스트로 전사(녹취)합니다.',
+    when:'회의가 시작되어 음성이 발생할 때.',
+    data:'회의 오디오 스트림, 화자 음성 프로필, 도메인 용어 사전',
+    how:'오디오를 실시간 음성인식(STT) → 화자 분할·타임스탬프로 전사, 회의록 Agent에 전달.' },
+  { id:'slides',   icon:'📑', name:'발표자료 Agent',    role:'슬라이드',    desc:'안건·자료를 바탕으로 발표용 슬라이드 초안을 만듭니다.',
+    when:'회의에서 발표·시연용 자료가 필요할 때.',
+    data:'회의 안건, 수집 자료, 사용자 업로드 참고자료, 발표 템플릿',
+    how:'안건·자료를 슬라이드 템플릿에 배치해 초안 생성, 참고자료 업로드 시 반영.' },
+  { id:'translate',icon:'🌐', name:'통역·번역 Agent',   role:'다국어',      desc:'글로벌 참석자를 위해 실시간 통역·자막·문서 번역을 제공합니다.',
+    when:'외국어 참석자가 있거나 다국어 산출물이 필요할 때(STT와 동시 가동).',
+    data:'STT 전사 텍스트, 도메인 용어집(사전), 대상 언어 설정',
+    how:'전사 텍스트를 실시간 번역·자막화하고, 회의록·문서의 번역본을 생성.' },
+  { id:'followup', icon:'🔔', name:'후속관리 Agent',    role:'후속·리마인더', desc:'후속 미팅 예약과 마감 리마인더를 자동으로 관리합니다.',
+    when:'회의 후 후속 미팅·마감 관리가 필요할 때(회의 종료 후).',
+    data:'액션아이템·기한, 참석자 캘린더, 알림 정책',
+    how:'액션 기한을 기준으로 후속 미팅을 예약하고 담당자 마감 리마인더를 자동 등록.' },
+  { id:'vibe',     icon:'🧑‍💻', name:'바이브 코딩 Agent', role:'프로토타입',  desc:'회의 결과·제안 내용을 AI 바이브 코딩으로 즉석에서 동작하는 HTML 시제품·대시보드로 만듭니다.',
+    when:'제안·아이디어를 동작하는 화면으로 빠르게 시연해야 할 때.',
+    data:'제안서·솔루션 정의, UI 컴포넌트·디자인 템플릿, 호스팅 환경',
+    how:'솔루션 내용을 입력받아 AI 코드 생성으로 HTML 시제품을 제작, 시연 공유 링크 생성.' },
+  { id:'security', icon:'🛡️', name:'보안·컴플라이언스 Agent', role:'검수·보안', desc:'외부로 나갈 산출물에 민감정보·개인정보가 없는지, 수신자가 적절한지 발송 전에 검수합니다.',
+    when:'HITL③ 최종 승인 직전, 결과물이 외부·타부서로 나가기 전(되돌리기 어려운 행동 직전).',
+    data:'개인정보·보안등급 정책, 민감정보·금칙어 패턴, 수신자 도메인·권한 화이트리스트',
+    how:'산출물과 수신자를 보안 정책과 대조해 위반을 탐지 → 마스킹·경고·차단 플래그를 Master에 전달.' },
+  { id:'verify',   icon:'🧐', name:'품질 검증 Agent', role:'품질 검증', desc:'제안서·회의록·분석 결과의 사실관계·일관성·누락을 근거와 대조해 검수합니다.',
+    when:'산출물이 생성된 뒤 사람 검토·발송 전(3·5·7단계의 누락 점검·재검증 지점).',
+    data:'원본 근거 자료, 표준 템플릿·체크리스트, 인용 출처, 과거 산출물',
+    how:'산출물을 근거 자료와 대조해 사실 오류·논리 비약·빠진 항목을 점검하고 수정 제안을 표시.' },
+  { id:'learn',    icon:'📚', name:'지식 자산화 Agent', role:'학습·자산화', desc:'회의 유형·요청 문구·산출물 패턴을 사내 지식으로 축적해 다음 회의의 분석 정확도를 높입니다.',
+    when:'회의 마무리(8단계) 후, 결과를 조직 학습으로 되먹임할 때(피드백 루프).',
+    data:'이번 회의 유형·요청 문구·산출물, 기존 암묵지·임베딩 인덱스, 사용자 피드백',
+    how:'산출물·패턴을 정규화해 지식베이스·검색 인덱스에 반영하고 회의 특화 sLLM 학습 데이터로 축적.' },
+];
+/* ===== 구성요소 유형 분류 (Agent / 엔진·모델 / 커넥터 / 스킬) ===== */
+const TYPE_META={
+  agent:{label:'🤖 Agent',     color:'#7c3aed', bg:'#f3e8ff', tcol:'#6d28d9', desc:'자율 추론·판단·도구 오케스트레이션'},
+  model:{label:'🧠 엔진·모델', color:'#e11d48', bg:'#ffe4e6', tcol:'#be123c', desc:'AI 모델·클라우드 API (STT·번역·임베딩)'},
+  conn: {label:'🔌 커넥터',     color:'#0284c7', bg:'#e0f2fe', tcol:'#0369a1', desc:'외부 시스템·SaaS 연동 (읽기/쓰기)'},
+  skill:{label:'⚙️ 스킬·모듈', color:'#d97706', bg:'#fef3c7', tcol:'#b45309', desc:'단일 LLM 기능·규칙엔진·자동화'},
+};
+const AGENT_TYPE={sched:'conn',room:'conn',attendee:'agent',research:'agent',proposal:'agent',minutes:'agent',analysis:'agent',action:'skill',notify:'conn',kms:'conn',stt:'model',slides:'skill',translate:'model',followup:'skill',vibe:'agent',security:'skill',verify:'agent',learn:'model'};
+function typeBadge(id){ const m=TYPE_META[AGENT_TYPE[id]]; if(!m)return ''; return '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded" style="color:'+m.tcol+';background:'+m.bg+'">'+m.label+'</span>'; }
+const grid = document.getElementById('agent-grid');
+const cardHTML = a => `
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-brand-300 transition">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-brand-50 grid place-items-center text-xl">${a.icon}</div>
+      <div class="min-w-0">
+        <p class="text-[11px] font-bold text-brand-600 bg-brand-50 inline-block px-2 py-0.5 rounded">${a.role}</p>
+        <h3 class="font-bold leading-tight mt-0.5">${a.name}</h3>
+      </div>
+    </div>
+    <p class="text-slate-600 text-sm mt-3 leading-relaxed">${a.desc}</p>
+    <div class="mt-3 pt-3 border-t border-slate-100 space-y-2.5 text-[12px]">
+      <div>
+        <p class="font-bold text-amber-700 flex items-center gap-1">🧭 Master의 선택 근거</p>
+        <p class="text-slate-600 mt-0.5 leading-relaxed">${a.when}</p>
+      </div>
+      <div>
+        <p class="font-bold text-emerald-700 flex items-center gap-1">🗂️ 사용 데이터·자료</p>
+        <p class="text-slate-600 mt-0.5 leading-relaxed">${a.data}</p>
+      </div>
+      <div>
+        <p class="font-bold text-brand-700 flex items-center gap-1">⚙️ 수행 방식</p>
+        <p class="text-slate-600 mt-0.5 leading-relaxed">${a.how}</p>
+      </div>
+    </div>
+  </div>`;
+const TYPE_ORDER=['agent','model','conn','skill'];
+grid.innerHTML = TYPE_ORDER.map(t=>{
+  const items=AGENTS.filter(a=>AGENT_TYPE[a.id]===t);
+  if(!items.length) return '';
+  const m=TYPE_META[t];
+  const header='<div class="col-span-full flex items-center gap-2 mt-5 first:mt-0">'+
+    '<span class="w-3.5 h-3.5 rounded-full shrink-0" style="background:'+m.color+'"></span>'+
+    '<h3 class="font-extrabold text-slate-800">'+m.label+'</h3>'+
+    '<span class="text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0" style="color:'+m.tcol+';background:'+m.bg+'">'+items.length+'개</span>'+
+    '<span class="text-[12px] text-slate-400 hidden sm:inline">'+m.desc+'</span>'+
+    '<span class="flex-1 border-t border-slate-200 ml-1"></span>'+
+    '</div>';
+  return header + items.map(cardHTML).join('');
+}).join('');
+
+/* ---------- ④ 시스템 구성도 : Agent 칩(②번 데이터 재사용) ---------- */
+(function(){
+  const chips=document.getElementById('arch-agent-chips');
+  if(chips){
+    chips.innerHTML = TYPE_ORDER.map(t=>{
+      const items=AGENTS.filter(a=>AGENT_TYPE[a.id]===t); if(!items.length) return '';
+      const m=TYPE_META[t];
+      return '<div class="rounded-lg border p-2" style="border-color:'+m.color+'55;background:'+m.bg+'66">'+
+        '<div class="flex items-center gap-1.5 mb-1.5"><span class="w-2 h-2 rounded-full" style="background:'+m.color+'"></span>'+
+        '<span class="text-[10.5px] font-extrabold" style="color:'+m.tcol+'">'+m.label+'</span>'+
+        '<span class="text-[9px] font-bold px-1 rounded ml-auto" style="color:'+m.tcol+';background:#fff">'+items.length+'종</span></div>'+
+        '<div class="flex flex-wrap gap-1">'+items.map(a=>'<span class="inline-flex items-center gap-1 bg-white border rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-700" style="border-color:'+m.color+'55">'+a.icon+' '+a.name.replace(/ ?Agent$/,'').trim()+'</span>').join('')+'</div>'+
+        '</div>';
+    }).join('');
+  }
+
+  /* ---------- ④ 논리 8계층 스택 (이미지 원본 구조 재현) ---------- */
+  const layersEl=document.getElementById('arch-layers');
+  if(!layersEl) return;
+  const C=(t,s)=>'<div class="acard"><span class="at">'+t+'</span>'+(s?'<span class="as">'+s+'</span>':'')+'</div>';
+  const grid=(n,html)=>'<div class="grid grid-cols-2 sm:grid-cols-'+n+' gap-2">'+html+'</div>';
+  const LAYERS=[
+    {n:1,col:'#4f46e5',ks:'경험·접근',role:'🚪 사용자 입구·출구',ic:'👤',
+      body:grid(4, C('🖥️ 에이전트 포털','Agent Portal')+C('💬 코파일럿 / 챗 UI','Copilot / Chat UI')+C('🛡️ 관리자 콘솔','Admin Console')+C('🔌 API Gateway / SDK','API Gateway / SDK'))
+        +'<p class="text-[10.5px] text-slate-400 mt-1.5">Channels · Portal · Teams · Slack · Voice · Email · API</p>'},
+    {n:2,col:'#6366f1',ks:'설계·개발',role:'🧰 사전: Agent·도구 제작',ic:'✏️',
+      body:grid(4, C('🧩 에이전트 설계/디자인','Agent Design / Low-Code / UX')+C('🗂️ 프롬프트/워크플로우','Prompt / Workflow Design')+C('🔧 Tool Registry','API·함수·플러그인')+C('👥 Agent Registry','카탈로그·버전·메타·권한'))},
+    {n:3,col:'#4338ca',ks:'실행 환경',role:'🧠 핵심 엔진 · 허브',ic:'⚙️',special:true},
+    {n:4,col:'#0ea5e9',ks:'지식·시맨틱',role:'📚 엔진에 지식 공급',ic:'📘',
+      body:grid(4, C('🔗 온톨로지/시맨틱 모델','Ontology / Semantic Model')+C('🕸️ 지식그래프 구축/관리','Knowledge Graph')+C('🗃️ 하이브리드 지식 스토어','Graph DB · Vector DB')+C('🎯 컨텍스트 조합/근거','Context Assembly / RAG'))},
+    {n:5,col:'#06b6d4',ks:'데이터·연동',role:'🗄️ 엔진에 데이터 공급',ic:'🗄️',
+      body:'<p class="text-[10px] font-bold text-slate-400 mb-1">연결/수집 · Connectors</p>'+grid(4, C('🔌 DB&소스 커넥터','DB & Source')+C('🔌 API 커넥터','API Connector')+C('🔌 SaaS 커넥터','SaaS Connector')+C('🔌 파일/이벤트','File / Event'))
+        +'<p class="text-[10px] font-bold text-slate-400 mb-1 mt-2">데이터 처리 파이프라인 · Pipeline</p><div class="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-600">'
+        +'<span class="acard inline-block">수집 Ingest</span><span class="text-slate-300">→</span><span class="acard inline-block">정제 Cleanse</span><span class="text-slate-300">→</span><span class="acard inline-block">정규화 Normalize</span><span class="text-slate-300">→</span><span class="acard inline-block">변환 Transform</span></div>'
+        +'<p class="text-[10px] font-bold text-slate-400 mb-1 mt-2">데이터 관리 · Data Management</p>'+grid(4, C('📐 스키마 관리','Schema')+C('✅ 정합/품질 관리','Data Quality')+C('🏷️ 메타데이터 관리','Metadata')+C('🧬 계보 관리','Lineage'))},
+    {n:6,col:'#10b981',ks:'품질·평가',role:'📊 상시 평가·개선',ic:'📊',
+      body:grid(5, C('🔬 실험 추적','Experiment Tracking')+C('⭐ 품질/근거 평가','Quality / Grounding')+C('🛡️ RAI/편향성 평가','RAI / Bias')+C('📈 성능/비용 모니터링','Performance / Cost')+C('💬 사용자 피드백','User Feedback'))},
+    {n:7,col:'#059669',ks:'컨트롤·거버넌스',role:'🛡️ 상시 통제',ic:'🛡️',
+      body:grid(5, C('📋 정책 관리/통제','Policy / Control')+C('🔑 에이전트 권한 관리','Agent Access')+C('✅ HITL 승인 기준','Approval Policy')+C('🔒 개인정보 관리','Privacy')+C('🚀 사용량/배포 거버넌스','Usage / Deploy Gov.'))},
+    {n:8,col:'#475569',ks:'플랫폼 인프라',role:'🏗️ 전 계층 토대',ic:'🏗️',
+      body:grid(5, C('🖥️ 컴퓨팅 / GPU','Compute / GPU')+C('📦 컨테이너/쿠버네티스','Container / K8s')+C('🔐 네트워크 / 보안','Network / Security')+C('🗄️ RDB / 스토리지','RDB / Storage')+C('🧮 GraphDB / VectorDB','Graph / Vector'))
+        +'<div class="flex gap-2 mt-2 text-[11px] font-semibold"><span class="acard inline-block">🏢 온프레미스 On-premises</span><span class="acard inline-block">☁️ 클라우드 Cloud</span></div>'},
+  ];
+  const L3body=()=>{
+    const mini=(t,s,c)=>'<div class="rounded-lg border p-2" style="border-color:'+c+'66;background:'+c+'0d"><p class="text-[11px] font-extrabold" style="color:'+c+'">'+t+'</p><p class="text-[9.5px] text-slate-500 mt-0.5 leading-snug">'+s+'</p></div>';
+    return '<div class="flex flex-wrap items-center gap-1.5 mb-2 text-[10.5px] font-semibold text-slate-500">'
+      +'<span class="acard inline-block">🌐 REST / GraphQL</span><span class="acard inline-block">📶 WebSocket</span><span class="acard inline-block">🧱 gRPC</span><span class="acard inline-block">⚡ Event Trigger</span></div>'
+      +'<div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 mb-2">'
+        +'<p class="text-[11px] font-extrabold text-slate-700 mb-1.5">🧩 에이전트 코어 · Agent Core — 실행 엔진</p>'
+        +'<div class="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-600">'
+        +'<span class="acard inline-block">📥 입력 처리</span><span class="text-slate-300">→</span><span class="acard inline-block">🧠 계획/추론 Planning</span><span class="text-slate-300">→</span><span class="acard inline-block">▶ 행동 실행 Action</span><span class="text-slate-300">→</span><span class="acard inline-block">💬 응답 생성 Response</span><span class="text-brand-400 font-bold ml-1">⟳</span></div></div>'
+      +'<div class="grid sm:grid-cols-2 gap-2 mb-2">'
+        +mini('🧭 오케스트레이션 / 멀티에이전트','Supervisor · Task Routing · A2A 협업 · Protocol MCP·A2A','#4f46e5')
+        +mini('✅ HITL 런타임 검토 게이트','Runtime Review / Approval Gate','#d97706')+'</div>'
+      +'<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">'
+        +mini('🗃️ 메모리 Memory','대화 히스토리 · 단기 · 장기','#0ea5e9')
+        +mini('🚪 모델 게이트웨이','내부 라우팅/선택 · LLM Provider','#e11d48')
+        +mini('🔧 도구 실행 Tool Exec','도구 선택/호출 · 결과 파싱/검증','#7c3aed')
+        +mini('🛡️ 안전 / 가드레일','정책·권한·안정성 검사 · I/O 필터','#059669')+'</div>'
+      +'<div class="mt-2">'+mini('🧰 에이전트 관리 · Agent Management','라이프사이클 · 권한/역할(RBAC) · 버전 관리 · 모니터링','#64748b')+'</div>'
+      +'<div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[9.5px] font-semibold text-slate-400 border-t border-slate-100 pt-2">'
+        +'<span>세션/상태 관리</span><span>·</span><span>능력/스킬 관리</span><span>·</span><span>프롬프트/정책 관리</span><span>·</span><span>버전 관리</span><span>·</span><span>관측성 (Observability)</span></div>';
+  };
+  layersEl.innerHTML=LAYERS.map(l=>{
+    const body=l.special?L3body():l.body;
+    return '<div class="lyr">'
+      +'<div class="lyr-h" style="background:'+l.col+'"><span class="lnum"><span class="lnb">'+l.n+'</span><span class="lk">'+l.ic+' '+l.ks+'</span></span><span class="lrole">'+l.role+'</span></div>'
+      +'<div class="lyr-b'+(l.special?' ring-2 ring-brand-400':'')+'">'+(l.special?'<p class="text-[10.5px] font-bold text-brand-600 mb-2">🧠 이 계층이 전체의 두뇌(허브) — L1의 요청을 받아 L4·L5에서 지식·데이터를 끌어와 추론·도구 실행 후 응답을 만듭니다.</p>':'')+body+'</div></div>';
+  }).join('');
+})();
+
+/* ---------- ③ 라이브 오케스트레이션 대시보드 ---------- */
+(function(){
+  const mapNodesEl=document.getElementById('map-nodes'), mapSvg=document.getElementById('map-svg'), token=document.getElementById('map-token'), dataTok=document.getElementById('data-token');
+  const logEl=document.getElementById('live-log'), logBody=document.getElementById('log-body');
+  const outputs=document.getElementById('live-outputs'), attFile=document.getElementById('att-file');
+  const mStatus=document.getElementById('master-status'), mDot=document.getElementById('master-dot');
+  const mActive=document.getElementById('m-active'), mCmd=document.getElementById('m-cmd'), mOut=document.getElementById('m-out');
+  const playBtn=document.getElementById('live-play'), resetBtn=document.getElementById('live-reset');
+  const panel=document.getElementById('act-panel');
+  const modal=document.getElementById('live-modal'), lmTitle=document.getElementById('lm-title'), lmClose=document.getElementById('lm-close'), lmSearchWrap=document.getElementById('lm-search-wrap'), lmSearch=document.getElementById('lm-search'), lmBody=document.getElementById('lm-body'), lmFoot=document.getElementById('lm-foot');
+  const aname = id => (AGENTS.find(a=>a.id===id)||{}).name || id;
+
+  /* ===== KT ds 임직원 500명 (그룹웨어) ===== */
+  const SUR='김이박최정강조윤장임한오서신권황안송전홍고문양손배백허유남심노하곽성차주우구민나지엄채원천방'.split('');
+  const GIV=['민준','서연','도윤','지우','하준','지유','예준','지호','주원','서아','지안','하윤','시우','서윤','지민','수아','은우','유나','건우','채원','현우','다은','우진','윤서','지훈','지원','준우','예린','민재','소율','정우','은서','승현','지율','선우','서현','연우','수빈','동현','가은','태윤','시윤','준혁','하린','지환','수현','예원','도현','민결','서진'];
+  const TEAMS=['AX컨설팅팀','데이터분석팀','클라우드사업팀','AI플랫폼팀','사업기획팀','디지털전략본부','금융사업팀','공공사업팀','보안솔루션팀','인프라운영팀','영업1팀','영업2팀','품질관리팀','HR팀','재무팀','UX디자인팀','SI개발1팀','SI개발2팀'];
+  const GRD=['전임','선임','책임','담당','수석'];
+  const PEOPLE=[]; for(let i=0;i<500;i++){ PEOPLE.push({id:i, n:SUR[(Math.random()*SUR.length)|0]+GIV[(Math.random()*GIV.length)|0], t:TEAMS[(Math.random()*TEAMS.length)|0], g:GRD[(Math.random()*GRD.length)|0]}); }
+
+  /* ===== 회의실 ===== */
+  const ROOMS=[
+    {b:'본관 B동',f:5,cap:12,name:'대회의실 B-501',tv:true,ac:true,vc:true},
+    {b:'본관 B동',f:3,cap:6,name:'소회의실 B-301',tv:true,ac:true,vc:false},
+    {b:'본관 B동',f:8,cap:30,name:'대강당 B-801',tv:true,ac:true,vc:true},
+    {b:'본관 B동',f:5,cap:8,name:'회의실 B-505',tv:true,ac:false,vc:false},
+    {b:'신관 C동',f:2,cap:4,name:'포커스룸 C-201',tv:false,ac:true,vc:false},
+    {b:'신관 C동',f:6,cap:10,name:'세미나실 C-601',tv:true,ac:true,vc:true},
+    {b:'신관 C동',f:6,cap:16,name:'중회의실 C-602',tv:true,ac:true,vc:true},
+  ];
+  let pickedRoom=ROOMS[0], roomBody=null;
+  function pickRoom(){ const n=Math.max(attendees.length,1); const c=ROOMS.filter(r=>r.cap>=n).sort((a,b)=>a.cap-b.cap); return c[0]||ROOMS[ROOMS.length-1]; }
+  function renderRoom(){ const r=pickedRoom; const yn=(v)=>v?'text-emerald-600':'text-slate-400';
+    return '<div class="space-y-0.5"><div><b>'+r.b+' '+r.f+'층 · '+r.name+'</b> ('+r.cap+'인실)</div>'+
+      '<div class="flex flex-wrap gap-x-3 text-[11px]"><span class="'+yn(r.tv)+'">📺 TV '+(r.tv?'✓':'✕')+'</span><span class="'+yn(r.ac)+'">❄️ 에어컨 '+(r.ac?'✓':'✕')+'</span><span class="'+yn(r.vc)+'">📹 화상 '+(r.vc?'✓':'✕')+'</span></div>'+
+      '<div class="text-slate-500">확정 시각: '+pickedTime+'</div>'+
+      '<button data-room-change class="mt-1 text-[11px] text-brand-600 font-semibold hover:underline">＋ 다른 회의실로 변경</button></div>'; }
+
+  /* ===== 편집 가능 데이터 ===== */
+  const ATT0=[{t:'AX컨설팅팀',n:'현대영',g:'책임'},{t:'AX컨설팅팀',n:'정우진',g:'선임'},{t:'데이터분석팀',n:'김민서',g:'담당'},{t:'사업기획팀',n:'이수현',g:'전임'},{t:'디지털전략본부',n:'박성호',g:'본부장'}];
+  const DOC0=[{n:'2025 한국무역협회 제안 이력',s:'KMS · AX컨설팅 페이지'},{n:'경쟁사 솔루션 비교표 v3',s:'KMS · 사업기획팀 페이지'},{n:'제안 ROI 산정 템플릿',s:'KMS · 공통 양식함'},{n:'유사 제안서 3건(수주)',s:'KMS · 영업팀 페이지'},{n:'고객 RFP 원문·요구사항',s:'메일 첨부 · 고객 제공'}];
+  let attendees=ATT0.slice(), docs=DOC0.slice(), attBody=null, docBody=null;
+  let slideDocs=[], slideBody=null, attTarget='doc';
+  function renderAttendees(){
+    return attendees.map((a,i)=>'<div class="ed-row flex justify-between items-center gap-2 py-0.5"><span><span class="text-slate-500">'+a.t+'</span> · <b>'+a.n+'</b> · '+a.g+'</span><button data-del-att="'+i+'" class="text-rose-500 hover:text-rose-700 text-xs px-1 shrink-0">✕</button></div>').join('')+
+      (attendees.length?'':'<div class="text-slate-400 text-[11px]">(명단 비어 있음)</div>')+
+      '<button data-gw-att class="mt-1 text-[11px] text-brand-600 font-semibold hover:underline">＋ 그룹웨어에서 불러오기</button>';
+  }
+  function renderDocs(){
+    return docs.map((d,i)=>'<div class="ed-row flex justify-between items-start gap-2 py-0.5"><span class="min-w-0">「'+d.n+'」<span class="block text-[10px] text-slate-400">↳ 출처: '+d.s+'</span></span><button data-del-doc="'+i+'" class="text-rose-500 hover:text-rose-700 text-xs px-1 shrink-0">✕</button></div>').join('')+
+      (docs.length?'':'<div class="text-slate-400 text-[11px]">(자료 없음)</div>')+
+      '<div class="flex gap-2 mt-1"><button data-file-doc class="text-[11px] text-brand-600 font-semibold hover:underline">＋ 파일 첨부</button></div>';
+  }
+  function renderSlides(){
+    return C_SLIDES +
+      '<div class="mt-1.5 pt-1.5 border-t border-amber-200/70">'+
+      '<div class="text-[10px] font-semibold text-slate-500 mb-0.5">📎 발표자료 참고 업로드</div>'+
+      slideDocs.map((d,i)=>'<div class="ed-row flex justify-between items-center gap-2 py-0.5"><span class="min-w-0">「'+d.n+'」<span class="block text-[10px] text-slate-400">↳ '+d.s+'</span></span><button data-del-slide="'+i+'" class="text-rose-500 hover:text-rose-700 text-xs px-1 shrink-0">✕</button></div>').join('')+
+      (slideDocs.length?'':'<div class="text-slate-400 text-[11px]">(업로드된 참고자료 없음)</div>')+
+      '<div class="flex gap-2 mt-1"><button data-file-slide class="text-[11px] text-brand-600 font-semibold hover:underline">＋ 자료 업로드</button></div>'+
+      '</div>';
+  }
+
+  /* ===== 산출물 내용 ===== */
+  const TIMES=['6/18(수) 14:00–15:00','6/19(목) 10:00–11:00','6/19(목) 16:00–17:00','6/20(금) 11:00–12:00'];
+  let pickedTime=TIMES[1], timePicked=false, timesBody=null;
+  const row=(a,b)=>'<div class="flex justify-between gap-2"><span class="text-slate-500">'+a+'</span><span class="font-semibold">'+b+'</span></div>';
+  const C_MATRIX='<div class="space-y-0.5"><div>· 기획 — 사업기획팀(책임·전임)</div><div>· 기술 — 데이터분석팀·AX팀(선임·담당)</div><div>· 의사결정 — 디지털전략본부장</div><div>· 고객접점 — 영업팀(책임)</div></div>';
+  const C_TIMES=()=>'<div class="grid grid-cols-2 gap-1.5 text-[11px]">'+TIMES.map((t,i)=>{
+      const sel=timePicked && t===pickedTime;
+      return '<button data-time-pick="'+i+'" class="rounded-md px-2 py-1 text-center transition '+(sel?'bg-brand-600 text-white font-bold ring-2 ring-brand-300':'bg-slate-100 text-slate-600 hover:bg-slate-200')+'">'+(sel?'✓ ':'')+t+'</button>';
+    }).join('')+'</div>'+
+    '<div class="mt-1.5 flex items-center gap-1.5"><input data-time-custom class="flex-1 rounded-md border border-slate-200 px-2 py-1 text-[11px]" placeholder="직접 입력 (예: 6/21(토) 09:00–10:00)"><button data-time-apply class="text-[11px] text-brand-600 font-semibold hover:underline shrink-0">＋ 적용</button></div>'+
+    (timePicked?'<div class="mt-1.5 text-[11px] font-semibold text-brand-700">📌 선택한 회의 시각: '+pickedTime+'</div>':'<div class="mt-1.5 text-[11px] text-slate-400">후보를 클릭하거나 직접 입력해 시각을 정/변경하세요</div>');
+  const INVITE=(title)=>'<div class="space-y-0.5"><div><b>['+title+'] 회의 초대</b></div><div>· 일시: <b>'+pickedTime+'</b></div><div>· 장소: '+pickedRoom.b+' '+pickedRoom.f+'층 '+pickedRoom.name+'</div><div>· 참석: '+attendees.length+'명 (현대영 책임 외)</div><div>· 안건: 제안 방향·역할·일정 확정</div><div>· 첨부: 사전 자료 '+docs.length+'건 · 어젠다</div></div>';
+  const C_MIN=(t)=>'<div class="space-y-0.5"><div class="font-semibold">['+t+' 회의록 초안]</div><div>· 안건1 — 제안 방향: A안으로 합의</div><div>· 안건2 — 역할분담: 자료 박○○, 작성 김○○</div><div>· 결정: 6/25까지 1차 초안</div><div>· 미결: 가격정책 차주 재논의</div></div>';
+  const C_STT='<div class="space-y-0.5"><div class="font-semibold">[실시간 녹취록]</div><div>· 발언자별 타임스탬프 전사</div><div>· 09:14 현대영 "A안이 적합합니다"</div><div>· 09:21 김민서 "데이터는 확보 가능"</div></div>';
+  const C_TRANS='<div class="space-y-0.5"><div class="font-semibold">[실시간 통역·자막]</div><div>· 한↔영 동시 통역 · 발언 실시간 자막</div><div>· "A안 is suitable" (09:14)</div><div>· 회의록 영문 번역본 자동 생성</div></div>';
+  const C_RESEARCH2='<div class="space-y-0.5"><div class="font-semibold">[회의 중 추가 자료]</div><div>· 논의 쟁점 관련 사내 유사 사례 2건</div><div>· 시장·경쟁사 근거 데이터 1건</div><div>· 출처: KMS·외부 리포트</div></div>';
+  const C_SLIDES='<div class="space-y-0.5"><div class="font-semibold">[발표 슬라이드 초안 · 10p]</div><div>표지 · 아젠다 · 제안 개요 · 솔루션 · 추진일정 · 기대효과 · Q&A</div></div>';
+  const C_FOLLOW='<div class="space-y-0.5"><div class="font-semibold">[후속 관리]</div><div>· 6/25 1차 초안 리뷰 미팅 예약</div><div>· 담당자 D-1 마감 리마인더 설정</div></div>';
+  const C_PROPOSAL='<div class="space-y-0.5"><div class="font-semibold">[제안서 초안 · 목차]</div><div>1.고객 현황·니즈 2.제안 개요 3.솔루션 구성</div><div>4.추진 일정 5.기대효과·ROI 6.견적</div></div>';
+  const C_VIBE='<div class="space-y-0.5"><div class="font-semibold">[HTML 시제품 · index.html]</div><div>· 제안 솔루션을 동작하는 데모 화면으로 구현</div><div>· 랜딩·대시보드·핵심 기능 3화면 (반응형)</div><div>· 고객 시연용 공유 링크 즉시 생성</div></div>';
+  const C_ACTION='<div class="space-y-0.5"><div class="font-semibold">[액션아이템]</div>'+row('1차 제안 초안 작성','김○○ · 6/25')+row('경쟁사 가격 조사','박○○ · 6/23')+row('고객 미팅 일정 조율','현대영 · 6/20')+'</div>';
+  const C_AGENDA='<div class="space-y-0.5"><div class="font-semibold">[이번 주 안건]</div><div>1.지난주 액션 점검 2.금주 우선순위 3.이슈/리스크 4.다음 주 계획</div></div>';
+  const C_PROGRESS='<div class="space-y-0.5"><div class="font-semibold">[지난주 액션 진척]</div>'+row('A 작업','<span class="text-emerald-600">완료</span>')+row('B 작업','<span class="text-amber-600">진행 70%</span>')+row('C 작업','<span class="text-rose-600">지연</span>')+'</div>';
+  const C_WEEKMIN='<div class="space-y-0.5"><div class="font-semibold">[주간 회의록]</div><div>· 완료/지연 공유, 금주 우선순위 합의</div><div>· 신규 이슈 1건 → 담당 지정</div></div>';
+  const C_RISK='<div class="space-y-0.5"><div class="font-semibold">[범위·리스크]</div><div>· 범위: 3개 모듈, 12주</div><div>· 리스크: 데이터 확보 지연(중), 인력(저)</div></div>';
+  const C_CHARTER='<div class="space-y-0.5"><div class="font-semibold">[프로젝트 헌장 초안]</div><div>· 목표·범위·산출물·일정·예산</div><div>· 이해관계자·거버넌스(R&R)</div></div>';
+  const C_RNR='<div class="space-y-0.5"><div class="font-semibold">[R&R · 마일스톤]</div>'+row('PM','현대영(책임)')+row('기술리드','정우진(선임)')+'<div>· 킥오프→설계(4주)→개발(6주)→검수(2주)</div></div>';
+
+  /* ===== 바이브 코딩 시제품 — 실제 다운로드/미리보기용 HTML ===== */
+  const VIBE_HTML=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>한국무역협회 차세대 AX 무역플랫폼 · 제안 시제품</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;font-family:'Pretendard','Malgun Gothic',sans-serif}
+body{background:#0b1220;color:#e2e8f0;line-height:1.6}.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header{padding:64px 0 40px;text-align:center;background:radial-gradient(circle at 50% 0,#1e293b,#0b1220)}
+.badge{display:inline-block;font-size:12px;font-weight:700;color:#a5b4fc;background:#312e81;padding:5px 12px;border-radius:999px}
+h1{font-size:34px;margin:18px 0 10px;color:#fff}.sub{color:#94a3b8;max-width:620px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:36px 0}
+.kpi{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:18px;text-align:center}
+.kpi b{display:block;font-size:26px;color:#818cf8}.kpi span{font-size:12px;color:#94a3b8}
+section{padding:30px 0;border-top:1px solid #1e293b}h2{font-size:20px;color:#fff;margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:18px}
+.card h3{font-size:15px;color:#c7d2fe;margin-bottom:6px}.card p{font-size:13px;color:#94a3b8}
+.bar{height:10px;background:#0f172a;border-radius:6px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#6366f1,#818cf8)}
+footer{padding:30px 0 60px;text-align:center;color:#64748b;font-size:12px}
+@media(max-width:720px){.kpis,.cards{grid-template-columns:1fr 1fr}h1{font-size:26px}}</style></head>
+<body><header><div class="wrap"><span class="badge">AX TRADE PLATFORM · PROTOTYPE</span>
+<h1>한국무역협회 차세대 AX 무역플랫폼</h1>
+<p class="sub">AI 기반 무역 데이터 통합·자동화로 수출입 업무를 한 화면에서. 본 페이지는 제안 회의에서 바이브 코딩으로 생성된 시연용 시제품입니다.</p></div></header>
+<div class="wrap"><div class="kpis"><div class="kpi"><b>-42%</b><span>업무 처리시간</span></div><div class="kpi"><b>3.2x</b><span>데이터 활용도</span></div><div class="kpi"><b>+18%</b><span>수출 매칭 성공률</span></div><div class="kpi"><b>24/7</b><span>AI 모니터링</span></div></div>
+<section><h2>핵심 기능</h2><div class="cards">
+<div class="card"><h3>① 무역 데이터 통합 허브</h3><p>관세·물류·환율·바이어 데이터를 단일 플랫폼으로 통합.</p></div>
+<div class="card"><h3>② AI 수출 매칭</h3><p>품목·국가별 수요 예측으로 최적 바이어를 자동 추천.</p></div>
+<div class="card"><h3>③ 자동화 워크플로</h3><p>서류 작성·신고·정산을 에이전트가 자동 처리.</p></div></div></section>
+<section><h2>추진 일정</h2>
+<div class="card"><h3>1단계 · 데이터 통합 (4주)</h3><div class="bar"><i style="width:100%"></i></div></div>
+<div class="card" style="margin-top:10px"><h3>2단계 · AI 매칭 (6주)</h3><div class="bar"><i style="width:60%"></i></div></div>
+<div class="card" style="margin-top:10px"><h3>3단계 · 자동화·검수 (2주)</h3><div class="bar"><i style="width:25%"></i></div></div></section></div>
+<footer>© KT DS · AX 컨설팅팀 · 제안 시연용 시제품 (자동 생성)</footer></body></html>`;
+
+  /* ===== 시나리오 ===== */
+  const SCN=[
+    [ /* 0. 일반/제안서 회의 */
+      {a:'human', m:'현대영 책임 → Master: "한국무역협회 차세대 AX 무역플랫폼 구축사업 제안서 작성 회의 잡아줘"'},
+      {a:'master', m:'요청 수신 — 회의 종류·목적 분석 중…'},
+      {a:'master', m:'한국무역협회 차세대 AX 무역플랫폼 구축사업 제안서 작성 회의로 판단 → 필요 데이터·Agent 계획 수립'},
+      {a:'cmd', g:'attendee', m:'Master → 참석자 추천 Agent: "참석자 추천"'},
+      {a:'resp', g:'attendee', m:'참석자 추천 Agent → Master: 후보 5명', o:'참석자 후보 명단', edit:'att'},
+      {a:'cmd', g:'research', m:'Master → 자료 수집 Agent: "KMS 근거자료 검색(RAG)"'},
+      {a:'resp', g:'research', m:'자료 수집 Agent → Master: 사전 자료 5건', o:'사전 자료 목록', edit:'doc'},
+      {a:'cmd', g:'sched', m:'Master → 일정 조율 Agent: "참석자 빈 시간 탐색"'},
+      {a:'resp', g:'sched', m:'일정 조율 Agent → Master: 가능 시각 4개', o:'회의 시각 후보(4)', c:C_TIMES, edit:'time'},
+      {a:'select', m:'회의 시각 후보 4개 중 하나를 선택해 주세요.', opts:TIMES},
+      {a:'hitl', m:'선택하신 시각·참석자·자료로 소집할까요? (산출물을 직접 수정하거나 [수정 요청] 가능)'},
+      {a:'master', m:'승인 확인 → 실행 시작'},
+      {a:'cmd', g:'sched', m:'Master → 일정 조율 Agent: "확정 시각으로 초대장 초안 작성"'},
+      {a:'resp', g:'sched', m:'일정 조율 Agent → Master: 초대장 초안 작성', o:'회의 초대장(초안)', c:()=>INVITE('한국무역협회 차세대 AX 무역플랫폼 구축사업 제안서 작성'), edit:'invite'},
+      {a:'hitl', m:'회의 초대장 초안입니다. 위 초대장 내용을 직접 수정할 수 있습니다(클릭해서 편집). 최종 확인되면 발송할까요?'},
+      {a:'master', m:'최종 승인 확인 → 초대장 발송'},
+      {a:'cmd', g:'sched', m:'Master → 일정 조율 Agent: "확정된 초대장 참석자에게 발송"'},
+      {a:'resp', g:'sched', m:'일정 조율 Agent → Master: 초대장 발송 완료', o:'초대장 발송 완료'},
+      {a:'cmd', g:'room', m:'Master → 회의실 예약 Agent: "인원·시각 맞는 회의실 예약"'},
+      {a:'resp', g:'room', m:'회의실 예약 Agent → Master: 예약 완료', o:'회의실 예약', edit:'room'},
+      {a:'cmd', g:'slides', m:'Master → 발표자료 Agent: "발표 슬라이드 초안 생성"'},
+      {a:'resp', g:'slides', m:'발표자료 Agent → Master: 발표 슬라이드 초안', o:'발표자료 초안', edit:'slides'},
+      {a:'wait', m:'녹취·STT · 회의록 작성 · 통역·번역 Agent가 모두 준비중입니다. 회의가 시작되면 알려주세요.', btn:'▶ "회의 시작합니다" 전송', say:'현대영 책임 → Master: "지금 회의 시작합니다"', ctx:'회의 시작 맥락 확인 → 녹취·회의록·통역 Agent 동시 가동', ready:['stt','minutes','translate']},
+      {a:'cmd', g:'stt', m:'Master → 녹취·STT Agent: "회의 음성 실시간 전사(녹취) 시작"'},
+      {a:'resp', g:'stt', m:'녹취·STT Agent → Master: 실시간 녹취록 생성중', o:'실시간 녹취록', c:C_STT},
+      {a:'cmd', g:'translate', m:'Master → 통역·번역 Agent: "실시간 통역·자막 제공 시작"'},
+      {a:'resp', g:'translate', m:'통역·번역 Agent → Master: 실시간 통역·자막 생성중', o:'실시간 통역·자막', c:C_TRANS},
+      {a:'a2a', g1:'stt', g2:'minutes', m:'녹취·STT Agent → 회의록 작성 Agent: 전사 텍스트 실시간 전달'},
+      {a:'a2a', g1:'translate', g2:'minutes', m:'통역·번역 Agent → 회의록 작성 Agent: 번역 발언 실시간 전달'},
+      {a:'cmd', g:'minutes', m:'Master → 회의록 작성 Agent: "녹취·번역 기반 회의록 실시간 정리"'},
+      {a:'resp', g:'minutes', m:'회의록 작성 Agent → Master: 회의록 초안(실시간 갱신)', o:'회의록 초안', c:()=>C_MIN('제안')},
+      {a:'master', m:'회의 중 추가 근거 필요 — 자료 수집 Agent 재가동'},
+      {a:'cmd', g:'research', m:'Master → 자료 수집 Agent: "논의 중 나온 쟁점 관련 자료 추가 검색"'},
+      {a:'resp', g:'research', m:'자료 수집 Agent → Master: 추가 근거 자료 확보', o:'회의 중 추가 자료', c:C_RESEARCH2},
+      {a:'a2a', g1:'research', g2:'minutes', m:'자료 수집 Agent → 회의록 작성 Agent: 추가 자료 회의록 반영'},
+      {a:'wait', m:'회의가 끝나면 알려주세요. (녹취·통역은 종료, 산출물 Agent 준비중)', btn:'■ "회의 끝났습니다" 전송', say:'현대영 책임 → Master: "회의 끝났습니다"', ctx:'회의 종료 맥락 확인 → 녹취·통역 종료, 후속 Agent 가동', ready:['proposal','action']},
+      {a:'a2a', g1:'research', g2:'proposal', m:'자료 수집 Agent → 제안서 작성 Agent: 수집 자료 직접 전달'},
+      {a:'cmd', g:'proposal', m:'Master → 제안서 작성 Agent: "제안서 초안 작성"'},
+      {a:'resp', g:'proposal', m:'제안서 작성 Agent → Master: 제안서 초안', o:'제안서 초안', c:C_PROPOSAL},
+      {a:'a2a', g1:'proposal', g2:'vibe', m:'제안서 작성 Agent → 바이브 코딩 Agent: 제안 솔루션 내용 직접 전달'},
+      {a:'cmd', g:'vibe', m:'Master → 바이브 코딩 Agent: "제안 솔루션을 동작하는 HTML 시제품으로 제작"'},
+      {a:'resp', g:'vibe', m:'바이브 코딩 Agent → Master: HTML 시제품·시연 링크 생성', o:'HTML 시제품', c:C_VIBE},
+      {a:'a2a', g1:'minutes', g2:'action', m:'회의록 작성 Agent → 액션아이템 Agent: 회의록 기반 할 일 전달'},
+      {a:'cmd', g:'action', m:'Master → 액션아이템 Agent: "할 일·담당·기한 정리"'},
+      {a:'resp', g:'action', m:'액션아이템 Agent → Master: 액션아이템', o:'액션아이템', c:C_ACTION},
+      {a:'cmd', g:'followup', m:'Master → 후속관리 Agent: "후속 미팅·마감 리마인더 등록"'},
+      {a:'resp', g:'followup', m:'후속관리 Agent → Master: 후속 일정·리마인더 등록', o:'후속 관리', c:C_FOLLOW},
+      {a:'hitl', m:'위와 같이 정리했습니다. 이후 [메일 발송 · KMS 기록] 액션이 대기중입니다. 수행할까요?', final:true, ready:['notify','kms']},
+      {a:'cmd', g:'notify', m:'Master → 알림·전달 Agent: "참석자에게 결과 전달"'},
+      {a:'resp', g:'notify', m:'알림·전달 Agent → Master: 메일·메신저 발송', o:'전달 완료'},
+      {a:'cmd', g:'kms', m:'Master → KMS 기록 Agent: "결과 KMS 자동 등록"'},
+      {a:'resp', g:'kms', m:'KMS 기록 Agent → Master: KMS 페이지 기록', o:'KMS 기록'},
+      {a:'done', m:'완료 — 모든 산출물 생성·공유, Agent 전원 대기(off)'},
+    ],
+    [ /* 1. 주간 반복 회의 */
+      {a:'system', m:'⏰ 자동 트리거 — 매주 월 09:00 주간회의 자동 준비'},
+      {a:'master', m:'지난주 회의록·액션아이템 자동 로드 중…'},
+      {a:'cmd', g:'research', m:'Master → 자료 수집 Agent: "지난주 기록 로드"'},
+      {a:'resp', g:'research', m:'자료 수집 Agent → Master: 지난주 기록 로드', o:'지난주 회의록·액션아이템', c:C_PROGRESS},
+      {a:'a2a', g1:'research', g2:'action', m:'자료 수집 Agent → 액션아이템 Agent: 지난주 액션 직접 전달'},
+      {a:'cmd', g:'action', m:'Master → 액션아이템 Agent: "지난주 할 일 점검"'},
+      {a:'resp', g:'action', m:'액션아이템 Agent → Master: 진척 집계', o:'진척 현황표', c:C_PROGRESS},
+      {a:'cmd', g:'minutes', m:'Master → 회의록 작성 Agent: "이번 주 안건 초안"'},
+      {a:'resp', g:'minutes', m:'회의록 작성 Agent → Master: 주간 안건 초안', o:'주간 안건 초안', c:C_AGENDA},
+      {a:'hitl', m:'고정 참석자·안건으로 진행할까요? (반복 회의라 가볍게 확인)'},
+      {a:'master', m:'승인 확인 → 소집·진행'},
+      {a:'cmd', g:'sched', m:'Master → 일정 조율 Agent: "고정 참석자 소집"'},
+      {a:'resp', g:'sched', m:'일정 조율 Agent → Master: 소집 완료', o:'회의 소집'},
+      {a:'cmd', g:'room', m:'Master → 회의실 예약 Agent: "고정 회의실 예약"'},
+      {a:'resp', g:'room', m:'회의실 예약 Agent → Master: 회의실 확정', o:'회의실 예약', edit:'room'},
+      {a:'wait', m:'녹취·STT · 회의록 작성 · 통역·번역 Agent가 모두 준비중입니다. 주간회의가 시작되면 알려주세요.', btn:'▶ "회의 시작합니다" 전송', say:'현대영 책임 → Master: "주간회의 시작합니다"', ctx:'회의 시작 맥락 확인 → 녹취·회의록·통역 Agent 동시 가동', ready:['stt','minutes','translate']},
+      {a:'cmd', g:'stt', m:'Master → 녹취·STT Agent: "회의 음성 실시간 전사 시작"'},
+      {a:'resp', g:'stt', m:'녹취·STT Agent → Master: 실시간 녹취록', o:'실시간 녹취록', c:C_STT},
+      {a:'cmd', g:'translate', m:'Master → 통역·번역 Agent: "실시간 통역·자막 제공 시작"'},
+      {a:'resp', g:'translate', m:'통역·번역 Agent → Master: 실시간 통역·자막', o:'실시간 통역·자막', c:C_TRANS},
+      {a:'a2a', g1:'stt', g2:'minutes', m:'녹취·STT Agent → 회의록 작성 Agent: 전사 실시간 전달'},
+      {a:'a2a', g1:'translate', g2:'minutes', m:'통역·번역 Agent → 회의록 작성 Agent: 번역 발언 실시간 전달'},
+      {a:'cmd', g:'minutes', m:'Master → 회의록 작성 Agent: "주간 회의록 실시간 정리"'},
+      {a:'resp', g:'minutes', m:'회의록 작성 Agent → Master: 주간 회의록', o:'주간 회의록', c:C_WEEKMIN},
+      {a:'master', m:'회의 중 추가 근거 필요 — 자료 수집 Agent 재가동'},
+      {a:'cmd', g:'research', m:'Master → 자료 수집 Agent: "논의 쟁점 관련 자료 추가 검색"'},
+      {a:'resp', g:'research', m:'자료 수집 Agent → Master: 추가 근거 자료 확보', o:'회의 중 추가 자료', c:C_RESEARCH2},
+      {a:'a2a', g1:'research', g2:'minutes', m:'자료 수집 Agent → 회의록 작성 Agent: 추가 자료 회의록 반영'},
+      {a:'wait', m:'회의가 끝나면 알려주세요. (녹취·통역은 종료)', btn:'■ "회의 끝났습니다" 전송', say:'현대영 책임 → Master: "회의 끝났습니다"', ctx:'회의 종료 맥락 확인 → 녹취·통역 종료, 후속 처리', ready:['action','followup']},
+      {a:'cmd', g:'action', m:'Master → 액션아이템 Agent: "액션 갱신"'},
+      {a:'resp', g:'action', m:'액션아이템 Agent → Master: 액션아이템 갱신', o:'갱신된 액션아이템', c:C_ACTION},
+      {a:'cmd', g:'followup', m:'Master → 후속관리 Agent: "차주 리마인더 등록"'},
+      {a:'resp', g:'followup', m:'후속관리 Agent → Master: 리마인더 등록', o:'후속 관리', c:C_FOLLOW},
+      {a:'hitl', m:'위와 같이 정리했습니다. [메일 발송 · KMS 누적 기록]이 대기중입니다. 수행할까요?', final:true, ready:['notify','kms']},
+      {a:'cmd', g:'notify', m:'Master → 알림·전달 Agent: "참석자 전달"'},
+      {a:'resp', g:'notify', m:'알림·전달 Agent → Master: 전달 완료', o:'전달 완료'},
+      {a:'cmd', g:'kms', m:'Master → KMS 기록 Agent: "KMS 누적 기록"'},
+      {a:'resp', g:'kms', m:'KMS 기록 Agent → Master: 누적 기록', o:'KMS 기록'},
+      {a:'done', m:'주간회의 자동 처리 완료 — 다음 주 동일 시각 재실행 예약'},
+    ],
+    [ /* 2. 프로젝트 킥오프 */
+      {a:'human', m:'현대영 책임 → Master: "○○ 프로젝트 킥오프 준비해줘"'},
+      {a:'master', m:'프로젝트 범위·목표·이해관계자 분석 중…'},
+      {a:'cmd', g:'research', m:'Master → 자료 수집 Agent: "프로젝트 배경자료 수집"'},
+      {a:'resp', g:'research', m:'자료 수집 Agent → Master: 배경자료 수집', o:'사전 배경자료', edit:'doc'},
+      {a:'cmd', g:'attendee', m:'Master → 참석자 추천 Agent: "전 부서 이해관계자 추천"'},
+      {a:'resp', g:'attendee', m:'참석자 추천 Agent → Master: 참석자 매트릭스', o:'참석자 매트릭스', c:C_MATRIX},
+      {a:'cmd', g:'analysis', m:'Master → 분석 Agent: "범위·리스크 분석"'},
+      {a:'resp', g:'analysis', m:'분석 Agent → Master: 범위·리스크 요약', o:'범위·리스크 분석', c:C_RISK},
+      {a:'cmd', g:'sched', m:'Master → 일정 조율 Agent: "가능 시각 탐색"'},
+      {a:'resp', g:'sched', m:'일정 조율 Agent → Master: 가능 시각 4개', o:'회의 시각 후보(4)', c:C_TIMES, edit:'time'},
+      {a:'select', m:'킥오프 시각을 선택해 주세요.', opts:TIMES},
+      {a:'hitl', m:'범위·참석자·시각으로 진행할까요? (산출물 직접 수정 또는 [수정 요청] 가능)'},
+      {a:'master', m:'승인 확인 → 킥오프 실행'},
+      {a:'cmd', g:'sched', m:'Master → 일정 조율 Agent: "일정 확정·초대장 초안 작성"'},
+      {a:'resp', g:'sched', m:'일정 조율 Agent → Master: 초대장 초안 작성', o:'회의 초대장(초안)', c:()=>INVITE('프로젝트 킥오프'), edit:'invite'},
+      {a:'hitl', m:'킥오프 초대장 초안입니다. 위 초대장 내용을 직접 수정할 수 있습니다(클릭해서 편집). 최종 확인되면 발송할까요?'},
+      {a:'master', m:'최종 승인 확인 → 초대장 발송'},
+      {a:'cmd', g:'sched', m:'Master → 일정 조율 Agent: "확정된 초대장 전 부서 참석자에게 발송"'},
+      {a:'resp', g:'sched', m:'일정 조율 Agent → Master: 초대장 발송 완료', o:'초대장 발송 완료'},
+      {a:'cmd', g:'room', m:'Master → 회의실 예약 Agent: "대규모 회의실 예약"'},
+      {a:'resp', g:'room', m:'회의실 예약 Agent → Master: 대회의실 예약', o:'회의실 예약', edit:'room'},
+      {a:'cmd', g:'slides', m:'Master → 발표자료 Agent: "킥오프 발표자료 초안"'},
+      {a:'resp', g:'slides', m:'발표자료 Agent → Master: 발표 슬라이드 초안', o:'발표자료 초안', edit:'slides'},
+      {a:'wait', m:'녹취·STT · 회의록 작성 · 통역·번역 Agent가 모두 준비중입니다. 킥오프가 시작되면 알려주세요.', btn:'▶ "킥오프 시작합니다" 전송', say:'현대영 책임 → Master: "킥오프 시작합니다"', ctx:'시작 맥락 확인 → 녹취·회의록·통역 Agent 동시 가동', ready:['stt','minutes','translate']},
+      {a:'cmd', g:'stt', m:'Master → 녹취·STT Agent: "음성 실시간 전사 시작"'},
+      {a:'resp', g:'stt', m:'녹취·STT Agent → Master: 실시간 녹취록', o:'실시간 녹취록', c:C_STT},
+      {a:'cmd', g:'translate', m:'Master → 통역·번역 Agent: "실시간 통역·자막 제공 시작"'},
+      {a:'resp', g:'translate', m:'통역·번역 Agent → Master: 실시간 통역·자막', o:'실시간 통역·자막', c:C_TRANS},
+      {a:'a2a', g1:'stt', g2:'minutes', m:'녹취·STT Agent → 회의록 작성 Agent: 전사 실시간 전달'},
+      {a:'a2a', g1:'translate', g2:'minutes', m:'통역·번역 Agent → 회의록 작성 Agent: 번역 발언 실시간 전달'},
+      {a:'cmd', g:'minutes', m:'Master → 회의록 작성 Agent: "킥오프 회의록 실시간 정리"'},
+      {a:'resp', g:'minutes', m:'회의록 작성 Agent → Master: 킥오프 회의록(실시간 갱신)', o:'킥오프 회의록', c:()=>C_MIN('킥오프')},
+      {a:'master', m:'킥오프 중 추가 근거 필요 — 자료 수집 Agent 재가동'},
+      {a:'cmd', g:'research', m:'Master → 자료 수집 Agent: "논의 쟁점 관련 자료 추가 검색"'},
+      {a:'resp', g:'research', m:'자료 수집 Agent → Master: 추가 근거 자료 확보', o:'킥오프 중 추가 자료', c:C_RESEARCH2},
+      {a:'a2a', g1:'research', g2:'minutes', m:'자료 수집 Agent → 회의록 작성 Agent: 추가 자료 회의록 반영'},
+      {a:'wait', m:'킥오프가 끝나면 알려주세요. (녹취·통역은 종료, 산출물 Agent 준비중)', btn:'■ "킥오프 끝났습니다" 전송', say:'현대영 책임 → Master: "킥오프 끝났습니다"', ctx:'종료 맥락 확인 → 녹취·통역 종료, 산출물 Agent 가동', ready:['proposal','action']},
+      {a:'a2a', g1:'analysis', g2:'proposal', m:'분석 Agent → 제안서 작성 Agent: 범위·리스크 분석 직접 전달'},
+      {a:'cmd', g:'proposal', m:'Master → 제안서 작성 Agent: "프로젝트 헌장 초안"'},
+      {a:'resp', g:'proposal', m:'제안서 작성 Agent → Master: 프로젝트 헌장', o:'프로젝트 헌장', c:C_CHARTER},
+      {a:'cmd', g:'action', m:'Master → 액션아이템 Agent: "R&R·마일스톤 정리"'},
+      {a:'resp', g:'action', m:'액션아이템 Agent → Master: R&R·마일스톤', o:'R&R · 마일스톤', c:C_RNR},
+      {a:'cmd', g:'followup', m:'Master → 후속관리 Agent: "주간 점검 미팅·리마인더 등록"'},
+      {a:'resp', g:'followup', m:'후속관리 Agent → Master: 후속 일정 등록', o:'후속 관리', c:C_FOLLOW},
+      {a:'hitl', m:'위와 같이 정리했습니다. [전체 공유 · KMS 프로젝트 공간 개설]이 대기중입니다. 수행할까요?', final:true, ready:['notify','kms']},
+      {a:'cmd', g:'notify', m:'Master → 알림·전달 Agent: "전체 공유"'},
+      {a:'resp', g:'notify', m:'알림·전달 Agent → Master: 전체 공유 완료', o:'전체 공유'},
+      {a:'cmd', g:'kms', m:'Master → KMS 기록 Agent: "KMS 프로젝트 공간 개설"'},
+      {a:'resp', g:'kms', m:'KMS 기록 Agent → Master: 프로젝트 페이지 개설', o:'KMS 프로젝트 페이지'},
+      {a:'done', m:'킥오프 준비 완료 — 프로젝트 공간 개설 및 Agent 전원 대기'},
+    ],
+  ];
+
+  /* 4레이어 자동 주입: Master → 🧭근거/맥락(reason) → Agent(cmd) → ⚙️데이터/근거 동작(basis) → 응답 */
+  (function expandLayers(){
+    const byId={}; AGENTS.forEach(a=>byId[a.id]=a);
+    for(let s=0;s<SCN.length;s++){
+      const out=[];
+      for(const e of SCN[s]){
+        if(e.a==='cmd'){
+          const ag=byId[e.g];
+          out.push({a:'reason', g:e.g, m:(e.why || (ag?'선택 근거 — '+ag.when:'근거·맥락 확인 중'))});
+          out.push(e);
+          out.push({a:'basis', g:e.g, m:(e.basis || (ag?'사용 데이터 — '+ag.data+'　·　수행 방식 — '+ag.how:'데이터·근거 적용'))});
+        } else out.push(e);
+      }
+      SCN[s]=out;
+    }
+  })();
+
+  let evs=SCN[0], idx=0, timer=null, playing=false, speed=1, scn=0, pending=null;
+  let activeCount=0, cmdCount=0, outCount=0;
+  const mapNodes={}; let a2aLine=null;
+  const STLBL={active:'처리중',done:'완료',ready:'준비중',idle:'대기',live:'동작중'};
+  const liveSet=new Set(); const LIVE_PHASE=['stt','minutes','translate'];
+  const EDIT_CHIPS=['분석 Agent 추가','참석자에 디지털본부장 추가','경쟁사 자료 추가','일정 하루 당기기'];
+
+  function renderMap(){
+    const N=AGENTS.length; let nodes='', lines='';
+    AGENTS.forEach((a,i)=>{
+      const ang=(-90 + i*(360/N))*Math.PI/180;
+      const x=50+40*Math.cos(ang), y=50+43*Math.sin(ang);
+      mapNodes[a.id]={x,y};
+      const tm=TYPE_META[AGENT_TYPE[a.id]]||{};
+      nodes+='<div data-node="'+a.id+'" class="map-node" style="left:'+x+'%;top:'+y+'%"><div class="mn-card"><span class="mn-type" style="background:'+(tm.color||'#64748b')+'" title="'+(tm.label||'')+'"></span><div class="mn-top"><span class="mn-ic2">'+a.icon+'</span><span class="mn-name">'+a.name.replace(' Agent','')+'</span></div><div class="mn-bottom"><span class="mn-dot"></span><span class="mn-st">대기</span></div></div></div>';
+      lines+='<line data-line="'+a.id+'" x1="50" y1="50" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#334155" stroke-width="0.4"/>';
+    });
+    mapSvg.innerHTML=lines+'<line id="a2a-line" stroke="#38bdf8" stroke-width="0.9" stroke-dasharray="2 1.5" opacity="0"/>';
+    a2aLine=mapSvg.querySelector('#a2a-line'); mapNodesEl.innerHTML=nodes;
+  }
+  function setNode(id,st){
+    if(liveSet.has(id) && st==='idle') st='live'; // 상시 동작 중인 Agent는 꺼지지 않음
+    const n=mapNodesEl.querySelector('[data-node="'+id+'"]'); const ln=mapSvg.querySelector('[data-line="'+id+'"]');
+    if(!n)return; n.classList.remove('on','done','ready','live'); const stEl=n.querySelector('.mn-st');
+    if(st==='active'){ n.classList.add('on'); if(ln){ln.setAttribute('stroke','#6366f1');ln.setAttribute('stroke-width','1.0');} }
+    else if(st==='done'){ n.classList.add('done'); if(ln){ln.setAttribute('stroke','#10b981');ln.setAttribute('stroke-width','0.7');} }
+    else if(st==='ready'){ n.classList.add('ready'); if(ln){ln.setAttribute('stroke','#f59e0b');ln.setAttribute('stroke-width','0.7');} }
+    else if(st==='live'){ n.classList.add('live'); if(ln){ln.setAttribute('stroke','#22d3ee');ln.setAttribute('stroke-width','0.9');} }
+    else { if(ln){ln.setAttribute('stroke','#334155');ln.setAttribute('stroke-width','0.4');} }
+    if(stEl) stEl.textContent=STLBL[st]||'대기';
+    metrics();
+  }
+  function allIdle(){ AGENTS.forEach(a=>setNode(a.id,'idle')); }
+  function moveToken(id){ const p = id==='master' ? {x:50,y:50} : mapNodes[id]; if(!p)return; token.style.left=p.x+'%'; token.style.top=p.y+'%'; }
+  function a2aMove(g1,g2){
+    const p1=mapNodes[g1],p2=mapNodes[g2]; if(!p1||!p2)return;
+    setNode(g1,'active'); setNode(g2,'ready');
+    if(a2aLine){a2aLine.setAttribute('x1',p1.x);a2aLine.setAttribute('y1',p1.y);a2aLine.setAttribute('x2',p2.x);a2aLine.setAttribute('y2',p2.y);a2aLine.setAttribute('opacity','0.9');}
+    dataTok.style.left=p1.x+'%'; dataTok.style.top=p1.y+'%'; dataTok.style.opacity='1';
+    setTimeout(()=>{ dataTok.style.left=p2.x+'%'; dataTok.style.top=p2.y+'%'; }, 60);
+    setTimeout(()=>{ setNode(g1,'done'); setNode(g2,'done'); dataTok.style.opacity='0'; if(a2aLine)a2aLine.setAttribute('opacity','0'); setTimeout(()=>{setNode(g1,'idle');setNode(g2,'idle');},900); }, 780/speed);
+  }
+
+  function log(type, msg){
+    const col={human:'text-emerald-300',system:'text-violet-300',master:'text-indigo-300',reason:'text-fuchsia-300',cmd:'text-sky-300',basis:'text-teal-300',resp:'text-amber-300',a2a:'text-cyan-300',hitl:'text-amber-200',select:'text-sky-200',wait:'text-emerald-200',done:'text-emerald-300',monitor:'text-rose-300'}[type]||'text-slate-200';
+    const ic={human:'🧑',system:'⏰',master:'🧠',reason:'🧭',cmd:'➡️',basis:'⚙️',resp:'⬅️',a2a:'🔁',hitl:'✋',select:'🕒',wait:'🟢',done:'✅',monitor:'🛡️'}[type]||'•';
+    const sub=(type==='reason'||type==='basis'||type==='monitor');
+    const el=document.createElement('div'); el.className='fade-in'+(sub?' pl-4 border-l-2 border-slate-700 ml-1':'');
+    el.innerHTML='<span class="'+col+(sub?' text-[11px] opacity-95':'')+'">'+ic+' '+msg+'</span>';
+    logBody.appendChild(el); logEl.scrollTop=logEl.scrollHeight;
+  }
+  function metrics(){ const on=mapNodesEl.querySelectorAll('.map-node.on,.map-node.live').length; mActive.textContent=on; mCmd.textContent=cmdCount; mOut.textContent=outCount; }
+  function addOutput(name, content, edit){
+    outCount++; const ph=outputs.querySelector('.placeholder'); if(ph) outputs.innerHTML='';
+    const isVibe = name==='HTML 시제품';
+    const hasContent = content!=null;
+    const showBadge = !!edit || (hasContent && !isVibe);
+    const card=document.createElement('div'); card.className='fade-in rounded-xl border border-amber-200 bg-amber-50/60 p-3';
+    card.innerHTML='<p class="text-[12px] font-bold text-amber-800 mb-1 flex items-center gap-1">📦 '+name+(showBadge?'<span class="text-[9px] font-semibold text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded ml-1">수정 가능</span>':'')+'</p><div class="ed-body text-[12px] text-slate-700 leading-relaxed"></div>';
+    const body=card.querySelector('.ed-body');
+    if(edit==='att'){ attBody=body; body.innerHTML=renderAttendees(); }
+    else if(edit==='doc'){ docBody=body; body.innerHTML=renderDocs(); }
+    else if(edit==='room'){ pickedRoom=pickRoom(); roomBody=body; body.innerHTML=renderRoom(); }
+    else if(edit==='slides'){ slideBody=body; body.innerHTML=renderSlides(); }
+    else if(edit==='invite'){ const html=typeof content==='function'?content():content; body.innerHTML='<div class="text-[10px] font-semibold text-brand-700 mb-1">✏️ 발송 전 직접 수정하세요 (클릭해서 편집)</div><div class="ed-invite border border-brand-300 rounded-md bg-white p-2 focus:outline-brand-400" contenteditable="true">'+html+'</div>'; }
+    else if(isVibe){ const html=typeof content==='function'?content():content; body.innerHTML=(html||'')+'<div class="mt-2 flex flex-wrap gap-1.5"><button data-vibe-download class="inline-flex items-center gap-1 text-[11px] font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-md px-2.5 py-1">⬇️ 시제품 다운로드 (HTML)</button><button data-vibe-open class="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 border border-brand-300 rounded-md px-2.5 py-1 hover:bg-brand-50">↗ 새 탭에서 미리보기</button></div>'; }
+    else { const html=typeof content==='function'?content():content;
+      if(!edit && hasContent){ body.innerHTML='<div class="text-[10px] font-semibold text-brand-700 mb-1">✏️ 직접 수정하세요 (클릭해서 편집)</div><div class="border border-brand-300 rounded-md bg-white p-2 focus:outline-brand-400" contenteditable="true">'+html+'</div>'; }
+      else { body.innerHTML=html||'<span class="text-[11px] text-slate-400">생성 완료</span>'; }
+    }
+    if(name && name.indexOf('회의 시각 후보')===0) timesBody=body;
+    outputs.appendChild(card);
+  }
+  function status(text, busy){ mStatus.textContent=text; mDot.className='ml-auto w-3 h-3 rounded-full '+(busy?'bg-amber-300 animate-pulse':'bg-emerald-300'); }
+  function vibeURL(){ return URL.createObjectURL(new Blob([VIBE_HTML],{type:'text/html'})); }
+  function downloadVibe(){ const url=vibeURL(); const a=document.createElement('a'); a.href=url; a.download='ax-무역플랫폼-시제품.html'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); log('human','현대영 책임: HTML 시제품 다운로드 (ax-무역플랫폼-시제품.html)'); }
+  function openVibe(){ window.open(vibeURL(),'_blank'); }
+
+  function exec(e){
+    if(e.a==='reason'){ moveToken('master'); setNode(e.g,'ready'); status('근거·맥락 확인 → '+aname(e.g)+' 선택 판단', true); log('reason', e.m); }
+    else if(e.a==='basis'){ setNode(e.g,'active'); status(aname(e.g).replace(' Agent','')+' 동작 — 데이터·근거 적용 중', true); log('basis', e.m); }
+    else if(e.a==='cmd'){ setNode(e.g,'active'); moveToken(e.g); activeCount++; cmdCount++; status('명령 전달 → '+aname(e.g), true); log('cmd', e.m); }
+    else if(e.a==='resp'){ setNode(e.g,'done'); moveToken('master'); activeCount=Math.max(0,activeCount-1); status('응답 수거 · 통합 중', true); log('resp', e.m); if(e.o) addOutput(e.o, e.c, e.edit); const gid=e.g; setTimeout(()=>setNode(gid,'idle'), 950/speed); }
+    else if(e.a==='a2a'){ a2aMove(e.g1,e.g2); status(aname(e.g1).replace(' Agent','')+' → '+aname(e.g2).replace(' Agent','')+' 데이터 전달', true); log('a2a', e.m); }
+    else if(e.a==='hitl'){ moveToken('master'); status('사람 확인 대기 (HITL)', true); log('hitl', 'Master → 현대영 책임: '+e.m); }
+    else if(e.a==='select'){ moveToken('master'); status('사람 선택 대기 (시각)', true); log('select', 'Master → 현대영 책임: '+e.m); }
+    else if(e.a==='wait'){ moveToken('master'); status('사람 컨텍스트 입력 대기', true); log('wait', 'Master: '+e.m); }
+    else if(e.a==='master'){ moveToken('master'); status(e.m.replace('…',''), true); log('master', 'Master Agent: '+e.m); }
+    else if(e.a==='human'){ moveToken('master'); status('요청 수신', true); log('human', e.m); }
+    else if(e.a==='system'){ moveToken('master'); status('스케줄러 자동 트리거', true); log('system', e.m); }
+    else if(e.a==='done'){ moveToken('master'); status('✅ '+e.m, false); log('done', e.m); }
+    metrics();
+  }
+
+  function pauseFor(e){ playing=false; clearTimeout(monTimer); playBtn.textContent='▶ 재생'; pending=e; if(e.ready){ (Array.isArray(e.ready)?e.ready:[e.ready]).forEach(id=>setNode(id,'ready')); } renderPanel(); panel.scrollIntoView({behavior:'smooth',block:'center'}); }
+  function resume(){ panel.classList.add('hidden'); pending=null; playing=true; playBtn.textContent='⏸ 일시정지'; startMonitor(); runNext(); }
+  function renderPanel(){
+    const e=pending; if(!e){ panel.classList.add('hidden'); return; }
+    panel.classList.remove('hidden');
+    if(e.a==='select'){
+      panel.className='mb-4 rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 sm:p-5 fade-in';
+      panel.innerHTML='<p class="font-bold text-sky-900">🕒 사람 선택 (HITL) — 회의 시각</p><p class="text-sky-800 text-sm mt-0.5">'+e.m+'</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">'+e.opts.map((o,i)=>'<button data-opt="'+i+'" class="opt px-3 py-2 rounded-lg border border-sky-300 bg-white text-sm font-semibold hover:bg-sky-100">'+o+'</button>').join('')+'</div>';
+      panel.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{ pickedTime=e.opts[+b.dataset.opt]; timePicked=true; if(timesBody)timesBody.innerHTML=C_TIMES(); log('human','현대영 책임 → Master: "'+pickedTime+' (으)로 진행합니다" (선택)'); resume(); }));
+    } else if(e.a==='wait'){
+      panel.className='mb-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 sm:p-5 fade-in';
+      panel.innerHTML='<div class="flex flex-wrap items-center gap-3"><span class="text-2xl">🟢</span><div class="min-w-0"><p class="font-bold text-emerald-900">사람 컨텍스트 입력 대기</p><p class="text-emerald-800 text-sm">'+e.m+'</p></div><button id="wbtn" class="ml-auto px-4 py-2 rounded-lg text-sm font-bold bg-emerald-600 text-white">'+e.btn+'</button></div>';
+      panel.querySelector('#wbtn').addEventListener('click',()=>{
+        const ready=e.ready?(Array.isArray(e.ready)?e.ready:[e.ready]):[];
+        const isStart=ready.some(id=>LIVE_PHASE.includes(id));
+        if(isStart){ ready.forEach(id=>{ liveSet.add(id); setNode(id,'live'); }); log('master','Master Agent: '+ready.map(aname).map(n=>n.replace(' Agent','')).join(' · ')+' 동시 가동 — 회의 동안 백그라운드에서 계속 동작합니다'); }
+        else { ready.forEach(id=>setNode(id,'idle')); if(liveSet.size){ const ids=[...liveSet]; liveSet.clear(); ids.forEach(id=>setNode(id,'done')); setTimeout(()=>ids.forEach(id=>setNode(id,'idle')),1300); } }
+        log('human', e.say); log('master','Master Agent: '+e.ctx); resume();
+      });
+    } else { renderApprove(e); }
+  }
+  function renderApprove(e){
+    panel.className='mb-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 sm:p-5 fade-in';
+    const list = e.final ? '<div class="mt-2 text-amber-900 text-sm">⏳ 대기 액션: <b>메일 발송 · KMS 기록</b></div>' : '';
+    panel.innerHTML='<div class="flex flex-wrap items-start gap-3"><span class="text-2xl">✋</span><div class="min-w-0"><p class="font-bold text-amber-900">★ 사람 확인 (HITL)</p><p class="text-amber-800 text-sm">'+e.m+'</p>'+list+'</div><div class="flex gap-2 ml-auto"><button id="h-ok" class="px-4 py-2 rounded-lg text-sm font-bold bg-emerald-600 text-white">✅ 승인하고 계속</button><button id="h-edit" class="px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-amber-300 text-amber-800">✏️ 수정 요청</button></div></div>';
+    panel.querySelector('#h-ok').addEventListener('click',()=>{ log('human','현대영 책임 → Master: "승인합니다. 진행하세요."'); resume(); });
+    panel.querySelector('#h-edit').addEventListener('click',()=>renderEdit(e));
+  }
+  function renderEdit(e){
+    panel.className='mb-4 rounded-2xl border-2 border-indigo-300 bg-indigo-50 p-4 sm:p-5 fade-in';
+    panel.innerHTML='<p class="font-bold text-indigo-900">✏️ 수정 요청 — 무엇을 바꿀까요?</p><textarea id="edit-ta" rows="2" class="w-full mt-2 rounded-lg border border-indigo-300 p-2 text-sm" placeholder="예: 분석 Agent 추가, 디지털본부장 참석 …"></textarea><div class="flex flex-wrap gap-1.5 mt-2 text-xs">'+EDIT_CHIPS.map(c=>'<button class="echip px-2 py-1 rounded-md border border-indigo-200 bg-white hover:bg-indigo-100">＋ '+c+'</button>').join('')+'</div><div class="flex gap-2 mt-3"><button id="edit-apply" class="px-4 py-2 rounded-lg text-sm font-bold bg-brand-600 text-white">✏️ 수정 반영하고 계속</button><button id="edit-cancel" class="px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-200">↩ 취소(그대로 승인)</button></div>';
+    const ta=panel.querySelector('#edit-ta');
+    panel.querySelectorAll('.echip').forEach(b=>b.addEventListener('click',()=>{ const t=b.textContent.replace('＋ ',''); ta.value=(ta.value?ta.value+', ':'')+t; }));
+    panel.querySelector('#edit-apply').addEventListener('click',()=>{
+      const v=(ta.value||'').trim()||'(요청 내용 없음)';
+      log('human','현대영 책임 → Master: "수정 요청 — '+v+'"'); log('master','Master Agent: 수정 반영 — 계획을 갱신했습니다');
+      if(/분석/.test(v)){ setNode('analysis','active'); cmdCount++; metrics(); log('cmd','Master → 분석 Agent: "추가 분석 수행"'); setTimeout(()=>{ setNode('analysis','done'); addOutput('추가 분석 결과', C_RISK); log('resp','분석 Agent → Master: 추가 분석 완료'); setTimeout(()=>setNode('analysis','idle'),900); },700); }
+      if(/본부장|참석/.test(v)){ attendees.push({t:'디지털전략본부',n:'본부장',g:'본부장'}); if(attBody)attBody.innerHTML=renderAttendees(); log('resp','참석자 추천 Agent → Master: 참석자 명단 갱신'); }
+      setTimeout(resume, /분석/.test(v)?1800:300);
+    });
+    panel.querySelector('#edit-cancel').addEventListener('click',()=>{ log('human','현대영 책임 → Master: "그대로 승인합니다"'); resume(); });
+  }
+
+  /* ===== 단계별 가변 소요시간 — 작업 난이도·복잡성에 따라 다르게 ===== */
+  // 액션 종류별 기본 시간(ms). 전반적으로 천천히.
+  const BASE_DUR={human:1500,system:1500,master:1900,reason:1300,basis:1500,cmd:1200,resp:1500,a2a:1700,done:1500};
+  // Agent별 작업 난이도 가중치(ms) — 무거운 일일수록 길게. basis·resp·a2a 단계에 가산.
+  const WORK_DUR={proposal:1600,analysis:1300,vibe:1500,minutes:800,research:700,slides:1000,stt:600,translate:600,action:500,followup:400,sched:300,room:200,attendee:500,notify:300,kms:300,verify:1100,security:500,learn:1100};
+  function durationFor(e){
+    let d=BASE_DUR[e.a]||1400;
+    const g=e.g||e.g1;
+    if((e.a==='basis'||e.a==='resp'||e.a==='a2a') && g && WORK_DUR[g]) d+=WORK_DUR[g];
+    d*=0.85+Math.random()*0.3; // ±15% 자연스러운 편차 (균일하지 않게)
+    return Math.round(d);
+  }
+
+  /* ===== 🛡️ 보안·컴플라이언스 Agent — 재생 내내 Master와 상시 소통 ===== */
+  const MON_MSGS=[
+    '오가는 명령·산출물에 민감정보·개인정보가 섞이지 않았는지 점검 중',
+    '외부 수신자·보안등급을 실시간 대조 중 — 이상 없음',
+    'Master가 호출한 Agent의 데이터 접근 권한 확인 중',
+    '산출물 발송 경로(메일·KMS)의 컴플라이언스 점검 중',
+  ];
+  let monIdx=0, monTimer=null;
+  function monLabel(){ const sn=mapNodesEl.querySelector('[data-node="security"] .mn-st'); if(sn) sn.textContent='모니터링'; }
+  function startMonitor(){ clearTimeout(monTimer); if(!playing)return; setNode('security','live'); monLabel(); monTimer=setTimeout(monitorPing, 7000/speed); }
+  function monitorPing(){ if(!playing)return; setNode('security','live'); monLabel(); log('monitor','보안·컴플라이언스 Agent ⟷ Master: '+MON_MSGS[monIdx++ % MON_MSGS.length]); monTimer=setTimeout(monitorPing, 7000/speed); }
+
+  function runNext(){
+    if(!playing) return;
+    if(idx>=evs.length){ finish(); return; }
+    const e=evs[idx]; idx++; exec(e);
+    if(e.a==='hitl'||e.a==='select'||e.a==='wait'){ pauseFor(e); return; }
+    const dur = durationFor(e);
+    timer=setTimeout(runNext, dur/speed);
+  }
+  function finish(){ playing=false; clearTimeout(monTimer); log('monitor','보안·컴플라이언스 Agent: 전 과정 이상 없음 — 모니터링 종료'); setNode('security','idle'); playBtn.textContent='▶ 재생'; status('완료 — 모든 Agent 대기(off)', false); }
+  function play(){ if(playing) return; if(idx>=evs.length) reset(); playing=true; playBtn.textContent='⏸ 일시정지'; if(idx===0){ setNode('security','live'); log('monitor','보안·컴플라이언스 Agent: 상시 모니터링 시작 — Master Agent와 연결을 유지합니다'); } startMonitor(); runNext(); }
+  function pause(){ playing=false; clearTimeout(timer); clearTimeout(monTimer); playBtn.textContent='▶ 재생'; }
+  function reset(){ clearTimeout(timer); clearTimeout(monTimer); liveSet.clear(); playing=false; pending=null; idx=0; activeCount=0; cmdCount=0; outCount=0; pickedTime=TIMES[1]; pickedRoom=ROOMS[0];
+    attendees=ATT0.slice(); docs=DOC0.slice(); attBody=null; docBody=null; roomBody=null; slideDocs=[]; slideBody=null; attTarget='doc'; timePicked=false; timesBody=null;
+    playBtn.textContent='▶ 재생'; allIdle(); moveToken('master'); dataTok.style.opacity='0'; metrics();
+    logBody.innerHTML='<p class="text-slate-500 text-xs">재생을 누르면 메시지가 흐릅니다…</p>';
+    outputs.innerHTML='<span class="text-xs text-slate-400 placeholder col-span-full">아직 없음 — 재생하면 Agent들이 산출물을 만듭니다</span>';
+    panel.classList.add('hidden'); status('대기 중 — [▶ 재생]을 누르면 동작합니다', false);
+  }
+
+  /* ===== 모달 (그룹웨어 인력 · 회의실) ===== */
+  let lmMode='people';
+  function openModal(title, search){ lmTitle.textContent=title; lmSearchWrap.style.display=search?'':'none'; modal.classList.remove('hidden'); }
+  function closeModal(){ modal.classList.add('hidden'); }
+  function renderPeople(q){
+    const ql=(q||'').trim();
+    const list=ql?PEOPLE.filter(p=>p.n.indexOf(ql)>=0||p.t.indexOf(ql)>=0||p.g.indexOf(ql)>=0):PEOPLE;
+    const shown=list.slice(0,80);
+    lmBody.innerHTML=shown.map(p=>'<div class="flex justify-between items-center gap-2 py-1.5 border-b border-slate-100"><span class="text-sm"><b>'+p.n+'</b> <span class="text-slate-400 text-xs">'+p.t+' · '+p.g+'</span></span><button data-add-person="'+p.id+'" class="text-xs font-semibold text-brand-600 border border-brand-200 rounded px-2 py-1 hover:bg-brand-50 shrink-0">＋ 추가</button></div>').join('')||'<p class="text-sm text-slate-400 py-6 text-center">검색 결과 없음</p>';
+    lmFoot.textContent='KT ds 임직원 '+PEOPLE.length+'명 · 표시 '+shown.length+'명'+(list.length>shown.length?' (검색으로 좁혀주세요)':'');
+  }
+  function renderRooms(){
+    lmBody.innerHTML=ROOMS.map((r,i)=>'<div class="flex justify-between items-center gap-2 py-2 border-b border-slate-100"><span class="text-sm"><b>'+r.b+' '+r.f+'층 · '+r.name+'</b> <span class="text-slate-400 text-xs">('+r.cap+'인)</span><br><span class="text-[11px]"><span class="'+(r.tv?'text-emerald-600':'text-slate-300')+'">📺TV</span> <span class="'+(r.ac?'text-emerald-600':'text-slate-300')+'">❄️에어컨</span> <span class="'+(r.vc?'text-emerald-600':'text-slate-300')+'">📹화상</span></span></span><button data-pick-room="'+i+'" class="text-xs font-semibold text-brand-600 border border-brand-200 rounded px-2 py-1 hover:bg-brand-50 shrink-0">선택</button></div>').join('');
+    lmFoot.textContent='회의실 '+ROOMS.length+'곳';
+  }
+  function openPeople(){ lmMode='people'; openModal('👥 그룹웨어 — KT ds 임직원 검색 ('+PEOPLE.length+'명)', true); lmSearch.value=''; renderPeople(''); }
+  function openRooms(){ lmMode='rooms'; openModal('🚪 회의실 선택 (동·층·인실·TV·에어컨)', false); renderRooms(); }
+  lmClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(); });
+  lmSearch.addEventListener('input', ()=>{ if(lmMode==='people') renderPeople(lmSearch.value); });
+  lmBody.addEventListener('click', e=>{
+    let b;
+    if(b=e.target.closest('[data-add-person]')){ const p=PEOPLE[+b.dataset.addPerson]; if(p){ attendees.push({t:p.t,n:p.n,g:p.g}); if(attBody)attBody.innerHTML=renderAttendees(); log('human','현대영 책임: 그룹웨어에서 '+p.n+'('+p.t+' '+p.g+') 추가'); b.textContent='✓ 추가됨'; b.disabled=true; b.className='text-xs font-semibold text-emerald-600 border border-emerald-200 rounded px-2 py-1 shrink-0'; } }
+    else if(b=e.target.closest('[data-pick-room]')){ pickedRoom=ROOMS[+b.dataset.pickRoom]; if(roomBody)roomBody.innerHTML=renderRoom(); log('human','현대영 책임: 회의실 변경 → '+pickedRoom.b+' '+pickedRoom.f+'층 '+pickedRoom.name); closeModal(); }
+  });
+
+  /* ===== 산출물 즉시 수정 ===== */
+  outputs.addEventListener('click', e=>{
+    let b;
+    if(b=e.target.closest('[data-del-att]')){ attendees.splice(+b.dataset.delAtt,1); if(attBody)attBody.innerHTML=renderAttendees(); log('human','현대영 책임: 참석자 명단에서 1명 제외'); }
+    else if(b=e.target.closest('[data-gw-att]')){ openPeople(); }
+    else if(b=e.target.closest('[data-del-doc]')){ docs.splice(+b.dataset.delDoc,1); if(docBody)docBody.innerHTML=renderDocs(); log('human','현대영 책임: 사전 자료 1건 삭제'); }
+    else if(b=e.target.closest('[data-gw-doc]')){ docs.push({n:'표준 제안 가이드 v2',s:'그룹웨어 · 공유함'}); if(docBody)docBody.innerHTML=renderDocs(); log('human','현대영 책임: 그룹웨어에서 자료 추가'); }
+    else if(b=e.target.closest('[data-file-doc]')){ attTarget='doc'; attFile.click(); }
+    else if(b=e.target.closest('[data-file-slide]')){ attTarget='slide'; attFile.click(); }
+    else if(b=e.target.closest('[data-del-slide]')){ slideDocs.splice(+b.dataset.delSlide,1); if(slideBody)slideBody.innerHTML=renderSlides(); log('human','현대영 책임: 발표자료 참고 1건 삭제'); }
+    else if(b=e.target.closest('[data-gw-slide]')){ slideDocs.push({n:'사내 발표 표준 템플릿 v4',s:'그룹웨어 · 공유함'}); if(slideBody)slideBody.innerHTML=renderSlides(); log('human','현대영 책임: 그룹웨어에서 발표 참고자료 추가'); }
+    else if(b=e.target.closest('[data-room-change]')){ openRooms(); }
+    else if(b=e.target.closest('[data-vibe-download]')){ downloadVibe(); }
+    else if(b=e.target.closest('[data-vibe-open]')){ openVibe(); }
+    else if(b=e.target.closest('[data-time-pick]')){ pickedTime=TIMES[+b.dataset.timePick]; timePicked=true; if(timesBody)timesBody.innerHTML=C_TIMES(); log('human','현대영 책임: 회의 시각 선택/변경 → '+pickedTime); if(pending&&pending.a==='select') resume(); }
+    else if(b=e.target.closest('[data-time-apply]')){ const inp=timesBody&&timesBody.querySelector('[data-time-custom]'); const v=inp&&inp.value.trim(); if(v){ pickedTime=v; timePicked=true; if(timesBody)timesBody.innerHTML=C_TIMES(); log('human','현대영 책임: 회의 시각 직접 입력 → '+pickedTime); if(pending&&pending.a==='select') resume(); } }
+  });
+  attFile.addEventListener('change', e=>{ const f=e.target.files&&e.target.files[0]; if(f){
+      if(attTarget==='slide'){ slideDocs.push({n:f.name,s:'직접 업로드'}); if(slideBody)slideBody.innerHTML=renderSlides(); log('human','현대영 책임: 발표자료 참고 업로드 ('+f.name+')'); }
+      else { docs.push({n:f.name,s:'직접 첨부'}); if(docBody)docBody.innerHTML=renderDocs(); log('human','현대영 책임: 파일 첨부 ('+f.name+')'); }
+    } e.target.value=''; });
+
+  playBtn.addEventListener('click', ()=>{ playing?pause():play(); });
+  resetBtn.addEventListener('click', reset);
+  document.querySelectorAll('.lscn').forEach(b=>b.addEventListener('click', ()=>{ document.querySelectorAll('.lscn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); scn=+b.dataset.scn; evs=SCN[scn]; reset(); }));
+  document.querySelectorAll('.lspd').forEach(b=>b.addEventListener('click', ()=>{ document.querySelectorAll('.lspd').forEach(x=>x.classList.remove('active')); b.classList.add('active'); speed=+b.dataset.spd; }));
+
+  renderMap(); reset();
+})();
+
+/* ---------- ⑤ 데이터 흐름 시뮬레이터 ---------- */
+(function(){
+  const graph=document.getElementById('fx-graph'); if(!graph) return;
+  const holder=document.getElementById('fx-holder');
+  const NS='http://www.w3.org/2000/svg', CW=1740, CH=820, ACCEL=1;
+  graph.style.width=CW+'px'; graph.style.height=CH+'px';
+
+  // 보안구역 배경
+  const ZONES=[
+    {x:0,   w:215, c:'rgba(244,63,94,.07)',  bc:'rgba(248,113,113,.5)', lbl:'🌐 외부망', lc:'#f87171'},
+    {x:215, w:240, c:'rgba(239,68,68,.05)',  bc:'rgba(248,113,113,.4)', lbl:'🔒 보안경계(사외)', lc:'#fca5a5'},
+    {x:455, w:245, c:'rgba(245,158,11,.08)', bc:'rgba(245,158,11,.5)',  lbl:'🟧 DMZ', lc:'#f59e0b'},
+    {x:700, w:240, c:'rgba(13,148,136,.07)', bc:'rgba(45,212,191,.45)', lbl:'🔀 내부경계(망분리·스위치)', lc:'#5eead4'},
+    {x:940, w:380, c:'rgba(99,102,241,.07)', bc:'rgba(129,140,248,.45)',lbl:'🟦 내부망 · App/Runtime Zone', lc:'#818cf8'},
+    {x:1320,w:220, c:'rgba(192,132,252,.08)',bc:'rgba(192,132,252,.4)', lbl:'🟥 AI · 모델 Zone', lc:'#c084fc'},
+    {x:1540,w:200, c:'rgba(45,212,191,.08)', bc:'rgba(45,212,191,.4)',  lbl:'🟦 데이터 Zone', lc:'#2dd4bf'},
+  ];
+  ZONES.forEach(z=>{
+    const d=document.createElement('div'); d.className='fx-zone';
+    d.style.left=z.x+'px'; d.style.width=z.w+'px'; d.style.background=z.c; d.style.borderRight='1px dashed '+z.bc;
+    graph.appendChild(d);
+    const l=document.createElement('div'); l.className='fx-zlbl'; l.style.left=(z.x+8)+'px'; l.style.color=z.lc; l.textContent=z.lbl;
+    graph.appendChild(l);
+  });
+  // 외부 인터넷(egress) 구분
+  const egl=document.createElement('div'); egl.style.cssText='position:absolute;left:1150px;top:118px;width:560px;border-top:1px dashed rgba(147,197,253,.45);z-index:1'; graph.appendChild(egl);
+  const egt=document.createElement('div'); egt.style.cssText='position:absolute;left:1150px;top:16px;font-size:10px;font-weight:800;color:#93c5fd;z-index:3'; egt.textContent='🌐 외부 인터넷 (egress · 외부 LLM·SaaS)'; graph.appendChild(egt);
+
+  // 노드 정의 (x,y · 값은 부하 L과 노이즈 n으로 변동)
+  const NODES={
+    // 외부망
+    user:    {x:80, y:175,ic:'🌐',nm:'임직원(사외)',rl:'외부망·VPN',u:'req/s',col:'#5BC2FF', val:L=>L*0.35},
+    result:  {x:80, y:560,ic:'📨',nm:'사외 수신',rl:'임직원 결과',u:'건',col:'#fbbf24', cum:true},
+    cust:    {x:80, y:700,ic:'🏢',nm:'고객·외부',rl:'메일 수신',u:'건',col:'#fbbf24', cum:true, cumScale:0.28},
+    channel: {x:175,y:175,ic:'📡',nm:'채널',gate:1},
+    // 보안경계(사외)
+    vpn:     {x:255,y:175,ic:'🔒',nm:'VPN',gate:1},
+    fw1:     {x:335,y:175,ic:'🔥',nm:'방화벽1',gate:1},
+    ids:     {x:415,y:175,ic:'🚨',nm:'IDS/IPS',gate:1},
+    // DMZ
+    lb:      {x:495,y:175,ic:'⚖️',nm:'L4/L7 LB',gate:1},
+    waf:     {x:575,y:175,ic:'🛡️',nm:'WAF',gate:1},
+    apigw:   {x:655,y:175,ic:'🔀',nm:'API GW·포털',gate:1},
+    // 내부경계
+    fw2:     {x:735,y:175,ic:'🔥',nm:'방화벽2',gate:1},
+    seg:     {x:815,y:175,ic:'🔀',nm:'망분리',gate:1},
+    sw:      {x:895,y:175,ic:'⇄',nm:'코어스위치',gate:1},
+    // 내부망 App
+    userin:  {x:800,y:660,ic:'🧑‍💼',nm:'임직원(사내)',rl:'업무망 직접',u:'req/s',col:'#60a5fa', val:L=>L*0.65},
+    master:  {x:1040,y:415,ic:'🧠',nm:'Master Agent',rl:'오케스트레이터',u:'활성작업',col:'#818cf8', master:1, val:L=>Math.round(L*1.4), util:L=>L/20},
+    hitl:    {x:1040,y:680,ic:'✅',nm:'HITL 게이트',rl:'사람 승인',u:'대기',col:'#34d399', val:(L,n)=>Math.max(0,Math.round(1.6+n*1.6))},
+    sched:   {x:1210,y:140,ic:'🗓️',nm:'일정조율',rl:'🔌 커넥터',u:'건/s',col:'#38bdf8', val:L=>L*0.5, util:L=>L/26},
+    research:{x:1210,y:285,ic:'🔎',nm:'자료수집·RAG',rl:'🤖 Agent',u:'질의/s',col:'#22d3ee', val:L=>L*0.8, util:L=>L/20},
+    proposal:{x:1210,y:430,ic:'📝',nm:'제안서 작성',rl:'🤖 Agent',u:'토큰/s',col:'#a78bfa', val:L=>Math.round(L*118), util:L=>L/18, big:1},
+    stt:     {x:1210,y:560,ic:'🎤',nm:'STT·회의록',rl:'🧠 엔진·모델',u:'초/s',col:'#f472b6', val:L=>L*0.9, util:L=>L/19},
+    security:{x:1210,y:690,ic:'🛡️',nm:'보안검증',rl:'⚙️ 스킬',u:'검사/s',col:'#34d399', val:L=>L*0.7, util:L=>L/24},
+    // AI · 모델 Zone (+ 외부 egress)
+    saas:    {x:1210,y:62,ic:'🔗',nm:'SaaS·그룹웨어',rl:'🌐 일정·메일 egress',u:'호출/s',col:'#38bdf8', val:L=>L*0.4, ext:1},
+    extllm:  {x:1430,y:70,ic:'☁️',nm:'외부 LLM',rl:'🌐 클라우드 egress',u:'호출/s',col:'#93c5fd', val:L=>L*0.45, ext:1},
+    modelgw: {x:1430,y:330,ic:'🚪',nm:'모델 게이트웨이',rl:'라우팅/선택',u:'호출/s',col:'#c084fc', val:L=>L*2.1, util:L=>L/16},
+    llm:     {x:1430,y:520,ic:'🤖',nm:'내부 sLLM',rl:'GPU 추론',u:'토큰/s',col:'#a855f7', val:L=>Math.round(L*330), util:L=>L/15, big:1},
+    // 데이터 Zone
+    vdb:     {x:1630,y:210,ic:'🧮',nm:'VectorDB',rl:'임베딩 검색',u:'QPS',col:'#2dd4bf', val:L=>L*1.7, util:L=>L/22},
+    rdb:     {x:1630,y:400,ic:'🗄️',nm:'RDB',rl:'정형 데이터',u:'QPS',col:'#5eead4', val:L=>L*1.1, util:L=>L/26},
+    kms:     {x:1630,y:580,ic:'🗂️',nm:'KMS 지식자산',rl:'문서 IO',u:'IO/s',col:'#67e8f9', val:L=>L*0.6, util:L=>L/28},
+  };
+
+  // 엣지 (a→b · 데이터 유형 · 라벨여부)
+  const TC={req:'#5BC2FF',cmd:'#818cf8',qry:'#22d3ee',data:'#2dd4bf',llm:'#c084fc',out:'#fbbf24',appr:'#34d399',ext:'#94a3b8'};
+  const TSHAPE={req:'c',cmd:'r',qry:'c',data:'e',llm:'c',out:'r',appr:'c',ext:'c'};
+  const TLBL={req:'요청',cmd:'명령',qry:'질의',data:'데이터',llm:'프롬프트',out:'산출물',appr:'승인',ext:'외부호출'};
+  const ED=[
+    // 사외 ingress 스파인: 채널→VPN→방화벽1→IDS/IPS→DMZ(LB·WAF·API GW)→방화벽2→망분리→스위치→Master
+    ['user','channel','req',1],['channel','vpn','req',0],['vpn','fw1','req',0],['fw1','ids','req',0],['ids','lb','req',0],['lb','waf','req',0],['waf','apigw','req',1],['apigw','fw2','req',0],['fw2','seg','req',0],['seg','sw','req',0],['sw','master','req',0],
+    // 사내 ingress (업무망 직접)
+    ['userin','master','req',1],['master','userin','out',0],
+    // fan-out
+    ['master','sched','cmd',0],['master','research','cmd',1],['master','proposal','cmd',0],['master','stt','cmd',0],['master','security','cmd',0],
+    // RAG (질의↔데이터)
+    ['research','vdb','qry',0],['vdb','research','data',0],['research','kms','qry',0],['kms','research','data',1],
+    // LLM (내부 sLLM)
+    ['proposal','modelgw','llm',1],['master','modelgw','llm',0],['modelgw','llm','llm',0],['llm','modelgw','data',0],['modelgw','master','data',0],
+    // egress: 외부 LLM(클라우드) · SaaS(그룹웨어)
+    ['modelgw','extllm','ext',1],['extllm','modelgw','data',0],['sched','saas','ext',1],
+    // DB (sched는 SaaS로 연동, security는 정책·감사라 KMS로 — AI Zone 관통 방지)
+    ['proposal','rdb','data',0],['security','kms','data',0],
+    // HITL
+    ['master','hitl','appr',1],['hitl','master','appr',0],
+    // 결과 전달 (API GW 경유 → 사외 임직원·고객)
+    ['master','apigw','out',0],['apigw','result','out',1],['apigw','cust','out',0],
+  ];
+
+  // 배관 + 입자
+  const svg=document.createElementNS(NS,'svg'); svg.setAttribute('class','fx-pipes'); svg.setAttribute('viewBox','0 0 '+CW+' '+CH); graph.appendChild(svg);
+  const geo=[];
+  ED.forEach(e=>{
+    const A=NODES[e[0]],B=NODES[e[1]],type=e[2],col=TC[type],sh=TSHAPE[type];
+    const line=document.createElementNS(NS,'line');
+    line.setAttribute('x1',A.x);line.setAttribute('y1',A.y);line.setAttribute('x2',B.x);line.setAttribute('y2',B.y);
+    line.setAttribute('stroke',col);line.setAttribute('stroke-width','2.5');line.setAttribute('opacity','0.22');line.setAttribute('stroke-linecap','round');
+    svg.appendChild(line);
+    const dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy),ang=Math.atan2(dy,dx)*180/Math.PI,px=-dy/len,py=dx/len;
+    const parts=[];
+    for(let k=0;k<3;k++){
+      let el;
+      if(sh==='r'){el=document.createElementNS(NS,'rect');el.setAttribute('width','6.5');el.setAttribute('height','6.5');el.setAttribute('x','-3.25');el.setAttribute('y','-3.25');el.setAttribute('rx','1.5');}
+      else if(sh==='e'){el=document.createElementNS(NS,'ellipse');el.setAttribute('rx','2.6');el.setAttribute('ry','4.6');}
+      else{el=document.createElementNS(NS,'circle');el.setAttribute('r','4');}
+      el.setAttribute('fill',col); svg.appendChild(el);
+      parts.push({el:el,t:k/3,seed:k*2.1});
+    }
+    geo.push({e:e,A:A,B:B,len:len,ang:ang,px:px,py:py,parts:parts,sh:sh,type:type});
+    if(e[3]){
+      const lab=document.createElement('div'); lab.className='fx-plbl';
+      lab.style.left=((A.x+B.x)/2)+'px'; lab.style.top=((A.y+B.y)/2)+'px'; lab.style.color=col; lab.style.borderColor=col+'66';
+      lab.textContent=TLBL[type];
+      graph.appendChild(lab);
+    }
+  });
+
+  // 노드 DOM
+  const nodeEls={};
+  Object.keys(NODES).forEach(id=>{
+    const nd=NODES[id], d=document.createElement('div'); d.style.left=nd.x+'px'; d.style.top=nd.y+'px';
+    if(nd.gate){
+      d.className='fx-node gate';
+      d.innerHTML='<div class="fx-gcard"><div class="fx-ic">'+nd.ic+'</div><div class="fx-gnm">'+nd.nm+'</div></div>';
+    } else {
+      d.className='fx-node';
+      const bar=(nd.util)?'<div class="fx-bar"><i data-bar style="background:'+nd.col+'"></i></div>':'';
+      const st=(nd.util||nd.master)?'<div class="fx-st"><span class="fx-dot" data-dot></span><span class="fx-sl" data-sl></span></div>':'';
+      d.innerHTML='<div class="fx-card'+(nd.master?' master':'')+(nd.ext?' ext':'')+'" data-card>'+
+        '<div class="fx-top"><div class="fx-ic">'+nd.ic+'</div><div><div class="fx-nm">'+nd.nm+'</div><div class="fx-rl">'+nd.rl+'</div></div></div>'+
+        '<div class="fx-val"><span class="fx-v" data-v style="color:'+nd.col+'">0</span><span class="fx-u">'+nd.u+'</span></div>'+bar+st+'</div>';
+    }
+    graph.appendChild(d); nodeEls[id]=d;
+  });
+
+  // KPI
+  const KPI=[
+    {l:'요청량(부하)',u:'req/s',c:'#5BC2FF',f:()=>load},
+    {l:'LLM 처리량',u:'tok/s',c:'#a855f7',f:()=>NODES.llm.val(load),fmt:1},
+    {l:'DB 총 QPS',u:'q/s',c:'#2dd4bf',f:()=>NODES.vdb.val(load)+NODES.rdb.val(load)+NODES.kms.val(load)},
+    {l:'평균 응답(p95)',u:'ms',c:'#fb923c',f:n=>Math.round(420+load*40+n*70)},
+    {l:'HITL 대기',u:'건',c:'#34d399',f:n=>NODES.hitl.val(load,n)},
+    {l:'누적 처리완료',u:'건',c:'#818cf8',f:()=>Math.round(done),fmt:1},
+  ];
+  const kbox=document.getElementById('fx-kpis');
+  kbox.innerHTML=KPI.map(x=>'<div class="fx-kpi"><div><span class="kv" data-kv style="color:'+x.c+'">0</span><span class="ku">'+x.u+'</span></div><div class="kl">'+x.l+'</div></div>').join('');
+  const kEls=Array.prototype.slice.call(kbox.querySelectorAll('[data-kv]'));
+  const fmt=v=>v>=1000?Math.round(v).toLocaleString():v.toFixed(v<10?1:0);
+
+  // 내레이션
+  const CAPS=[
+    '🌐 사외 임직원이 채널(Portal·Teams)로 접속 → VPN·방화벽·IDS/IPS·DMZ(LB·WAF·API GW)를 통과합니다.',
+    '🧑‍💼 사내 임직원은 업무망에서 망분리·코어스위치를 거쳐 Master Agent에 직접 접속합니다.',
+    '🧠 Master Agent가 필요한 Agent들에게 작업을 분배(fan-out)합니다.',
+    '🔎 자료수집 Agent가 VectorDB·KMS에서 근거를 검색(RAG)합니다.',
+    '📝 제안서 Agent가 모델 게이트웨이로 내부 sLLM / 외부 LLM(클라우드)을 호출합니다.',
+    '🔗 일정·메일은 외부 SaaS(그룹웨어)로 egress하고, 외부 발송 전 ✅ HITL 승인을 받습니다.',
+    '📨 결과는 API GW를 거쳐 사외 임직원·고객에게, 사내 임직원에게는 직접 전달됩니다.',
+  ];
+  const capEl=document.getElementById('fx-caption');
+
+  // 상태
+  let load=6, speed=2, running=true, last=null, frame=0, simT=0, done=0, capIdx=0;
+
+  function refresh(){
+    const n=Math.sin(simT*1.3); // -1..1
+    Object.keys(NODES).forEach(id=>{
+      const nd=NODES[id], el=nodeEls[id];
+      if(nd.gate) return;
+      const v=el.querySelector('[data-v]');
+      let val = nd.cum ? done*(nd.cumScale||1) : nd.val(load,n*0.6);
+      v.textContent = nd.cum?Math.round(val).toLocaleString() : (nd.big?Math.round(val).toLocaleString():(val>=100?Math.round(val):val.toFixed(val<10?1:0)));
+      if(nd.util){
+        const u=Math.min(1.15, nd.util(load)+n*0.05), pct=Math.min(100,u*100);
+        const busy=u>0.85, col=busy?'#f59e0b':(u>0.6?'#fbbf24':nd.col);
+        el.querySelector('[data-bar]').style.width=pct+'%'; el.querySelector('[data-bar]').style.background=col;
+        el.querySelector('[data-card]').classList.toggle('busy',busy);
+        const dot=el.querySelector('[data-dot]'), sl=el.querySelector('[data-sl]');
+        if(dot){dot.style.background=busy?'#f59e0b':'#3FBFBF'; sl.textContent=busy?'혼잡':'정상'; sl.style.color=busy?'#fbbf24':'#5eead4';}
+      } else if(nd.master){
+        const dot=el.querySelector('[data-dot]'), sl=el.querySelector('[data-sl]');
+        if(dot){dot.style.background='#818cf8'; sl.textContent='지휘 중'; sl.style.color='#a5b4fc';}
+      }
+    });
+    KPI.forEach((x,i)=>{const val=x.f(n); kEls[i].textContent = x.fmt?Math.round(val).toLocaleString():fmt(val);});
+  }
+
+  function loop(ts){
+    if(last==null)last=ts; const dt=Math.min(0.05,(ts-last)/1000); last=ts; frame++;
+    if(running){
+      simT+=dt*speed;
+      done += load*0.97*dt*speed*ACCEL*2.4;
+      const base=0.12*speed*(0.5+load/22);
+      geo.forEach(g=>{
+        const v=base*(46/Math.max(46,g.len));
+        g.parts.forEach(p=>{
+          p.t+=v*dt*6; if(p.t>1)p.t-=1;
+          let x=g.A.x+(g.B.x-g.A.x)*p.t, y=g.A.y+(g.B.y-g.A.y)*p.t;
+          if(g.type==='llm'||g.type==='qry'){const o=Math.sin(p.t*Math.PI*3+p.seed)*5; x+=g.px*o; y+=g.py*o;}
+          let tr='translate('+x.toFixed(1)+','+y.toFixed(1)+')';
+          if(g.sh==='e')tr+=' rotate('+g.ang.toFixed(0)+')'; else if(g.sh==='r')tr+=' rotate('+((p.t*540+p.seed*40)%360).toFixed(0)+')';
+          p.el.setAttribute('transform',tr);
+          p.el.setAttribute('opacity', g.type==='llm'||g.type==='qry'?'0.5':'0.95');
+        });
+      });
+      const ci=Math.floor(simT/3)%CAPS.length;
+      if(ci!==capIdx){capIdx=ci; capEl.textContent='▶ '+CAPS[ci];}
+      if(frame%6===0) refresh();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // 컨트롤
+  const playBtn=document.getElementById('fx-play'), loadInput=document.getElementById('fx-load'), loadV=document.getElementById('fx-loadv');
+  playBtn.addEventListener('click',()=>{running=!running; playBtn.textContent=running?'⏸ 일시정지':'▶ 재생'; playBtn.classList.toggle('bg-brand-600',running); playBtn.classList.toggle('text-white',running); playBtn.classList.toggle('bg-white',!running); playBtn.classList.toggle('border',!running); playBtn.classList.toggle('border-slate-200',!running);});
+  loadInput.addEventListener('input',()=>{load=+loadInput.value; loadV.textContent=load+' req/s'; refresh();});
+  document.getElementById('fx-reset').addEventListener('click',()=>{load=6;loadInput.value=6;loadV.textContent='6 req/s';simT=0;done=0;capIdx=0;capEl.textContent='▶ '+CAPS[0];refresh();});
+  document.querySelectorAll('.fx-spd').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.fx-spd').forEach(x=>x.classList.remove('active','bg-brand-600','text-white'));b.classList.add('active','bg-brand-600','text-white');speed=+b.dataset.fspd;}));
+  // 2× 기본 활성 표시
+  const spd2=document.querySelector('.fx-spd[data-fspd="2"]'); if(spd2){spd2.classList.add('bg-brand-600','text-white');}
+
+  // 화면 폭에 맞춰 전체 자동 맞춤 (외부망~데이터Zone 한 화면)
+  let zoom=1;
+  const zlbl=document.getElementById('fx-zoomlbl');
+  function fitGraph(){
+    const wrap=document.getElementById('fx-wrap'); if(!wrap) return;
+    wrap.style.marginLeft='0'; wrap.style.width='auto';
+    if(wrap.clientWidth<40) return; // 탭 비활성(숨김) 상태
+    const docW=document.documentElement.clientWidth, left=wrap.getBoundingClientRect().left;
+    wrap.style.width=docW+'px'; wrap.style.marginLeft=(-left)+'px';
+    const availW=docW-24, maxH=Math.min(720, window.innerHeight*0.82);
+    let fit=Math.min(availW/CW, maxH/CH); fit=Math.max(0.3,Math.min(1.7,fit));
+    const s=fit*zoom;
+    graph.style.transform='scale('+s+')';
+    holder.style.width=(CW*s)+'px'; holder.style.height=(CH*s)+'px';
+    holder.style.margin = (zoom>1.001)?'0':'0 auto';
+    wrap.style.height=(CH*fit+20)+'px';
+    wrap.style.overflow = (zoom>1.001)?'auto':'hidden';
+    if(zlbl) zlbl.textContent=Math.round(s*100)+'%';
+  }
+  function setZoom(z){ zoom=Math.max(0.6,Math.min(3,z)); fitGraph(); }
+  window.addEventListener('resize',fitGraph);
+  document.querySelectorAll('[data-tab="data"]').forEach(b=>b.addEventListener('click',()=>setTimeout(fitGraph,40)));
+  const zi=document.getElementById('fx-zoomin'),zo=document.getElementById('fx-zoomout'),zf=document.getElementById('fx-zoomfit');
+  if(zi)zi.addEventListener('click',()=>setZoom(zoom*1.25));
+  if(zo)zo.addEventListener('click',()=>setZoom(zoom/1.25));
+  if(zf)zf.addEventListener('click',()=>setZoom(1));
+
+  refresh(); fitGraph(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

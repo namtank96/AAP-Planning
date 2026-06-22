@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP 회의 업무 작동 원리 (v0.12)</title>
+<style>
+  :root{
+    --bg:#f8fafc; --surface:#ffffff; --soft:#f9fafb; --text:#111827; --muted:#64748b; --line:#e5e7eb;
+    --accent:#0d9488; --accent-soft:#f0fdfa; --accent-line:#99f6e4;
+    --amber:#d97706; --amber-soft:#fffbeb; --green:#16a34a; --green-soft:#f0fdf4;
+    --red:#dc2626; --red-soft:#fef2f2; --gold:#b45309; --navy:#0f172a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:var(--bg);color:var(--text);font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .app{display:grid;grid-template-rows:auto 1fr auto;height:100vh;overflow:hidden;}
+  .internal{display:none;} body.dev-on .internal{display:block;}
+
+  /* Top band */
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:11px 18px;display:flex;align-items:center;gap:18px;}
+  .top .req{flex:1;min-width:0;}
+  .top .rl{font-size:10px;color:#9ca3af;font-weight:700;}
+  .top .rt{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .top .und{display:flex;gap:16px;align-items:center;flex:0 0 auto;}
+  .top .und .ul{font-size:10px;color:#9ca3af;font-weight:700;}
+  .top .und .uv{font-size:12.5px;font-weight:600;}
+  .top .und .uv.warn{color:var(--amber);}
+  .top .tbtns{display:flex;gap:8px;flex:0 0 auto;}
+  .top .tg{font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;cursor:pointer;}
+
+  /* Main split */
+  .main{display:grid;grid-template-columns:44% 56%;gap:14px;padding:14px;overflow:hidden;}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:auto;padding:14px 15px;}
+  .ph{font-weight:700;font-size:14px;}
+  .ps{font-size:11.5px;color:var(--muted);margin-bottom:11px;}
+
+  /* Left: drilldown rail */
+  .rail{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+  .wr{display:flex;align-items:center;gap:9px;padding:7px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;transition:.18s;}
+  .wr:hover{border-color:var(--accent-line);}
+  .wr.sel{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 2px 8px rgba(13,148,136,.1);}
+  .wr .wn{width:20px;height:20px;border-radius:6px;background:#eef2f7;color:#94a3b8;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .wr.done .wn{background:var(--accent);color:#fff;}
+  .wr.sel .wn{background:var(--accent);color:#fff;}
+  .wr .wl{font-size:12.5px;font-weight:600;}
+  .wr .wc{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+  .wc.s-confirm{background:var(--accent-soft);color:var(--accent);}
+  .wc.s-prep{background:#eef2f7;color:#64748b;}
+  .wc.s-review{background:var(--amber-soft);color:var(--amber);}
+  .wc.s-apply{background:var(--green-soft);color:var(--green);}
+  .wc.s-run{background:#eef6ff;color:#2563eb;}
+  .wc.s-done{background:var(--green-soft);color:var(--green);}
+  .wc.s-save{background:#fff7ed;color:var(--gold);}
+
+  /* Left: detail panel */
+  .detail{border-top:1px solid var(--line);padding-top:12px;}
+  .dt{font-weight:700;font-size:13.5px;margin-bottom:9px;display:flex;align-items:center;gap:8px;}
+  .dsec{margin-bottom:10px;}
+  .dl{font-size:10px;color:#9ca3af;font-weight:700;margin-bottom:3px;}
+  .dv{font-size:12.5px;color:#374151;}
+  .dv.need{background:var(--amber-soft);border-left:3px solid var(--amber);border-radius:5px;padding:6px 9px;color:#92400e;}
+  .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;}
+  .tag{font-size:10.5px;border:1px solid var(--line);border-radius:7px;padding:2px 8px;background:#fff;color:#475569;}
+  details.more{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px;}
+  details.more summary{font-size:11px;color:var(--muted);font-weight:700;cursor:pointer;list-style:none;}
+  details.more summary::before{content:"▸ ";} details.more[open] summary::before{content:"▾ ";}
+  .dev{font-family:"Consolas",monospace;font-size:11px;color:#64748b;}
+
+  /* Right: AAP structure (hero) */
+  .struct{position:relative;}
+  .nd{border:1px solid var(--line);border-radius:12px;background:#fff;padding:9px 13px;transition:.2s;}
+  .nd .nk{font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;}
+  .nd .nk .ndd{width:9px;height:9px;border-radius:50%;background:#cbd5e1;flex:0 0 auto;}
+  .nd .ne{font-size:9.5px;color:#cbd5e1;margin-left:17px;}
+  body.dev-on .nd .ne{color:#9ca3af;}
+  .nd.idle{opacity:.42;}
+  .nd.done .ndd{background:var(--green);}
+  .nd.active{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 5px 16px rgba(13,148,136,.13);}
+  .nd.active .nk{color:#0f766e;} .nd.active .ndd{background:var(--accent);}
+  .vln{height:13px;width:2px;background:var(--line);margin:0 auto;}
+  .vln.on{background:var(--accent);}
+  .agent-chips{margin:8px 0 1px 17px;display:flex;flex-wrap:wrap;gap:5px;}
+  .ac{font-size:10.5px;border:1px solid var(--line);border-radius:7px;padding:3px 9px;background:#fff;color:#64748b;transition:.2s;}
+  .ac.hot{border-color:var(--accent);background:#fff;color:#0f766e;font-weight:700;box-shadow:0 2px 6px rgba(13,148,136,.12);}
+  .foundation{margin-top:13px;border:1px solid var(--line);border-radius:10px;background:var(--soft);padding:8px 13px;font-size:11.5px;color:var(--muted);text-align:center;transition:.2s;}
+  .foundation.active{background:var(--navy);color:#cbd5e1;border-color:var(--navy);}
+
+  /* Bottom thin bar */
+  .bot{background:#fff;border-top:1px solid var(--line);padding:8px 18px;display:flex;align-items:center;gap:12px;}
+  .bot .bstep{font-size:12px;color:var(--muted);}
+  .bot .bstep b{color:var(--text);}
+  .bot .spacer{flex:1;}
+  .btn{font-size:12px;padding:7px 14px;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:pointer;color:var(--text);}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .btn.sm{padding:5px 10px;font-size:11.5px;}
+
+  [data-tip]{cursor:help;}
+  #tip{position:fixed;z-index:60;max-width:280px;background:var(--navy);color:#f1f5f9;font-size:11.5px;line-height:1.55;padding:9px 11px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:none;pointer-events:none;}
+
+  /* Guide */
+  #gSpot{position:fixed;z-index:100;border-radius:12px;box-shadow:0 0 0 9999px rgba(15,23,42,.55);border:2px solid var(--accent);transition:all .32s cubic-bezier(.4,0,.2,1);pointer-events:none;display:none;}
+  #gCursor{position:fixed;z-index:102;pointer-events:none;transition:left .35s,top .35s;display:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));}
+  #gBubble{position:fixed;z-index:102;width:300px;background:#fff;border-radius:13px;box-shadow:0 18px 50px rgba(0,0,0,.3);padding:14px 16px;display:none;transition:left .35s,top .35s;}
+  #gBubble .gn{font-size:10.5px;color:var(--accent);font-weight:700;}
+  #gBubble .gt{font-size:14px;font-weight:700;margin:1px 0 5px;}
+  #gBubble .gtx{font-size:12.5px;color:#374151;line-height:1.6;}
+  #gBubble .gctl{display:flex;gap:7px;margin-top:12px;align-items:center;}
+  #gBubble .gctl .spacer{flex:1;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="req"><div class="rl">요청</div><div class="rt">다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘.</div></div>
+    <div class="und">
+      <div><div class="ul">AAP가 이해한 업무</div><div class="uv">킥오프 회의 준비</div></div>
+      <div><div class="ul">목적</div><div class="uv">착수 범위·역할·일정·보안 조건 정리</div></div>
+      <div><div class="ul">확인 필요</div><div class="uv warn">외부 초대·자료 공유</div></div>
+    </div>
+    <div class="tbtns"><label class="tg"><input type="checkbox" id="devToggle"> 개발자 보기</label></div>
+  </div>
+
+  <div class="main">
+    <section class="panel left">
+      <div class="ph">회의 업무 드릴다운</div>
+      <div class="ps">회의 업무가 AAP 안에서 나뉘는 세부 업무 단위입니다.</div>
+      <div class="rail" id="rail"></div>
+      <div class="detail" id="detail"></div>
+    </section>
+    <section class="panel right">
+      <div class="ph">AAP 작동 구조</div>
+      <div class="ps">선택한 회의 업무를 처리하는 AAP 요소가 점등됩니다.</div>
+      <div class="struct" id="struct"></div>
+    </section>
+  </div>
+
+  <div class="bot">
+    <div class="bstep" id="bstep"></div>
+    <div class="spacer"></div>
+    <button class="btn primary" id="guideBtn">처리 흐름 보기</button>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="gSpot"></div>
+<svg id="gCursor" width="22" height="22" viewBox="0 0 24 24"><path d="M4 2l6.5 17 2.3-6.7 6.7-2.3z" fill="#0f172a" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg>
+<div id="gBubble"></div>
+
+<script>
+/* 우측 AAP 노드 */
+const NODES=[
+  {k:'user',ko:'사용자 요청',en:'Service Experience',tip:'사용자의 한 줄 요청을 받아 처리 대상으로 인식하는 부분입니다.'},
+  {k:'semantic',ko:'업무 이해',en:'Business Semantic',tip:'업무 용어·역할·절차·정책을 AAP가 처리할 수 있는 구조로 바꾸는 부분입니다.'},
+  {k:'data',ko:'자료 연결',en:'Data & Inputs',tip:'메일·문서함·일정·조직도에서 회의 준비에 필요한 정보를 모으는 부분입니다.'},
+  {k:'agent',ko:'작업 구성',en:'Agentic Reasoning',tip:'회의 준비를 참석자·일정·자료·안건 등 세부 작업으로 나누고 조율하는 부분입니다.',chips:true},
+  {k:'policy',ko:'검토 기준',en:'Policy · Evaluation',tip:'바로 처리할 일과 담당자 확인이 필요한 일을 정책 기준으로 나누는 부분입니다.'},
+  {k:'hitl',ko:'담당자 확인',en:'HITL · Governance',tip:'외부 초대·자료 공유·공식 문구처럼 책임이 있는 항목은 자동 실행하지 않고 담당자가 확인합니다.'},
+  {k:'action',ko:'시스템 반영',en:'Action · Writeback',tip:'확인된 항목을 캘린더·문서함·메일 같은 실제 시스템에 반영하는 부분입니다.'},
+  {k:'trace',ko:'기록',en:'Run Trace',tip:'요청부터 반영까지 처리 과정을 기록해 다시 볼 수 있게 하는 부분입니다.'},
+  {k:'learning',ko:'재사용',en:'Operational Learning',tip:'이번 회의 준비에서 수정된 기준을 다음 회의 준비에 재사용하는 부분입니다.'},
+];
+const AGENT_CHIPS=[['parts','참석자 후보'],['sched','일정 후보'],['mat','자료 묶음'],['agenda','안건 초안'],['check','확인 항목'],['minutes','회의록 후보'],['todo','후속 할 일']];
+
+/* 좌측 12 세부 업무 — 좌우 정합 매핑 */
+const WORK=[
+ {id:'request',label:'요청 확인',status:'확인',sc:'s-confirm',aap:['user'],chips:[],
+  tip:'한 줄 요청에서 회의 준비가 시작됩니다. AAP는 바로 예약하지 않고 부족한 정보부터 찾습니다.',
+  in:'사용자 요청 한 줄', out:'회의 준비 업무 시작', review:'요청 의도 보완 필요 여부', wb:'없음',
+  tags:['사용자 요청','업무 시작','정보 부족'], refs:'요청 문장', dev:'Raw Request'},
+ {id:'intent',label:'업무 이해',status:'확인',sc:'s-confirm',aap:['semantic','policy'],chips:[],
+  tip:'요청을 킥오프 회의 준비 업무로 정리합니다. 목적·필요 산출물·확인 항목이 함께 잡힙니다.',
+  in:'사용자 요청 · 이전 고객 미팅 정보', out:'킥오프 회의 준비 업무 · 회의 목적 · 필요 산출물', review:'외부 고객 포함 여부 · 자료 공유 여부', wb:'회의 준비안',
+  tags:['회의 유형','회의 목적','필요 산출물','확인 플래그'], refs:'이전 회의록 · 고객 메일', dev:'Meeting Event'},
+ {id:'materials',label:'자료 확인',status:'준비',sc:'s-prep',aap:['data','semantic','trust'],chips:[],
+  tip:'메일·문서함·이전 회의록·조직도에서 회의 준비에 필요한 근거를 찾습니다. 권한이 없거나 외부 공유가 어려운 자료는 확인 대상으로 분리합니다.',
+  in:'메일 · 문서함 · 이전 회의록 · 제안 자료 · 고객 Q&A · 조직도', out:'관련 자료 묶음 · 참고 근거 목록 · 공유 제한 후보', review:'외부 공유 가능 자료 · 마스킹 필요 여부', wb:'자료 폴더 · 초대 메일 첨부 후보',
+  tags:['메일','문서함','이전 회의록','제안 자료','Q&A','조직도','권한'], refs:'관련 문서 6 · 메일 14', dev:'Context Package'},
+ {id:'parts',label:'참석자 구성',status:'준비',sc:'s-prep',aap:['data','semantic','agent','policy'],chips:['parts'],
+  tip:'이전 회의 참석자, 최근 메일 참여자, 조직도 역할을 바탕으로 참석자 후보를 준비합니다.',
+  in:'조직도 · 이전 회의 참석자 · 최근 메일 참여자 · 회의 목적', out:'필수 참석자 · 선택 참석자 · 외부 참석자 후보', review:'최종 참석자 · 외부 고객 포함 여부', wb:'캘린더 초대 · 메일 수신자 · 자료 공유 권한',
+  tags:['영업','PM','AI 아키텍트','데이터 담당','보안 담당','고객 DX','고객 IT'], refs:'김영업 메일 8건 등', dev:'Candidate Set'},
+ {id:'sched',label:'일정 후보',status:'준비',sc:'s-prep',aap:['data','agent','action'],chips:['sched'],
+  tip:'참석자 후보의 캘린더와 회의 시간 조건으로 일정 후보를 계산합니다.',
+  in:'참석자 후보 · 캘린더 · 회의 시간 조건', out:'일정 후보 3개 · 충돌 정보 · 대체 시간', review:'최종 일정', wb:'캘린더 초안 · 회의실 예약',
+  tags:['6/24 10:00','6/25 14:00','6/26 09:30','충돌 없음','대체안'], refs:'참석자 캘린더', dev:'Time Candidate Set'},
+ {id:'matbundle',label:'자료 묶음',status:'준비',sc:'s-prep',aap:['data','policy','hitl'],chips:['mat'],
+  tip:'회의 전 배포 자료를 공유 가능/내부 제외로 나눕니다.',
+  in:'관련 문서 · 제안 자료 · 이전 회의록 · 보안 검토사항', out:'공유 가능 자료 · 내부 제외 자료 · 회의 전 배포 자료', review:'외부 공유 범위 · 내부 자료 제외', wb:'자료 폴더 · 공유 링크 · 초대 메일',
+  tags:['제안 자료','회의록','Q&A','아키텍처 요약','내부 상세 제외','공유 링크'], refs:'보안 검토사항', dev:'Material Package'},
+ {id:'agenda',label:'안건 초안',status:'준비',sc:'s-prep',aap:['semantic','agent'],chips:['agenda'],
+  tip:'회의 목적과 고객 관심사로 안건 초안과 논의 순서를 만듭니다.',
+  in:'회의 목적 · 고객 관심사 · 이전 미팅 내용 · 적용 후보 업무', out:'안건 초안 · 논의 순서 · 확인 질문', review:'안건 순서 · 고객 공유 문구', wb:'회의록 템플릿 · 초대 메일 본문',
+  tags:['목적 확인','적용 업무','데이터 확인','시스템 확인','보안 조건','다음 액션'], refs:'이전 미팅 Q&A', dev:'Agenda Draft'},
+ {id:'check',label:'확인 항목',status:'확인 필요',sc:'s-review',aap:['policy','hitl','trust'],chips:['check'],
+  tip:'외부 초대·자료 공유·공식 문구처럼 책임이 있는 항목은 자동 실행하지 않고 담당자가 확인합니다.',
+  in:'참석자 후보 · 자료 묶음 · 안건 초안 · 정책 기준', out:'바로 처리 가능 항목 · 담당자 확인 항목 · 제한 항목', review:'외부 초대 · 자료 공유 · 메일 문구', wb:'실행 가능 항목 목록',
+  tags:['바로 처리','담당자 확인','공유 제한','외부 초대','발송 문구'], refs:'외부 공유 정책', dev:'Coordination Result · Human Review Decision'},
+ {id:'writeback',label:'시스템 반영',status:'반영',sc:'s-apply',aap:['hitl','action','trace'],chips:[],
+  tip:'담당자가 확인한 항목만 캘린더·회의실·문서함·메일 초안에 반영됩니다.',
+  in:'담당자가 확인한 회의 준비안', out:'캘린더 초안 · 회의실 예약 · 자료 폴더 · 메일 초안 · 회의록 템플릿', review:'외부 발송 승인', wb:'캘린더 · 메일 · 문서함 · 회의실 · 워크플로우',
+  tags:['캘린더','회의실','메일','문서함','회의록 템플릿','워크플로우'], refs:'승인된 준비안', dev:'Action Result'},
+ {id:'during',label:'회의 중 기록',status:'진행',sc:'s-run',aap:['user','semantic','trace'],chips:['minutes','todo'],
+  tip:'회의 중 발언과 진행 상태를 결정사항·후속 할 일 후보로 정리합니다.',
+  in:'회의 발언 · 안건 진행 · 채팅 · 참석 상태', out:'회의 기록 · 결정사항 후보 · 후속 할 일 후보 · 보류사항', review:'공식 결정사항 · 고객 공유 표현', wb:'회의록 초안',
+  tags:['발언 기록','안건 진행','결정 후보','후속 할 일','보류사항'], refs:'회의 발언 로그', dev:'Raw Meeting Record'},
+ {id:'after',label:'회의 후 정리',status:'완료',sc:'s-done',aap:['semantic','trace','action'],chips:['minutes','todo'],
+  tip:'회의 기록을 회의록과 후속 할 일로 정리합니다. 확정은 담당자 확인이 필요합니다.',
+  in:'회의 기록 · 결정사항 후보 · 후속 할 일 후보', out:'회의록 · 결정사항 · 후속 할 일 · 담당자·기한', review:'회의록 확정 · 할 일 담당자 · 기한', wb:'To-do · 후속 메일 · 프로젝트 관리',
+  tags:['회의록','결정사항','후속 할 일','담당자','기한','후속 메일'], refs:'회의 결정 후보', dev:'Official Minutes · Action Item Set'},
+ {id:'reuse',label:'재사용',status:'저장',sc:'s-save',aap:['trace','learning','semantic'],chips:[],
+  tip:'이번 회의 준비에서 수정된 참석자·자료·안건 기준을 다음 회의 준비에 재사용합니다.',
+  in:'처리 이력 · 담당자 수정 · 회의 결과 · 후속 업무 결과', out:'회의 준비 패턴 · 참석자 추천 기준 · 자료 묶음 기준 · 안건 템플릿', review:'재사용 범위', wb:'다음 회의 준비 · 업무 템플릿',
+  tags:['처리 이력','수정 이력','추천 기준','회의 Skill','템플릿'], refs:'담당자 수정 이력', dev:'Skill Update · Run Trace'},
+];
+
+/* Guide 단계 (좌측/우측 번갈아) */
+const GUIDE=[
+ {sel:'[data-work="request"]', work:'request', bubble:'한 줄 요청에서 회의 준비가 시작됩니다. AAP는 바로 예약하지 않고 부족한 정보부터 찾습니다.'},
+ {sel:'[data-work="intent"]', work:'intent', bubble:'요청을 킥오프 회의 준비 업무로 정리합니다. 목적과 확인 항목이 함께 잡힙니다.'},
+ {sel:'[data-work="materials"]', work:'materials', bubble:'메일·문서함·조직도에서 필요한 근거를 모으고, 외부 공유가 어려운 자료는 확인 대상으로 분리합니다.'},
+ {sel:'[data-work="parts"]', work:'parts', bubble:'참석자·일정·자료·안건이 세부 작업으로 나뉘어 각각 후보가 준비됩니다.'},
+ {sel:'[data-work="check"]', work:'check', bubble:'바로 처리할 일과 담당자 확인이 필요한 일, 공유가 제한된 일을 나눕니다.'},
+ {sel:'[data-node="hitl"]', work:'check', bubble:'외부 초대·자료 공유처럼 책임이 있는 항목은 담당자가 확인한 뒤에만 반영됩니다.'},
+ {sel:'[data-work="writeback"]', work:'writeback', bubble:'확인된 항목만 캘린더·문서함·메일에 실제로 반영됩니다.'},
+ {sel:'[data-work="during"]', work:'during', bubble:'회의 중 발언과 진행 상태가 결정사항·후속 할 일 후보로 정리됩니다.'},
+ {sel:'[data-work="after"]', work:'after', bubble:'회의 기록이 회의록과 후속 할 일로 정리됩니다. 확정은 담당자 확인이 필요합니다.'},
+ {sel:'[data-node="learning"]', work:'reuse', bubble:'이번 처리 경험이 다음 회의 준비의 추천 기준과 템플릿으로 저장됩니다.'},
+];
+
+const STATE={sel:'parts', guideOn:false, guideStep:0};
+const W=id=>WORK.find(w=>w.id===id);
+const idxOf=id=>WORK.findIndex(w=>w.id===id);
+
+/* ===== render ===== */
+function renderRail(){
+  const el=document.getElementById('rail');el.innerHTML='';
+  WORK.forEach((w,i)=>{
+    const sel=STATE.sel===w.id;const done=idxOf(STATE.sel)>i;
+    const r=document.createElement('div');r.className='wr'+(sel?' sel':'')+(done?' done':'');
+    r.setAttribute('data-work',w.id);r.setAttribute('data-tip','w:'+w.id);
+    r.innerHTML=`<span class="wn">${i+1}</span><span class="wl">${w.label}</span><span class="wc ${w.sc}">${w.status}</span>`;
+    r.onclick=()=>setSel(w.id);el.appendChild(r);
+  });
+}
+function renderDetail(){
+  const w=W(STATE.sel);
+  document.getElementById('detail').innerHTML=
+   `<div class="dt">${w.label}</div>
+    <div class="dsec"><div class="dl">입력</div><div class="dv">${w.in}</div></div>
+    <div class="dsec"><div class="dl">생성 결과</div><div class="dv">${w.out}</div></div>
+    <div class="dsec"><div class="dl">담당자 확인</div><div class="dv ${w.review&&w.review!=='없음'?'need':''}">${w.review}</div></div>
+    <div class="dsec"><div class="dl">반영 대상</div><div class="dv">${w.wb}</div></div>
+    <div class="dsec"><div class="dl">세부 요소</div><div class="tags">${w.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>
+    <details class="more"><summary>상세</summary>
+      <div class="dsec"><div class="dl">참고 근거</div><div class="dv">${w.refs}</div></div>
+      <div class="internal"><div class="dl">내부 처리</div><div class="dv dev">${w.dev}</div></div>
+    </details>`;
+}
+function renderStruct(){
+  const w=W(STATE.sel);const act=new Set(w.aap);const ci=idxOf(STATE.sel);
+  const done=new Set();for(let i=0;i<ci;i++)WORK[i].aap.forEach(k=>done.add(k));
+  const cls=k=>act.has(k)?'active':(done.has(k)?'done':'idle');
+  let h='';
+  NODES.forEach((n,i)=>{
+    if(i>0)h+=`<div class="vln${act.has(n.k)||done.has(n.k)?' on':''}"></div>`;
+    let chips='';
+    if(n.chips){chips=`<div class="agent-chips">${AGENT_CHIPS.map(([ck,cl])=>`<span class="ac${w.chips.includes(ck)?' hot':''}">${cl}</span>`).join('')}</div>`;}
+    h+=`<div class="nd ${cls(n.k)}" data-node="${n.k}" data-tip="n:${n.k}"><div class="nk"><span class="ndd"></span>${n.ko}</div><div class="ne">${n.en}</div>${chips}</div>`;
+  });
+  const trustOn=act.has('trust');
+  h+=`<div class="foundation ${trustOn?'active':''}" data-tip="n:trust">보안 · 권한 · 기록 <span style="font-size:9px;color:inherit;opacity:.7">Trust Foundation</span></div>`;
+  document.getElementById('struct').innerHTML=h;
+}
+function renderBot(){
+  const i=idxOf(STATE.sel);document.getElementById('bstep').innerHTML=`현재 단계 <b>${String(i+1).padStart(2,'0')} / 12</b> · ${W(STATE.sel).label}`;
+}
+function setSel(id){STATE.sel=id;renderRail();renderDetail();renderStruct();renderBot();}
+
+/* ===== tooltips ===== */
+const TIP=document.getElementById('tip');
+function tipText(key){
+  if(!key)return null;const[t,k]=key.split(':');
+  if(t==='n'){if(k==='trust')return '권한·PII·감사·설명가능성을 모든 단계에 적용하는 토대입니다.';const n=NODES.find(x=>x.k===k);return n?n.tip:null;}
+  if(t==='w'){const w=W(k);return w?w.tip:null;}
+  return null;
+}
+function showTip(el){const txt=tipText(el.getAttribute('data-tip'));if(!txt)return;
+  TIP.textContent=txt;TIP.style.display='block';const r=el.getBoundingClientRect();
+  TIP.style.left=Math.min(r.left,window.innerWidth-300)+'px';let top=r.bottom+8;
+  if(top+TIP.offsetHeight>window.innerHeight)top=r.top-TIP.offsetHeight-8;TIP.style.top=Math.max(8,top)+'px';}
+document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(t)showTip(t);else if(!e.target.closest('#tip'))TIP.style.display='none';});
+
+/* ===== Guide ===== */
+let GT=null;
+function startGuide(){STATE.guideOn=true;STATE.guideStep=0;['gSpot','gCursor','gBubble'].forEach(id=>document.getElementById(id).style.display='block');gotoGuide(0);}
+function stopGuide(){STATE.guideOn=false;['gSpot','gCursor','gBubble'].forEach(id=>document.getElementById(id).style.display='none');}
+function gotoGuide(i){
+  if(i<0||i>=GUIDE.length)return;STATE.guideStep=i;const g=GUIDE[i];setSel(g.work);
+  const t=document.querySelector(g.sel);if(!t)return;GT=t;
+  try{t.scrollIntoView({block:'center',behavior:'instant'});}catch(e){t.scrollIntoView();}
+  requestAnimationFrame(()=>requestAnimationFrame(positionGuide));setTimeout(positionGuide,90);
+  const b=document.getElementById('gBubble');const w=W(g.work);
+  b.innerHTML=`<div class="gn">${i+1} / ${GUIDE.length}</div><div class="gt">${w.label}</div><div class="gtx">${g.bubble}</div>
+   <div class="gctl"><button class="btn sm" ${i===0?'disabled':''} id="gPrev">이전</button><div class="spacer"></div>
+   <button class="btn sm" id="gStop">중지</button><button class="btn sm primary" id="gNext">${i===GUIDE.length-1?'완료':'다음'}</button></div>`;
+  document.getElementById('gPrev').onclick=()=>gotoGuide(i-1);
+  document.getElementById('gStop').onclick=stopGuide;
+  document.getElementById('gNext').onclick=()=>i===GUIDE.length-1?stopGuide():gotoGuide(i+1);
+}
+function positionGuide(){
+  if(!STATE.guideOn||!GT)return;const r=GT.getBoundingClientRect();
+  const sp=document.getElementById('gSpot');sp.style.left=(r.left-6)+'px';sp.style.top=(r.top-6)+'px';sp.style.width=(r.width+12)+'px';sp.style.height=(r.height+12)+'px';
+  const cu=document.getElementById('gCursor');cu.style.left=(r.right-28)+'px';cu.style.top=(r.top+22)+'px';
+  const b=document.getElementById('gBubble');let bl=r.right+18;if(bl+300>window.innerWidth)bl=r.left-318;if(bl<8)bl=8;
+  let bt=r.top;if(bt+b.offsetHeight>window.innerHeight)bt=window.innerHeight-b.offsetHeight-12;b.style.left=bl+'px';b.style.top=Math.max(8,bt)+'px';
+}
+
+document.getElementById('guideBtn').onclick=()=>STATE.guideOn?stopGuide():startGuide();
+document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
+window.addEventListener('resize',positionGuide);
+document.addEventListener('scroll',()=>{if(STATE.guideOn)positionGuide();},true);
+document.addEventListener('keydown',e=>{if(!STATE.guideOn)return;if(e.key==='ArrowRight')gotoGuide(STATE.guideStep+1);if(e.key==='ArrowLeft')gotoGuide(STATE.guideStep-1);if(e.key==='Escape')stopGuide();});
+
+setSel('parts');
+(function(){const q=new URLSearchParams(location.search);if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
+  const s=q.get('sel');if(s&&W(s))setSel(s);
+  if(q.get('guide')==='1'){startGuide();const g=parseInt(q.get('g'),10);if(!isNaN(g))gotoGuide(g);}})();
+</script>
+</body>
+</html>

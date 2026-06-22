@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Meeting Runtime Demo · v0.1 (Core Run)</title>
+<style>
+  :root{
+    --bg:#f1f5f9; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --card:#ffffff;
+    --cust:#475569; --data:#2563eb; --sem:#7c3aed; --agt:#0d9488;
+    --act:#16a34a; --lrn:#d97706; --amber:#d97706; --red:#dc2626; --trust:#1e293b;
+    --custbg:#f8fafc; --databg:#eff6ff; --sembg:#f5f3ff; --agtbg:#f0fdfa;
+    --actbg:#f0fdf4; --lrnbg:#fffbeb;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:'Malgun Gothic','Segoe UI',sans-serif;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.5;}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100vh;overflow:hidden;}
+
+  /* Header */
+  .hdr{background:var(--trust);color:#e2e8f0;padding:8px 16px;display:flex;align-items:center;gap:14px;}
+  .hdr .title{font-weight:700;font-size:15px;color:#fff;}
+  .hdr .sub{font-size:11px;color:#94a3b8;max-width:420px;}
+  .hdr .runid{font-size:11px;color:#cbd5e1;background:#334155;padding:2px 8px;border-radius:4px;}
+  .hdr .mode{font-size:11px;color:#5eead4;border:1px solid #0d9488;padding:2px 8px;border-radius:4px;}
+  .hdr .spacer{flex:1;}
+  .hdr .toggle{font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;cursor:pointer;}
+
+  /* Step rail */
+  .rail{background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;padding:6px 12px;overflow-x:auto;align-items:center;}
+  .step{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;cursor:pointer;white-space:nowrap;border:1px solid transparent;color:var(--muted);font-size:11.5px;}
+  .step .num{width:18px;height:18px;border-radius:50%;background:var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:0 0 auto;}
+  .step.done{color:#0f172a;}
+  .step.done .num{background:#16a34a;color:#fff;}
+  .step.active{background:#ecfeff;border-color:#0d9488;color:#0f172a;font-weight:700;}
+  .step.active .num{background:#0d9488;color:#fff;}
+  .step.hitl.active .num{background:var(--amber);}
+  .step.locked{opacity:.4;cursor:not-allowed;}
+  .step .ph{font-size:9px;color:#94a3b8;}
+
+  /* Main grid */
+  .main{display:grid;grid-template-columns:30% 45% 25%;gap:10px;padding:10px;overflow:hidden;}
+  body.exp-off .main{grid-template-columns:34% 66%;}
+  body.exp-off .right{display:none;}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto;padding:12px;}
+  .col h3{margin:0 0 8px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+
+  /* Left business screen */
+  .screen-title{font-weight:700;font-size:13.5px;margin-bottom:8px;}
+  .portal .agent-item{padding:7px 10px;border:1px solid var(--line);border-radius:7px;margin-bottom:5px;background:#fff;}
+  .portal .agent-item.active{border-color:#0d9488;background:var(--agtbg);font-weight:700;}
+  .muted{color:var(--muted);font-size:11.5px;margin-top:6px;}
+  .ask{color:var(--muted);margin-bottom:6px;}
+  .reqbox{border:1px solid var(--line);background:#f8fafc;border-radius:8px;padding:10px;font-size:13px;}
+  .btnrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .btn{font-size:11.5px;padding:5px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;}
+  .btn.primary{background:#0d9488;color:#fff;border-color:#0d9488;}
+  .status{margin-top:8px;font-size:11.5px;color:var(--muted);}
+  .loadlist,.tasklist,.checklist{list-style:none;padding:0;margin:0;}
+  .loadlist li,.tasklist li{padding:6px 8px;border:1px dashed var(--line);border-radius:6px;margin-bottom:5px;font-size:12px;}
+  .tasklist li{border-style:solid;}
+  .checklist li{padding:6px 8px;border-radius:6px;margin-bottom:5px;font-size:12px;}
+  .checklist li.done{background:var(--actbg);border:1px solid #bbf7d0;}
+  .checklist li.done::before{content:"✓ ";color:#16a34a;font-weight:700;}
+  .checklist li.wait{background:var(--lrnbg);border:1px solid #fde68a;}
+  .checklist li.wait::before{content:"⏳ ";}
+  .card{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;background:#fff;}
+  .card.hl{border-color:#7c3aed;background:var(--sembg);font-weight:700;}
+  .card.warn{border-color:#f59e0b;background:var(--lrnbg);}
+  .card.ok{border-color:#16a34a;background:var(--actbg);}
+  .card.danger{border-color:#dc2626;background:#fef2f2;}
+  .chk{display:flex;gap:7px;align-items:flex-start;padding:7px 9px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;font-size:12px;}
+  .chk small{color:var(--muted);}
+
+  /* Center engine room */
+  .engine{border:2px solid var(--trust);border-radius:10px;padding:8px;height:100%;display:flex;flex-direction:column;gap:5px;position:relative;background:#fbfcfe;}
+  .engine .trust-label{position:absolute;top:-9px;left:12px;background:var(--trust);color:#fff;font-size:9.5px;padding:1px 8px;border-radius:4px;letter-spacing:.03em;}
+  .engine.trust-on{box-shadow:0 0 0 3px rgba(30,41,59,.12);}
+  .band{border:1px solid var(--line);border-left:4px solid var(--bandc,#cbd5e1);border-radius:8px;padding:6px 9px;background:#fff;transition:all .15s;}
+  .band .bhead{display:flex;align-items:center;gap:8px;font-size:11.5px;}
+  .band .bname{font-weight:700;color:var(--bandc,#334155);}
+  .band .bstat{margin-left:auto;font-size:10.5px;color:var(--muted);}
+  .band .bsum{font-size:11px;color:var(--muted);margin-left:auto;}
+  .band.done{background:#fcfdfe;}
+  .band.done .bstat{color:#16a34a;}
+  .band.pending{opacity:.55;}
+  .band.active{flex:0 0 auto;min-height:96px;background:var(--bandbg,#fff);box-shadow:0 1px 8px rgba(15,23,42,.07);border-color:var(--bandc);}
+  .band.active .bname{font-size:12.5px;}
+  .band.active .bstat{color:var(--bandc);font-weight:700;}
+  .bbody{margin-top:7px;display:flex;flex-direction:column;gap:6px;align-items:center;}
+  .pulse{position:relative;}
+  .pulse::after{content:"";position:absolute;right:8px;top:9px;width:7px;height:7px;border-radius:50%;background:var(--bandc);animation:p 1.1s infinite;}
+  @keyframes p{0%{box-shadow:0 0 0 0 var(--bandc);opacity:.9}70%{box-shadow:0 0 0 7px transparent;opacity:.4}100%{opacity:.9}}
+
+  .flownode{padding:6px 14px;border-radius:8px;font-weight:700;font-size:12px;text-align:center;border:1px solid;}
+  .flownode.big{font-size:14px;padding:9px 18px;}
+  .flownode.gray{background:#f1f5f9;border-color:#cbd5e1;color:#475569;}
+  .flownode.blue{background:var(--databg);border-color:var(--data);color:var(--data);}
+  .flownode.purple{background:var(--sembg);border-color:var(--sem);color:var(--sem);}
+  .flownode.teal{background:var(--agtbg);border-color:var(--agt);color:var(--agt);}
+  .flownode.green{background:var(--actbg);border-color:var(--act);color:var(--act);}
+  .flownode.amber{background:var(--lrnbg);border-color:var(--amber);color:#b45309;}
+  .rhythm{font-size:11px;font-weight:700;color:#475569;background:#eef2f7;padding:1px 8px;border-radius:10px;}
+  .band-note{font-size:11px;color:var(--muted);text-align:center;}
+  .kv{font-size:11px;color:#334155;text-align:center;background:#f8fafc;border-radius:6px;padding:4px 8px;}
+  .diverge,.fan{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+  .src,.agent,.chip{font-size:10.5px;border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:#fff;text-align:center;}
+  .src small,.agent small{display:block;color:var(--muted);font-size:9.5px;margin-top:1px;}
+  .src.ok{border-color:#16a34a;background:var(--actbg);color:#15803d;}
+  .src.wait{border-color:#f59e0b;background:var(--lrnbg);color:#b45309;}
+  .agent{border-color:#5eead4;background:var(--agtbg);min-width:74px;}
+  .chip{background:var(--custbg);}
+  .tasks{font-size:10.5px;color:#475569;text-align:center;line-height:1.6;}
+  .branch{display:flex;gap:7px;width:100%;justify-content:center;}
+  .br{flex:1;max-width:140px;border-radius:7px;padding:6px 8px;font-size:11px;font-weight:700;text-align:center;border:1px solid;}
+  .br small{display:block;font-weight:400;font-size:9.5px;margin-top:2px;}
+  .br.auto{background:var(--actbg);border-color:var(--act);color:#15803d;}
+  .br.hitl{background:var(--lrnbg);border-color:var(--amber);color:#b45309;}
+  .br.block{background:#fef2f2;border-color:var(--red);color:#b91c1c;}
+
+  /* Right interpretation */
+  .rfield{margin-bottom:9px;}
+  .rfield .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;font-weight:700;margin-bottom:2px;}
+  .rstage{font-size:13.5px;font-weight:700;color:var(--agt);}
+  .rdo{font-size:12px;}
+  .rlist{margin:0;padding-left:15px;font-size:11.5px;color:#334155;}
+  .rlist li{margin-bottom:1px;}
+  .layers{display:flex;flex-wrap:wrap;gap:4px;}
+  .ltag{font-size:10px;background:#f1f5f9;border:1px solid var(--line);border-radius:5px;padding:2px 6px;color:#475569;}
+  .rrhythm{font-size:11.5px;font-weight:700;color:#475569;background:#eef2f7;border-radius:6px;padding:4px 8px;display:inline-block;}
+  .rnote{font-size:11.5px;color:#334155;background:#f8fafc;border-left:3px solid #0d9488;border-radius:4px;padding:6px 9px;}
+  .rnote.hitl{border-left-color:var(--amber);background:var(--lrnbg);}
+  .ground{font-size:10.5px;color:#0d9488;margin-top:4px;}
+
+  /* Log dock */
+  .logdock{background:#0b1220;color:#cbd5e1;border-top:1px solid #1e293b;height:158px;display:flex;flex-direction:column;}
+  .logtabs{display:flex;gap:2px;padding:5px 10px 0;}
+  .ltab{font-size:11px;padding:3px 10px;border-radius:6px 6px 0 0;cursor:pointer;color:#94a3b8;}
+  .ltab.active{background:#162033;color:#fff;}
+  .logbody{flex:1;overflow:auto;padding:6px 12px;font-family:'Consolas','D2Coding',monospace;font-size:11px;background:#162033;}
+  .logline{padding:1px 0;white-space:nowrap;}
+  .logline .tg{color:#5eead4;}
+  .logline .tg.gov{color:#fbbf24;}
+  .logline .tg.dec{color:#a78bfa;}
+  .logline .tg.act{color:#4ade80;}
+  .logline .sgrp{color:#475569;margin-right:6px;}
+
+  /* Footer nav */
+  .navbar{position:absolute;bottom:166px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;}
+  .navbar .btn{box-shadow:0 2px 8px rgba(0,0,0,.15);}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <div class="title">AAP Meeting Runtime Demo</div>
+      <div class="sub">모호한 회의 요청이 AAP 내부에서 업무 사건·Agent 실행·Writeback으로 바뀌는 과정</div>
+    </div>
+    <span class="runid">RUN-MEETING-001</span>
+    <span class="mode">Core Run · Step 0–9</span>
+    <div class="spacer"></div>
+    <label class="toggle"><input type="checkbox" id="expToggle" checked> 내부 설명 패널</label>
+  </header>
+
+  <nav class="rail" id="rail"></nav>
+
+  <div class="main">
+    <section class="col left">
+      <h3>좌측 · 사용자 업무 화면</h3>
+      <div id="leftBody"></div>
+    </section>
+    <section class="col center" style="padding:10px 10px 0;">
+      <h3>중앙 · AAP 내부 구조 (발산 ▷ / ◁ 수렴)</h3>
+      <div class="engine" id="engine">
+        <span class="trust-label">Trust · Security · Governance</span>
+      </div>
+    </section>
+    <section class="col right">
+      <h3>우측 · 작동 원리 해석</h3>
+      <div id="rightBody"></div>
+    </section>
+  </div>
+
+  <div class="navbar">
+    <span class="btn" id="prevBtn">◀ 이전</span>
+    <span class="btn primary" id="nextBtn">다음 ▶</span>
+  </div>
+
+  <footer class="logdock">
+    <div class="logtabs" id="logtabs"></div>
+    <div class="logbody" id="logBody"></div>
+  </footer>
+</div>
+
+<script>
+/* ===== Bands (축 A: 6 AAP 계층) ===== */
+const BANDS = [
+  {key:'custenv', name:'Customer Environment', c:'var(--cust)', bg:'var(--custbg)'},
+  {key:'data',    name:'Data & Inputs',        c:'var(--data)', bg:'var(--databg)'},
+  {key:'semantic',name:'Business Semantic',     c:'var(--sem)',  bg:'var(--sembg)'},
+  {key:'agentic', name:'Agentic Core',          c:'var(--agt)',  bg:'var(--agtbg)'},
+  {key:'action',  name:'Action & Integration',  c:'var(--act)',  bg:'var(--actbg)'},
+  {key:'learning',name:'Operational Learning',  c:'var(--lrn)',  bg:'var(--lrnbg)'},
+];
+const DONE_LABEL = {
+  custenv:'Mail·Cal·Docs·Org·CRM 연결',
+  data:'Context Package · 메일14 문서6 CRM1',
+  semantic:'◆ Meeting Event (Kickoff)',
+  agentic:'9 Task · 5 Agent · 조율 완료',
+  action:'Writeback 완료',
+  learning:'—',
+};
+const PEND_LABEL = {
+  custenv:'고객 환경 시스템',
+  data:'요청·맥락 입력',
+  semantic:'업무 의미화',
+  agentic:'Agent 발산·조율',
+  action:'실행·반영',
+  learning:'운영 학습 (P3)',
+};
+
+/* ===== STEPS (Core Run 0~9) ===== */
+const STEPS = [
+{ id:0, title:'준비', ph:'', hitl:false,
+  left:`<div class="screen-title">AI 업무 포털</div>
+    <div class="portal">
+      <div class="agent-item active">회의 준비 Agent</div>
+      <div class="agent-item">회의록 Agent</div>
+      <div class="agent-item">보고서 Agent</div>
+      <div class="agent-item">사내자료 검색 Agent</div>
+      <div class="agent-item">결재 검토 Agent</div>
+    </div>
+    <div class="muted">사용자 · hong.gildong · AX BD · AI Business Planning</div>
+    <div class="muted">연결 · Calendar, Mail, Docs, CRM, Groupware · 외부공유 조건부</div>`,
+  center:{active:'custenv', done:[], trust:true,
+    inner:`<div class="diverge">
+        <div class="chip">Mail</div><div class="chip">Calendar</div><div class="chip">Docs</div>
+        <div class="chip">Org Chart</div><div class="chip">CRM</div><div class="chip">Groupware</div>
+        <div class="chip">Meeting Room</div><div class="chip">IAM/SSO</div></div>
+      <div class="band-note">사용자 권한·연결 가능 시스템 확인 (아직 업무 객체 없음)</div>`},
+  right:{stage:'Service · Data · Trust', do:'요청 전 사용자 권한과 연결 가능한 시스템을 확인합니다.',
+    input:['User Identity','IAM / SSO'], process:['권한 확인','접근 가능 시스템 범위 확인'],
+    output:['User Context'], layers:['Service Experience','Enterprise Data & Inputs','Trust Foundation'],
+    rhythm:'준비', note:'같은 회의 요청이라도 권한에 따라 접근 문서·외부 초대·자동 발송 범위가 달라집니다.', ground:''},
+  logs:[['Auth','User identity verified'],['Access','Calendar, Mail, Docs, CRM access granted'],['Policy','External sharing requires approval']]},
+
+{ id:1, title:'요청 입력', ph:'', hitl:false,
+  left:`<div class="screen-title">회의 준비 Agent</div>
+    <div class="ask">무엇을 도와드릴까요?</div>
+    <div class="reqbox">"다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘."</div>
+    <div class="btnrow"><span class="btn primary">실행</span><span class="btn">예시 불러오기</span></div>
+    <div class="status">상태 · 요청 수신</div>`,
+  center:{active:'data', done:['custenv'],
+    inner:`<div class="flownode gray">Raw Request Event · REQ-001</div>
+      <div class="band-note">원시 요청 — 아직 실행 명령이 아님. 누락 · 고객사·참석자·일정·공유정책</div>`},
+  right:{stage:'Business Semantic Modeling', do:'요청을 즉시 실행하지 않고 먼저 분해 — 빠진 정보를 식별합니다.',
+    input:['Raw Request'], process:['요청 분해','누락 필드 식별'], output:['Raw Request Event'],
+    layers:['Service Experience','Business Semantic'], rhythm:'발산 전',
+    note:'사용자 요청은 실행 명령이 아니라 해석이 필요한 업무 신호입니다.', ground:'↳ 좌측 요청 입력창과 연결'},
+  logs:[['Request','Raw request captured'],['Semantic','Missing fields: customer, participants, date candidates, sharing policy']]},
+
+{ id:2, title:'맥락 수집', ph:'', hitl:false,
+  left:`<div class="screen-title">관련 맥락 수집 중</div>
+    <ul class="loadlist">
+      <li>최근 메일 14건</li><li>이전 회의록 · 6/10 AAP 소개 미팅</li><li>제안 자료 6건</li>
+      <li>고객사 · 대한제조그룹</li><li>관련 부서 5곳</li><li>참석 가능 일정 조회 준비</li></ul>`,
+  center:{active:'data', done:['custenv'],
+    inner:`<div class="diverge">
+        <div class="src">Mail<small>14</small></div><div class="src">Docs<small>6</small></div>
+        <div class="src">CRM<small>1</small></div><div class="src">Org<small>5</small></div><div class="src">Calendar</div></div>
+      <div class="rhythm">▷ 발산</div>
+      <div class="flownode blue">Context Package</div>
+      <div class="band-note">단순 검색이 아니라 관련 맥락을 묶어 입력에 없던 객체를 생성</div>`},
+  right:{stage:'Enterprise Data & Inputs', do:'짧은 요청을 보완하려 고객 환경 여러 시스템에서 맥락을 수집합니다.',
+    input:['Raw Request','User Context'], process:['Mail·Docs·CRM·Org·Calendar 조회','관련 맥락 추출'],
+    output:['Context Package'], layers:['Enterprise Data & Inputs','Trust Foundation'],
+    rhythm:'발산 — 하나의 요청이 여러 소스로 확장', note:'수집된 정보는 후보 상태입니다. 아직 수렴하지 않습니다.', ground:'↳ 좌측 "수집 중" 목록과 연결'},
+  logs:[['Connector:Mail','14 related emails found'],['Connector:Docs','6 related documents found'],['Connector:CRM','Customer matched: 대한제조그룹'],['Connector:Org','5 candidate departments identified'],['Governance','2 documents marked internal-only']]},
+
+{ id:3, title:'업무 의미화', ph:'', hitl:false,
+  left:`<div class="screen-title">AAP 해석 결과</div>
+    <div class="card hl">회의 유형 · 킥오프 회의</div>
+    <div class="card">목적 · AAP 도입 후속 착수 범위·역할·일정·보안 조건 정렬</div>
+    <div class="card">필요 산출물 · 참석자/일정/자료 패키지/안건/초대 메일/회의록 템플릿</div>
+    <div class="card warn">검토 필요 · 참석자 확정 · 외부 고객 초대 · 외부 공유 자료 승인</div>`,
+  center:{active:'semantic', done:['custenv','data'],
+    inner:`<div class="rhythm">◁ 수렴</div>
+      <div class="flownode purple big">◆ Meeting Event</div>
+      <div class="kv">유형 Kickoff · 목적 착수범위·R&R·일정·보안 정렬 · 정책 외부고객 포함 → 공유 승인 필요</div>`},
+  right:{stage:'Business Semantic Modeling', do:'발산된 맥락을 하나의 실행 가능한 업무 사건으로 수렴합니다.',
+    input:['Context Package','Meeting Type Ontology','Policy Rules'],
+    process:['회의 유형 분류','목적 추론','필요 산출물 정의','정책 플래그 생성'],
+    output:['Meeting Event','Policy Flags'], layers:['Business Semantic','Trust Foundation'],
+    rhythm:'수렴 — 여러 맥락 → 1 업무 사건', note:'이 단계가 없으면 AAP는 회의를 단순 일정 예약으로만 처리합니다.', ground:'↳ ◆Meeting Event ↔ 좌측 "AAP 해석 결과"'},
+  logs:[['Semantic','Meeting type classified: Kickoff'],['Semantic','Purpose inferred: scope/R&R/schedule alignment'],['Policy','External customer detected'],['Policy','External sharing approval required']]},
+
+{ id:4, title:'Task 분해', ph:'', hitl:false,
+  left:`<div class="screen-title">회의 준비 계획 생성 중</div>
+    <ul class="tasklist">
+      <li>참석자 후보 생성</li><li>일정 후보 계산</li><li>사전 자료 구성</li><li>안건 초안 작성</li>
+      <li>보안·공유 정책 검토</li><li>회의실·화상회의 후보</li><li>초대 메일 초안</li></ul>`,
+  center:{active:'agentic', done:['custenv','data','semantic'],
+    inner:`<div class="flownode teal">Supervisor</div>
+      <div class="rhythm">▷ 발산 · Task Graph (9)</div>
+      <div class="tasks">T1 참석자 · T2 일정 · T3 자료 · T4 안건 · T5 정책<br>T6 회의실 · T7 초대 · T8 회의록 · T9 액션 템플릿</div>
+      <div class="band-note">외부 초대는 Policy Review + HITL 전까지 잠금</div>`},
+  right:{stage:'Agentic Reasoning & Execution', do:'Supervisor가 Meeting Event를 여러 Agent 작업으로 분해합니다.',
+    input:['Meeting Event'], process:['Task Graph 생성','병렬/순차·의존성 설정'],
+    output:['Execution Plan','Task Graph (9)'], layers:['Agentic Reasoning'],
+    rhythm:'발산 — 1 사건 → 9 Task', note:'중요한 건 Agent 수가 아니라, Supervisor가 작업 단위와 실행 순서를 구성한다는 점입니다.', ground:'↳ 좌측 준비 작업 목록과 연결'},
+  logs:[['Supervisor','Task graph generated (9 tasks)'],['Routing','Participant, Knowledge, Policy started in parallel'],['Dependency','External invite locked until Policy Review + HITL']]},
+
+{ id:5, title:'Agent 발산', ph:'', hitl:false,
+  left:`<div class="screen-title">Agent 후보 생성</div>
+    <div class="card">참석자 · 필수 김영업·박PM·이아키·최데이터·정보안 / 선택 한계약·유UX / 외부 DX팀장·IT기획</div>
+    <div class="card">일정 · 1안 6/24 수 10:00 · 2안 6/25 목 14:00 · 3안 6/26 금 09:30</div>
+    <div class="card">자료 · 선제안 자료 · 4-2 아키텍처 · 6/10 회의록 · Q&A · 보안 검토사항</div>
+    <div class="card">안건 · 목적→적용후보→데이터확인→아키매핑→보안조건→다음액션</div>`,
+  center:{active:'agentic', done:['custenv','data','semantic'],
+    inner:`<div class="flownode teal">Supervisor</div>
+      <div class="rhythm">▷ 발산</div>
+      <div class="fan">
+        <div class="agent">Participant<small>필수5·선택2·외부2</small></div>
+        <div class="agent">Calendar<small>일정 3안</small></div>
+        <div class="agent">Knowledge<small>자료 5건</small></div>
+        <div class="agent">Agenda<small>안건 6항</small></div>
+        <div class="agent">Policy<small>공유 제한 2</small></div></div>`},
+  right:{stage:'Agentic · Data · Semantic', do:'각 Agent가 후보 공간을 펼칩니다 (발산 절정).',
+    input:['Meeting Event','Context Package','Org / Calendar / Docs'],
+    process:['참석자·일정·자료·안건·정책 후보 생성'], output:['Participant / Time / Material / Agenda / Policy Set'],
+    layers:['Agentic Reasoning','Data & Inputs','Business Semantic'],
+    rhythm:'발산 절정', note:'AAP 내부는 하나의 LLM 호출이 아니라 여러 전문 작업의 조합입니다.', ground:'↳ 5 Agent 결과 ↔ 좌측 후보 카드 4종'},
+  logs:[['Agent:Participant','9 candidates (필수5·선택2·외부2)'],['Agent:Calendar','3 time slots'],['Agent:Knowledge','5 materials packaged'],['Agent:Agenda','6-item draft'],['Agent:Policy','2 share restrictions']]},
+
+{ id:6, title:'조율', ph:'', hitl:false,
+  left:`<div class="screen-title">검토 결과 (조율)</div>
+    <div class="card ok">자동 진행 · 일정 후보 · 자료 폴더 · 안건 초안 · 회의록 템플릿</div>
+    <div class="card warn">사용자 확인 · 참석자 확정 · 고객 초대 · 외부 공유 자료 · 초대 문구</div>
+    <div class="card danger">정책 제한 · 내부 아키텍처 상세 자료 마스킹 전 공유 제한</div>`,
+  center:{active:'agentic', done:['custenv','data','semantic'],
+    inner:`<div class="rhythm">◁ 수렴 · 조율</div>
+      <div class="flownode teal">Supervisor</div>
+      <div class="branch">
+        <div class="br auto">Auto<small>일정·폴더·안건·회의록</small></div>
+        <div class="br hitl">HITL<small>참석자·외부초대·공유자료·문구</small></div>
+        <div class="br block">Blocked<small>내부 아키 상세 (마스킹)</small></div></div>`},
+  right:{stage:'Supervisor Coordination', do:'여러 Agent 결과를 자동 실행 / 사람 검토 / 제한으로 분류합니다.',
+    input:['Participant·Time·Material·Agenda Set','Policy Review'],
+    process:['역할 충족·참석 가능률·공유 가능성·적합도·정책 위반 평가','자동/HITL/제한 분리'],
+    output:['Coordination Result'], layers:['Agentic Reasoning','Trust·Security·Governance','AI Quality/Eval'],
+    rhythm:'수렴 — 후보 → 실행 정책', note:'각 항목에 왜 자동인지·승인 필요인지·제한인지 설명이 붙습니다. "AI가 알아서 다 했다"고 말하지 않습니다.', ground:'↳ 3분기 ↔ 좌측 자동/확인/제한 카드'},
+  logs:[['Evaluation','Participant coverage: 84%'],['Evaluation','Agenda fit: 88%'],['Policy','External sharing risk: medium'],['HITL','Final invite requires user approval'],['Guardrail','Internal architecture detail requires masking']]},
+
+{ id:7, title:'실행 패키지', ph:'', hitl:false,
+  left:`<div class="screen-title">Meeting Execution Package</div>
+    <div class="card">회의명 · AAP 고객사 킥오프 회의</div>
+    <div class="card">추천 일정 · 6/24 · 6/25 · 6/26 (3안)</div>
+    <div class="card">참석자 · 필수 5 + 외부 2 + 선택 2</div>
+    <div class="card">자료 패키지 · 5건 / 안건 · 6항</div>
+    <div class="card warn">승인 필요 · 참석자 확정 · 고객 초대 메일 · 외부 공유 자료 · 내부 자료 마스킹</div>`,
+  center:{active:'action', done:['custenv','data','semantic','agentic'],
+    inner:`<div class="rhythm">◁ 재수렴</div>
+      <div class="flownode green big">▣ Meeting Execution Package</div>
+      <div class="kv">일정 3안 · 참석자 9 · 자료 5 · 안건 6 · 승인필요 4<br>status · pending_human_review</div>`},
+  right:{stage:'Action 준비', do:'조율 결과를 하나의 실행 가능한 업무 패키지로 재수렴합니다.',
+    input:['Coordination Result'], process:['실행 패키지 조립','자동/승인 항목 분리'],
+    output:['Meeting Execution Package'], layers:['Service Experience','Agentic Reasoning','Enterprise Integration & Action','Trust Foundation'],
+    rhythm:'재수렴', note:'AAP는 아직 발송하지 않았습니다. 실행 전 책임 지점을 사용자에게 노출합니다.', ground:'↳ ▣Package ↔ 좌측 실행 패키지 미리보기'},
+  logs:[['Package','Meeting Execution Package created'],['Status','Pending human review'],['Ready','Agenda draft + material folder prepared'],['Pending','External invite approval required']]},
+
+{ id:8, title:'HITL', ph:'', hitl:true,
+  left:`<div class="screen-title">승인 필요 항목</div>
+    <label class="chk"><input type="checkbox" checked> <span>참석자 확정 <small>계약·UX는 선택 유지?</small></span></label>
+    <label class="chk"><input type="checkbox" checked> <span>외부 고객 초대 <small>DX팀장·IT기획</small></span></label>
+    <label class="chk"><input type="checkbox"> <span>내부 상세 자료 공유 <small>마스킹 후 권장</small></span></label>
+    <label class="chk"><input type="checkbox" checked> <span>초대 메일 문구 <small>"AAP 도입 후속 킥오프"</small></span></label>
+    <div class="btnrow"><span class="btn primary">승인 후 실행</span><span class="btn">수정 요청</span><span class="btn">보류</span></div>`,
+  center:{active:'action', done:['custenv','data','semantic','agentic'], trust:true,
+    inner:`<div class="flownode amber big">⛉ HITL Gate</div>
+      <div class="kv">참석자 확정 · 외부 초대 · 자료 공유 · 초대 문구 — 사용자 승인 대기</div>
+      <div class="band-note">책임 있는 수렴점. 사용자 선택은 Decision Log에 기록됩니다.</div>`},
+  right:{stage:'HITL · Governance', do:'책임이 따르는 수렴점에서 사람의 검토·승인을 받습니다.',
+    input:['Execution Package','Policy Review'], process:['참석자/외부초대/자료공유/문구 검토'],
+    output:['Human Review Decision'], layers:['HITL Routing','Action Policy','Audit & Explainability'],
+    rhythm:'책임 수렴', note:'HITL은 AI가 못해서가 아니라, 책임 지점의 판단을 공식 이력으로 남기기 위한 장치입니다.', ground:'↳ HITL Gate ↔ 좌측 승인 체크리스트', hitl:true},
+  logs:[['HITL','Reviewer approved participant list'],['HITL','Internal architecture detail excluded'],['Decision Log','Human decision recorded'],['Policy','External invite now allowed']]},
+
+{ id:9, title:'Writeback', ph:'', hitl:false,
+  left:`<div class="screen-title">실행 완료</div>
+    <ul class="checklist">
+      <li class="done">캘린더 초대 생성 · CAL-3391</li><li class="done">회의실 예약 · ROOM-552</li>
+      <li class="done">화상회의 링크 생성</li><li class="done">자료 폴더 생성</li>
+      <li class="done">아젠다 문서 생성</li><li class="done">회의록 템플릿 생성</li>
+      <li class="wait">고객 초대 메일 · 발송 대기</li></ul>`,
+  center:{active:'action', done:['custenv','data','semantic','agentic'],
+    inner:`<div class="flownode green">▣ Execution Package (승인됨)</div>
+      <div class="rhythm">▷ 실행 · Writeback</div>
+      <div class="diverge">
+        <div class="src ok">Calendar<small>CAL-3391</small></div><div class="src ok">Room<small>ROOM-552</small></div>
+        <div class="src ok">Docs<small>폴더·아젠다</small></div><div class="src ok">Minutes<small>템플릿</small></div>
+        <div class="src wait">Mail<small>초안·대기</small></div></div>`},
+  right:{stage:'Enterprise Integration & Action', do:'승인된 결과를 실제 업무 시스템에 반영합니다.',
+    input:['Approved Execution Package'], process:['Calendar/Room/Mail/Docs API 호출'],
+    output:['Action Result'], layers:['Enterprise Integration & Action','Tool Calling Runtime','Audit Log'],
+    rhythm:'실행 — Writeback', note:'AAP의 핵심: "이렇게 하세요"라고 답하는 게 아니라, 승인된 결과를 실제 시스템에 반영합니다.', ground:'↳ Writeback 타깃 ↔ 좌측 실행 완료 체크리스트'},
+  logs:[['Writeback:Calendar','Event created · CAL-3391'],['Writeback:Room','Room reserved · ROOM-552'],['Writeback:Docs','Material folder + agenda created'],['Writeback:Mail','Invite draft prepared'],['Audit','All action results logged']]},
+];
+const LOCKED = [{title:'회의 진행',ph:'P3'},{title:'사후 처리',ph:'P3'},{title:'Learning',ph:'P3'},{title:'Playback',ph:'P4'}];
+
+/* ===== log category ===== */
+function catOf(tag){
+  const t=tag.toLowerCase();
+  if(/writeback|ready|package|access|status/.test(t)) return 'act';
+  if(/semantic|hitl|decision|evaluation/.test(t)) return 'dec';
+  if(/connector|supervisor|routing|agent|dependency/.test(t)) return 'agent';
+  if(/policy|guardrail|governance|audit|auth/.test(t)) return 'gov';
+  if(/learning|skill|feedback/.test(t)) return 'lrn';
+  return '';
+}
+const LOG_TABS=[['all','All'],['act','Action'],['dec','Decision'],['agent','Agent'],['gov','Governance'],['lrn','Learning']];
+
+/* ===== state ===== */
+let cur=0, logTab='all';
+(function(){ const q=new URLSearchParams(location.search); const s=parseInt(q.get('step'),10);
+  if(!isNaN(s)&&s>=0&&s<STEPS.length) cur=s; })();
+
+/* ===== render ===== */
+function renderRail(){
+  const r=document.getElementById('rail'); r.innerHTML='';
+  STEPS.forEach(s=>{
+    const cls = s.id===cur?'active':(s.id<cur?'done':'');
+    const el=document.createElement('div');
+    el.className=`step ${cls} ${s.hitl?'hitl':''}`;
+    el.innerHTML=`<span class="num">${s.id}</span><span>${s.title}</span>`;
+    el.onclick=()=>{cur=s.id;render();};
+    r.appendChild(el);
+  });
+  LOCKED.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='step locked';
+    el.innerHTML=`<span class="num">${10+i}</span><span>${s.title}</span><span class="ph">${s.ph}</span>`;
+    r.appendChild(el);
+  });
+}
+
+function renderLeft(){ document.getElementById('leftBody').innerHTML = STEPS[cur].left; }
+
+function renderCenter(){
+  const cfg=STEPS[cur].center;
+  const eng=document.getElementById('engine');
+  eng.className = 'engine'+(cfg.trust?' trust-on':'');
+  let html='<span class="trust-label">Trust · Security · Governance</span>';
+  BANDS.forEach(b=>{
+    const isActive=cfg.active===b.key;
+    const isDone=cfg.done.includes(b.key);
+    const state=isActive?'active':(isDone?'done':'pending');
+    const stat=isDone?'<span class="bstat">✓</span>':(isActive?'<span class="bstat">● ACTIVE</span>':'<span class="bstat">·</span>');
+    const sum = isActive?'' : `<span class="bsum">${isDone?DONE_LABEL[b.key]:PEND_LABEL[b.key]}</span>`;
+    html+=`<div class="band ${state}" style="--bandc:${b.c};--bandbg:${b.bg}">
+        <div class="bhead"><span class="bname">${b.name}</span>${sum}${stat}</div>
+        ${isActive?`<div class="bbody">${cfg.inner}</div>`:''}
+      </div>`;
+  });
+  eng.innerHTML=html;
+}
+
+function renderRight(){
+  const r=STEPS[cur].right;
+  const li=a=>a.map(x=>`<li>${x}</li>`).join('');
+  document.getElementById('rightBody').innerHTML=`
+    <div class="rfield"><div class="lbl">현재 단계</div><div class="rstage">${r.stage}</div></div>
+    <div class="rfield"><div class="lbl">무엇을 하는가</div><div class="rdo">${r.do}</div></div>
+    <div class="rfield"><div class="lbl">입력</div><ul class="rlist">${li(r.input)}</ul></div>
+    <div class="rfield"><div class="lbl">처리</div><ul class="rlist">${li(r.process)}</ul></div>
+    <div class="rfield"><div class="lbl">산출</div><ul class="rlist">${li(r.output)}</ul></div>
+    <div class="rfield"><div class="lbl">AAP 계층</div><div class="layers">${r.layers.map(l=>`<span class="ltag">${l}</span>`).join('')}</div></div>
+    <div class="rfield"><div class="lbl">발산 / 수렴</div><span class="rrhythm">${r.rhythm}</span></div>
+    <div class="rfield"><div class="lbl">${r.hitl?'왜 HITL인가':'왜 중요한가'}</div><div class="rnote ${r.hitl?'hitl':''}">${r.note}</div>${r.ground?`<div class="ground">${r.ground}</div>`:''}</div>`;
+}
+
+function renderLogs(){
+  const body=document.getElementById('logBody');
+  let lines=[];
+  for(let i=0;i<=cur;i++){
+    STEPS[i].logs.forEach(([tag,msg])=>lines.push({s:i,tag,msg,cat:catOf(tag)}));
+  }
+  if(logTab!=='all') lines=lines.filter(l=>l.cat===logTab);
+  body.innerHTML=lines.map(l=>
+    `<div class="logline"><span class="sgrp">S${l.s}</span><span class="tg ${l.cat}">[${l.tag}]</span> ${l.msg}</div>`
+  ).join('') || '<div class="logline" style="color:#475569">— 표시할 로그 없음 —</div>';
+  body.scrollTop=body.scrollHeight;
+}
+
+function renderTabs(){
+  const t=document.getElementById('logtabs'); t.innerHTML='';
+  LOG_TABS.forEach(([k,label])=>{
+    const el=document.createElement('div');
+    el.className='ltab'+(logTab===k?' active':'');
+    el.textContent=label;
+    el.onclick=()=>{logTab=k;renderLogs();renderTabs();};
+    t.appendChild(el);
+  });
+}
+
+function render(){
+  renderRail(); renderLeft(); renderCenter(); renderRight(); renderLogs(); renderTabs();
+  document.getElementById('prevBtn').style.visibility = cur===0?'hidden':'visible';
+  document.getElementById('nextBtn').style.visibility = cur===STEPS.length-1?'hidden':'visible';
+}
+
+document.getElementById('nextBtn').onclick=()=>{ if(cur<STEPS.length-1){cur++;render();} };
+document.getElementById('prevBtn').onclick=()=>{ if(cur>0){cur--;render();} };
+document.getElementById('expToggle').onchange=e=>{ document.body.classList.toggle('exp-off',!e.target.checked); };
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowRight')document.getElementById('nextBtn').onclick(); if(e.key==='ArrowLeft')document.getElementById('prevBtn').onclick(); });
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Meeting Runtime Demo · v0.2 (Core Run)</title>
+<style>
+  :root{
+    --bg:#f1f5f9; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --card:#ffffff;
+    --cust:#475569; --data:#2563eb; --sem:#7c3aed; --agt:#0d9488;
+    --act:#16a34a; --lrn:#d97706; --amber:#d97706; --red:#dc2626; --trust:#1e293b;
+    --custbg:#f8fafc; --databg:#eff6ff; --sembg:#f5f3ff; --agtbg:#f0fdfa;
+    --actbg:#f0fdf4; --lrnbg:#fffbeb;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:'Malgun Gothic','Segoe UI',sans-serif;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.5;}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100vh;overflow:hidden;}
+
+  /* Header */
+  .hdr{background:var(--trust);color:#e2e8f0;padding:8px 16px;display:flex;align-items:center;gap:14px;}
+  .hdr .title{font-weight:700;font-size:15px;color:#fff;}
+  .hdr .sub{font-size:11px;color:#94a3b8;max-width:430px;}
+  .hdr .runid{font-size:11px;color:#cbd5e1;background:#334155;padding:2px 8px;border-radius:4px;}
+  .hdr .mode{font-size:11px;color:#5eead4;border:1px solid #0d9488;padding:2px 8px;border-radius:4px;}
+  .hdr .spacer{flex:1;}
+  .hdr .toggle{font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;cursor:pointer;}
+
+  /* Step rail */
+  .rail{background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;padding:6px 12px;overflow-x:auto;align-items:center;}
+  .step{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;cursor:pointer;white-space:nowrap;border:1px solid transparent;color:var(--muted);font-size:11.5px;}
+  .step .num{width:18px;height:18px;border-radius:50%;background:var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:0 0 auto;}
+  .step.done{color:#0f172a;}
+  .step.done .num{background:#16a34a;color:#fff;}
+  .step.active{background:#ecfeff;border-color:#0d9488;color:#0f172a;font-weight:700;}
+  .step.active .num{background:#0d9488;color:#fff;}
+  .step.hitl.active .num{background:var(--amber);}
+  .step.locked{opacity:.4;cursor:not-allowed;}
+  .step .ph{font-size:9px;color:#94a3b8;}
+  .railnav{margin-left:auto;display:flex;gap:6px;flex:0 0 auto;}
+
+  /* Main grid */
+  .main{display:grid;grid-template-columns:32% 44% 24%;gap:10px;padding:10px;overflow:hidden;}
+  body.exp-off .main{grid-template-columns:38% 62%;}
+  body.exp-off .right{display:none;}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto;padding:12px;}
+  .col h3{margin:0 0 8px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+  .col.center{display:flex;flex-direction:column;padding:10px 10px 12px;}
+
+  /* Left business screen */
+  .screen-title{font-weight:700;font-size:13.5px;margin-bottom:8px;}
+  .portal .agent-item{padding:7px 10px;border:1px solid var(--line);border-radius:7px;margin-bottom:5px;background:#fff;}
+  .portal .agent-item.active{border-color:#0d9488;background:var(--agtbg);font-weight:700;}
+  .muted{color:var(--muted);font-size:11.5px;margin-top:6px;}
+  .ask{color:var(--muted);margin-bottom:6px;}
+  .reqbox{border:1px solid var(--line);background:#f8fafc;border-radius:8px;padding:10px;font-size:13px;}
+  .btnrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .btn{font-size:11.5px;padding:5px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;}
+  .btn.primary{background:#0d9488;color:#fff;border-color:#0d9488;}
+  .lblrow{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;font-weight:700;margin:9px 0 3px;}
+  .kvbox{border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12px;background:#fff;}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;}
+  .ch{font-size:10.5px;border:1px solid var(--line);border-radius:5px;padding:2px 7px;background:#f8fafc;}
+  .warnbox{font-size:11.5px;background:var(--lrnbg);border:1px solid #fde68a;border-radius:7px;padding:7px 9px;margin-top:6px;color:#92400e;}
+  ul.tight{margin:2px 0;padding-left:16px;font-size:12px;}
+  ul.tight li{margin-bottom:1px;}
+  table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:2px;}
+  table.tbl td{border-bottom:1px solid var(--line);padding:3px 5px;vertical-align:top;}
+  table.tbl td.run{color:#0d9488;font-weight:700;}
+  table.tbl td.lock{color:#b45309;}
+  .conf{float:right;font-size:10.5px;background:#ede9fe;color:#6d28d9;border-radius:8px;padding:1px 7px;font-weight:700;}
+  .checklist{list-style:none;padding:0;margin:0;}
+  .checklist li{padding:6px 8px;border-radius:6px;margin-bottom:5px;font-size:12px;}
+  .checklist li.done{background:var(--actbg);border:1px solid #bbf7d0;}
+  .checklist li.done::before{content:"✓ ";color:#16a34a;font-weight:700;}
+  .checklist li.wait{background:var(--lrnbg);border:1px solid #fde68a;}
+  .checklist li.wait::before{content:"⏳ ";}
+  .card{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;background:#fff;}
+  .card.hl{border-color:#7c3aed;background:var(--sembg);font-weight:700;}
+  .card.warn{border-color:#f59e0b;background:var(--lrnbg);}
+  .card.ok{border-color:#16a34a;background:var(--actbg);}
+  .card.danger{border-color:#dc2626;background:#fef2f2;}
+  .chk{display:flex;gap:7px;align-items:flex-start;padding:7px 9px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;font-size:12px;}
+  .chk small{color:var(--muted);}
+
+  /* Center structure room */
+  .engine{border:2px solid var(--trust);border-radius:10px;padding:8px;flex:1;display:flex;flex-direction:column;gap:5px;position:relative;background:#fbfcfe;min-height:0;}
+  .engine .trust-label{position:absolute;top:-9px;left:12px;background:var(--trust);color:#fff;font-size:9.5px;padding:1px 8px;border-radius:4px;letter-spacing:.03em;}
+  .engine.trust-on{box-shadow:0 0 0 3px rgba(30,41,59,.12);}
+  .band{border:1px solid var(--line);border-left:4px solid var(--bandc,#cbd5e1);border-radius:8px;padding:6px 9px;background:#fff;transition:all .15s;flex:0 0 auto;}
+  .band .bhead{display:flex;align-items:center;gap:8px;font-size:11.5px;}
+  .band .bname{font-weight:700;color:var(--bandc,#334155);}
+  .band .bstat{margin-left:auto;font-size:10.5px;color:var(--muted);}
+  .band .bsum{font-size:11px;color:var(--muted);margin-left:auto;}
+  .band.done{background:#fcfdfe;}
+  .band.done .bstat{color:#16a34a;}
+  .band.pending{opacity:.55;}
+  .band.active{flex:1 1 auto;min-height:120px;display:flex;flex-direction:column;background:var(--bandbg,#fff);box-shadow:0 1px 8px rgba(15,23,42,.07);border-color:var(--bandc);}
+  .band.active .bname{font-size:12.5px;}
+  .band.active .bstat{color:var(--bandc);font-weight:700;}
+  .bbody{margin-top:7px;flex:1;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;}
+
+  .flownode{padding:6px 14px;border-radius:8px;font-weight:700;font-size:12px;text-align:center;border:1px solid;}
+  .flownode.big{font-size:14px;padding:9px 18px;}
+  .flownode.gray{background:#f1f5f9;border-color:#cbd5e1;color:#475569;}
+  .flownode.blue{background:var(--databg);border-color:var(--data);color:var(--data);}
+  .flownode.purple{background:var(--sembg);border-color:var(--sem);color:var(--sem);}
+  .flownode.teal{background:var(--agtbg);border-color:var(--agt);color:var(--agt);}
+  .flownode.green{background:var(--actbg);border-color:var(--act);color:var(--act);}
+  .flownode.amber{background:var(--lrnbg);border-color:var(--amber);color:#b45309;}
+  .arrow{font-size:13px;color:#94a3b8;line-height:1;}
+  .band-note{font-size:11px;color:var(--muted);text-align:center;max-width:90%;}
+  .kv{font-size:11px;color:#334155;text-align:center;background:#f8fafc;border-radius:6px;padding:4px 8px;}
+  .diverge,.fan{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+  .src,.agent,.chip{font-size:10.5px;border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:#fff;text-align:center;}
+  .src small,.agent small{display:block;color:var(--muted);font-size:9.5px;margin-top:1px;}
+  .src.ok{border-color:#16a34a;background:var(--actbg);color:#15803d;}
+  .src.wait{border-color:#f59e0b;background:var(--lrnbg);color:#b45309;}
+  .agent{border-color:#5eead4;background:var(--agtbg);min-width:74px;}
+  .chip{background:var(--custbg);}
+  .tasks{font-size:10.5px;color:#475569;text-align:center;line-height:1.6;}
+  .branch{display:flex;gap:7px;width:100%;justify-content:center;}
+  .br{flex:1;max-width:150px;border-radius:7px;padding:6px 8px;font-size:11px;font-weight:700;text-align:center;border:1px solid;}
+  .br small{display:block;font-weight:400;font-size:9.5px;margin-top:2px;}
+  .br.auto{background:var(--actbg);border-color:var(--act);color:#15803d;}
+  .br.hitl{background:var(--lrnbg);border-color:var(--amber);color:#b45309;}
+  .br.block{background:#fef2f2;border-color:var(--red);color:#b91c1c;}
+
+  /* Right interpretation (해석 위주) */
+  .rkicker{font-size:11px;color:var(--agt);font-weight:700;letter-spacing:.02em;margin-bottom:7px;border-bottom:1px solid var(--line);padding-bottom:6px;}
+  .rfield{margin-bottom:11px;}
+  .rfield .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;font-weight:700;margin-bottom:3px;}
+  .rprin{font-size:12.5px;line-height:1.7;color:#1e293b;}
+  .rnote{font-size:11.5px;color:#334155;background:#f8fafc;border-left:3px solid #0d9488;border-radius:4px;padding:7px 9px;}
+  .rnote.hitl{border-left-color:var(--amber);background:var(--lrnbg);}
+  .ground{font-size:10.5px;color:#0d9488;margin:4px 0 2px;}
+  .rdetail{margin-top:6px;border-top:1px dashed var(--line);padding-top:8px;}
+  .rdetail summary{font-size:11px;color:var(--muted);cursor:pointer;font-weight:700;list-style:none;}
+  .rdetail summary::before{content:"▸ ";}
+  .rdetail[open] summary::before{content:"▾ ";}
+  .rdetail .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;font-weight:700;margin:8px 0 2px;}
+  .rlist{margin:0;padding-left:15px;font-size:11.5px;color:#334155;}
+  .rlist li{margin-bottom:1px;}
+  .layers{display:flex;flex-wrap:wrap;gap:4px;}
+  .ltag{font-size:10px;background:#f1f5f9;border:1px solid var(--line);border-radius:5px;padding:2px 6px;color:#475569;}
+
+  /* Log dock */
+  .logdock{background:#0b1220;color:#cbd5e1;border-top:1px solid #1e293b;height:150px;display:flex;flex-direction:column;}
+  .logtabs{display:flex;gap:2px;padding:5px 10px 0;}
+  .ltab{font-size:11px;padding:3px 10px;border-radius:6px 6px 0 0;cursor:pointer;color:#94a3b8;}
+  .ltab.active{background:#162033;color:#fff;}
+  .logbody{flex:1;overflow:auto;padding:6px 12px;font-family:'Consolas','D2Coding',monospace;font-size:11px;background:#162033;}
+  .logline{padding:1px 0;white-space:nowrap;}
+  .logline .tg{color:#5eead4;}
+  .logline .tg.gov{color:#fbbf24;}
+  .logline .tg.dec{color:#a78bfa;}
+  .logline .tg.act{color:#4ade80;}
+  .logline .sgrp{color:#475569;margin-right:6px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <div class="title">AAP Meeting Runtime Demo</div>
+      <div class="sub">모호한 회의 요청이 AAP 내부에서 업무 사건·Agent 실행·Writeback으로 바뀌는 과정</div>
+    </div>
+    <span class="runid">RUN-MEETING-001</span>
+    <span class="mode">Core Run · Step 0–9</span>
+    <div class="spacer"></div>
+    <label class="toggle"><input type="checkbox" id="expToggle" checked> 작동 원리 해석 패널</label>
+  </header>
+
+  <nav class="rail" id="rail"></nav>
+
+  <div class="main">
+    <section class="col left">
+      <h3>좌측 · 사용자 업무 화면</h3>
+      <div id="leftBody"></div>
+    </section>
+    <section class="col center">
+      <h3>중앙 · AAP 작동 구조</h3>
+      <div class="engine" id="engine">
+        <span class="trust-label">Trust · Security · Governance</span>
+      </div>
+    </section>
+    <section class="col right">
+      <h3>우측 · 작동 원리 해석</h3>
+      <div id="rightBody"></div>
+    </section>
+  </div>
+
+  <footer class="logdock">
+    <div class="logtabs" id="logtabs"></div>
+    <div class="logbody" id="logBody"></div>
+  </footer>
+</div>
+
+<script>
+/* ===== Bands (6 AAP 계층) ===== */
+const BANDS = [
+  {key:'custenv', name:'Customer Environment', c:'var(--cust)', bg:'var(--custbg)'},
+  {key:'data',    name:'Data & Inputs',        c:'var(--data)', bg:'var(--databg)'},
+  {key:'semantic',name:'Business Semantic',     c:'var(--sem)',  bg:'var(--sembg)'},
+  {key:'agentic', name:'Agentic Core',          c:'var(--agt)',  bg:'var(--agtbg)'},
+  {key:'action',  name:'Action & Integration',  c:'var(--act)',  bg:'var(--actbg)'},
+  {key:'learning',name:'Operational Learning',  c:'var(--lrn)',  bg:'var(--lrnbg)'},
+];
+const DONE_LABEL = {
+  custenv:'Mail·Cal·Docs·Org·CRM 연결',
+  data:'Context Package · 메일14 문서6 CRM1',
+  semantic:'◆ Meeting Event (Kickoff)',
+  agentic:'9 Task · 5 Agent · 조율 완료',
+  action:'Writeback 완료',
+  learning:'—',
+};
+const PEND_LABEL = {
+  custenv:'고객 환경 시스템', data:'요청·맥락 입력', semantic:'업무 의미화',
+  agentic:'Agent 실행·조율', action:'실행·반영', learning:'운영 학습 (P3)',
+};
+
+/* ===== STEPS (Core Run 0~9) ===== */
+const STEPS = [
+{ id:0, title:'준비', hitl:false,
+  left:`<div class="screen-title">AI 업무 포털 · 회의 준비 Agent</div>
+    <div class="portal">
+      <div class="agent-item active">회의 준비 Agent</div>
+      <div class="agent-item">회의록 Agent</div>
+      <div class="agent-item">보고서 Agent</div>
+      <div class="agent-item">사내자료 검색 Agent</div>
+      <div class="agent-item">결재 검토 Agent</div></div>
+    <div class="lblrow">접속 사용자</div>
+    <div class="kvbox"><b>홍길동</b> · AX BD · AI Business Planning</div>
+    <div class="lblrow">연결 시스템</div>
+    <div class="chips"><span class="ch">Calendar</span><span class="ch">Mail</span><span class="ch">Docs</span><span class="ch">CRM</span><span class="ch">Groupware</span><span class="ch">Meeting Room</span></div>
+    <div class="warnbox">외부 공유 권한 · 조건부(승인 필요) — 권한에 따라 접근 문서·외부 초대 범위가 달라짐</div>`,
+  center:{active:'custenv', done:[], trust:true,
+    inner:`<div class="diverge">
+        <div class="chip">Mail</div><div class="chip">Calendar</div><div class="chip">Docs</div>
+        <div class="chip">Org Chart</div><div class="chip">CRM</div><div class="chip">Groupware</div>
+        <div class="chip">Meeting Room</div><div class="chip">IAM/SSO</div></div>
+      <div class="band-note">사용자 권한·연결 가능 시스템 확인 (아직 업무 객체 없음)</div>`},
+  right:{stage:'Service · Data · Trust',
+    principle:'AAP는 회의를 받기 전에 "누가 요청하는가"부터 확인합니다. 사용자 신분·권한·연결 가능한 시스템 범위를 먼저 파악하는 구조라, 같은 요청도 사람에 따라 접근 문서·외부 초대·자동 발송 가능 범위가 달라집니다. 즉 권한이 모든 후속 판단의 경계를 먼저 정합니다.',
+    note:'권한 확인이 없으면 회의 준비는 "누구나 같은 결과"가 되어 보안·책임이 무너집니다.',
+    ground:'', input:['User Identity','IAM / SSO'], process:['권한 확인','접근 가능 시스템 범위 확인'],
+    output:['User Context'], layers:['Service Experience','Enterprise Data & Inputs','Trust Foundation']},
+  logs:[['Auth','User identity verified'],['Access','Calendar, Mail, Docs, CRM access granted'],['Policy','External sharing requires approval']]},
+
+{ id:1, title:'요청 입력', hitl:false,
+  left:`<div class="screen-title">회의 준비 Agent</div>
+    <div class="ask">무엇을 도와드릴까요?</div>
+    <div class="reqbox">"다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘."</div>
+    <div class="btnrow"><span class="btn primary">실행</span><span class="btn">예시 불러오기</span></div>
+    <div class="lblrow">AAP가 읽어낸 신호</div>
+    <div class="chips"><span class="ch">다음 주</span><span class="ch">AAP 고객사</span><span class="ch">킥오프</span><span class="ch">관련 부서</span><span class="ch">제안 자료</span><span class="ch">회의록</span></div>
+    <div class="warnbox">빠진 정보 · 고객사명 · 참석자 명단 · 회의 일시 · 공유 자료 보안등급 · 외부 초대 여부</div>`,
+  center:{active:'data', done:['custenv'],
+    inner:`<div class="flownode gray">Raw Request Event · REQ-001</div>
+      <div class="band-note">원시 요청 — 아직 실행 명령이 아님. 해석이 필요한 업무 신호</div>`},
+  right:{stage:'Business Semantic Modeling',
+    principle:'사용자 요청은 실행 명령이 아니라 "해석이 필요한 업무 신호"로 다룹니다. AAP는 한 줄 요청을 곧장 캘린더에 넣지 않고, 먼저 무엇이 빠졌는지(고객사·참석자·일정·공유정책)를 식별합니다. 이 "즉시 실행하지 않는" 구조가 일반 자동화와의 첫 분기점입니다.',
+    note:'바로 실행하면 잘못된 사람에게 잘못된 자료가 나갈 수 있습니다. 그래서 먼저 업무 사건을 정의합니다.',
+    ground:'↳ 좌측 요청 입력창·읽어낸 신호와 연결', input:['Raw Request'], process:['요청 분해','누락 필드 식별'],
+    output:['Raw Request Event'], layers:['Service Experience','Business Semantic']},
+  logs:[['Request','Raw request captured'],['Semantic','Missing fields: customer, participants, date candidates, sharing policy']]},
+
+{ id:2, title:'맥락 수집', hitl:false,
+  left:`<div class="screen-title">관련 맥락 수집 중</div>
+    <div class="lblrow">메일 · 14건 (핵심)</div>
+    <ul class="tight"><li>대한제조그룹 후속 미팅 요청</li><li>기술 검토 자료 송부</li><li>보안 검토 필요사항</li></ul>
+    <div class="lblrow">문서 · 6건</div>
+    <ul class="tight"><li>AAP_선제안_자료_v3.pdf</li><li>AAP_4-2_아키텍처.html</li><li>고객사_QA_정리.docx</li></ul>
+    <div class="lblrow">CRM</div>
+    <div class="kvbox"><b>대한제조그룹</b> · DX팀 · 후속 논의 단계</div>
+    <div class="lblrow">관련 부서 · 5</div>
+    <div class="chips"><span class="ch">AX BD</span><span class="ch">AI Architecture</span><span class="ch">Data Platform</span><span class="ch">Security</span><span class="ch">PMO</span></div>`,
+  center:{active:'data', done:['custenv'],
+    inner:`<div class="diverge">
+        <div class="src">Mail<small>14</small></div><div class="src">Docs<small>6</small></div>
+        <div class="src">CRM<small>1</small></div><div class="src">Org<small>5</small></div><div class="src">Calendar</div></div>
+      <div class="arrow">↓</div>
+      <div class="flownode blue">Context Package</div>
+      <div class="band-note">관련 맥락을 묶어 입력에 없던 객체를 생성</div>`},
+  right:{stage:'Enterprise Data & Inputs',
+    principle:'짧은 요청만으로는 일을 할 수 없으므로, AAP는 고객 환경의 여러 시스템(메일·문서·CRM·조직도·캘린더)을 조회해 맥락을 모읍니다. 흩어진 정보를 "Context Package"라는 하나의 업무 맥락으로 묶는데, 이는 입력에는 없던 AAP가 새로 만든 중간 산출물입니다.',
+    note:'단순 검색이 아니라 "이 회의에 필요한 맥락"만 골라 구조화한다는 점이 핵심입니다.',
+    ground:'↳ 좌측 수집 결과(메일·문서·CRM·부서)와 연결', input:['Raw Request','User Context'], process:['Mail·Docs·CRM·Org·Calendar 조회','관련 맥락 추출'],
+    output:['Context Package'], layers:['Enterprise Data & Inputs','Trust Foundation']},
+  logs:[['Connector:Mail','14 related emails found'],['Connector:Docs','6 related documents found'],['Connector:CRM','Customer matched: 대한제조그룹'],['Connector:Org','5 candidate departments identified'],['Governance','2 documents marked internal-only']]},
+
+{ id:3, title:'업무 의미화', hitl:false,
+  left:`<div class="screen-title">AAP 해석 결과</div>
+    <div class="card hl">회의 유형 · 킥오프 회의 <span class="conf">확신도 92%</span></div>
+    <div class="card"><b>목적</b><br>· 착수 범위 정렬 · 역할/책임(R&R) 정리<br>· 일정·다음 단계 합의 · 보안/자료 공유 조건 확인</div>
+    <div class="card"><b>필요 산출물</b> · 참석자 · 일정 · 사전 자료 패키지 · 킥오프 안건 · 초대 메일 · 회의록 템플릿</div>
+    <div class="card warn"><b>검토 필요</b> · 참석자 확정 · 외부 고객 초대 · 외부 공유 자료 승인</div>
+    <div class="card danger"><b>적용 정책</b> · 외부 고객 포함 → 자료 공유 승인 필요 · 초대 자동발송 제한(HITL)</div>`,
+  center:{active:'semantic', done:['custenv','data'],
+    inner:`<div class="flownode purple big">◆ Meeting Event</div>
+      <div class="kv">유형 Kickoff · 목적 착수범위·R&R·일정·보안 정렬<br>정책 외부고객 포함 → 공유 승인 필요</div>
+      <div class="band-note">업무 의미 모델(온톨로지)을 적용해 책임·정책이 걸린 업무 사건으로 구조화</div>`},
+  right:{stage:'Business Semantic Modeling',
+    principle:'이 단계가 AAP의 핵심입니다. "킥오프 회의"라는 말을 일정 이름이 아니라 업무 유형으로 해석해, 목적·필요 역할·표준 산출물·정책 조건을 갖춘 "Meeting Event"로 구조화합니다. 업무 의미 모델(온톨로지)을 적용하는 이 구조 덕분에 회의가 단순 예약이 아니라 책임·정책이 걸린 업무 사건이 됩니다.',
+    note:'이 단계가 없으면 AAP는 회의를 단순 일정 예약으로만 처리합니다. 의미화가 모든 실행 경로를 결정합니다.',
+    ground:'↳ ◆Meeting Event ↔ 좌측 "AAP 해석 결과"', input:['Context Package','Meeting Type Ontology','Policy Rules'],
+    process:['회의 유형 분류','목적 추론','필요 산출물 정의','정책 플래그 생성'],
+    output:['Meeting Event','Policy Flags'], layers:['Business Semantic','Trust Foundation']},
+  logs:[['Semantic','Meeting type classified: Kickoff'],['Semantic','Purpose inferred: scope/R&R/schedule alignment'],['Policy','External customer detected'],['Policy','External sharing approval required']]},
+
+{ id:4, title:'Task 분해', hitl:false,
+  left:`<div class="screen-title">회의 준비 계획</div>
+    <div class="muted">Supervisor가 9개 작업으로 분해 · 일부 병렬 실행</div>
+    <table class="tbl">
+      <tr><td>T1 참석자</td><td class="run">진행</td></tr>
+      <tr><td>T2 일정</td><td class="run">진행</td></tr>
+      <tr><td>T3 자료</td><td class="run">진행</td></tr>
+      <tr><td>T4 안건</td><td>대기</td></tr>
+      <tr><td>T5 정책 검토</td><td class="run">진행</td></tr>
+      <tr><td>T6 회의실·화상</td><td>대기</td></tr>
+      <tr><td>T7 초대 메일</td><td class="lock">잠금 · 정책+승인 후</td></tr></table>`,
+  center:{active:'agentic', done:['custenv','data','semantic'],
+    inner:`<div class="flownode teal">Supervisor</div>
+      <div class="arrow">↓</div>
+      <div class="tasks">T1 참석자 · T2 일정 · T3 자료 · T4 안건 · T5 정책<br>T6 회의실 · T7 초대 · T8 회의록 · T9 액션 템플릿</div>
+      <div class="band-note">외부 초대는 Policy Review + HITL 전까지 잠금</div>`},
+  right:{stage:'Agentic Reasoning & Execution',
+    principle:'하나의 업무 사건을 한 번에 처리하지 않고, 중앙 조율자(Supervisor)가 작업 단위로 나눠 실행 순서를 짭니다. 참석자·일정·자료·안건·정책 등으로 분해하되, 외부 초대처럼 책임이 큰 작업은 정책 검토·사람 승인 전까지 잠가두는 의존성을 함께 설계합니다.',
+    note:'중요한 건 Agent 수가 아니라, "누가 무엇을 어떤 순서로" 하는지를 Supervisor가 구성한다는 점입니다.',
+    ground:'↳ 좌측 준비 작업 목록(T1~T7)과 연결', input:['Meeting Event'], process:['Task Graph 생성','병렬/순차·의존성 설정'],
+    output:['Execution Plan','Task Graph (9)'], layers:['Agentic Reasoning']},
+  logs:[['Supervisor','Task graph generated (9 tasks)'],['Routing','Participant, Knowledge, Policy started in parallel'],['Dependency','External invite locked until Policy Review + HITL']]},
+
+{ id:5, title:'Agent 실행', hitl:false,
+  left:`<div class="screen-title">Agent 후보 생성</div>
+    <div class="lblrow">참석자 (필수)</div>
+    <table class="tbl">
+      <tr><td>김영업</td><td>영업</td><td class="muted">고객 메일 8건 참여</td></tr>
+      <tr><td>박PM</td><td>PM</td><td class="muted">후속 제안 범위 담당</td></tr>
+      <tr><td>이아키</td><td>AI 아키텍트</td><td class="muted">아키텍처 자료 작성</td></tr>
+      <tr><td>최데이터</td><td>데이터</td><td class="muted">연계 질의 담당</td></tr>
+      <tr><td>정보안</td><td>보안</td><td class="muted">보안 질의 수신</td></tr></table>
+    <div class="muted">선택 · 한계약 · 유UX / 외부 · DX팀장 · IT기획</div>
+    <div class="lblrow">일정 후보</div>
+    <ul class="tight"><li>1안 6/24(수) 10:00–11:30</li><li>2안 6/25(목) 14:00–15:30</li><li>3안 6/26(금) 09:30–11:00</li></ul>
+    <div class="lblrow">자료 5건 · 안건 6항</div>
+    <div class="muted">선제안 자료 · 4-2 아키텍처 · 6/10 회의록 · Q&A · 보안 검토사항</div>`,
+  center:{active:'agentic', done:['custenv','data','semantic'],
+    inner:`<div class="flownode teal">Supervisor</div>
+      <div class="arrow">↓</div>
+      <div class="fan">
+        <div class="agent">Participant<small>필수5·선택2·외부2</small></div>
+        <div class="agent">Calendar<small>일정 3안</small></div>
+        <div class="agent">Knowledge<small>자료 5건</small></div>
+        <div class="agent">Agenda<small>안건 6항</small></div>
+        <div class="agent">Policy<small>공유 제한 2</small></div></div>
+      <div class="band-note">분해된 작업마다 전용 Agent가 후보를 생성 (근거 포함)</div>`},
+  right:{stage:'Agentic · Data · Semantic',
+    principle:'AAP 내부는 하나의 LLM 호출이 아니라 여러 전문 작업의 조합입니다. 분해된 작업마다 전용 Agent가 각자 후보(참석자·일정·자료·안건·정책)를 만듭니다. 각 결과에는 "왜 이 사람·이 자료인지" 근거가 따라붙어, 이후 판단과 설명의 토대가 됩니다.',
+    note:'예: 김영업은 고객 메일 8건에 참여했기에 추천 — 추천에 근거가 있어 사람이 검증할 수 있습니다.',
+    ground:'↳ 5 Agent 결과 ↔ 좌측 참석자 표·일정·자료', input:['Meeting Event','Context Package','Org / Calendar / Docs'],
+    process:['참석자·일정·자료·안건·정책 후보 생성','각 후보 근거 부착'],
+    output:['Participant / Time / Material / Agenda / Policy Set'], layers:['Agentic Reasoning','Data & Inputs','Business Semantic']},
+  logs:[['Agent:Participant','9 candidates (필수5·선택2·외부2)'],['Agent:Calendar','3 time slots'],['Agent:Knowledge','5 materials packaged'],['Agent:Agenda','6-item draft'],['Agent:Policy','2 share restrictions']]},
+
+{ id:6, title:'조율', hitl:false,
+  left:`<div class="screen-title">검토 결과</div>
+    <div class="card ok"><b>자동 진행</b> · 일정 후보 3개 · 자료 폴더 · 안건 초안 · 회의록 템플릿</div>
+    <div class="card warn"><b>사용자 확인</b> · 참석자 최종 확정 · 고객 초대 여부 · 외부 공유 자료 · 초대 메일 문구</div>
+    <div class="card danger"><b>정책 제한</b> · 내부 아키텍처 상세 자료 → 마스킹 전 외부 공유 차단</div>
+    <div class="muted">평가 · 참석자 충족 84% · 안건 적합 88% · 공유 위험 medium</div>`,
+  center:{active:'agentic', done:['custenv','data','semantic'],
+    inner:`<div class="flownode teal">Supervisor</div>
+      <div class="arrow">↓</div>
+      <div class="branch">
+        <div class="br auto">Auto<small>일정·폴더·안건·회의록</small></div>
+        <div class="br hitl">HITL<small>참석자·외부초대·공유자료·문구</small></div>
+        <div class="br block">Blocked<small>내부 아키 상세 (마스킹)</small></div></div>
+      <div class="band-note">각 항목에 왜 자동인지·왜 승인인지·왜 막혔는지 설명이 붙음</div>`},
+  right:{stage:'Supervisor Coordination',
+    principle:'펼쳐진 후보를 그대로 실행하지 않고, 조율자가 한 번 더 거릅니다. 역할 충족도·참석 가능률·공유 가능성·정책 위반 여부를 평가해 "자동 실행 / 사람 검토(HITL) / 정책 제한"으로 나눕니다. "AI가 알아서 다 했다"가 아니라, 각 항목이 왜 자동인지·왜 승인이 필요한지·왜 막혔는지를 설명하는 통제 구조입니다.',
+    note:'이 통제 분기가 AAP를 "자동화 도구"가 아닌 "운영 플랫폼"으로 만드는 지점입니다.',
+    ground:'↳ Auto/HITL/Blocked 3분기 ↔ 좌측 자동/확인/제한 카드', input:['Participant·Time·Material·Agenda Set','Policy Review'],
+    process:['역할·가용률·공유가능성·정책위반 평가','자동/HITL/제한 분리'],
+    output:['Coordination Result'], layers:['Agentic Reasoning','Trust·Security·Governance','AI Quality/Eval']},
+  logs:[['Evaluation','Participant coverage: 84%'],['Evaluation','Agenda fit: 88%'],['Policy','External sharing risk: medium'],['HITL','Final invite requires user approval'],['Guardrail','Internal architecture detail requires masking']]},
+
+{ id:7, title:'실행 패키지', hitl:false,
+  left:`<div class="screen-title">Meeting Execution Package</div>
+    <div class="card"><b>회의명</b> · AAP 고객사 킥오프 회의</div>
+    <div class="card"><b>추천 일정</b><br>1안 6/24(수) 10:00 · 2안 6/25(목) 14:00 · 3안 6/26(금) 09:30</div>
+    <div class="card"><b>참석자</b> · 필수 5(영업·PM·아키텍트·데이터·보안) + 외부 2(DX팀장·IT기획) + 선택 2</div>
+    <div class="card"><b>자료 패키지</b> · 5건 / <b>안건</b> · 6항</div>
+    <div class="card warn"><b>승인 필요</b> · 참석자 확정 · 고객 초대 메일 · 외부 공유 자료 · 내부 자료 마스킹</div>
+    <div class="muted">상태 · 사람 검토 대기(pending_human_review) · 아직 미발송</div>`,
+  center:{active:'action', done:['custenv','data','semantic','agentic'],
+    inner:`<div class="flownode green big">▣ Meeting Execution Package</div>
+      <div class="kv">일정 3안 · 참석자 9 · 자료 5 · 안건 6 · 승인필요 4<br>status · pending_human_review</div>
+      <div class="band-note">실행 직전 최종 조립체 — 책임 지점을 사용자에게 먼저 노출</div>`},
+  right:{stage:'Action 준비',
+    principle:'조율 결과를 실제로 실행 가능한 하나의 업무 패키지로 묶습니다. 일정·참석자·자료·안건·승인 필요 항목이 한 묶음이 되며, 상태는 "사람 검토 대기"입니다. AAP는 아직 아무것도 발송하지 않았고, 실행 직전에 책임 지점을 사용자에게 먼저 드러냅니다.',
+    note:'자동차로 치면 주행 전 엔진·연료·경로·안전장치를 모두 점검해 놓은 상태입니다.',
+    ground:'↳ ▣Package ↔ 좌측 실행 패키지 미리보기', input:['Coordination Result'], process:['실행 패키지 조립','자동/승인 항목 분리'],
+    output:['Meeting Execution Package'], layers:['Service Experience','Agentic Reasoning','Enterprise Integration & Action','Trust Foundation']},
+  logs:[['Package','Meeting Execution Package created'],['Status','Pending human review'],['Ready','Agenda draft + material folder prepared'],['Pending','External invite approval required']]},
+
+{ id:8, title:'HITL', hitl:true,
+  left:`<div class="screen-title">승인 필요 항목</div>
+    <label class="chk"><input type="checkbox" checked> <span>참석자 확정 <small>계약·UX는 선택 유지?</small></span></label>
+    <label class="chk"><input type="checkbox" checked> <span>외부 고객 초대 <small>DX팀장·IT기획</small></span></label>
+    <label class="chk"><input type="checkbox"> <span>내부 상세 자료 공유 <small>마스킹 후 권장</small></span></label>
+    <label class="chk"><input type="checkbox" checked> <span>초대 메일 문구 <small>"AAP 도입 후속 킥오프"</small></span></label>
+    <div class="btnrow"><span class="btn primary">승인 후 실행</span><span class="btn">수정 요청</span><span class="btn">보류</span></div>
+    <div class="muted">AAP 권고 · 계약·UX 선택 유지 · 내부 상세 자료 제외(마스킹) 권장</div>`,
+  center:{active:'action', done:['custenv','data','semantic','agentic'], trust:true,
+    inner:`<div class="flownode amber big">⛉ HITL Gate</div>
+      <div class="kv">참석자 확정 · 외부 초대 · 자료 공유 · 초대 문구 — 사용자 승인 대기</div>
+      <div class="band-note">책임 있는 수렴점. 사용자 선택은 Decision Log에 기록됨</div>`},
+  right:{stage:'HITL · Governance',
+    principle:'책임이 따르는 지점에서는 사람에게 제어권을 넘기는 구조입니다. 참석자 확정·외부 초대·자료 공유·문구는 사용자가 직접 결정하고, 그 선택은 Decision Log에 공식 이력으로 남습니다. HITL은 AI가 부족해서가 아니라, 책임 있는 판단을 기록 가능한 형태로 남기기 위한 장치입니다.',
+    note:'AAP는 "알아서 다 한다"가 아니라, 책임 지점에서 멈추고 사람의 결정을 이력으로 남깁니다.',
+    ground:'↳ HITL Gate ↔ 좌측 승인 체크리스트', input:['Execution Package','Policy Review'], process:['참석자/외부초대/자료공유/문구 검토'],
+    output:['Human Review Decision'], layers:['HITL Routing','Action Policy','Audit & Explainability'], hitl:true},
+  logs:[['HITL','Reviewer approved participant list'],['HITL','Internal architecture detail excluded'],['Decision Log','Human decision recorded'],['Policy','External invite now allowed']]},
+
+{ id:9, title:'Writeback', hitl:false,
+  left:`<div class="screen-title">실행 완료</div>
+    <ul class="checklist">
+      <li class="done">캘린더 초대 생성 · CAL-3391</li><li class="done">회의실 예약 · ROOM-552</li>
+      <li class="done">화상회의 링크 생성</li><li class="done">자료 폴더 생성</li>
+      <li class="done">아젠다 문서 생성</li><li class="done">회의록 템플릿 생성</li>
+      <li class="wait">고객 초대 메일 · 발송 대기</li></ul>
+    <div class="muted">남은 일 · 초대 메일 발송 승인 · 다음 회의 후보 7/4(금) 10:00</div>`,
+  center:{active:'action', done:['custenv','data','semantic','agentic'],
+    inner:`<div class="flownode green">▣ Execution Package (승인됨)</div>
+      <div class="arrow">↓</div>
+      <div class="diverge">
+        <div class="src ok">Calendar<small>CAL-3391</small></div><div class="src ok">Room<small>ROOM-552</small></div>
+        <div class="src ok">Docs<small>폴더·아젠다</small></div><div class="src ok">Minutes<small>템플릿</small></div>
+        <div class="src wait">Mail<small>초안·대기</small></div></div>
+      <div class="band-note">승인된 결과를 실제 업무 시스템에 반영 (Writeback)</div>`},
+  right:{stage:'Enterprise Integration & Action',
+    principle:'AAP가 일반 AI와 갈리는 지점입니다. 승인된 결과를 "이렇게 하세요"로 답하는 데서 끝내지 않고, 캘린더·회의실·문서함·메일 시스템에 실제로 반영(Writeback)합니다. 모든 호출과 결과는 감사 로그로 남아, 무엇이 실제로 실행됐는지 추적 가능합니다.',
+    note:'답변 생성이 아니라 시스템 반영 — 이것이 AAP를 "운영 플랫폼"이라 부르는 이유입니다.',
+    ground:'↳ Writeback 타깃 ↔ 좌측 실행 완료 체크리스트', input:['Approved Execution Package'], process:['Calendar/Room/Mail/Docs API 호출'],
+    output:['Action Result'], layers:['Enterprise Integration & Action','Tool Calling Runtime','Audit Log']},
+  logs:[['Writeback:Calendar','Event created · CAL-3391'],['Writeback:Room','Room reserved · ROOM-552'],['Writeback:Docs','Material folder + agenda created'],['Writeback:Mail','Invite draft prepared'],['Audit','All action results logged']]},
+];
+const LOCKED = [{title:'회의 진행',ph:'P3'},{title:'사후 처리',ph:'P3'},{title:'Learning',ph:'P3'},{title:'Playback',ph:'P4'}];
+
+/* ===== log category ===== */
+function catOf(tag){
+  const t=tag.toLowerCase();
+  if(/writeback|ready|package|access|status/.test(t)) return 'act';
+  if(/semantic|hitl|decision|evaluation/.test(t)) return 'dec';
+  if(/connector|supervisor|routing|agent|dependency/.test(t)) return 'agent';
+  if(/policy|guardrail|governance|audit|auth/.test(t)) return 'gov';
+  if(/learning|skill|feedback/.test(t)) return 'lrn';
+  return '';
+}
+const LOG_TABS=[['all','All'],['act','Action'],['dec','Decision'],['agent','Agent'],['gov','Governance'],['lrn','Learning']];
+
+/* ===== state ===== */
+let cur=0, logTab='all';
+(function(){ const q=new URLSearchParams(location.search); const s=parseInt(q.get('step'),10);
+  if(!isNaN(s)&&s>=0&&s<STEPS.length) cur=s; })();
+
+function goNext(){ if(cur<STEPS.length-1){cur++;render();} }
+function goPrev(){ if(cur>0){cur--;render();} }
+
+/* ===== render ===== */
+function renderRail(){
+  const r=document.getElementById('rail'); r.innerHTML='';
+  STEPS.forEach(s=>{
+    const cls = s.id===cur?'active':(s.id<cur?'done':'');
+    const el=document.createElement('div');
+    el.className=`step ${cls} ${s.hitl?'hitl':''}`;
+    el.innerHTML=`<span class="num">${s.id}</span><span>${s.title}</span>`;
+    el.onclick=()=>{cur=s.id;render();};
+    r.appendChild(el);
+  });
+  LOCKED.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='step locked';
+    el.innerHTML=`<span class="num">${10+i}</span><span>${s.title}</span><span class="ph">${s.ph}</span>`;
+    r.appendChild(el);
+  });
+  const nav=document.createElement('div'); nav.className='railnav';
+  nav.innerHTML=`<span class="btn" id="prevBtn">◀ 이전</span><span class="btn primary" id="nextBtn">다음 ▶</span>`;
+  r.appendChild(nav);
+  document.getElementById('prevBtn').onclick=goPrev;
+  document.getElementById('nextBtn').onclick=goNext;
+  document.getElementById('prevBtn').style.visibility = cur===0?'hidden':'visible';
+  document.getElementById('nextBtn').style.visibility = cur===STEPS.length-1?'hidden':'visible';
+}
+
+function renderLeft(){ document.getElementById('leftBody').innerHTML = STEPS[cur].left; }
+
+function renderCenter(){
+  const cfg=STEPS[cur].center;
+  const eng=document.getElementById('engine');
+  eng.className = 'engine'+(cfg.trust?' trust-on':'');
+  let html='<span class="trust-label">Trust · Security · Governance</span>';
+  BANDS.forEach(b=>{
+    const isActive=cfg.active===b.key;
+    const isDone=cfg.done.includes(b.key);
+    const state=isActive?'active':(isDone?'done':'pending');
+    const stat=isDone?'<span class="bstat">✓</span>':(isActive?'<span class="bstat">● ACTIVE</span>':'<span class="bstat">·</span>');
+    const sum = isActive?'' : `<span class="bsum">${isDone?DONE_LABEL[b.key]:PEND_LABEL[b.key]}</span>`;
+    html+=`<div class="band ${state}" style="--bandc:${b.c};--bandbg:${b.bg}">
+        <div class="bhead"><span class="bname">${b.name}</span>${sum}${stat}</div>
+        ${isActive?`<div class="bbody">${cfg.inner}</div>`:''}
+      </div>`;
+  });
+  eng.innerHTML=html;
+}
+
+function renderRight(){
+  const r=STEPS[cur].right;
+  const li=a=>a.map(x=>`<li>${x}</li>`).join('');
+  document.getElementById('rightBody').innerHTML=`
+    <div class="rkicker">${r.stage}</div>
+    <div class="rfield"><div class="lbl">어떤 구조·원리로 작동하나</div><div class="rprin">${r.principle}</div></div>
+    <div class="rfield"><div class="lbl">${r.hitl?'왜 HITL인가':'왜 이렇게 하나'}</div><div class="rnote ${r.hitl?'hitl':''}">${r.note}</div></div>
+    ${r.ground?`<div class="ground">${r.ground}</div>`:''}
+    <details class="rdetail">
+      <summary>입력 · 처리 · 산출 · AAP 계층</summary>
+      <div class="lbl">입력</div><ul class="rlist">${li(r.input)}</ul>
+      <div class="lbl">처리</div><ul class="rlist">${li(r.process)}</ul>
+      <div class="lbl">산출</div><ul class="rlist">${li(r.output)}</ul>
+      <div class="lbl">AAP 계층</div><div class="layers">${r.layers.map(l=>`<span class="ltag">${l}</span>`).join('')}</div>
+    </details>`;
+}
+
+function renderLogs(){
+  const body=document.getElementById('logBody');
+  let lines=[];
+  for(let i=0;i<=cur;i++){ STEPS[i].logs.forEach(([tag,msg])=>lines.push({s:i,tag,msg,cat:catOf(tag)})); }
+  if(logTab!=='all') lines=lines.filter(l=>l.cat===logTab);
+  body.innerHTML=lines.map(l=>
+    `<div class="logline"><span class="sgrp">S${l.s}</span><span class="tg ${l.cat}">[${l.tag}]</span> ${l.msg}</div>`
+  ).join('') || '<div class="logline" style="color:#475569">— 표시할 로그 없음 —</div>';
+  body.scrollTop=body.scrollHeight;
+}
+
+function renderTabs(){
+  const t=document.getElementById('logtabs'); t.innerHTML='';
+  LOG_TABS.forEach(([k,label])=>{
+    const el=document.createElement('div');
+    el.className='ltab'+(logTab===k?' active':'');
+    el.textContent=label;
+    el.onclick=()=>{logTab=k;renderLogs();renderTabs();};
+    t.appendChild(el);
+  });
+}
+
+function render(){ renderRail(); renderLeft(); renderCenter(); renderRight(); renderLogs(); renderTabs(); }
+
+document.getElementById('expToggle').onchange=e=>{ document.body.classList.toggle('exp-off',!e.target.checked); };
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowRight')goNext(); if(e.key==='ArrowLeft')goPrev(); });
+
+render();
+</script>
+</body>
+</html>

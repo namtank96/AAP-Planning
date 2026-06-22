@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Meeting Whitebox Runtime Demo · v0.2</title>
+<style>
+  :root{
+    --bg:#f8fafc; --card:#ffffff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb;
+    --primary:#0d9488; --primary-bg:#f0fdfa; --amber:#d97706; --amber-bg:#fffbeb;
+    --red:#dc2626; --red-bg:#fef2f2; --green:#16a34a; --green-bg:#f0fdf4;
+    --trust:#1e293b; --gold:#b45309;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:'Malgun Gothic','Segoe UI',sans-serif;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.55;}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100vh;overflow:hidden;}
+
+  /* Header */
+  .hdr{background:var(--trust);color:#e2e8f0;padding:8px 16px;display:flex;align-items:center;gap:14px;}
+  .hdr .title{font-weight:700;font-size:15px;color:#fff;}
+  .hdr .sub{font-size:11px;color:#94a3b8;}
+  .hdr .spacer{flex:1;}
+  .hdr .dpk{display:flex;align-items:center;gap:6px;font-size:11px;color:#cbd5e1;}
+  .hdr .dpk select{font-size:11px;background:#334155;color:#fff;border:1px solid #475569;border-radius:5px;padding:2px 6px;}
+  .hdr .tg{font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;cursor:pointer;}
+
+  /* Step bar */
+  .stepbar{background:#fff;border-bottom:1px solid var(--line);display:flex;gap:0;padding:7px 14px;overflow-x:auto;align-items:center;}
+  .sb-item{display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap;color:var(--muted);font-size:11.5px;}
+  .sb-item .dot{width:20px;height:20px;border-radius:50%;background:var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:0 0 auto;}
+  .sb-item .nm{padding:0 4px;}
+  .sb-item.done .dot{background:var(--green);color:#fff;}
+  .sb-item.done{color:#374151;}
+  .sb-item.active{color:var(--ink);font-weight:700;}
+  .sb-item.active .dot{background:var(--primary);color:#fff;box-shadow:0 0 0 3px var(--primary-bg);}
+  .sb-line{flex:1;height:2px;background:var(--line);margin:0 6px;min-width:14px;}
+  .sb-line.done{background:var(--green);}
+  .sb-nav{margin-left:auto;display:flex;gap:6px;flex:0 0 auto;padding-left:10px;}
+  .btn{font-size:11.5px;padding:5px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .btn:disabled{opacity:.4;cursor:default;}
+
+  /* Main */
+  .main{display:grid;grid-template-columns:60% 40%;gap:10px;padding:10px;overflow:hidden;}
+  .col{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:auto;padding:14px;}
+  .col h3{margin:0 0 10px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:8px;}
+  .col h3 .hint{font-weight:400;text-transform:none;letter-spacing:0;color:#9ca3af;font-size:10.5px;}
+
+  /* Left: request + work package */
+  .reqcard{border:1px solid var(--line);border-radius:12px;background:#f9fafb;padding:11px 13px;margin-bottom:12px;}
+  .reqcard .rq-l{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af;font-weight:700;margin-bottom:4px;}
+  .reqcard .rq-t{font-size:13px;}
+  .pkg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .wcard{border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px 13px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:box-shadow .12s,border-color .12s;min-height:78px;}
+  .wcard:hover{box-shadow:0 2px 10px rgba(17,24,39,.06);}
+  .wcard.sel{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-bg);}
+  .wcard.empty{border-style:dashed;background:#fcfcfd;}
+  .wcard.blocked{border-color:#fca5a5;}
+  .wc-head{display:flex;align-items:center;gap:7px;}
+  .wc-title{font-weight:700;font-size:12.5px;}
+  .wc-std{font-size:9px;color:#9ca3af;border:1px solid var(--line);border-radius:4px;padding:0 4px;display:none;}
+  body.show-std .wc-std{display:inline;}
+  .wc-body{font-size:11.5px;color:#374151;}
+  .wc-empty{font-size:11px;color:#9ca3af;}
+  .chip{font-size:10px;font-weight:700;border-radius:20px;padding:2px 9px;margin-left:auto;white-space:nowrap;}
+  .chip.empty{background:#f3f4f6;color:#9ca3af;}
+  .chip.analyzing{background:#eef2ff;color:#4f46e5;}
+  .chip.candidate{background:var(--primary-bg);color:var(--primary);}
+  .chip.needs_review{background:var(--amber-bg);color:var(--amber);}
+  .chip.approved{background:var(--green-bg);color:var(--green);}
+  .chip.executed{background:var(--green-bg);color:var(--green);}
+  .chip.learned{background:#fff7ed;color:var(--gold);}
+  .chip.blocked{background:var(--red-bg);color:var(--red);}
+
+  /* Right: runtime map */
+  .rx-explain{font-size:12px;line-height:1.7;color:#1f2937;background:#f9fafb;border-left:3px solid var(--primary);border-radius:6px;padding:9px 11px;margin-bottom:12px;}
+  .rx-explain b{color:var(--primary);}
+  .rmap{display:flex;flex-direction:column;}
+  .rnode{position:relative;border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px 10px;}
+  .rnode .rn-edge{position:absolute;left:21px;top:-11px;width:2px;height:11px;background:var(--line);}
+  .rnode:first-child .rn-edge{display:none;}
+  .rnode.idle{opacity:.5;}
+  .rnode.done{border-color:#cbd5e1;}
+  .rnode.done .rn-edge{background:var(--green);}
+  .rnode.active{border-color:var(--primary);background:var(--primary-bg);box-shadow:0 1px 8px rgba(13,148,136,.12);}
+  .rnode.active .rn-edge{background:var(--primary);}
+  .rn-head{display:flex;align-items:center;gap:8px;}
+  .rn-dot{width:9px;height:9px;border-radius:50%;background:#cbd5e1;flex:0 0 auto;}
+  .rnode.done .rn-dot{background:var(--green);}
+  .rnode.active .rn-dot{background:var(--primary);animation:pl 1.2s infinite;}
+  @keyframes pl{0%{box-shadow:0 0 0 0 rgba(13,148,136,.5)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .rn-name{font-weight:700;font-size:12px;}
+  .rn-desc{font-size:10.5px;color:var(--muted);margin-top:1px;margin-left:17px;}
+  .rn-sub{margin:7px 0 1px 17px;display:flex;flex-wrap:wrap;gap:4px;}
+  .rn-sub .sc{font-size:10px;border:1px solid #99f6e4;background:#fff;border-radius:5px;padding:2px 7px;color:#0f766e;}
+  .rx-gap{height:6px;}
+  .focusbtn{margin-top:10px;}
+
+  /* tooltip */
+  #tip{position:fixed;z-index:60;max-width:260px;background:#111827;color:#f9fafb;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.25);display:none;pointer-events:none;}
+  [data-tip]{border-bottom:1px dotted #9ca3af;cursor:help;}
+
+  /* focus modal */
+  #modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;z-index:70;}
+  #modal .box{background:#fff;border-radius:16px;width:460px;max-width:92vw;padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  #modal h4{margin:0 0 4px;font-size:15px;}
+  #modal .mlbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af;font-weight:700;margin:11px 0 2px;}
+  #modal .mval{font-size:12.5px;color:#374151;}
+  #modal .mclose{float:right;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1;}
+  #modal .mmean{background:var(--primary-bg);border-radius:8px;padding:9px 11px;font-size:12px;color:#0f766e;margin-top:6px;}
+
+  /* logs */
+  .logdock{background:#0b1220;color:#cbd5e1;border-top:1px solid #1e293b;height:150px;display:flex;flex-direction:column;}
+  .logtop{display:flex;align-items:center;gap:2px;padding:5px 12px 0;}
+  .ltab{font-size:11px;padding:3px 11px;border-radius:6px 6px 0 0;cursor:pointer;color:#94a3b8;}
+  .ltab.active{background:#162033;color:#fff;}
+  .lfilter{margin-left:auto;font-size:10.5px;color:#5eead4;cursor:pointer;display:none;}
+  .lfilter.on{display:inline;}
+  .logbody{flex:1;overflow:auto;padding:6px 12px;font-family:'Consolas','D2Coding',monospace;font-size:11px;background:#162033;}
+  .logline{padding:1px 0;white-space:nowrap;}
+  .logline .sg{color:#475569;margin-right:7px;}
+  .logline .tg{color:#5eead4;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <div class="title">AAP Meeting Whitebox Runtime Demo</div>
+      <div class="sub">회의 업무로 보는 AAP 작동 원리 · 표준 Runtime 템플릿</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="dpk">Domain Pack ·
+      <select id="dpkSel">
+        <option value="meeting">회의 (완성)</option>
+        <option value="claim" disabled>손해사정 (placeholder)</option>
+        <option value="control" disabled>내부통제 (placeholder)</option>
+        <option value="voc" disabled>VOC 대응 (placeholder)</option>
+        <option value="quality" disabled>제조 품질 (placeholder)</option>
+      </select>
+    </div>
+    <label class="tg"><input type="checkbox" id="stdToggle"> 표준 객체명</label>
+  </header>
+
+  <nav class="stepbar" id="stepbar"></nav>
+
+  <div class="main">
+    <section class="col left">
+      <h3>고객 업무 화면 <span class="hint">· 회의 준비 패키지가 단계별로 완성</span></h3>
+      <div id="leftBody"></div>
+    </section>
+    <section class="col right">
+      <h3>AAP Runtime Map <span class="hint">· 현재 단계에서 작동하는 구조가 점등</span></h3>
+      <div id="rightBody"></div>
+    </section>
+  </div>
+
+  <footer class="logdock">
+    <div class="logtop" id="logtop"></div>
+    <div class="logbody" id="logBody"></div>
+  </footer>
+</div>
+
+<div id="tip"></div>
+<div id="modal"><div class="box" id="modalBox"></div></div>
+
+<script>
+/* =========================================================================
+   STANDARD RUNTIME GRAMMAR  (domain-agnostic — 산업 전환 시 재사용)
+   Request → WorkEvent → ContextPackage → CandidateSet → CoordinationResult
+   → ExecutionPackage → HITLDecision → WritebackResult → RunTrace → SkillUpdate
+   ========================================================================= */
+const RUNTIME_STAGES = [
+  {key:'request',   label:'요청'},
+  {key:'semantic',  label:'의미화'},
+  {key:'context',   label:'맥락 수집'},
+  {key:'candidate', label:'후보 생성'},
+  {key:'coordinate',label:'조율'},
+  {key:'approve',   label:'승인'},
+  {key:'execute',   label:'실행'},
+  {key:'post',      label:'사후 처리'},
+  {key:'learn',     label:'학습·Playback'},
+];
+
+/* AAP Runtime Map nodes (domain-agnostic) */
+const AAP_NODES = [
+  {key:'service', name:'Service Experience',      desc:'사용자 요청·승인·결과 확인', tip:''},
+  {key:'semantic',name:'Business Semantic',       desc:'요청을 업무 사건으로 구조화', tip:'Meeting Event'},
+  {key:'data',    name:'Data & Inputs',           desc:'고객 시스템에서 업무 맥락 수집', tip:'Context Package'},
+  {key:'agentic', name:'Agentic Reasoning',       desc:'작업을 Agent Task로 분해·실행', tip:'Supervisor'},
+  {key:'coord',   name:'Coordination / Policy',   desc:'자동 / 검토 / 제한으로 분류', tip:''},
+  {key:'hitl',    name:'HITL / Governance',       desc:'책임 지점에서 사람 승인·기록', tip:'HITL'},
+  {key:'action',  name:'Action / Writeback',      desc:'승인 결과를 업무 시스템에 반영', tip:'Writeback'},
+  {key:'learn',   name:'Operational Learning',    desc:'결과를 운영 Skill로 축적', tip:'Skill Update'},
+  {key:'trace',   name:'Run Trace',               desc:'전체 실행 이력을 재생', tip:'Run Trace'},
+];
+
+/* Standard runtime object slots (산업 무관) */
+const STANDARD_RUNTIME = ['request','workEvent','contextPackage','candidateSet','coordinationResult',
+  'executionPackage','hitlDecision','writebackResult','runTrace','skillUpdate'];
+
+/* Standard term tooltips */
+const TOOLTIPS = {
+  'Meeting Event':'사용자의 모호한 요청을 회의 목적·필요 산출물·정책 조건이 포함된 업무 사건으로 구조화한 객체',
+  'Context Package':'메일·문서·캘린더·조직도 등에서 수집한 업무 맥락 묶음',
+  'Candidate Set':'참석자·일정·자료·안건처럼 실행 전 생성된 후보 집합',
+  'Execution Package':'실행 직전의 회의 준비 패키지. 참석자·일정·자료·안건·승인 항목을 포함',
+  'HITL':'책임이 따르는 수렴점에서 사람이 확정·승인하는 구조',
+  'Writeback':'AI 결과를 캘린더·메일·문서함·업무 시스템에 실제 반영하는 것',
+  'Run Trace':'입력·조회·Agent 작업·정책 판단·승인·실행·학습까지 재생 가능한 이력',
+  'Skill Update':'반복 가능한 업무 처리 패턴을 다음 실행에 재사용할 수 있도록 저장하는 것',
+  'Supervisor':'업무 사건을 여러 Agent Task로 나누고 결과를 조율하는 제어자',
+};
+
+/* =========================================================================
+   DOMAIN PACK  — meeting만 완성, 나머지는 구조 placeholder
+   산업 전환 시 이 객체만 교체하면 동일 Runtime 화면이 재사용된다.
+   ========================================================================= */
+const DOMAIN_PACK = {
+  meeting: buildMeetingPack(),
+  claim:   {_placeholder:true, name:'손해사정'},
+  control: {_placeholder:true, name:'내부통제'},
+  voc:     {_placeholder:true, name:'VOC 대응'},
+  quality: {_placeholder:true, name:'제조 품질'},
+};
+let activeDomain = 'meeting';
+
+function buildMeetingPack(){
+  /* 좌측 누적 패키지 카드 (회의 객체) */
+  const CARDS = [
+    {key:'purpose', title:'회의 목적', std:'Work Event', content:'유형 · 킥오프 회의<br>목적 · 착수 범위·역할(R&R)·일정·보안 조건 정렬'},
+    {key:'parts',   title:'참석자',   std:'Candidate Set', content:'필수 · 영업·PM·아키텍트·데이터·보안<br>외부 · DX팀장·IT기획 / 선택 · 계약·UX'},
+    {key:'schedule',title:'일정',     std:'Candidate Set', content:'1안 6/24(수) 10:00 · 2안 6/25(목) 14:00<br>3안 6/26(금) 09:30'},
+    {key:'material',title:'자료',     std:'Context · Candidate', content:'선제안 자료 · 4-2 아키텍처 · 6/10 회의록<br>Q&A · 보안 검토사항'},
+    {key:'agenda',  title:'안건',     std:'Candidate Set', content:'목적 확인 → 적용 후보 → 데이터·시스템<br>→ 아키텍처 매핑 → 보안 조건 → 다음 액션'},
+    {key:'approval',title:'승인',     std:'Coordination Result', content:'확인 필요 · 참석자·외부 초대·공유 자료·문구<br><span style="color:#dc2626">제한 · 내부 아키텍처 상세 자료(외부 공유 제외)</span>'},
+    {key:'execute', title:'실행',     std:'Writeback Result', content:'캘린더 CAL-3391 · 회의실 ROOM-552 · 화상 링크<br>자료 폴더 · 아젠다 · 회의록 템플릿 · 메일 초안'},
+    {key:'minutes', title:'회의록',   std:'Outcome', content:'결정 3 · 보류 2 · 후속 메일 초안'},
+    {key:'actionitems',title:'액션아이템',std:'Outcome', content:'고객 IT기획 · 그룹웨어 API 목록 / 6·28<br>KT DS AI · 데모 초안 / 7·2 · 보안 · 공유 기준 / 6·30'},
+    {key:'skill',   title:'학습',     std:'Skill Update', content:'Kickoff Meeting Skill 업데이트 후보<br>참석자·자료 패키지 패턴 · 사용자 수정 이력'},
+  ];
+
+  /* 단계별 정의: 카드 상태 delta · AAP 노드 점등 · 하위노드 · 로그 · 해석 · Focus */
+  const STEPS = [
+  { stage:'request', set:{},
+    explain:'사용자의 한 줄 요청은 실행 명령이 아니라 <b>해석이 필요한 업무 신호</b>입니다. AAP는 곧장 캘린더에 넣지 않고, 먼저 무엇이 빠졌는지(고객사·참석자·일정·공유정책)를 식별합니다.',
+    active:['service'], sub:{},
+    logs:{event:[['Raw request captured','']], decision:[], action:[], learning:[]},
+    focus:null },
+
+  { stage:'semantic', set:{purpose:'approved'},
+    explain:'"킥오프"를 일정 이름이 아니라 <b>업무 유형</b>으로 해석해, 목적·필요 역할·산출물·정책 조건을 갖춘 <b>Work Event(Meeting Event)</b>로 구조화합니다. 이 의미화가 모든 실행 경로를 결정합니다.',
+    active:['semantic'], sub:{},
+    logs:{event:[['Meeting Event generated','purpose']], decision:[['Meeting type classified: Kickoff','purpose'],['External sharing requires approval','approval']], action:[], learning:[]},
+    focus:{title:'Work Event 생성', created:'Meeting Event', input:'사용자 요청 · 이전 미팅 · 고객 후속 메일', aap:'Business Semantic Modeling', meaning:'단순 일정 예약 요청이 아니라, 목적·참석자·자료·정책 조건을 가진 업무 사건으로 구조화됨'} },
+
+  { stage:'context', set:{material:'candidate'},
+    explain:'짧은 요청을 보완하려 고객 환경의 여러 시스템을 조회해 <b>Context Package</b>를 만듭니다. 흩어진 메일·문서·고객 정보를 "이 회의에 필요한 맥락"으로 묶는, 입력에 없던 중간 산출물입니다.',
+    active:['data'], sub:{data:['Mail Connector','Docs Connector','Calendar Connector','Org Chart Connector','CRM Connector']},
+    logs:{event:[['Context package created','material']], decision:[['Customer matched: 대한제조그룹','material']], action:[['14 related emails found','material'],['6 related documents found','material'],['5 candidate departments identified','parts']], learning:[]},
+    focus:{title:'Context Package 생성', created:'Meeting Context Package', input:'메일 14 · 문서 6 · CRM · 조직도 · 캘린더', aap:'Enterprise Data & Inputs', meaning:'단순 검색이 아니라 회의에 필요한 맥락만 골라 하나의 업무 맥락으로 구조화'} },
+
+  { stage:'candidate', set:{parts:'candidate',schedule:'candidate',agenda:'candidate',material:'candidate'},
+    explain:'중앙 조율자(<span data-tip="Supervisor">Supervisor</span>)가 업무 사건을 작업으로 분해하고, 작업마다 전용 Agent가 후보(참석자·일정·자료·안건)를 만듭니다. 각 후보에는 "왜 이 사람·이 자료인지" 근거가 따라붙습니다.',
+    active:['agentic'], sub:{agentic:['Supervisor','Participant Agent','Calendar Agent','Knowledge Agent','Agenda Agent','Policy Agent']},
+    logs:{event:[['Candidate set created','']], decision:[], action:[['Participant candidates generated','parts'],['Time candidates generated','schedule'],['Material package created','material'],['Agenda draft generated','agenda']], learning:[]},
+    focus:{title:'Candidate Set 생성', created:'참석자·일정·자료·안건 후보', input:'Meeting Event · Context Package · 조직도·캘린더·문서', aap:'Agentic Reasoning & Execution', meaning:'하나의 LLM 호출이 아니라 여러 전문 Agent가 각자 근거를 가진 후보를 생성'} },
+
+  { stage:'coordinate', set:{approval:'needs_review',parts:'needs_review'},
+    explain:'후보를 그대로 실행하지 않고 조율자가 한 번 더 거릅니다. 역할 충족도·공유 가능성·정책 위반을 평가해 <b>자동 / 확인 필요 / 제한</b>으로 나눕니다. 각 항목이 왜 그렇게 분류됐는지 설명이 붙는 통제 구조입니다.',
+    active:['coord'], sub:{},
+    logs:{event:[['Coordination result assembled','approval']], decision:[['External sharing risk detected','approval'],['Auto actions separated from review-required','approval']], action:[], learning:[]},
+    focus:{title:'Execution Package 조립', created:'Meeting Execution Package', input:'참석자·일정·자료·안건 후보 + 정책 평가', aap:'Coordination / Policy', meaning:'실행 직전 최종 조립체 — 자동/검토/제한이 구분되고, 책임 항목은 사람에게 넘겨짐'} },
+
+  { stage:'approve', set:{parts:'approved',material:'approved',approval:'approved'},
+    explain:'책임이 따르는 지점에서는 사람에게 제어권을 넘깁니다(<span data-tip="HITL">HITL</span>). 참석자·외부 초대·공유 자료·문구를 사용자가 확정하고, 그 선택은 <b>Decision Log</b>에 공식 이력으로 남습니다.',
+    active:['hitl'], sub:{},
+    logs:{event:[['Human review completed','approval']], decision:[['Participant list approved','parts'],['Internal architecture detail excluded','material'],['External invite now allowed','approval']], action:[], learning:[]},
+    focus:{title:'HITL 승인', created:'Human Review Decision', input:'Execution Package · 정책 검토 결과', aap:'HITL / Governance', meaning:'AI가 부족해서가 아니라, 책임 있는 판단을 기록 가능한 형태로 남기기 위한 장치'} },
+
+  { stage:'execute', set:{execute:'executed',schedule:'approved',agenda:'approved'},
+    explain:'AAP가 일반 AI와 갈리는 지점입니다. 승인된 결과를 "이렇게 하세요"로 끝내지 않고, 캘린더·회의실·문서함·메일에 <b>실제로 반영(Writeback)</b>합니다. 모든 호출은 감사 로그로 남습니다.',
+    active:['action'], sub:{action:['Calendar API','Mail API','Docs API','Room API','Workflow API']},
+    logs:{event:[['Writeback completed','execute']], decision:[], action:[['Calendar event created · CAL-3391','execute'],['Room reserved · ROOM-552','execute'],['Material folder created','execute'],['Mail draft prepared','execute']], learning:[]},
+    focus:{title:'Writeback', created:'Action Result', input:'승인된 Execution Package', aap:'Action / Writeback', meaning:'답변 생성이 아니라 시스템 반영 — AAP를 운영 플랫폼이라 부르는 이유'} },
+
+  { stage:'post', set:{minutes:'needs_review',actionitems:'needs_review'},
+    explain:'회의 중 발언·결정을 구조화해 회의록·액션아이템 <b>후보</b>로 정리합니다. 공식 확정은 다시 사람 검토(HITL)로 두어, 결정·책임·후속 실행을 분리합니다.',
+    active:['semantic','action'], sub:{},
+    logs:{event:[['Decision candidates detected','minutes']], decision:[['Official minutes require confirmation','minutes']], action:[['Action items generated','actionitems']], learning:[]},
+    focus:null },
+
+  { stage:'learn', set:{minutes:'approved',actionitems:'approved',skill:'learned'},
+    explain:'이번 운영 경험(결정·실행·사용자 수정)을 <span data-tip="Skill Update">Skill Update</span> 후보로 축적하고, 전체 과정을 <span data-tip="Run Trace">Run Trace</span>로 재생할 수 있게 합니다. 다음 유사 회의에서 추천 품질이 좋아집니다.',
+    active:['learn','trace'], sub:{learn:['Decision Log','Action Log','Feedback','Skill Library','Evaluation']},
+    logs:{event:[['Run Trace available','skill']], decision:[], action:[], learning:[['Kickoff Meeting Skill update candidate created','skill'],['Participant recommendation pattern stored','skill'],['Material package pattern stored','skill'],['Human edit captured','skill']]},
+    focus:{title:'Skill Update', created:'Kickoff Meeting Skill v1.1 (후보)', input:'Decision Log · Action Log · 사용자 수정 이력', aap:'Operational Learning', meaning:'몰래 학습이 아니라, 버전·근거를 가진 재사용 가능한 운영 자산으로 축적'} },
+  ];
+  return {name:'AAP 고객사 킥오프 회의',
+    request:'"다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘."',
+    cards:CARDS, steps:STEPS};
+}
+
+/* ===== state ===== */
+let cur=0, logTab='event', selCard=null;
+(function(){ const q=new URLSearchParams(location.search); const s=parseInt(q.get('step'),10);
+  const n=DOMAIN_PACK[activeDomain].steps.length;
+  if(!isNaN(s)&&s>=0&&s<n) cur=s; })();
+
+function pack(){ return DOMAIN_PACK[activeDomain]; }
+function cardStateAt(key,step){ let st='empty'; for(let i=0;i<=step;i++){const d=pack().steps[i].set; if(d&&d[key]!==undefined)st=d[key];} return st; }
+const STATE_LABEL={empty:'분석 전',analyzing:'분석 중',candidate:'후보',needs_review:'확인 필요',approved:'승인됨',executed:'완료',learned:'학습 후보',blocked:'제한'};
+
+function goNext(){ if(cur<pack().steps.length-1){cur++;selCard=null;render();} }
+function goPrev(){ if(cur>0){cur--;selCard=null;render();} }
+
+/* ===== render ===== */
+function renderStepBar(){
+  const el=document.getElementById('stepbar'); el.innerHTML='';
+  pack().steps.forEach((s,i)=>{
+    if(i>0){ const ln=document.createElement('div'); ln.className='sb-line'+(i<=cur?' done':''); el.appendChild(ln); }
+    const it=document.createElement('div');
+    it.className='sb-item '+(i===cur?'active':(i<cur?'done':''));
+    it.innerHTML=`<span class="dot">${i+1}</span><span class="nm">${RUNTIME_STAGES[i].label}</span>`;
+    it.onclick=()=>{cur=i;selCard=null;render();};
+    el.appendChild(it);
+  });
+  const nav=document.createElement('div'); nav.className='sb-nav';
+  nav.innerHTML=`<button class="btn" id="pv">◀ 이전</button><button class="btn primary" id="nx">다음 ▶</button>`;
+  el.appendChild(nav);
+  const pv=document.getElementById('pv'), nx=document.getElementById('nx');
+  pv.onclick=goPrev; nx.onclick=goNext; pv.disabled=cur===0; nx.disabled=cur===pack().steps.length-1;
+}
+
+function renderLeft(){
+  const p=pack();
+  let html=`<div class="reqcard"><div class="rq-l">사용자 요청</div><div class="rq-t">${p.request}</div></div>
+    <div class="pkg-grid">`;
+  p.cards.forEach(c=>{
+    const st=cardStateAt(c.key,cur);
+    const body = st==='empty'
+      ? `<div class="wc-empty">분석 전</div>`
+      : `<div class="wc-body">${c.content}</div>`;
+    html+=`<div class="wcard ${st}${selCard===c.key?' sel':''}" data-card="${c.key}">
+        <div class="wc-head"><span class="wc-title" data-tip="${c.std==='Work Event'?'Meeting Event':(c.std==='Context · Candidate'?'Context Package':(c.std==='Candidate Set'?'Candidate Set':(c.std==='Coordination Result'?'Execution Package':(c.std==='Writeback Result'?'Writeback':(c.std==='Skill Update'?'Skill Update':'')))))}">${c.title}</span>
+          <span class="wc-std">${c.std}</span>
+          <span class="chip ${st}">${STATE_LABEL[st]}</span></div>
+        ${body}</div>`;
+  });
+  html+=`</div>`;
+  const lb=document.getElementById('leftBody'); lb.innerHTML=html;
+  lb.querySelectorAll('.wcard').forEach(el=>{
+    el.onclick=()=>{ const k=el.getAttribute('data-card'); selCard=(selCard===k?null:k); render(); };
+  });
+}
+
+function renderRight(){
+  const step=pack().steps[cur];
+  const activeSet=new Set(step.active);
+  const doneSet=new Set();
+  for(let i=0;i<cur;i++) pack().steps[i].active.forEach(k=>doneSet.add(k));
+  let html=`<div class="rx-explain">${step.explain}</div><div class="rmap">`;
+  AAP_NODES.forEach(n=>{
+    const cls = activeSet.has(n.key)?'active':(doneSet.has(n.key)?'done':'idle');
+    let sub='';
+    if(activeSet.has(n.key) && step.sub[n.key]){
+      sub=`<div class="rn-sub">${step.sub[n.key].map(s=>`<span class="sc"${TOOLTIPS[s]?` data-tip="${s}"`:''}>${s}</span>`).join('')}</div>`;
+    }
+    const nameTip = n.tip?` data-tip="${n.tip}"`:'';
+    html+=`<div class="rnode ${cls}"><div class="rn-edge"></div>
+        <div class="rn-head"><span class="rn-dot"></span><span class="rn-name"${nameTip}>${n.name}</span></div>
+        <div class="rn-desc">${n.desc}</div>${sub}</div><div class="rx-gap"></div>`;
+  });
+  html=html.replace(/<div class="rx-gap"><\/div>$/,'');
+  html+=`</div>`;
+  if(step.focus){ html+=`<div class="focusbtn"><button class="btn" id="focusBtn">⊕ 이 단계 자세히 보기</button></div>`; }
+  const rb=document.getElementById('rightBody'); rb.innerHTML=html;
+  if(step.focus){ document.getElementById('focusBtn').onclick=()=>openFocus(step.focus); }
+  /* 활성 노드를 우측 패널 안에서 보이도록 스크롤 */
+  const rcol=rb.closest('.col'); const an=rb.querySelector('.rnode.active');
+  if(rcol && an){ const top=an.offsetTop, bot=top+an.offsetHeight;
+    if(bot > rcol.scrollTop + rcol.clientHeight) rcol.scrollTop = bot - rcol.clientHeight + 16;
+    else if(top < rcol.scrollTop) rcol.scrollTop = Math.max(0, top-16); }
+}
+
+function openFocus(f){
+  document.getElementById('modalBox').innerHTML=`
+    <span class="mclose" onclick="document.getElementById('modal').style.display='none'">×</span>
+    <h4>${f.title}</h4>
+    <div class="mlbl">무엇이 생성되었나</div><div class="mval">${f.created}</div>
+    <div class="mlbl">어떤 입력을 사용했나</div><div class="mval">${f.input}</div>
+    <div class="mlbl">어떤 AAP 요소가 작동했나</div><div class="mval">${f.aap}</div>
+    <div class="mlbl">왜 이 판단이 필요한가</div><div class="mmean">${f.meaning}</div>`;
+  document.getElementById('modal').style.display='flex';
+}
+document.getElementById('modal').onclick=e=>{ if(e.target.id==='modal') e.currentTarget.style.display='none'; };
+
+function renderLogs(){
+  const top=document.getElementById('logtop'); top.innerHTML='';
+  [['event','Event Log'],['decision','Decision Log'],['action','Action Log'],['learning','Learning Log']].forEach(([k,label])=>{
+    const t=document.createElement('div'); t.className='ltab'+(logTab===k?' active':''); t.textContent=label;
+    t.onclick=()=>{logTab=k;renderLogs();}; top.appendChild(t);
+  });
+  const f=document.createElement('div'); f.className='lfilter'+(selCard?' on':'');
+  const cardTitle = selCard? (pack().cards.find(c=>c.key===selCard)||{}).title : '';
+  f.textContent = selCard? `▣ "${cardTitle}" 카드 연동 필터 · 전체 보기 ✕` : '';
+  f.onclick=()=>{selCard=null;render();};
+  top.appendChild(f);
+
+  let lines=[];
+  for(let i=0;i<=cur;i++){
+    const L=pack().steps[i].logs;
+    if(selCard){
+      ['event','decision','action','learning'].forEach(cat=>(L[cat]||[]).forEach(([msg,ck])=>{ if(ck===selCard) lines.push({s:i,msg,cat}); }));
+    } else {
+      (L[logTab]||[]).forEach(([msg,ck])=>lines.push({s:i,msg}));
+    }
+  }
+  const body=document.getElementById('logBody');
+  body.innerHTML = lines.length? lines.map(l=>`<div class="logline"><span class="sg">S${l.s+1}</span><span class="tg">[${l.cat?l.cat:logTab}]</span> ${l.msg}</div>`).join('')
+    : '<div class="logline" style="color:#475569">— 표시할 로그 없음 —</div>';
+  body.scrollTop=body.scrollHeight;
+}
+
+function render(){ renderStepBar(); renderLeft(); renderRight(); renderLogs(); }
+
+/* tooltip (hover + click) */
+const tip=document.getElementById('tip');
+function showTip(target){
+  const key=target.getAttribute('data-tip'); const txt=TOOLTIPS[key]; if(!txt) return;
+  tip.textContent=txt; tip.style.display='block';
+  const r=target.getBoundingClientRect();
+  let top=r.bottom+8, left=r.left;
+  tip.style.left=Math.min(left, window.innerWidth-280)+'px'; tip.style.top=top+'px';
+  if(top+tip.offsetHeight>window.innerHeight){ tip.style.top=(r.top-tip.offsetHeight-8)+'px'; }
+}
+document.addEventListener('mouseover',e=>{ const t=e.target.closest('[data-tip]'); if(t) showTip(t); });
+document.addEventListener('mouseout',e=>{ if(e.target.closest('[data-tip]')) tip.style.display='none'; });
+document.addEventListener('click',e=>{ const t=e.target.closest('[data-tip]'); if(t){ if(tip.style.display==='block'&&tip.dataset.k===t.getAttribute('data-tip')){tip.style.display='none';} else {showTip(t);tip.dataset.k=t.getAttribute('data-tip');} } });
+
+document.getElementById('stdToggle').onchange=e=>document.body.classList.toggle('show-std',e.target.checked);
+document.getElementById('dpkSel').onchange=e=>{ activeDomain=e.target.value; cur=0; selCard=null; render(); };
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowRight')goNext(); if(e.key==='ArrowLeft')goPrev(); if(e.key==='Escape')document.getElementById('modal').style.display='none'; });
+
+render();
+/* 검증용: ?focus=1 이면 현재 단계 Focus Modal 자동 오픈 */
+(function(){ const q=new URLSearchParams(location.search); if(q.get('focus')==='1'){ const f=pack().steps[cur].focus; if(f) openFocus(f); } })();
+</script>
+</body>
+</html>

@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP Platform · Workload Runtime Builder — 회의 (v0.19)</title>
+<style>
+  :root{
+    --bg:#f4f7fb; --surf:#f8fafc; --surface:#ffffff; --ink:#0f172a; --slate:#334155; --muted:#64748b; --faint:#94a3b8; --border:#e2e8f0; --line:#eef2f7;
+    --aap:#0d9488; --aap-ink:#0f766e; --aap-soft:#f0fdfa; --aap-border:#99f6e4;
+    --violet:#7c3aed; --violet-soft:#f5f3ff; --violet-border:#ddd6fe;
+    --amber:#d97706; --amber-soft:#fffbeb; --amber-ink:#92400e; --amber-border:#fde68a;
+    --green:#16a34a; --green-soft:#f0fdf4; --red:#dc2626; --red-soft:#fef2f2; --red-border:#fecaca;
+    --shadow:0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:13px;line-height:1.55;-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;overflow:hidden;}
+
+  /* ===== top bar (platform shell) ===== */
+  .topbar{height:54px;flex:0 0 54px;display:flex;align-items:center;gap:14px;padding:0 18px;background:#fff;border-bottom:1px solid var(--border);}
+  .brand{display:flex;align-items:baseline;gap:8px;}
+  .brand .logo{width:23px;height:23px;border-radius:7px;background:linear-gradient(135deg,var(--aap),#14b8a6);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;transform:translateY(4px);}
+  .brand b{font-size:15px;letter-spacing:-.3px;} .brand span{font-size:11px;color:var(--muted);}
+  .scenario{display:flex;align-items:center;gap:7px;margin-left:4px;padding:5px 11px;background:var(--aap-soft);border:1px solid #ccfbf1;border-radius:999px;font-size:11.5px;color:var(--aap-ink);font-weight:600;}
+  .scenario .dt{width:6px;height:6px;border-radius:50%;background:var(--aap);}
+  .pack{font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:4px 10px;} .pack b{color:var(--ink);font-weight:700;}
+  .sp{flex:1;}
+  .toggle{display:flex;background:#f1f5f9;border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px;}
+  .toggle button{border:0;background:transparent;font-family:inherit;font-size:12px;font-weight:700;color:var(--muted);padding:6px 14px;border-radius:7px;cursor:pointer;}
+  .toggle button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.1);}
+  .runbtn{border:0;background:var(--ink);color:#fff;font-family:inherit;font-weight:700;font-size:12px;padding:9px 15px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+  .runbtn:hover{background:#000;} .runbtn.stop{background:var(--red);}
+
+  .views{flex:1;min-height:0;position:relative;}
+  .view{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;}
+  .view[hidden]{display:none;}
+
+  /* ===== RUN view (v0.16 host) ===== */
+  .main{flex:1;display:grid;grid-template-columns:60% 40%;gap:13px;padding:12px 13px;overflow:hidden;min-height:0;}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:var(--shadow);overflow:auto;}
+  .panel.left{padding:0;display:flex;flex-direction:column;}
+  .panel.right{padding:12px 14px;display:flex;flex-direction:column;}
+  .ph{font-weight:800;font-size:13px;display:flex;align-items:center;gap:7px;}
+  .help{width:15px;height:15px;border-radius:50%;border:1px solid var(--border);color:var(--muted);font-size:9.5px;display:inline-flex;align-items:center;justify-content:center;cursor:help;}
+
+  /* compact 업무 순서 strip */
+  .seqwrap{padding:9px 13px 7px;border-bottom:1px solid var(--line);}
+  .seqlab{font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--faint);text-transform:uppercase;margin-bottom:6px;}
+  .seq{display:flex;align-items:center;gap:0;flex-wrap:wrap;row-gap:5px;}
+  .snode{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);border:1px solid transparent;white-space:nowrap;}
+  .snode .sn{font-size:10px;font-weight:800;color:var(--faint);}
+  .snode.done{color:var(--slate);} .snode.done .sn{color:var(--aap);}
+  .snode.active{background:var(--aap-soft);border-color:var(--aap-border);color:var(--aap-ink);} .snode.active .sn{color:var(--aap);}
+  .snode.gate{border-color:var(--amber-border);} .snode.gate .sn{color:var(--amber);}
+  .ssep{color:#cbd5e1;font-size:10px;padding:0 3px;}
+
+  /* console — agentic workspace (upgraded) */
+  .cons-wrap{flex:1;padding:11px 14px;overflow:auto;display:flex;flex-direction:column;min-height:0;}
+  .cons-h{font-size:9.5px;color:var(--faint);font-weight:800;letter-spacing:.03em;margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+  .cons-h .repl{margin-left:auto;font-size:10.5px;color:var(--aap);cursor:pointer;font-weight:700;}
+  .console{position:relative;flex:1;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.05);overflow:hidden;display:flex;flex-direction:column;min-height:380px;}
+  .con-bar{background:var(--ink);color:#cbd5e1;font-size:10.5px;padding:8px 13px;display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  .con-bar .dot{width:7px;height:7px;border-radius:50%;background:#475569;} .con-bar b{color:#fff;}
+  .con-bar .crumbs{margin-left:auto;display:flex;gap:6px;align-items:center;color:#64748b;font-size:9.5px;}
+  .con-body{flex:1;padding:14px 17px;display:flex;flex-direction:column;overflow:auto;}
+  .task{display:flex;align-items:center;gap:9px;margin-bottom:4px;}
+  .task .tl{font-size:9px;color:var(--faint);font-weight:800;} .task .tt{font-size:16px;font-weight:800;}
+  .task .tst{margin-left:auto;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;}
+  .tst.wait{background:#eef2f7;color:#64748b;} .tst.run{background:var(--aap-soft);color:var(--aap);} .tst.done{background:var(--green-soft);color:var(--green);}
+  .tst.run .pdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--aap);margin-right:4px;animation:blink 1s infinite;} @keyframes blink{50%{opacity:.3;}}
+  .tdesc{font-size:11px;color:var(--muted);margin-bottom:11px;}
+  .carry{font-size:10.5px;font-weight:700;color:#7c2d12;background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:8px;padding:6px 10px;margin-bottom:10px;}
+  .carry.keep{color:#15803d;background:var(--green-soft);border-color:#bbf7d0;}
+
+  .deleg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;color:var(--muted);}
+  .deleg .dtx{font-size:12px;} .deleg-btn{font-size:13px;font-weight:800;padding:11px 22px;border-radius:11px;background:var(--aap);color:#fff;border:none;cursor:pointer;box-shadow:0 6px 16px rgba(13,148,136,.28);transition:transform .12s;} .deleg-btn.press{transform:scale(.94);}
+
+  .sec-h{font-size:9px;color:var(--faint);font-weight:800;letter-spacing:.04em;margin:6px 0 6px;text-transform:uppercase;}
+  .stage{border:1px solid var(--line);border-radius:10px;padding:5px 7px;margin-bottom:6px;background:#fff;}
+  .stage.par{border-style:dashed;background:#fcfdff;} .par-h{font-size:8.5px;font-weight:800;color:var(--aap);margin:1px 2px 4px;}
+  .fi{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 6px;border-radius:7px;color:var(--faint);transition:.2s;}
+  .fi .ic{width:16px;height:16px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;background:#eef2f7;color:var(--faint);}
+  .fi.done{color:var(--slate);} .fi.done .ic{background:var(--aap);color:#fff;}
+  .fi.doing{color:var(--ink);} .fi.doing .ic{background:#fff;border:2px solid var(--aap-soft);border-top-color:var(--aap);animation:spin .7s linear infinite;color:transparent;} @keyframes spin{to{transform:rotate(360deg);}}
+  .fi .ft{font-weight:700;flex:0 0 auto;} .fi .arr{color:#cbd5e1;} .fi.done .arr{color:var(--aap);}
+  .fi .fout{color:var(--muted);font-size:11px;} .fi.done .fout{color:var(--slate);}
+
+  /* deliverable cards (오케 산출물 디자인 → 고객 화면) */
+  .dlv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}
+  .dlv-card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:10px 12px;cursor:pointer;transition:.15s;position:relative;display:flex;flex-direction:column;gap:3px;}
+  .dlv-card:hover{border-color:var(--aap-border);box-shadow:0 4px 14px rgba(13,148,136,.1);transform:translateY(-1px);}
+  .dlv-card .dc-ic{font-size:15px;} .dlv-card .dc-n{font-size:12.5px;font-weight:800;}
+  .dlv-card .dc-s{font-size:10.5px;color:var(--muted);}
+  .dlv-card .dc-open{position:absolute;right:10px;top:10px;font-size:9.5px;font-weight:700;color:var(--aap);}
+  .dlv-card.full{grid-column:1 / -1;}
+  .dlv-card.sel{border-color:var(--amber-border);background:var(--amber-soft);} .dlv-card.sel .dc-open{color:var(--amber);}
+  .dlv-badge{font-size:8.5px;font-weight:800;padding:1px 6px;border-radius:5px;background:var(--aap-soft);color:var(--aap-ink);border:1px solid var(--aap-border);align-self:flex-start;margin-top:2px;}
+  .dlv-badge.pick{background:var(--amber-soft);color:var(--amber);border-color:var(--amber-border);}
+
+  /* HITL card → modal trigger */
+  .hitl{margin-top:9px;border:1px solid var(--amber-border);background:var(--amber-soft);border-radius:12px;padding:11px 13px;}
+  .hitl-h{font-size:10px;font-weight:800;color:var(--amber-ink);display:flex;align-items:center;gap:6px;}
+  .hitl-q{font-size:12.5px;font-weight:700;color:#7c2d12;margin:5px 0 9px;}
+  .hitl-open{font-size:12px;font-weight:800;padding:8px 15px;border-radius:9px;cursor:pointer;border:1px solid var(--amber);background:var(--amber);color:#fff;}
+  .hitl.resolved{border-color:#bbf7d0;background:var(--green-soft);} .hitl.resolved .hitl-h{color:var(--green);}
+
+  .mcursor{position:absolute;z-index:8;width:20px;height:20px;pointer-events:none;transition:left .5s cubic-bezier(.4,0,.2,1),top .5s cubic-bezier(.4,0,.2,1);opacity:0;}
+  .mcursor.show{opacity:1;} .mcursor.click::after{content:"";position:absolute;inset:-6px;border:2px solid var(--aap);border-radius:50%;animation:ripple .5s ease-out;} @keyframes ripple{from{transform:scale(.4);opacity:.8;}to{transform:scale(1.5);opacity:0;}}
+
+  /* RIGHT 8-layer flow */
+  .explain{margin:8px 0 11px;border:1px solid var(--border);border-left:3px solid var(--aap);border-radius:9px;background:var(--surf);padding:9px 12px;font-size:11.5px;line-height:1.6;color:var(--slate);}
+  .explain b{color:var(--aap-ink);} .explain .v{color:var(--violet);font-weight:700;}
+  .flow{flex:0 0 auto;}
+  .rstage.par{border:1px dashed var(--violet-border);border-radius:11px;padding:5px;background:#fdfcff;}
+  .rstage.par .rph{font-size:8px;font-weight:800;color:var(--violet);margin:1px 4px 3px;}
+  .op{border:1px solid var(--border);border-radius:10px;background:#fff;padding:7px 10px;opacity:.34;transition:.3s;margin-bottom:4px;} .op:last-child{margin-bottom:0;}
+  .op.doing,.op.done{opacity:1;border-color:var(--aap);} .op.done{box-shadow:0 2px 10px rgba(13,148,136,.08);} .op.doing{box-shadow:0 0 0 3px var(--aap-soft);}
+  .op.asset.doing,.op.asset.done{border-color:var(--violet);box-shadow:0 2px 10px rgba(124,58,237,.1);}
+  .op-h{display:flex;align-items:center;gap:7px;}
+  .op-lay{font-size:8px;font-weight:800;color:var(--faint);background:var(--surf);border:1px solid var(--border);border-radius:5px;padding:1px 6px;}
+  .op.doing .op-lay,.op.done .op-lay{color:var(--aap-ink);border-color:var(--aap-border);} .op.asset.doing .op-lay,.op.asset.done .op-lay{color:var(--violet);border-color:var(--violet-border);}
+  .op-t{font-size:11.5px;font-weight:800;color:var(--slate);} .op.doing .op-t,.op.done .op-t{color:var(--ink);}
+  .op-badge{font-size:7px;font-weight:900;color:#fff;background:var(--violet);border-radius:4px;padding:1px 5px;margin-left:auto;}
+  .op-out{font-size:10.5px;color:var(--faint);margin-top:2px;} .op.doing .op-out,.op.done .op-out{color:var(--slate);} .op-out b{color:var(--aap-ink);font-weight:700;}
+  .op-micro{margin-top:4px;display:flex;flex-wrap:wrap;gap:3px;}
+  .mc{font-size:8px;font-weight:700;color:var(--faint);background:var(--surf);border:1px solid var(--border);border-radius:4px;padding:1px 5px;} .op.doing .mc,.op.done .mc{color:var(--aap-ink);background:var(--aap-soft);border-color:var(--aap-border);}
+  .op.changed{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft);} .op.changed .op-out{color:var(--amber-ink);}
+  .rarrow{text-align:center;color:#cbd5e1;font-size:10px;margin:1px 0;} .rarrow.on{color:var(--aap);}
+
+  .bot{background:#fff;border-top:1px solid var(--border);padding:7px 16px;display:flex;align-items:center;gap:12px;flex:0 0 auto;}
+  .bot .bstep{font-size:12px;color:var(--muted);} .bot .bstep b{color:var(--ink);} .bot .spacer{flex:1;}
+  .btn{font-size:12px;padding:7px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;cursor:pointer;color:var(--ink);}
+  .btn.primary{background:var(--aap);color:#fff;border-color:var(--aap);}
+  .tg{font-size:11.5px;color:#475569;display:flex;align-items:center;gap:5px;cursor:pointer;}
+
+  /* ===== DESIGN view (Execution Plan) ===== */
+  .scroll{flex:1;overflow:auto;padding:16px 22px 28px;}
+  .wrapc{max-width:1080px;margin:0 auto;}
+  .sec-title{font-size:9.5px;font-weight:800;letter-spacing:.6px;color:var(--aap);text-transform:uppercase;margin:0 0 3px;}
+  .sec-sub{font-size:13px;color:var(--muted);margin:0 0 14px;}
+  .wa{display:grid;grid-template-columns:1fr 1fr;gap:9px 26px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px 18px;box-shadow:var(--shadow);margin-bottom:18px;}
+  .wa .h{font-size:13px;font-weight:800;grid-column:1/-1;margin-bottom:3px;}
+  .wa-row{display:flex;gap:10px;font-size:12.5px;line-height:1.45;}
+  .wa-row.full{grid-column:1/-1;}
+  .wa-row .k{flex:0 0 70px;color:var(--faint);font-weight:700;}
+  .wa-row .req{color:var(--aap-ink);font-weight:600;}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;} .chips span{font-size:11px;background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:#334155;}
+
+  .plan{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;}
+  .plan-head,.plan-row{display:grid;grid-template-columns:30px 1.1fr 1.5fr 1.2fr 0.9fr;gap:12px;padding:10px 16px;align-items:start;}
+  .plan-head{background:var(--surf);border-bottom:1px solid var(--border);font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--faint);text-transform:uppercase;position:sticky;top:0;}
+  .plan-row{border-bottom:1px solid var(--line);font-size:12px;}
+  .plan-row:last-child{border-bottom:none;}
+  .plan-row.gate{background:#fffdf6;}
+  .pr-n{width:24px;height:24px;border-radius:7px;background:var(--aap-soft);color:var(--aap-ink);font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;}
+  .plan-row.gate .pr-n{background:var(--amber-soft);color:var(--amber);}
+  .pr-label{font-weight:800;font-size:12.5px;} .pr-sub{font-size:10.5px;color:var(--faint);margin-top:2px;}
+  .pr-make{color:var(--slate);} .pr-make b{color:var(--aap-ink);font-weight:700;}
+  .pr-sel{font-size:11.5px;}
+  .sel-auto{color:var(--green);font-weight:700;} .sel-hitl{color:var(--amber);font-weight:800;} .sel-pick{color:var(--violet);font-weight:800;}
+  .pr-lay{display:flex;flex-wrap:wrap;gap:3px;} .pr-lay span{font-size:8.5px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:4px;padding:1px 5px;}
+  .gatebar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0;}
+  .gatebar .g{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:9px;padding:7px 12px;}
+
+  /* ===== GOVERN view (Agent Registry) ===== */
+  .master-card{background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px;display:flex;align-items:center;gap:14px;}
+  .master-card .mi{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-size:22px;}
+  .master-card .mt{font-size:10.5px;font-weight:800;color:#ccfbf1;} .master-card h3{font-size:17px;font-weight:800;margin:1px 0 4px;}
+  .master-card p{font-size:12px;color:#d1faf3;max-width:760px;}
+  .reg{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;}
+  .ag{background:#fff;border:1px solid var(--border);border-radius:13px;padding:13px 14px;box-shadow:0 1px 3px rgba(15,23,42,.04);}
+  .ag.asset{border-color:var(--violet-border);}
+  .ag-h{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+  .ag-ic{width:34px;height:34px;border-radius:9px;background:var(--aap-soft);display:grid;place-items:center;font-size:16px;flex:0 0 auto;}
+  .ag.asset .ag-ic{background:var(--violet-soft);}
+  .ag-role{font-size:9.5px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border-radius:5px;padding:1px 6px;display:inline-block;}
+  .ag.asset .ag-role{color:var(--violet);background:var(--violet-soft);}
+  .ag-name{font-size:13px;font-weight:800;margin-top:2px;}
+  .ag-lay{margin-left:auto;font-size:8px;font-weight:800;color:var(--faint);background:var(--surf);border:1px solid var(--border);border-radius:5px;padding:2px 6px;}
+  .ag-kt{font-size:8px;font-weight:900;color:var(--violet);background:var(--violet-soft);border:1px solid var(--violet-border);border-radius:5px;padding:2px 6px;margin-left:6px;}
+  .ag-desc{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:9px;}
+  .ag-meta{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:7px;}
+  .ag-m .ag-mk{font-size:10px;font-weight:800;display:flex;align-items:center;gap:4px;}
+  .ag-m.when .ag-mk{color:var(--amber);} .ag-m.data .ag-mk{color:var(--green);} .ag-m.how .ag-mk{color:var(--aap-ink);}
+  .ag-m .ag-mv{font-size:11px;color:var(--slate);line-height:1.45;margin-top:1px;}
+  .gov-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+  .gov-cell{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .gov-cell .gk{font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--faint);text-transform:uppercase;}
+  .gov-cell .gv{font-size:12px;color:var(--slate);margin-top:5px;line-height:1.5;} .gov-cell .gv b{color:var(--ink);}
+
+  /* ===== modal ===== */
+  #modal{position:fixed;inset:0;background:rgba(15,23,42,.52);display:none;align-items:center;justify-content:center;z-index:90;padding:20px;}
+  #modal.show{display:flex;}
+  .mbox{background:#fff;border-radius:18px;width:560px;max-width:94vw;max-height:88vh;overflow:auto;box-shadow:0 24px 64px rgba(0,0,0,.32);}
+  .mtop{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;position:sticky;top:0;background:#fff;z-index:2;}
+  .mtop .mic{width:34px;height:34px;border-radius:10px;background:var(--aap-soft);display:grid;place-items:center;font-size:17px;flex:0 0 auto;}
+  .mtop.amber .mic{background:var(--amber-soft);}
+  .mtop .mt{font-size:15px;font-weight:800;} .mtop .msub{font-size:11px;color:var(--muted);} .mtop .mx{margin-left:auto;cursor:pointer;color:var(--faint);font-size:22px;line-height:1;border:none;background:none;}
+  .mbody{padding:16px 20px;}
+  .dlv{font-size:12.5px;line-height:1.7;}
+  .dlv .dlv-sec{font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--faint);text-transform:uppercase;margin:12px 0 5px;} .dlv .dlv-sec:first-child{margin-top:0;}
+  .dlv .row{display:flex;align-items:flex-start;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:5px;}
+  .dlv .row .av{width:26px;height:26px;border-radius:50%;background:#e2e8f0;color:#475569;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .dlv .row .nm{font-weight:700;} .dlv .row .why{font-size:10.5px;color:var(--muted);}
+  .dlv .row .tag{margin-left:auto;font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;}
+  .tag.ok{background:var(--green-soft);color:var(--green);} .tag.warn{background:var(--amber-soft);color:var(--amber);} .tag.no{background:#f1f5f9;color:var(--faint);} .tag.block{background:var(--red-soft);color:var(--red);}
+  .doc{border:1px solid var(--border);border-radius:11px;padding:14px 16px;background:var(--surf);}
+  .doc h5{margin:0 0 9px;font-size:14px;} .doc .dl{font-size:9px;color:var(--faint);font-weight:800;letter-spacing:.04em;margin:11px 0 3px;text-transform:uppercase;}
+  .doc .drow{display:flex;gap:8px;padding:2px 0;} .doc .drow .dk{color:var(--faint);width:52px;flex:0 0 auto;font-size:11px;}
+  .pickgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}
+  .pickopt{border:1px solid var(--border);border-radius:11px;padding:11px 13px;cursor:pointer;transition:.15s;background:#fff;}
+  .pickopt:hover{border-color:var(--aap-border);background:var(--aap-soft);}
+  .pickopt.sel{border-color:var(--aap);background:var(--aap-soft);box-shadow:0 0 0 2px var(--aap-border);}
+  .pickopt .pt{font-size:13px;font-weight:800;} .pickopt .ps{font-size:10.5px;color:var(--muted);margin-top:2px;} .pickopt .pcheck{font-size:10px;font-weight:800;color:var(--aap);}
+  .mfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;position:sticky;bottom:0;background:#fff;}
+  .mfoot .why{font-size:10.5px;color:var(--muted);flex:1;} .mfoot .why b{color:var(--amber-ink);}
+  .mbtn{font-size:12.5px;font-weight:800;padding:9px 16px;border-radius:9px;cursor:pointer;border:1px solid;}
+  .mbtn.yes{background:var(--aap);color:#fff;border-color:var(--aap);} .mbtn.amber{background:var(--amber);color:#fff;border-color:var(--amber);} .mbtn.no{background:#fff;color:var(--slate);border-color:var(--border);}
+
+  [data-tip]{cursor:help;}
+  #tip{position:fixed;z-index:100;max-width:300px;background:var(--ink);color:#f1f5f9;font-size:11px;line-height:1.55;padding:9px 11px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:none;pointer-events:none;}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:12px;font-weight:600;padding:11px 18px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:95;box-shadow:0 8px 24px rgba(15,23,42,.25);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<div class="topbar">
+  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>Workload Runtime Builder</span></div>
+  <div class="scenario"><span class="dt"></span>AAP 고객사 킥오프 회의 준비</div>
+  <div class="pack">Domain Pack <b>회의</b> ▾</div>
+  <div class="sp"></div>
+  <div class="toggle" id="toggle">
+    <button data-view="design">구성</button>
+    <button data-view="run" class="on">실행</button>
+    <button data-view="govern">관리</button>
+  </div>
+  <button class="runbtn" id="runBtn">▶ Run</button>
+</div>
+
+<div class="views">
+
+  <!-- ============ DESIGN VIEW ============ -->
+  <section class="view" data-view="design" hidden>
+    <div class="scroll"><div class="wrapc">
+      <p class="sec-title">Workload Analysis · 업무 이해</p>
+      <p class="sec-sub">AAP가 요청을 먼저 해석합니다 — 무엇을 / 무엇을 만들어야 하나</p>
+      <div class="wa">
+        <div class="wa-row full"><span class="k">요청</span><span class="req">"다음 주 AAP 고객사 킥오프 회의 잡아줘. 참석자랑 일정, 자료까지 준비해줘."</span></div>
+        <div class="wa-row"><span class="k">유형</span><span>킥오프 회의 준비</span></div>
+        <div class="wa-row"><span class="k">목적</span><span>착수 범위·역할·일정·보안 조건 정리</span></div>
+        <div class="wa-row full"><span class="k">필요 산출물</span><span class="chips"><span>참석자</span><span>일정</span><span>자료 묶음</span><span>안건</span><span>회의록</span><span>후속 할 일</span></span></div>
+        <div class="wa-row full"><span class="k">확인 지점</span><span>외부 초대 · 자료 공유 · 회의록 확정 (책임이 걸린 곳만 담당자 확인)</span></div>
+      </div>
+
+      <p class="sec-title">Execution Plan · 실행 구조 구성</p>
+      <p class="sec-sub">AAP가 업무를 단계로 분해합니다 — 각 단계가 <b>무엇을 만들고</b>, 어디서 <b>사람이 선택·확인</b>하는지</p>
+      <div class="plan" id="planTable"></div>
+
+      <div class="gatebar">
+        <div class="g">★ HITL ① 계획·확인 항목 승인</div>
+        <div class="g">★ HITL ② 회의 시작·종료 신호</div>
+        <div class="g">★ HITL ③ 외부 발송·회의록 확정</div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ============ RUN VIEW (v0.16 host) ============ -->
+  <section class="view" data-view="run">
+    <div class="main">
+      <section class="panel left">
+        <div class="seqwrap">
+          <div class="seqlab">업무 순서</div>
+          <div class="seq" id="seq"></div>
+        </div>
+        <div class="cons-wrap">
+          <div class="cons-h">고객 화면 <span class="repl" id="replay">↻ 다시 보기</span></div>
+          <div class="console">
+            <div class="con-bar"><span class="dot"></span><b>회의 업무 지원</b> · 대한제조그룹 · 담당 홍길동<span class="crumbs" id="crumbs"></span></div>
+            <div class="con-body" id="conBody"></div>
+            <div class="mcursor" id="mcursor"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 2l6.5 17 2.3-6.7 6.7-2.3z" fill="#0f172a" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+          </div>
+        </div>
+      </section>
+      <section class="panel right">
+        <div class="ph">AAP 작동 구조 · 8계층 흐름 <span class="help" data-tip="고객 화면에서 에이전트가 수행하는 작업이 AAP 8계층 안에서 어떤 컴포넌트로 실행되는지 동시에 점등됩니다. ∥ = 병렬. 보라색 = kt ds 자산(AI:ON-U·Antbot·Self-Improving).">?</span></div>
+        <div class="explain" id="explain"></div>
+        <div class="flow" id="flow"></div>
+        <div style="flex:1"></div>
+      </section>
+    </div>
+    <div class="bot">
+      <div class="bstep" id="bstep"></div>
+      <div class="spacer"></div>
+      <label class="tg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
+      <button class="btn" id="prevBtn">‹ 이전</button>
+      <button class="btn primary" id="nextBtn">다음 ›</button>
+    </div>
+  </section>
+
+  <!-- ============ GOVERN VIEW (Agent Registry) ============ -->
+  <section class="view" data-view="govern" hidden>
+    <div class="scroll"><div class="wrapc">
+      <div class="gov-strip">
+        <div class="gov-cell"><div class="gk">Policy</div><div class="gv">외부 공유·접근 권한·실행 승인 정책. 책임 지점은 <b>자동 실행 차단</b> 후 담당자 확인.</div></div>
+        <div class="gov-cell"><div class="gk">Run Trace</div><div class="gv">입력→판단 근거→Tool 호출→담당자 확인→시스템 반영을 <b>전 구간 기록</b>.</div></div>
+        <div class="gov-cell"><div class="gk">Evaluation</div><div class="gv">근거 충족도·정책 위반·실행 성공률을 <b>Antbot</b>이 평가.</div></div>
+        <div class="gov-cell"><div class="gk">Skill Library</div><div class="gv">회의 준비 패턴·참석자 추천 기준·자료 묶음 기준을 <b>재사용 자산</b>으로 축적.</div></div>
+      </div>
+
+      <p class="sec-title">Agent Registry · 구성요소</p>
+      <p class="sec-sub">AAP가 이 업무를 위해 조합한 전문가들 — 각자 한 가지 일을 잘합니다 (Agent만이 아니라 Module·Connector·Policy로 구성)</p>
+      <div class="master-card">
+        <div class="mi">🧠</div>
+        <div>
+          <div class="mt">총괄 · 오케스트레이터 (Supervisor)</div>
+          <h3>Master Agent</h3>
+          <p>업무 맥락을 분석하고 어떤 Agent·데이터·정책이 필요한지 판단해 전체를 지휘합니다. 사람(HITL)과 소통하는 창구이기도 합니다.</p>
+        </div>
+      </div>
+      <div class="reg" id="reg"></div>
+    </div></div>
+  </section>
+
+</div>
+
+<!-- modal / tip / toast -->
+<div id="modal"><div class="mbox" id="mbox"></div></div>
+<div id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const LK={L1:'경험·접근',L2:'설계·개발',L3:'에이전트 코어',L4:'지식·시맨틱',L5:'데이터·연동',L6:'AI 품질·평가',L7:'컨트롤·거버넌스',L8:'인프라'};
+
+/* ===== 산출물 모달 콘텐츠 (오케 산출물 디자인 차용 · 우리 케이스로 각색) ===== */
+const DLV={
+  docs:{ic:'📁',title:'사전 자료 묶음',sub:'자료 수집 Agent · 공유 가능 여부 근거',body:`<div class="dlv">
+    <div class="row"><span class="av">📄</span><div><div class="nm">AAP 선제안 자료 v3.2</div><div class="why">근거 · 이전 회의에서 고객 재요청 · 민감도 2등급</div></div><span class="tag ok">공유 가능</span></div>
+    <div class="row"><span class="av">📄</span><div><div class="nm">AAP 4-2 아키텍처 설명</div><div class="why">근거 · 고객 IT기획 질의 관련</div></div><span class="tag ok">공유 가능</span></div>
+    <div class="row"><span class="av">📄</span><div><div class="nm">6/10 미팅 회의록</div><div class="why">근거 · 후속 맥락 연결 · 민감도 1등급</div></div><span class="tag ok">공유 가능</span></div>
+    <div class="row"><span class="av">🔒</span><div><div class="nm">내부 아키텍처 상세 설계</div><div class="why">근거 · 보안 검토사항 포함</div></div><span class="tag block">제한·마스킹</span></div></div>`},
+  parts:{ic:'👥',title:'참석자 후보 명단',sub:'참석자 추천 Agent · 후보별 포함/제외 근거',body:`<div class="dlv">
+    <div class="dlv-sec">필수 참석자 · 5</div>
+    <div class="row"><span class="av">김</span><div><div class="nm">김영업 · 영업대표</div><div class="why">근거 · 고객 메일 8건 참여</div></div><span class="tag ok">필수</span></div>
+    <div class="row"><span class="av">박</span><div><div class="nm">박PM · 프로젝트 매니저</div><div class="why">근거 · 후속 제안 범위 담당</div></div><span class="tag ok">필수</span></div>
+    <div class="row"><span class="av">이</span><div><div class="nm">이아키 · 솔루션 아키텍트</div><div class="why">근거 · 4-2 아키텍처 자료 작성자</div></div><span class="tag ok">필수</span></div>
+    <div class="row"><span class="av">최</span><div><div class="nm">최데이터 · 데이터</div><div class="why">근거 · 데이터 연계 질의 담당</div></div><span class="tag ok">필수</span></div>
+    <div class="row"><span class="av">정</span><div><div class="nm">정보안 · 보안</div><div class="why">근거 · 보안 검토 질의 수신자</div></div><span class="tag ok">필수</span></div>
+    <div class="dlv-sec">외부 참석자 · 담당자 확인 필요</div>
+    <div class="row"><span class="av">D</span><div><div class="nm">고객 DX팀장 · IT기획</div><div class="why">근거 · 외부 도메인 · 초대 전 확인</div></div><span class="tag warn">⚑ 확인</span></div>
+    <div class="dlv-sec">제외</div>
+    <div class="row"><span class="av">이</span><div><div class="nm">이수진</div><div class="why">근거 · 최근 3개월 미참여</div></div><span class="tag no">제외</span></div></div>`},
+  invite:()=>({ic:'✉️',title:'회의 초대장 (초안)',sub:'일정 조율 Agent · 발송 대기',body:`<div class="doc"><h5>AAP 고객사 킥오프 회의 초대</h5>
+    <div class="drow"><span class="dk">일시</span><b>${STATE.pickedTime}</b></div>
+    <div class="drow"><span class="dk">장소</span>A동 301 · 화상 meet.company.com/aap-kickoff</div>
+    <div class="drow"><span class="dk">참석</span>김영업·박PM·이아키·최데이터·정보안${STATE.decisions.parts==='no'?'':' + 외부 DX팀장·IT기획'}</div>
+    <div class="drow"><span class="dk">안건</span>착수 범위·역할·일정·보안 조건</div>
+    <div class="drow"><span class="dk">첨부</span>선제안 자료·4-2 아키텍처·Q&A (공유 링크)</div></div>`}),
+  agenda:{ic:'📋',title:'안건 초안',sub:'안건 작성 Agent · 킥오프 표준 + 고객 관심사',body:`<div class="doc"><h5>킥오프 회의 안건 · 6항</h5>
+    <div class="drow"><span class="dk">1</span>목적 확인 — 착수 범위·기대 산출물</div>
+    <div class="drow"><span class="dk">2</span>적용 후보 업무 — 우선순위</div>
+    <div class="drow"><span class="dk">3</span>데이터·시스템 연계 범위</div>
+    <div class="drow"><span class="dk">4</span>아키텍처 매핑 (4-2)</div>
+    <div class="drow"><span class="dk">5</span>보안 조건 · 공유 기준</div>
+    <div class="drow"><span class="dk">6</span>다음 액션 · 일정</div></div>`},
+  minutes:{ic:'🗒️',title:'회의록 (초안)',sub:'회의록 Agent · 결정·근거',body:`<div class="doc"><h5>AAP 고객사 킥오프 회의록</h5>
+    <div class="dl">결정사항</div>
+    <div class="drow">1 · 1차 데모 = 킥오프 준비·운영 시나리오</div>
+    <div class="drow">2 · 연계 우선 = 캘린더·문서함·그룹웨어</div>
+    <div class="drow">3 · 보안 = 외부 공유·권한 기준부터</div>
+    <div class="dl">후속 할 일</div>
+    <div class="drow">· 고객 IT기획 — 그룹웨어 API 목록 / 6·28</div>
+    <div class="drow">· KT DS AI — 데모 초안 / 7·2</div>
+    <div class="drow">· 보안 담당 — 공유 기준 / 6·30</div>
+    <div class="dl">확인 필요</div>
+    <div class="drow">회의록 확정 · 담당자·기한 확정 · 고객 공유 문구</div></div>`},
+  action:{ic:'✅',title:'액션아이템',sub:'액션아이템 Agent · 담당·기한',body:`<div class="dlv">
+    <div class="row"><div style="flex:1"><div class="nm">1차 데모 = 킥오프 준비 시나리오</div><div class="why">KT DS AI</div></div><span class="tag ok">7·2</span></div>
+    <div class="row"><div style="flex:1"><div class="nm">그룹웨어 API 목록 공유</div><div class="why">고객 IT기획</div></div><span class="tag warn">6·28</span></div>
+    <div class="row"><div style="flex:1"><div class="nm">외부 공유 기준 정리</div><div class="why">보안 담당</div></div><span class="tag warn">6·30</span></div></div>`},
+  invite_sent:{ic:'📅',title:'캘린더 · 시스템 반영',sub:'시스템 반영 Agent · Writeback 결과',body:`<div class="doc"><h5>AAP 고객사 킥오프 회의</h5>
+    <div class="drow"><span class="dk">캘린더</span>CAL-3391 등록 완료 · ROOM-552</div>
+    <div class="drow"><span class="dk">폴더</span>자료 폴더 · 회의록 템플릿 생성</div>
+    <div class="drow"><span class="dk">메일</span>고객 초대 메일 · 발송 대기</div>
+    <div class="drow"><span class="dk">상태</span>담당자 확인 후 발송</div></div>`},
+  reuse:{ic:'📚',title:'재사용 패턴 (학습 자산)',sub:'지식 자산화 Agent · Self-Improving',body:`<div class="dlv">
+    <div class="row"><div style="flex:1"><div class="nm">킥오프 회의 준비 패턴</div><div class="why">참석자 추천 기준 · 자료 묶음 기준 · 안건 템플릿</div></div><span class="tag ok">저장</span></div>
+    <div class="row"><div style="flex:1"><div class="nm">담당자 수정 피드백 반영</div><div class="why">제외 참석자·자료 → 다음 회의 추천 개선</div></div><span class="tag ok">반영</span></div></div>`},
+};
+
+/* 시각 선택(select) 모달 */
+const TIMES=[
+  {t:'6/24 (화) 14:00–15:30',s:'가용 7/7 · 회의실 A동 301'},
+  {t:'6/25 (수) 10:00–11:30',s:'가용 6/7 · 회의실 B'},
+  {t:'6/26 (목) 15:00–16:30',s:'가용 7/7 · 회의실 C'},
+];
+
+/* ===== WORK (v0.16 12단계 + produces/select 이식) ===== */
+const WORK=[
+ {id:'request',label:'요청 확인',st:'확인',desc:'한 줄 요청에서 회의 준비가 시작됩니다. 바로 예약하지 않고 부족한 정보부터 확인합니다.',
+  explain:`회의 요청은 추론 루프의 시작입니다. <b>L1 경험·접근</b>(챗 UI)이 요청을 접수하고, <b>L4 지식·시맨틱</b>이 핵심 신호를 추출해 아직 정해지지 않은 정보를 식별합니다.`,
+  ops:[{g:0,feed:'회의 요청 수신',out:'킥오프 회의 준비 요청',L:'L1',comp:'코파일럿·챗 UI'},
+   {g:1,feed:'핵심 신호 추출',out:'다음주·고객사·킥오프·관련 부서·제안 자료',L:'L4',comp:'온톨로지·시맨틱'},
+   {g:2,feed:'누락 정보 식별',out:'참석자·일시·공유 승인 미정',L:'L4',comp:'컨텍스트 조합·근거'}],
+  result:`<div class="crow b">킥오프 회의 준비 요청 접수</div><div class="crow" style="color:#64748b">보완 필요 · 참석자 · 일시 · 공유 자료 승인</div>`},
+ {id:'intent',label:'업무 이해',st:'확인',desc:'요청을 킥오프 회의 준비 업무로 정리합니다. 목적·산출물·확인 항목이 함께 잡힙니다.',
+  explain:`업무 이해는 추론 루프 <b>Semantic</b> 단계입니다. <b>L4</b>가 "킥오프"를 업무 유형으로 해석해 목적·산출물을 정의하고, <b>L7</b>이 외부 공유 정책을 답니다.`,
+  ops:[{g:0,feed:'회의 유형 분류',out:'킥오프 회의',L:'L4',comp:'온톨로지·시맨틱'},
+   {g:1,feed:'목적·산출물 추론',out:'착수 범위·역할·일정·보안 / 참석자·자료·안건',L:'L4',comp:'컨텍스트 조합·근거'},
+   {g:2,feed:'외부 공유 정책 확인',out:'외부 고객 포함 → 공유 승인 필요',L:'L7',comp:'정책 관리·통제'}],
+  result:`<div class="crow b">킥오프 회의 준비 · 목적 정렬</div><div class="crow" style="color:#92400e">확인 필요 · 외부 초대 · 자료 공유</div>`},
+ {id:'materials',label:'자료 확인',st:'준비',desc:'메일·문서함·조직도에서 회의 준비에 필요한 근거를 모읍니다.',
+  explain:`자료 확인은 <b>Data → Semantic</b> 구간입니다. <b>L5</b>가 메일·문서함·조직도를 <b>병렬 조회</b>하고 OCR·정규화하며(<span class="v">AI:ON-U</span>), <b>L4 지식그래프</b>가 회의 맥락으로 연결합니다.`,
+  ops:[{g:0,feed:'메일 조회',out:'관련 메일 14건',L:'L5',comp:'연결·수집',micro:['메일 커넥터']},
+   {g:0,feed:'문서함 조회',out:'제안·아키텍처 문서 6건',L:'L5',comp:'연결·수집',micro:['파일 커넥터']},
+   {g:0,feed:'조직도 조회',out:'관련 부서 5',L:'L5',comp:'연결·수집',micro:['DB·API 커넥터']},
+   {g:1,feed:'OCR 디지털화·정규화',out:'문서 텍스트화·정규화 완료',L:'L5',comp:'데이터 처리',asset:1,badge:'AI:ON-U'},
+   {g:2,feed:'관련 자료 연결',out:'회의 맥락 자료 묶음',L:'L4',comp:'도메인 지식그래프'}],
+  result:`<div class="crow b">관련 자료 묶음</div><div class="crow" style="color:#64748b">메일 14 · 회의록 1 · 문서 6 · 부서 5</div>`,
+  produces:[{k:'docs'}]},
+ {id:'parts',label:'참석자 구성',st:'준비',desc:'조직도·이전 참여자·메일 참여자를 바탕으로 참석자 후보를 준비합니다.',
+  explain:`참석자 구성은 <b>Semantic → Reasoning</b> 구간입니다. <b>L5</b>가 조직도·메일을 <b>병렬</b> 분석하고, <b>L4</b>가 역할을 매핑하며, <b>L3 코어</b>가 추천 Agent를 실행하고 <b>L6</b>(<span class="v">Antbot</span>)가 충족도를 검증합니다.`,
+  ops:[{g:0,feed:'조직도 조회',out:'부서·역할 후보',L:'L5',comp:'연결·수집',micro:['DB·API 커넥터']},
+   {g:0,feed:'최근 메일 참여자 분석',out:'커뮤니케이션 참여자 12명',L:'L5',comp:'연결·수집',micro:['메일 커넥터']},
+   {g:1,feed:'역할 ↔ 참석자 매핑',out:'역할별 후보 매칭',L:'L4',comp:'도메인 지식그래프'},
+   {g:2,feed:'참석자 추천 Agent 실행',out:'필수 5 · 외부 2 후보',L:'L3',comp:'코어·실행 엔진',micro:['입력→모델→도구→가드레일']},
+   {g:3,feed:'참석 충족도 평가',out:'충족도 84% · 보안 담당 포함',L:'L6',comp:'품질·근거 평가',asset:1,badge:'Antbot'}],
+  result:`<div class="crow"><span class="ck">✓</span><b>필수 5</b> 김영업·박PM·이아키·최데이터·정보안</div><div class="crow" style="color:#64748b">외부 · 고객 DX팀장·IT기획 <span class="flag">⚑ 확인</span></div>`,
+  produces:[{k:'parts'}],
+  hitl:{q:'외부 고객(DX팀장·IT기획)을 초대할까요?',why:'외부 고객 포함은 자료 공유 책임이 따릅니다.',yes:'승인하고 진행',no:'제외'}},
+ {id:'sched',label:'일정 후보',st:'준비',desc:'참석자 캘린더와 시간 조건으로 일정 후보를 계산합니다. 후보 중 하나를 사람이 선택합니다.',
+  explain:`일정 후보는 <b>Data → Reasoning</b> 구간입니다. <b>L5</b>가 참석자 캘린더를 조회하고, <b>L3 코어</b>가 교집합·회의실 가용성을 계산하며 <b>L6</b>가 충돌을 검증합니다. <b>확정 시각은 사람이 선택</b>합니다.`,
+  ops:[{g:0,feed:'참석자 캘린더 조회',out:'7명 가용 시간',L:'L5',comp:'연결·수집',micro:['캘린더 커넥터']},
+   {g:1,feed:'일정 최적화 Agent 실행',out:'후보 3개 · 충돌 0',L:'L3',comp:'코어·실행 엔진',micro:['교집합','회의실 가용성']},
+   {g:2,feed:'시간 충돌 검증',out:'전 후보 충돌 없음',L:'L6',comp:'품질·근거 평가'}],
+  result:`<div class="crow"><span class="ck">✓</span>가용 시각 후보 3안 산출 · <b>사람이 선택</b></div>`,
+  select:{k:'time'}},
+ {id:'matbundle',label:'자료 묶음',st:'준비',desc:'회의 전 배포 자료를 공유 가능·내부 제외로 나눕니다.',
+  explain:`자료 묶음은 <b>Reasoning → Decision</b> 구간입니다. <b>L3 코어</b>가 자료를 민감도로 분류하고, <b>L7</b>이 공유 가능/제한을 정책으로 나누며, <b>L8</b>이 PII·DLP를 점검합니다.`,
+  ops:[{g:0,feed:'자료 패키지 Agent 실행',out:'민감도 분류·마스킹 후보',L:'L3',comp:'코어·실행 엔진',micro:['민감도 분류']},
+   {g:1,feed:'공유 가능/제한 분류',out:'공유 3 · 제한 1',L:'L7',comp:'정책 관리·통제'},
+   {g:1,feed:'PII·DLP 검사',out:'민감 정보 0건',L:'L8',comp:'네트워크·보안'}],
+  result:`<div class="crow" style="color:#15803d">공유 가능 · 제안 자료 · 4-2 아키텍처 · Q&A</div><div class="crow" style="color:#92400e">내부 제외 · 상세 설계 자료 <span class="flag">⚑ 마스킹</span></div>`,
+  produces:[{k:'docs'}],
+  hitl:{q:'내부 상세 자료는 마스킹 후 제외로 처리할까요?',why:'보안 검토사항이 포함되어 외부 공유 시 책임이 따릅니다.',yes:'제외 확정',no:'다시 검토'}},
+ {id:'agenda',label:'안건 초안',st:'준비',desc:'회의 목적과 고객 관심사로 안건 초안과 논의 순서를 만듭니다.',
+  explain:`안건 초안은 <b>Semantic → Reasoning</b> 구간입니다. <b>L4</b>가 회의 유형 표준 안건을 의미화하고 이전 Q&A 근거를 결합하며, <b>L3 코어</b>가 논의 순서·확인 질문을 생성합니다.`,
+  ops:[{g:0,feed:'표준 안건 의미화',out:'킥오프 6단 골격',L:'L4',comp:'온톨로지·시맨틱'},
+   {g:1,feed:'이전 Q&A 근거 결합',out:'고객 관심사 3건 반영',L:'L4',comp:'컨텍스트 조합·근거'},
+   {g:2,feed:'안건 작성 Agent 실행',out:'안건 6항 · 확인 질문',L:'L3',comp:'코어·실행 엔진',micro:['논의 순서','확인 질문']}],
+  result:`<div class="crow">안건 6항 · 논의 순서·확인 질문 생성</div>`,
+  produces:[{k:'agenda'}]},
+ {id:'check',label:'확인 항목',st:'확인 필요',gate:1,desc:'외부 초대·자료 공유처럼 책임이 있는 항목은 자동 실행하지 않고 담당자가 확인합니다.',
+  explain:`확인 항목은 <b>Reasoning → Decision</b> 구간입니다. <b>L6</b>가 위험·적합도를 평가하고, <b>L7</b>이 자동/검토/제한으로 분기하며, <b>L3 런타임 게이트</b>가 책임 지점을 멈춰 담당자 확인으로 넘깁니다.`,
+  ops:[{g:0,feed:'위험·적합도 평가',out:'공유 위험 medium · 참석 적합 88%',L:'L6',comp:'품질·근거 평가'},
+   {g:1,feed:'자동/검토/제한 분기',out:'자동 4 · 확인 4 · 제한 1',L:'L7',comp:'정책 관리·통제'},
+   {g:2,feed:'런타임 검토 게이트 보류',out:'확인 4건 담당자 전달',L:'L3',comp:'HITL 런타임 게이트'}],
+  result:`<div class="crow" style="color:#15803d"><span class="ck">✓</span>바로 처리 · 자료 폴더 · 안건 · 템플릿</div><div class="crow" style="color:#92400e">담당자 확인 · 외부 초대 · 공유 · 문구</div><div class="crow" style="color:#b91c1c">공유 제한 · 내부 상세 자료</div>`,
+  hitl:{q:'담당자 확인 항목(외부 초대·공유·문구)을 승인하고 반영을 준비할까요?',why:'외부 커뮤니케이션·자료 공유는 책임 지점입니다.',yes:'승인하고 반영 준비',no:'수정 요청'}},
+ {id:'writeback',label:'시스템 반영',st:'반영',gate:1,desc:'담당자가 확인한 항목만 캘린더·문서함·메일 초안에 반영됩니다.',
+  explain:`시스템 반영은 <b>Decision → Action</b> 구간입니다. <b>L3 코어</b>가 캘린더·문서함·메일 API를 <b>병렬 호출</b>하고, <b>L8</b>이 저장하며, <b>L6</b>가 실행을 기록합니다. 앞 단계 담당자 결정이 여기 반영됩니다.`,
+  ops:[{g:0,feed:'캘린더 등록',out:'CAL-3391 · ROOM-552',L:'L3',comp:'코어·실행 엔진',micro:['calendar.create()']},
+   {g:0,feed:'자료 폴더·회의록 템플릿',out:'폴더·템플릿 생성',L:'L3',comp:'코어·실행 엔진',micro:['docs.folder()']},
+   {g:0,feed:'고객 초대 메일',out:'발송 대기',ext:1,L:'L3',comp:'코어·실행 엔진',micro:['mail.draft()']},
+   {g:1,feed:'실행 이력 기록',out:'Action Log 적재',L:'L6',comp:'실행 추적'}],
+  result:`<div class="crow" style="color:#15803d"><span class="ck">✓</span>캘린더·회의실·화상 링크 · 자료 폴더 · 회의록 템플릿</div>`,
+  produces:[{k:'invite_sent'}],
+  hitl:{q:'외부 고객에게 초대 메일을 지금 발송할까요?',why:'외부 발송은 되돌리기 어려운 대외 커뮤니케이션입니다.',yes:'발송',no:'보류'}},
+ {id:'during',label:'회의 중 기록',st:'진행',gate:1,desc:'회의 중 발언과 진행 상태를 결정사항·후속 할 일 후보로 정리합니다. (회의 시작/종료는 사람이 신호)',
+  explain:`회의 중 기록은 <b>Data → Reasoning</b> 구간입니다. <b>L5</b>가 발언·채팅을 실시간 수집하고 <b>L4</b>가 결정과 의견을 구분하며, <b>L3 코어</b>가 결정·할 일 후보를 추출합니다.`,
+  ops:[{g:0,feed:'발언·채팅 수집(STT)',out:'발언 23건',L:'L5',comp:'연결·수집'},
+   {g:1,feed:'결정·이슈 의미화',out:'결정 3 · 이슈 2',L:'L4',comp:'온톨로지·시맨틱'},
+   {g:2,feed:'회의 기록 Agent 실행',out:'결정·할 일 후보 추출',L:'L3',comp:'코어·실행 엔진',micro:['결정/의견 구분','액션 추출']}],
+  result:`<div class="crow">결정 후보 · PoC 범위는 회의 업무부터</div><div class="crow" style="color:#64748b">할 일 후보 · 그룹웨어 API 목록 공유</div>`,
+  produces:[{k:'minutes'}]},
+ {id:'after',label:'회의 후 정리',st:'완료',desc:'회의 기록을 회의록과 후속 할 일로 정리합니다. 확정은 담당자 확인이 필요합니다.',
+  explain:`회의 후 정리는 <b>Reasoning → Action</b> 구간입니다. <b>L4</b>가 결정·할 일을 구조화하고 <b>L3 코어</b>가 회의록·후속 할 일을 생성하며, <b>L7</b>이 공식 회의록 확정을 담당자 확인으로 두고 <b>L8</b>이 To-do를 등록합니다.`,
+  ops:[{g:0,feed:'결정·할 일 구조화',out:'회의록 구조 구성',L:'L4',comp:'컨텍스트 조합·근거'},
+   {g:1,feed:'회의록·액션 Agent 실행',out:'회의록 + 할 일 3건',L:'L3',comp:'코어·실행 엔진'},
+   {g:2,feed:'To-do 등록',out:'프로젝트 연결',L:'L8',comp:'스토리지·DB'}],
+  result:`<div class="crow b">회의록 · 결정 3 · 보류 2 · 리스크 1</div>`,
+  produces:[{k:'minutes'},{k:'action'}],
+  hitl:{q:'회의록과 후속 할 일(담당자·기한)을 확정할까요?',why:'공식 회의록과 후속 배정은 책임이 따릅니다.',yes:'회의록 확정',no:'수정'}},
+ {id:'reuse',label:'재사용',st:'저장',desc:'이번 회의 준비에서 수정된 기준을 다음 회의 준비에 재사용합니다.',
+  explain:`재사용은 추론 루프 <b>Learning</b> 단계입니다. <b>L6</b>가 담당자 수정을 피드백으로 받고, <b>L7</b>(<span class="v">Self-Improving</span>)이 운영 학습으로 자산화해 <b>L4</b> 추천 기준을 갱신합니다.`,
+  ops:[{g:0,feed:'담당자 수정 피드백 수집',out:'제외 참석자·자료 반영',L:'L6',comp:'사용자 피드백'},
+   {g:1,feed:'운영 학습 자산화',out:'재사용 패턴 저장',L:'L7',comp:'Self-Improving',asset:1,badge:'Self-Improving'},
+   {g:2,feed:'추천 기준 갱신',out:'다음 회의 추천 개선',L:'L4',comp:'온톨로지·시맨틱'}],
+  result:`<div class="crow" style="color:#15803d"><span class="ck">✓</span>킥오프 회의 준비 패턴 저장</div>`,
+  produces:[{k:'reuse'}]},
+];
+const idxOf=id=>WORK.findIndex(w=>w.id===id);
+const W=id=>WORK.find(w=>w.id===id);
+const groupsOf=w=>[...new Set(w.ops.map(o=>o.g))].sort((a,b)=>a-b);
+
+/* ===== Agent Registry (오케 Agent 목록 → 관리, 회의 케이스로 각색) ===== */
+const AGENTS=[
+ {ic:'👥',role:'사람 찾기',name:'참석자 추천 Agent',L:'L3',desc:'회의 주제에 꼭 필요한 사람을 조직·역할 기준으로 추천합니다.',
+  when:'주최자가 참석자를 특정하지 않았거나 필수 인원 누락이 의심될 때.',data:'인사·조직도, 역할(R&R) 매핑, 과거 동일 주제 참석 이력',how:'회의 목적을 조직도·역할·이력과 매칭 → 필수/선택/외부를 근거와 함께 추천.'},
+ {ic:'🔎',role:'데이터 검색',name:'자료 수집 Agent',L:'L5',desc:'KMS·과거 자료에서 회의 근거 자료를 찾아옵니다 (RAG).',
+  when:'문서 작성·의사결정에 근거가 필요할 때(회의 전 + 회의 중 쟁점).',data:'KMS 문서, 과거 제안서·회의록, 메일 첨부 (벡터 임베딩)',how:'질의를 벡터 검색(RAG)으로 관련 문서 검색 → 관련도순 정렬·출처 제시.'},
+ {ic:'🗓️',role:'회의 잡기',name:'일정 조율 Agent',L:'L3',desc:'참석자 빈 시간을 찾아 시각 후보를 만들고 초대장을 보냅니다.',
+  when:'회의를 열어야 한다고 판단되면 가장 먼저. 시각·초대장 확정이 필요할 때.',data:'캘린더, 참석자 가용·근무시간, 회의실 가용, 초대장 템플릿',how:'일정 교차 비교로 빈 시간 후보 산출 → 사람이 선택 → 초대장 작성·발송.'},
+ {ic:'🚪',role:'회의실 예약',name:'회의실 예약 Agent',L:'L5',desc:'인원·시간·장비에 맞는 회의실을 찾아 예약합니다.',
+  when:'오프라인·하이브리드로 물리 공간이 필요할 때.',data:'회의실 마스터(인실·화상장비), 시간대별 예약 현황',how:'인원·장비 조건으로 회의실 DB 필터링 → 최소 충족 회의실 매칭·예약.'},
+ {ic:'📦',role:'자료 패키지',name:'자료 패키지 Agent',L:'L3',desc:'배포 자료를 민감도로 분류해 공유 가능/제한으로 묶습니다.',
+  when:'회의 전 사전 자료를 외부 공유해야 할 때.',data:'수집 자료, 민감도·보안등급 정책, 마스킹 규칙',how:'자료를 민감도 분류 → 정책에 따라 공유/제한·마스킹 후보 생성.'},
+ {ic:'📋',role:'안건 작성',name:'안건 작성 Agent',L:'L3',desc:'회의 목적과 고객 관심사로 안건 초안·논의 순서를 만듭니다.',
+  when:'회의 산출물로 안건·논의 골격이 필요할 때.',data:'회의 유형 표준 안건, 이전 Q&A, 고객 관심사',how:'표준 안건을 의미화하고 이전 근거를 결합해 6항 안건·확인 질문 생성.'},
+ {ic:'🛡️',role:'검수·보안',name:'정책·보안 Agent',L:'L7',desc:'외부로 나갈 산출물에 민감정보·부적절 수신자가 없는지 검수합니다.',
+  when:'외부 초대·자료 공유·발송 직전(되돌리기 어려운 행동 전).',data:'개인정보·보안등급 정책, 금칙 패턴, 수신자 화이트리스트',how:'산출물·수신자를 정책과 대조 → 마스킹·경고·차단 플래그를 Master에 전달.'},
+ {ic:'🧐',role:'품질 검증',name:'품질 검증 Agent',L:'L6',asset:1,desc:'산출물의 충족도·일관성·누락을 근거와 대조해 검수합니다 (Antbot).',
+  when:'산출물 생성 후 사람 검토·발송 전.',data:'원본 근거, 표준 체크리스트, 인용 출처',how:'산출물을 근거와 대조해 오류·누락 점검 → 충족도·수정 제안 표시.'},
+ {ic:'🗒️',role:'기록',name:'회의록 Agent',L:'L3',desc:'회의 발언을 실시간으로 정리해 회의록 초안을 만듭니다.',
+  when:'회의가 시작되어 발언이 발생할 때(STT·통역과 동시).',data:'STT 전사·번역 텍스트, 회의 안건',how:'전사 텍스트를 안건·결정·미결·액션으로 구조화·요약.'},
+ {ic:'🎤',role:'실시간 전사',name:'녹취·STT Agent',L:'L5',desc:'회의 음성을 발언자별 실시간 텍스트로 전사합니다.',
+  when:'회의가 시작되어 음성이 발생할 때.',data:'오디오 스트림, 화자 프로필, 도메인 용어 사전',how:'음성인식(STT) → 화자 분할·타임스탬프 전사 → 회의록 Agent 전달.'},
+ {ic:'✅',role:'할 일 관리',name:'액션아이템 Agent',L:'L3',desc:'회의에서 정해진 할 일을 담당자·기한과 함께 정리합니다.',
+  when:'회의에서 할 일·결정이 도출됐을 때(회의 후).',data:'회의록(결정·미결), 참석자 R&R, 캘린더(기한)',how:'회의록에서 할 일 추출 → 담당·기한 매핑해 추적 리스트로 정리.'},
+ {ic:'📨',role:'공유',name:'알림·전달 Agent',L:'L3',desc:'결과물을 참석자에게 메일·메신저로 전달합니다.',
+  when:'최종 산출물을 공유해야 할 때(최종 승인 후).',data:'참석자 연락처·채널, 최종 산출물',how:'대상별 채널로 결과물·요약 발송 → 전달 결과 회신.'},
+ {ic:'🗂️',role:'보관',name:'시스템 반영·KMS Agent',L:'L8',desc:'확정 결과를 캘린더·문서함·KMS에 반영·기록합니다.',
+  when:'담당자 확인 후 시스템 반영·조직 자산화가 필요할 때.',data:'최종 산출물, 시스템 API, KMS 분류·권한',how:'캘린더·폴더·메일 API 병렬 호출 → KMS에 분류·태깅·등록.'},
+ {ic:'📚',role:'학습·자산화',name:'지식 자산화 Agent',L:'L7',asset:1,desc:'회의 유형·요청·산출물 패턴을 축적해 다음 회의 정확도를 높입니다 (Self-Improving).',
+  when:'회의 마무리 후 결과를 조직 학습으로 되먹임할 때(피드백 루프).',data:'이번 회의 유형·요청·산출물, 암묵지 인덱스, 사용자 피드백',how:'패턴을 정규화해 지식베이스·sLLM 학습 데이터로 축적.'},
+];
+
+/* ===== STATE ===== */
+const STATE={view:'run', sel:'request', playing:false, hitlDone:false, decisions:{}, pickedTime:TIMES[0].t};
+const RUN={phase:'idle', reveal:0, timers:[], playTimer:null};
+function clearRun(){RUN.timers.forEach(clearTimeout);RUN.timers=[];clearTimeout(RUN.playTimer);}
+function extExcluded(){return STATE.decisions['parts']==='no';}
+
+/* ===== view switching ===== */
+function setView(v){
+  STATE.view=v;
+  document.querySelectorAll('#toggle button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+  document.querySelectorAll('.view').forEach(s=>s.hidden=s.dataset.view!==v);
+  if(v!=='run'&&STATE.playing)stopPlay();
+  if(v==='design')renderPlan();
+  if(v==='govern')renderReg();
+}
+document.querySelectorAll('#toggle button').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+
+/* ===== compact sequence ===== */
+function renderSeq(){
+  const ci=idxOf(STATE.sel);
+  document.getElementById('seq').innerHTML=WORK.map((w,i)=>{
+    let cls='snode';if(i===ci)cls+=' active';else if(i<ci)cls+=' done';if(w.gate)cls+=' gate';
+    return (i>0?'<span class="ssep">›</span>':'')+`<div class="${cls}" data-go="${w.id}"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}</div>`;
+  }).join('');
+  document.querySelectorAll('#seq .snode').forEach(e=>e.onclick=()=>setSel(e.dataset.go));
+}
+
+/* ===== console (run view) ===== */
+function renderConsole(){
+  const w=W(STATE.sel),gs=groupsOf(w);let st='wait',sl='대기';
+  if(RUN.phase==='working'){st='run';sl='<span class="pdot"></span>진행 중';}else if(RUN.phase==='done'){st='done';sl='완료';}
+  document.getElementById('crumbs').textContent=`${String(idxOf(STATE.sel)+1).padStart(2,'0')} / ${WORK.length} · ${w.label}`;
+  let body=`<div class="task"><div><div class="tl">작업</div><div class="tt">${w.label}</div></div><span class="tst ${st}">${sl}</span></div><div class="tdesc">${w.desc}</div>`;
+  if(RUN.phase!=='before'&&STATE.sel==='writeback'&&STATE.decisions['parts']){
+    body+=extExcluded()?`<div class="carry">↩ 참석자 단계 결정 반영 · <b>외부 고객 제외</b> → 초대 메일 발송 없음</div>`:`<div class="carry keep">↩ 참석자 단계 결정 반영 · <b>외부 고객 포함</b> → 초대 메일 발송 대기</div>`;
+  }
+  if(RUN.phase==='before'){
+    body+=`<div class="deleg"><div class="dtx">담당자가 이 작업을 AAP에게 맡깁니다.</div><button class="deleg-btn" id="delegBtn">AAP에게 맡기기</button></div>`;
+  } else {
+    body+=`<div class="sec-h">AAP가 수행한 작업 · 단계별 산출물</div>`;
+    gs.forEach((g,gi)=>{
+      const ops=w.ops.filter(o=>o.g===g);const stt=gi<RUN.reveal?'done':(gi===RUN.reveal&&RUN.phase==='working'?'doing':'');
+      body+=`<div class="stage ${ops.length>1?'par':''}">`;if(ops.length>1)body+=`<div class="par-h">∥ 동시 실행</div>`;
+      ops.forEach(o=>{let out=o.out;if(o.ext&&extExcluded())out='제외됨 (담당자 결정)';
+        body+=`<div class="fi ${stt}"><span class="ic">${stt==='done'?'✓':''}</span><span class="ft">${o.feed}</span><span class="arr">→</span><span class="fout">${stt?out:'…'}</span></div>`;});
+      body+=`</div>`;
+    });
+    if(RUN.phase==='done'){
+      body+=`<div class="sec-h">결과</div><div class="result" style="border:1px solid var(--border);border-radius:11px;background:var(--surf);padding:9px 12px;margin-bottom:4px">${w.result}</div>`;
+      // 생성된 산출물 (모달)
+      const cards=[];
+      (w.produces||[]).forEach(p=>{const d=typeof DLV[p.k]==='function'?DLV[p.k]():DLV[p.k];cards.push(`<div class="dlv-card" data-dlv="${p.k}"><span class="dc-open">열기 ›</span><div class="dc-ic">${d.ic}</div><div class="dc-n">${d.title}</div><div class="dc-s">${d.sub}</div><span class="dlv-badge">산출물</span></div>`);});
+      if(w.select){cards.push(`<div class="dlv-card sel full" data-pick="1"><span class="dc-open">선택 ›</span><div class="dc-ic">🕒</div><div class="dc-n">회의 시각 후보 · 3안</div><div class="dc-s">현재 선택: <b>${STATE.pickedTime}</b></div><span class="dlv-badge pick">사람이 선택</span></div>`);}
+      if(cards.length)body+=`<div class="sec-h" style="margin-top:11px">📦 생성된 산출물 ${w.select?'· 선택':''}</div><div class="dlv-grid">${cards.join('')}</div>`;
+      // HITL → 모달 트리거
+      if(w.hitl){const r=STATE.hitlDone;body+=`<div class="hitl ${r?'resolved':''}"><div class="hitl-h">${r?'✓ 담당자 확인 완료 · 결정이 다음 단계에 반영됩니다':'⚑ 담당자 확인 (HITL)'}</div>${r?'':`<div class="hitl-q">${w.hitl.q}</div><button class="hitl-open" id="hitlOpen">확인하기 ›</button>`}</div>`;}
+    }
+  }
+  document.getElementById('conBody').innerHTML=body;
+  if(RUN.phase==='before'){const b=document.getElementById('delegBtn');b.onclick=runStart;positionCursor(b);}else document.getElementById('mcursor').classList.remove('show','click');
+  document.querySelectorAll('#conBody [data-dlv]').forEach(e=>e.onclick=()=>openDlv(e.dataset.dlv));
+  const pk=document.querySelector('#conBody [data-pick]');if(pk)pk.onclick=openPick;
+  const ho=document.getElementById('hitlOpen');if(ho)ho.onclick=()=>openHitl(W(STATE.sel));
+}
+function positionCursor(btn){const mc=document.getElementById('mcursor'),con=document.querySelector('#conBody').parentElement;if(!btn||!con)return;const br=btn.getBoundingClientRect(),cr=con.getBoundingClientRect();mc.classList.add('show');mc.style.left=(br.left-cr.left+br.width*0.7)+'px';mc.style.top=(br.top-cr.top+br.height*0.5)+'px';}
+
+/* ===== right 8-layer flow ===== */
+function renderRight(){
+  const w=W(STATE.sel),gs=groupsOf(w);let h='';
+  gs.forEach((g,gi)=>{
+    const ops=w.ops.filter(o=>o.g===g);const stt=gi<RUN.reveal?'done':(gi===RUN.reveal&&RUN.phase==='working'?'doing':'');
+    if(gi>0)h+=`<div class="rarrow ${gi<=RUN.reveal?'on':''}">▼</div>`;
+    const par=ops.length>1;h+=`<div class="rstage ${par?'par':''}">`;if(par)h+=`<div class="rph">∥ 병렬 동시 실행</div>`;
+    ops.forEach(o=>{let out=o.out;let changed='';if(o.ext&&extExcluded()){out='제외됨 (담당자 결정)';changed=' changed';}
+      const micro=o.micro?`<div class="op-micro">${o.micro.map(m=>`<span class="mc">${m}</span>`).join('')}</div>`:'';
+      const badge=o.badge?`<span class="op-badge">${o.badge}</span>`:'';
+      h+=`<div class="op ${stt} ${o.asset?'asset':''}${changed}"><div class="op-h"><span class="op-lay">${o.L} ${LK[o.L]}</span><span class="op-t">${o.comp}</span>${badge}</div><div class="op-out">${o.feed} · <b>${stt?out:'대기'}</b></div>${(stt?micro:'')}</div>`;});
+    h+=`</div>`;
+  });
+  document.getElementById('flow').innerHTML=h;document.getElementById('explain').innerHTML=w.explain;
+}
+function renderBot(){const i=idxOf(STATE.sel);document.getElementById('bstep').innerHTML=`현재 단계 <b>${String(i+1).padStart(2,'0')} / ${WORK.length}</b> · ${W(STATE.sel).label}`;}
+
+/* ===== modal system ===== */
+const modal=document.getElementById('modal'),mbox=document.getElementById('mbox');
+function showModal(html){mbox.innerHTML=html;modal.classList.add('show');}
+function closeModal(){modal.classList.remove('show');}
+modal.onclick=e=>{if(e.target.id==='modal')closeModal();};
+function openDlv(k){const d=typeof DLV[k]==='function'?DLV[k]():DLV[k];
+  showModal(`<div class="mtop"><div class="mic">${d.ic}</div><div><div class="mt">${d.title}</div><div class="msub">${d.sub}</div></div><button class="mx" onclick="closeModal()">×</button></div><div class="mbody">${d.body}</div>`);}
+function openPick(){
+  const opts=TIMES.map((t,i)=>`<div class="pickopt ${t.t===STATE.pickedTime?'sel':''}" data-pi="${i}"><div class="pt">${t.t.split(' ').slice(0,2).join(' ')} <span style="font-weight:600;color:#64748b">${t.t.split(' ').slice(2).join(' ')}</span></div><div class="ps">${t.s}</div>${t.t===STATE.pickedTime?'<div class="pcheck">✓ 선택됨</div>':''}</div>`).join('');
+  showModal(`<div class="mtop"><div class="mic">🕒</div><div><div class="mt">회의 시각 선택</div><div class="msub">일정 조율 Agent · 가용 후보 3안 — 자동 확정이 아니라 사람이 선택</div></div><button class="mx" onclick="closeModal()">×</button></div>
+   <div class="mbody"><div class="pickgrid">${opts}</div></div>
+   <div class="mfoot"><span class="why">📌 선택한 시각이 <b>초대장·캘린더</b> 산출물에 반영됩니다.</span></div>`);
+  document.querySelectorAll('#mbox [data-pi]').forEach(e=>e.onclick=()=>{STATE.pickedTime=TIMES[+e.dataset.pi].t;closeModal();renderConsole();toast('회의 시각 선택 → '+STATE.pickedTime);});
+}
+function openHitl(w){
+  const h=w.hitl;
+  showModal(`<div class="mtop amber"><div class="mic">⚑</div><div><div class="mt">담당자 확인 · HITL</div><div class="msub">${w.label} · 책임이 걸린 지점은 자동 실행하지 않습니다</div></div><button class="mx" onclick="closeModal()">×</button></div>
+   <div class="mbody"><div style="font-size:14px;font-weight:800;margin-bottom:8px">${h.q}</div><div style="font-size:12px;color:#64748b;line-height:1.6">AAP는 판단과 근거를 준비했고, 최종 결정은 담당자가 합니다.</div></div>
+   <div class="mfoot"><span class="why">근거 · <b>${h.why||'책임 지점'}</b></span><button class="mbtn no" id="hNo">${h.no}</button><button class="mbtn amber" id="hYes">${h.yes}</button></div>`);
+  document.getElementById('hYes').onclick=()=>decide('yes');
+  document.getElementById('hNo').onclick=()=>decide('no');
+}
+function decide(v){STATE.decisions[W(STATE.sel).id]=v;STATE.hitlDone=true;closeModal();renderConsole();renderRight();toast(v==='yes'?'승인 · 결정이 다음 단계에 반영됩니다':'보류 · 수정 요청');}
+
+/* ===== run / play ===== */
+function runStart(){const b=document.getElementById('delegBtn');if(b)b.classList.add('press');document.getElementById('mcursor').classList.add('click');
+  RUN.timers.push(setTimeout(()=>{RUN.phase='working';RUN.reveal=0;renderConsole();renderRight();revealOps();},420));}
+function revealOps(){const n=groupsOf(W(STATE.sel)).length;
+  for(let i=1;i<=n;i++)RUN.timers.push(setTimeout(()=>{RUN.reveal=i;renderConsole();renderRight();},i*620));
+  RUN.timers.push(setTimeout(()=>{RUN.phase='done';RUN.reveal=n;renderConsole();renderRight();
+    if(STATE.playing)RUN.playTimer=setTimeout(playNext,W(STATE.sel).hitl?2600:1600);},n*620+250));}
+function runStep(){clearRun();STATE.hitlDone=false;RUN.phase='before';RUN.reveal=0;renderConsole();renderRight();}
+function setSel(id){STATE.sel=id;STATE.hitlDone=false;renderSeq();renderBot();runStep();}
+
+function startPlay(){if(STATE.view!=='run')setView('run');STATE.playing=true;STATE.decisions={};document.getElementById('runBtn').textContent='■ 중지';document.getElementById('runBtn').classList.add('stop');setSel(WORK[0].id);autoRun();}
+function autoRun(){RUN.timers.push(setTimeout(()=>{const b=document.getElementById('delegBtn');if(b)b.classList.add('press');document.getElementById('mcursor').classList.add('click');RUN.timers.push(setTimeout(()=>{RUN.phase='working';RUN.reveal=0;renderConsole();renderRight();revealOps();},420));},260));}
+function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);document.getElementById('runBtn').textContent='▶ Run';document.getElementById('runBtn').classList.remove('stop');}
+function playNext(){const ci=idxOf(STATE.sel);if(ci<WORK.length-1){setSel(WORK[ci+1].id);autoRun();}else stopPlay();}
+
+/* ===== design view : plan table ===== */
+function renderPlan(){
+  const sel=w=>w.select?`<span class="sel-pick">🕒 사람이 선택</span>`:(w.hitl?`<span class="sel-hitl">⚑ 담당자 확인</span>`:`<span class="sel-auto">자동</span>`);
+  const makes=w=>{const out=[];(w.produces||[]).forEach(p=>{const d=typeof DLV[p.k]==='function'?DLV[p.k]():DLV[p.k];out.push(d.title);});if(w.select)out.push('회의 시각 후보 3안');if(!out.length)out.push('<span style="color:#94a3b8">중간 처리 (산출물 없음)</span>');return out.map(x=>`<b>${x}</b>`).join(' · ').replace(/<b><span/g,'<span').replace(/<\/span><\/b>/g,'</span>');};
+  const lays=w=>[...new Set(w.ops.map(o=>o.L))].map(l=>`<span>${l}</span>`).join('');
+  let h=`<div class="plan-head"><div>#</div><div>단계</div><div>만드는 산출물</div><div>사람이 선택·확인</div><div>거치는 계층</div></div>`;
+  WORK.forEach((w,i)=>{h+=`<div class="plan-row ${w.gate?'gate':''}"><div class="pr-n">${i+1}</div>
+    <div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.st}</div></div>
+    <div class="pr-make">${makes(w)}</div>
+    <div class="pr-sel">${sel(w)}</div>
+    <div class="pr-lay">${lays(w)}</div></div>`;});
+  document.getElementById('planTable').innerHTML=h;
+}
+
+/* ===== govern view : registry ===== */
+function renderReg(){
+  document.getElementById('reg').innerHTML=AGENTS.map(a=>`
+   <div class="ag ${a.asset?'asset':''}">
+     <div class="ag-h"><div class="ag-ic">${a.ic}</div><div><span class="ag-role">${a.role}</span><div class="ag-name">${a.name}</div></div><span class="ag-lay">${a.L} ${LK[a.L]}</span>${a.asset?'<span class="ag-kt">kt ds</span>':''}</div>
+     <div class="ag-desc">${a.desc}</div>
+     <div class="ag-meta">
+       <div class="ag-m when"><div class="ag-mk">🧭 Master의 선택 근거</div><div class="ag-mv">${a.when}</div></div>
+       <div class="ag-m data"><div class="ag-mk">🗂️ 사용 데이터</div><div class="ag-mv">${a.data}</div></div>
+       <div class="ag-m how"><div class="ag-mk">⚙️ 수행 방식</div><div class="ag-mv">${a.how}</div></div>
+     </div>
+   </div>`).join('');
+}
+
+/* ===== misc ===== */
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),2200);}
+document.getElementById('replay').onclick=()=>runStep();
+document.getElementById('prevBtn').onclick=()=>{const ci=idxOf(STATE.sel);if(ci>0)setSel(WORK[ci-1].id);};
+document.getElementById('nextBtn').onclick=()=>{const ci=idxOf(STATE.sel);if(ci<WORK.length-1)setSel(WORK[ci+1].id);};
+document.getElementById('runBtn').onclick=()=>STATE.playing?stopPlay():startPlay();
+document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
+const TIP=document.getElementById('tip');
+document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(t){TIP.textContent=t.getAttribute('data-tip');TIP.style.display='block';const r=t.getBoundingClientRect();TIP.style.left=Math.min(r.left,window.innerWidth-320)+'px';let tp=r.bottom+8;if(tp+TIP.offsetHeight>window.innerHeight)tp=r.top-TIP.offsetHeight-8;TIP.style.top=Math.max(8,tp)+'px';}else if(!e.target.closest('#tip'))TIP.style.display='none';});
+
+/* init */
+(function(){const q=new URLSearchParams(location.search);
+ if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
+ if(q.get('ext')==='no')STATE.decisions['parts']='no';
+ const s=q.get('sel')||'request';STATE.sel=W(s)?s:'request';
+ const v=q.get('view'); if(v&&['design','run','govern'].includes(v))STATE.view=v;
+ renderSeq();renderBot();
+ if(q.get('still')==='1'){STATE.hitlDone=q.get('hitl')==='1';RUN.phase='done';RUN.reveal=groupsOf(W(STATE.sel)).length;renderConsole();renderRight();}else runStep();
+ setView(STATE.view);
+})();
+</script>
+</body>
+</html>

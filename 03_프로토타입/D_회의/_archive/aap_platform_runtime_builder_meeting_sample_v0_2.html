@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAP Platform · Workload Runtime Builder — 회의 시나리오 (콘솔+8계층 샘플 v0.2)</title>
+<style>
+:root{
+  --aap:#0d9488; --aap-d:#0f766e; --aap-bg:#ecfdf5; --aap-bd:#99f6e4;
+  --ink:#0f172a; --slate:#334155; --sub:#64748b; --faint:#94a3b8; --line:#e2e8f0; --line2:#eef2f6;
+  --bg:#f1f5f9; --card:#fff;
+  --violet:#7c3aed; --violet-bg:#f5f3ff; --violet-bd:#ddd6fe;
+  --amber:#d97706; --amber-bg:#fffbeb; --amber-bd:#fde68a; --amber-ink:#92400e;
+  --green:#16a34a; --green-bg:#f0fdf4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;
+  background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; font-size:13px;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+/* ───── top bar ───── */
+.topbar{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:16px;padding:0 20px;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 2px rgba(15,23,42,.03)}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand .logo{width:23px;height:23px;border-radius:7px;background:linear-gradient(135deg,var(--aap),#14b8a6);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;transform:translateY(4px)}
+.brand b{font-size:15.5px;letter-spacing:-.3px}
+.brand span{font-size:11.5px;color:var(--sub)}
+.scenario{display:flex;align-items:center;gap:8px;margin-left:4px;padding:6px 12px;background:var(--aap-bg);border:1px solid #ccfbf1;border-radius:999px;font-size:12px;color:var(--aap-d);font-weight:600}
+.scenario .dot{width:7px;height:7px;border-radius:50%;background:var(--aap)}
+.pack{font-size:11px;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+.pack b{color:var(--ink);font-weight:700}
+.spacer{flex:1}
+.toggle{display:flex;background:#f1f5f9;border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.toggle button{border:0;background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--sub);padding:6px 13px;border-radius:7px;cursor:pointer}
+.toggle button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+.toggle button.off{color:var(--faint);cursor:pointer}
+.runbtn{border:0;background:var(--ink);color:#fff;font-family:inherit;font-weight:700;font-size:12px;padding:9px 15px;border-radius:9px;cursor:pointer}
+.runbtn:hover{background:#000}
+
+/* ───── main ───── */
+.main{flex:1;display:grid;grid-template-columns:1fr 424px;gap:14px;padding:14px 18px;min-height:0}
+.col{min-height:0;display:flex;flex-direction:column;gap:11px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+
+/* work sequence strip (compact) */
+.seq{display:flex;align-items:center;gap:0;padding:9px 13px;flex:0 0 auto}
+.seq .lbl{font-size:9.5px;font-weight:800;letter-spacing:.5px;color:var(--faint);text-transform:uppercase;margin-right:12px;flex:0 0 auto}
+.snode{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--sub);border:1px solid transparent;white-space:nowrap}
+.snode .sn{font-size:11px;font-weight:800;color:var(--faint)}
+.snode.done{color:var(--slate)} .snode.done .sn{color:var(--aap)}
+.snode.active{background:var(--aap-bg);border-color:var(--aap-bd);color:var(--aap-d)} .snode.active .sn{color:var(--aap)}
+.snode.dim{color:var(--faint);cursor:default;opacity:.6}
+.ssep{color:#cbd5e1;font-size:11px;padding:0 4px;flex:0 0 auto}
+
+/* customer console (MAIN) */
+.console-col{flex:1;display:flex;flex-direction:column;min-height:0}
+.console{flex:1;display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.05)}
+.con-bar{background:var(--ink);color:#cbd5e1;font-size:11px;padding:9px 14px;display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.con-bar .d{width:7px;height:7px;border-radius:50%;background:#475569}
+.con-bar b{color:#fff;font-weight:700}
+.con-bar .req{color:#94a3b8;margin-left:4px;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.con-head{display:flex;align-items:center;gap:10px;padding:13px 18px 11px;border-bottom:1px solid var(--line2);position:relative}
+.con-head .tt{font-size:17px;font-weight:800}
+.con-head .by{font-size:11px;color:var(--violet);font-weight:600}
+.con-head .by b{color:var(--violet)}
+.con-head .sp{flex:1}
+.con-head .tst{font-size:10.5px;font-weight:800;padding:3px 11px;border-radius:999px;background:var(--green-bg);color:var(--green)}
+.anabtn{font-family:inherit;font-size:11px;font-weight:700;color:var(--aap-d);background:var(--aap-bg);border:1px solid var(--aap-bd);border-radius:8px;padding:5px 11px;cursor:pointer}
+.anabtn:hover{background:#d9f8f0}
+.anapop{position:absolute;top:48px;right:18px;width:320px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.18);padding:13px 15px;z-index:30;display:none}
+.anapop.show{display:block}
+.anapop .ah{font-size:10px;font-weight:800;letter-spacing:.4px;color:var(--aap);text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.anapop .ah .x{margin-left:auto;cursor:pointer;color:var(--faint);font-size:15px;line-height:1}
+.ana-row{display:flex;gap:9px;font-size:12px;line-height:1.5;padding:4px 0}
+.ana-row .k{flex:0 0 62px;color:var(--faint);font-weight:700}
+.ana-row .v{color:var(--ink)}
+.con-body{flex:1;padding:14px 18px;overflow:auto}
+
+.cc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cc-head .t{font-size:14px;font-weight:700}
+.cc-head .meta{font-size:11px;color:var(--faint)}
+.cc-group{margin-bottom:13px}
+.cc-glabel{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--sub);margin-bottom:8px}
+.pill{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:999px}
+.pill.auto{background:var(--aap-bg);color:var(--aap-d);border:1px solid #a7f3d0}
+.pill.confirm{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.person{display:flex;align-items:center;gap:11px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:#fff}
+.person .av{width:30px;height:30px;border-radius:50%;background:#e2e8f0;color:#475569;font-weight:700;font-size:12.5px;display:flex;align-items:center;justify-content:center}
+.person .nm{font-size:13px;font-weight:600}
+.person .ro{font-size:11px;color:var(--faint)}
+.person .st{margin-left:auto;font-size:11px;font-weight:700}
+.person .st.ok{color:var(--aap)}
+.person.flag{border-color:var(--amber-bd);background:#fffdf6}
+.person.flag .av{background:#fef3c7;color:#b45309}
+.person .st.warn{color:var(--amber);display:flex;align-items:center;gap:9px}
+.miniact{font-family:inherit;border:1px solid var(--amber);color:var(--amber);background:#fff;font-size:10.5px;font-weight:700;border-radius:7px;padding:4px 10px;cursor:pointer}
+.miniact:hover{background:var(--amber-bg)}
+.cc-list{display:flex;flex-direction:column;gap:6px}
+.cc-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;font-size:13px}
+.cc-item .ck{color:var(--aap);font-weight:800;font-size:12px}
+.cc-item .sub{margin-left:auto;font-size:11px;color:var(--faint)}
+.cc-note{font-size:11.5px;color:var(--sub);line-height:1.55;background:#f8fafc;border:1px solid var(--line2);border-radius:9px;padding:10px 12px;margin-top:8px}
+.cc-note b{color:var(--aap-d)}
+
+/* ───── right : 8 layers ───── */
+.lay-h{display:flex;align-items:center;gap:9px;padding:12px 15px 4px}
+.lay-h .kicker{font-size:10px;font-weight:800;letter-spacing:.6px;color:var(--aap);text-transform:uppercase}
+.lay-h h3{font-size:14px;font-weight:700}
+.lay-path{font-size:11px;color:var(--sub);padding:2px 15px 11px;border-bottom:1px solid var(--line2)}
+.lay-path b{color:var(--aap-d);font-weight:700}
+.lays{padding:10px;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:5px}
+.lay{display:flex;gap:11px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:#fafbfc;transition:.2s;position:relative}
+.lay.lit{background:#fff;border-color:var(--aap-bd);box-shadow:0 2px 10px rgba(13,148,136,.08)}
+.lay .lid{flex:0 0 30px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.lay .lcode{font-size:10px;font-weight:800;color:var(--faint);background:#eef2f6;border-radius:6px;padding:2px 6px;width:100%;text-align:center}
+.lay.lit .lcode{color:#fff;background:var(--aap)}
+.lay .ord{font-size:10px;font-weight:800;color:var(--aap);width:16px;height:16px;border-radius:50%;border:1.5px solid var(--aap);display:flex;align-items:center;justify-content:center;background:#fff}
+.lay .lbody{flex:1;min-width:0}
+.lay .lname{font-size:12.5px;font-weight:700;color:var(--sub);display:flex;align-items:center;gap:7px}
+.lay.lit .lname{color:var(--ink)}
+.lay .kt{font-size:8.5px;font-weight:800;color:var(--violet);background:var(--violet-bg);border:1px solid var(--violet-bd);border-radius:999px;padding:1px 6px}
+.lay .lsub{font-size:11px;color:var(--faint);margin-top:3px;line-height:1.45}
+.lay .comps{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.lay .comp{font-size:11px;font-weight:600;color:var(--aap-d);background:var(--aap-bg);border:1px solid var(--aap-bd);border-radius:7px;padding:3px 9px}
+.lay .comp.asset{color:var(--violet);background:var(--violet-bg);border-color:var(--violet-bd)}
+.lay .comp.asset .ab{font-size:8px;font-weight:900;margin-left:5px;opacity:.8}
+.lay-leg{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--sub);padding:9px 15px;border-top:1px solid var(--line2)}
+.lay-leg .lg{display:flex;align-items:center;gap:5px}
+.lay-leg .sw{width:11px;height:11px;border-radius:3px}
+
+/* toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:12px;font-weight:600;padding:11px 18px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:50;box-shadow:0 8px 24px rgba(15,23,42,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.samplebadge{position:fixed;top:62px;right:18px;background:#fff;border:1px solid var(--line);font-size:10px;color:var(--sub);padding:4px 10px;border-radius:999px;z-index:20;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.samplebadge b{color:var(--aap-d)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>Workload Runtime Builder</span></div>
+  <div class="scenario"><span class="dot"></span>AAP 고객사 킥오프 회의 준비</div>
+  <div class="pack">Domain Pack <b>회의</b> ▾</div>
+  <div class="spacer"></div>
+  <div class="toggle">
+    <button class="on">구성</button>
+    <button class="off" data-soft>실행</button>
+    <button class="off" data-soft>관리</button>
+  </div>
+  <button class="runbtn" data-soft>▶ Run</button>
+</div>
+
+<div class="samplebadge">SAMPLE · 콘솔 + 8계층 — <b>②참석자 구성</b></div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT : customer console (main) -->
+  <div class="col">
+    <!-- compact work sequence -->
+    <div class="card seq" id="seq"></div>
+
+    <!-- console -->
+    <div class="console-col">
+      <div class="console">
+        <div class="con-bar"><span class="d"></span><b>회의 업무 지원</b><span class="req">· 대한제조그룹 킥오프 · 담당 홍길동</span></div>
+        <div class="con-head">
+          <div>
+            <div class="tt" id="ccTitle"></div>
+          </div>
+          <div class="sp"></div>
+          <span class="tst">완료</span>
+          <button class="anabtn" id="anaBtn">ⓘ 이 단계 분석</button>
+          <div class="anapop" id="anaPop"></div>
+        </div>
+        <div class="con-body" id="ccBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT : AAP 8 layers -->
+  <div class="col">
+    <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="lay-h"><span class="kicker">AAP 작동 구조</span><h3>8계층</h3></div>
+      <div class="lay-path" id="layPath"></div>
+      <div class="lays" id="lays"></div>
+      <div class="lay-leg">
+        <div class="lg"><span class="sw" style="background:var(--aap)"></span>이 단계가 거친 계층·세부요소</div>
+        <div class="lg"><span class="sw" style="background:var(--violet)"></span>kt ds 자산</div>
+        <div class="lg"><span class="sw" style="background:#eef2f6;border:1px solid var(--line)"></span>미사용</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───── 8 layers (fixed structure) ───── */
+const LAYERS=[
+  {id:'L1',name:'경험·접근',sub:'코파일럿·챗 UI · 업무 콘솔'},
+  {id:'L2',name:'설계·개발',sub:'워크플로우 설계 · Skill·Pack 구성'},
+  {id:'L3',name:'에이전트 코어',sub:'오케스트레이션(Supervisor) · 코어 실행 엔진 · HITL 게이트'},
+  {id:'L4',name:'지식·시맨틱',kt:true,sub:'온톨로지 · 도메인 지식그래프 · 근거 조합'},
+  {id:'L5',name:'데이터·연동',sub:'메일·조직도·DB·캘린더 커넥터 · 데이터 처리'},
+  {id:'L6',name:'AI 품질·평가',sub:'품질·근거 평가 · 실행 추적 · 사용자 피드백'},
+  {id:'L7',name:'컨트롤·거버넌스',kt:true,sub:'정책 관리·통제 · 운영 학습'},
+  {id:'L8',name:'인프라',sub:'스토리지·DB · 네트워크·보안'},
+];
+
+/* ───── steps (sample: ①②③ interactive, ④⑤⑥ dim) ───── */
+const STEPS=[
+  {id:'s1',no:'①',label:'자료 확인',state:'done',
+   ana:{목적:'회의 근거 자료 확보',산출물:'회의 맥락 자료 묶음(공유 가능/제한 분류 전)',확인:'외부 공유 대상은 ④ 자료 묶음에서 판단'},
+   title:'관련 자료 수집',
+   console:`
+     <div class="cc-head"><div class="t">관련 자료 수집</div><div class="meta">12건 · 정규화 완료</div></div>
+     <div class="cc-list">
+       <div class="cc-item"><span class="ck">✓</span>AAP 선제안 자료 v3.2<span class="sub">민감도 2등급</span></div>
+       <div class="cc-item"><span class="ck">✓</span>계약 초안 (검토본)<span class="sub">민감도 3등급</span></div>
+       <div class="cc-item"><span class="ck">✓</span>보안 요건서<span class="sub">민감도 3등급</span></div>
+       <div class="cc-item"><span class="ck">✓</span>직전 6/10 미팅 회의록<span class="sub">민감도 1등급</span></div>
+     </div>
+     <div class="cc-note">메일·문서함·조직도에서 관련 자료를 모아 <b>OCR·정규화·민감도 분류</b>까지 끝낸 상태입니다.</div>`,
+   layers:[
+     {L:'L5',order:1,comps:[{t:'메일·문서함·조직도 커넥터'},{t:'데이터 처리(OCR·정규화)',asset:'AI:ON-U'}]},
+     {L:'L4',order:2,comps:[{t:'도메인 지식그래프 (회의 맥락 연결)'}]},
+   ]},
+  {id:'s2',no:'②',label:'참석자 구성',state:'active',
+   ana:{목적:'킥오프 필수 역할(영업·PM·아키텍트) 참석자 구성',산출물:'내부 확정 · 외부 후보',확인:'외부 참석자 초대(정책상 담당자 확인)'},
+   title:'참석자 구성',
+   console:`
+     <div class="cc-head"><div class="t">참석자 구성</div><div class="meta">후보 4명 · AAP 구성</div></div>
+     <div class="cc-group">
+       <div class="cc-glabel">내부 참석자<span class="pill auto">자동 확정</span></div>
+       <div class="person"><span class="av">김</span><div><div class="nm">김영업</div><div class="ro">영업대표 · 사업팀</div></div><span class="st ok">✓ 확정</span></div>
+       <div class="person"><span class="av">박</span><div><div class="nm">박PM</div><div class="ro">프로젝트 매니저</div></div><span class="st ok">✓ 확정</span></div>
+       <div class="person"><span class="av">이</span><div><div class="nm">이아키</div><div class="ro">솔루션 아키텍트</div></div><span class="st ok">✓ 확정</span></div>
+     </div>
+     <div class="cc-group">
+       <div class="cc-glabel">외부 참석자<span class="pill confirm">담당자 확인</span></div>
+       <div class="person flag"><span class="av">D</span><div><div class="nm">고객 DX팀장</div><div class="ro">고객사 · 외부 도메인</div></div>
+         <span class="st warn">초대 전 확인 <button class="miniact" data-soft>확인 요청</button></span></div>
+     </div>
+     <div class="cc-note">조직도·메일 이력으로 후보를 구성했습니다. 내부는 자동 확정, <b>외부 참석자만 정책상 담당자 확인</b>으로 분기됩니다 — 사람이 모든 걸 보는 게 아니라 책임이 걸린 1건만 확인합니다.</div>`,
+   layers:[
+     {L:'L5',order:1,comps:[{t:'조직도·메일 커넥터'}]},
+     {L:'L4',order:2,comps:[{t:'도메인 지식그래프 (역할↔참석자)'}]},
+     {L:'L3',order:3,comps:[{t:'코어 실행 엔진 (참석자 추천)'}]},
+     {L:'L6',order:4,comps:[{t:'품질·근거 평가 (충족도 84%)',asset:'Antbot'}]},
+   ]},
+  {id:'s3',no:'③',label:'일정 후보',state:'done',
+   ana:{목적:'참석자 전원 가용 일정 확보',산출물:'일정 후보 3안',확인:'확정 초대는 참석자 확정 후'},
+   title:'일정 후보',
+   console:`
+     <div class="cc-head"><div class="t">일정 후보</div><div class="meta">3안 · 가용성 반영</div></div>
+     <div class="cc-list">
+       <div class="cc-item"><span class="ck">①</span>6/24 (화) 14:00<span class="sub">가용 7/7 · 회의실 A</span></div>
+       <div class="cc-item"><span class="ck">②</span>6/25 (수) 10:00<span class="sub">가용 6/7</span></div>
+       <div class="cc-item"><span class="ck">③</span>6/26 (목) 15:00<span class="sub">가용 7/7 · 회의실 C</span></div>
+     </div>
+     <div class="cc-note">참석자 캘린더 가용성과 <b>근무시간·회의실 정책</b>을 반영해 후보 3안을 계산했습니다. 확정 초대는 참석자 확정 후 진행됩니다.</div>`,
+   layers:[
+     {L:'L5',order:1,comps:[{t:'캘린더 커넥터'}]},
+     {L:'L3',order:2,comps:[{t:'코어 실행 엔진 (일정 최적화)'}]},
+     {L:'L6',order:3,comps:[{t:'시간 충돌 검증'}]},
+   ]},
+  {id:'s4',no:'④',label:'자료 묶음',state:'dim'},
+  {id:'s5',no:'⑤',label:'안건 초안',state:'dim'},
+  {id:'s6',no:'⑥',label:'시스템 반영',state:'dim'},
+];
+
+let CUR='s2';
+
+/* ───── render compact sequence ───── */
+function renderSeq(){
+  const el=document.getElementById('seq');
+  let h=`<span class="lbl">업무 순서</span>`;
+  STEPS.forEach((s,i)=>{
+    if(i>0) h+=`<span class="ssep">›</span>`;
+    let cls='snode';
+    if(s.id===CUR) cls+=' active';
+    else if(s.state==='dim') cls+=' dim';
+    else cls+=' done';
+    const interactive=s.state!=='dim';
+    h+=`<div class="${cls}" ${interactive?`data-step="${s.id}"`:''}><span class="sn">${s.no}</span>${s.label}</div>`;
+  });
+  el.innerHTML=h;
+  el.querySelectorAll('[data-step]').forEach(n=>n.onclick=()=>select(n.dataset.step));
+}
+
+/* ───── render console ───── */
+function renderConsole(){
+  const s=STEPS.find(x=>x.id===CUR);
+  document.getElementById('ccTitle').textContent='작업 · '+s.title;
+  document.getElementById('ccBody').innerHTML=s.console;
+  // analysis popover content
+  const ana=s.ana;
+  document.getElementById('anaPop').innerHTML=
+    `<div class="ah">이 단계 분석 (업무 이해)<span class="x" id="anaX">×</span></div>`+
+    Object.entries(ana).map(([k,v])=>`<div class="ana-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  document.getElementById('anaPop').classList.remove('show');
+  const x=document.getElementById('anaX'); if(x) x.onclick=(e)=>{e.stopPropagation();document.getElementById('anaPop').classList.remove('show');};
+  bindSoft();
+}
+
+/* ───── render 8 layers ───── */
+function renderLayers(){
+  const s=STEPS.find(x=>x.id===CUR);
+  const map={}; s.layers.forEach(l=>map[l.L]=l);
+  // path caption
+  const ordered=[...s.layers].sort((a,b)=>a.order-b.order).map(l=>l.L);
+  document.getElementById('layPath').innerHTML=`이 단계가 거친 경로 · <b>${ordered.join(' → ')}</b> &nbsp;<span style="color:var(--faint)">(데이터→의미→실행→평가)</span>`;
+  const el=document.getElementById('lays');
+  el.innerHTML=LAYERS.map(L=>{
+    const act=map[L.id];
+    const lit=!!act;
+    let right;
+    if(lit){
+      right=`<div class="comps">${act.comps.map(c=>`<span class="comp ${c.asset?'asset':''}">${c.t}${c.asset?`<span class="ab">${c.asset}</span>`:''}</span>`).join('')}</div>`;
+    }else{
+      right=`<div class="lsub">${L.sub}</div>`;
+    }
+    return `<div class="lay ${lit?'lit':''}">
+      <div class="lid"><span class="lcode">${L.id}</span>${lit?`<span class="ord">${act.order}</span>`:''}</div>
+      <div class="lbody">
+        <div class="lname">${L.name}${L.kt?`<span class="kt">kt ds ★</span>`:''}</div>
+        ${right}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ───── select step ───── */
+function select(id){
+  const s=STEPS.find(x=>x.id===id); if(!s||s.state==='dim') return;
+  CUR=id;
+  renderSeq(); renderConsole(); renderLayers();
+}
+
+/* ───── soft clicks + popover ───── */
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),2200);}
+function bindSoft(){document.querySelectorAll('[data-soft]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();toast('이 샘플은 [구성] 뷰의 ②참석자 구성 단계만 — 실행·관리·액션은 v0.1 전체본에서 제공됩니다.');});}
+document.getElementById('anaBtn').onclick=(e)=>{e.stopPropagation();document.getElementById('anaPop').classList.toggle('show');};
+document.addEventListener('click',(e)=>{if(!e.target.closest('#anaPop')&&!e.target.closest('#anaBtn'))document.getElementById('anaPop').classList.remove('show');});
+
+/* init */
+renderSeq(); renderConsole(); renderLayers(); bindSoft();
+</script>
+</body>
+</html>

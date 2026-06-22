@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAP Platform · Workload Runtime Builder — 회의 시나리오 (구성 뷰 샘플)</title>
+<style>
+:root{
+  --aap:#0d9488; --aap-d:#0f766e; --aap-bg:#ecfdf5;
+  --ink:#0f172a; --sub:#64748b; --faint:#94a3b8; --line:#e2e8f0; --line2:#eef2f6;
+  --bg:#f1f5f9; --card:#ffffff;
+  --A:#0d9488; --M:#4f46e5; --C:#0284c7; --P:#d97706; --E:#475569;
+  --auto:#0d9488; --confirm:#d97706; --block:#dc2626; --violet:#7c3aed;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;
+  background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+/* ───── top bar ───── */
+.topbar{
+  height:58px; flex:0 0 58px; display:flex; align-items:center; gap:18px;
+  padding:0 22px; background:#fff; border-bottom:1px solid var(--line);
+  box-shadow:0 1px 2px rgba(15,23,42,.03);
+}
+.brand{display:flex; align-items:baseline; gap:9px}
+.brand .logo{
+  width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--aap),#14b8a6);
+  display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;
+  transform:translateY(4px)
+}
+.brand b{font-size:16px;letter-spacing:-.3px}
+.brand span{font-size:12px;color:var(--sub)}
+.scenario{
+  display:flex;align-items:center;gap:8px;margin-left:6px;padding:6px 12px;
+  background:var(--aap-bg);border:1px solid #ccfbf1;border-radius:999px;
+  font-size:12.5px;color:var(--aap-d);font-weight:600;
+}
+.scenario .dot{width:7px;height:7px;border-radius:50%;background:var(--aap)}
+.pack{
+  font-size:11.5px;color:var(--sub);border:1px solid var(--line);border-radius:999px;
+  padding:5px 10px;display:flex;align-items:center;gap:5px;background:#fff
+}
+.pack b{color:var(--ink);font-weight:700}
+.spacer{flex:1}
+.toggle{display:flex;background:#f1f5f9;border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.toggle button{
+  border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--sub);
+  padding:6px 14px;border-radius:7px;cursor:pointer
+}
+.toggle button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+.toggle button.off{color:var(--faint);cursor:not-allowed}
+.runbtn{
+  border:0;background:var(--ink);color:#fff;font-family:inherit;font-weight:700;font-size:12.5px;
+  padding:9px 16px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:7px
+}
+.runbtn:hover{background:#000}
+/* ───── main ───── */
+.main{flex:1;display:grid;grid-template-columns:1fr 372px;gap:14px;padding:14px 18px;min-height:0}
+.col{min-height:0;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.card-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line2)}
+.card-h .kicker{font-size:10.5px;font-weight:800;letter-spacing:.6px;color:var(--aap);text-transform:uppercase}
+.card-h h3{font-size:14px;font-weight:700}
+.card-h .desc{font-size:11.5px;color:var(--sub);margin-left:auto}
+.stagebadge{font-size:10px;font-weight:800;color:#fff;background:var(--aap);border-radius:6px;padding:2px 7px;letter-spacing:.3px}
+
+/* ── workload analysis ── */
+.analysis{padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:9px 22px}
+.arow{display:flex;gap:10px;font-size:12.5px;line-height:1.45}
+.arow .k{flex:0 0 64px;color:var(--faint);font-weight:600}
+.arow.full{grid-column:1 / -1}
+.arow .v{color:var(--ink)}
+.arow .v .req{color:var(--aap-d);font-weight:600}
+.outs{display:flex;flex-wrap:wrap;gap:5px}
+.outs span{font-size:11.5px;background:#f8fafc;border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:#334155}
+
+/* ── execution plan ── */
+.planwrap{padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.pipe{display:flex;align-items:stretch;gap:0;overflow:hidden}
+.pnode{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;border-radius:10px;
+  cursor:pointer;position:relative;border:1.5px solid transparent;
+}
+.pnode .num{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;background:#eef2f6;color:var(--sub);border:1.5px solid var(--line)
+}
+.pnode .pl{font-size:11.5px;font-weight:600;color:var(--sub);text-align:center;line-height:1.2}
+.pnode.done .num{background:var(--aap);color:#fff;border-color:var(--aap)}
+.pnode.done .pl{color:var(--ink)}
+.pnode.active{border-color:var(--aap);background:var(--aap-bg)}
+.pnode.active .num{background:var(--aap);color:#fff;border-color:var(--aap);box-shadow:0 0 0 4px #ccfbf1}
+.pnode.active .pl{color:var(--aap-d);font-weight:700}
+.pnode.dim{opacity:.45;cursor:default}
+.pnode.dim .pl{color:var(--faint)}
+.psep{flex:0 0 22px;display:flex;align-items:flex-start;justify-content:center;padding-top:14px;color:var(--faint);font-size:14px}
+
+/* ── selected step detail ── */
+.detail{display:grid;grid-template-columns:1fr 318px;gap:14px;min-height:0;flex:1}
+.panel{border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;flex-direction:column;min-height:0}
+.panel-h{display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid var(--line2)}
+.panel-h .ico{width:18px;height:18px;border-radius:5px;background:var(--aap-bg);color:var(--aap-d);
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.panel-h .ttl{font-size:12px;font-weight:700}
+.panel-h .tag{margin-left:auto;font-size:10px;font-weight:700;color:var(--sub)}
+.panel-b{padding:13px;overflow:auto}
+
+/* customer console mock */
+.cc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.cc-head .t{font-size:13.5px;font-weight:700}
+.cc-head .meta{font-size:11px;color:var(--faint)}
+.cc-group{margin-bottom:12px}
+.cc-glabel{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:7px}
+.cc-glabel .pill{font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:999px}
+.pill.auto{background:#ecfdf5;color:var(--auto);border:1px solid #a7f3d0}
+.pill.confirm{background:#fffbeb;color:var(--confirm);border:1px solid #fde68a}
+.pill.block{background:#fef2f2;color:var(--block);border:1px solid #fecaca}
+.person{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:#fff}
+.person .av{width:28px;height:28px;border-radius:50%;background:#e2e8f0;color:#475569;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.person .nm{font-size:12.5px;font-weight:600}
+.person .ro{font-size:11px;color:var(--faint)}
+.person .st{margin-left:auto;font-size:11px;font-weight:700}
+.person .st.ok{color:var(--auto)}
+.person.flag{border-color:#fde68a;background:#fffdf6}
+.person.flag .av{background:#fef3c7;color:#b45309}
+.person .st.warn{color:var(--confirm);display:flex;align-items:center;gap:8px}
+.miniact{font-family:inherit;border:1px solid var(--confirm);color:var(--confirm);background:#fff;
+  font-size:10.5px;font-weight:700;border-radius:7px;padding:4px 9px;cursor:pointer}
+.miniact:hover{background:#fffbeb}
+.cc-note{font-size:11px;color:var(--sub);line-height:1.5;background:#f8fafc;border:1px solid var(--line2);border-radius:8px;padding:9px 11px;margin-top:4px}
+.cc-note b{color:var(--aap-d)}
+.cc-list{display:flex;flex-direction:column;gap:6px}
+.cc-item{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px}
+.cc-item .ck{color:var(--auto);font-weight:800}
+.cc-item .sub{margin-left:auto;font-size:11px;color:var(--faint)}
+
+/* composition (right of detail) */
+.comp-route{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.croute{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px}
+.comp-line{display:flex;gap:9px;margin-bottom:9px;align-items:flex-start}
+.tchip{flex:0 0 20px;height:20px;border-radius:6px;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.tchip.A{background:var(--A)} .tchip.M{background:var(--M)} .tchip.C{background:var(--C)}
+.tchip.P{background:var(--P)} .tchip.E{background:var(--E)}
+.comp-line .cc{font-size:12.5px;line-height:1.5}
+.comp-line .cc .tn{font-weight:700}
+.comp-line .cc .nm{color:var(--ink)}
+.comp-line .cc .none{color:var(--faint)}
+.comp-line .cc .as{color:var(--violet);font-weight:700}
+.comp-foot{margin-top:auto;padding-top:11px;border-top:1px dashed var(--line);font-size:11px;color:var(--sub);line-height:1.5}
+.comp-foot .sup{color:var(--A);font-weight:700}
+
+/* ── palette ── */
+.pal{padding:6px 6px 10px;overflow:auto;min-height:0}
+.pal-intro{font-size:11px;color:var(--sub);padding:8px 10px 10px;line-height:1.5}
+.pgroup{margin:0 4px 4px}
+.pg-h{display:flex;align-items:center;gap:8px;padding:7px 8px}
+.pg-h .gc{width:18px;height:18px;border-radius:5px;color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.pg-h .gc.A{background:var(--A)} .pg-h .gc.M{background:var(--M)} .pg-h .gc.C{background:var(--C)}
+.pg-h .gc.P{background:var(--P)} .pg-h .gc.E{background:var(--E)}
+.pg-h .gn{font-size:12px;font-weight:700}
+.pg-h .gu{margin-left:auto;font-size:10.5px;color:var(--faint);font-weight:600}
+.pitems{display:flex;flex-direction:column;gap:3px;padding:0 4px 6px}
+.pitem{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:8px;font-size:12px;color:var(--faint);border:1px solid transparent;transition:.18s}
+.pitem .pd{width:7px;height:7px;border-radius:50%;background:#cbd5e1;flex:0 0 7px}
+.pitem .as-tag{margin-left:auto;font-size:9px;font-weight:800;color:var(--violet);background:#f5f3ff;border:1px solid #ddd6fe;border-radius:999px;padding:1px 6px}
+.pitem.lit{color:var(--ink);font-weight:600;background:var(--aap-bg);border-color:#ccfbf1}
+.pitem.lit .pd{background:var(--aap);box-shadow:0 0 0 3px #ccfbf1}
+.pitem.lit.asset{background:#f5f3ff;border-color:#ddd6fe}
+.pitem.lit.asset .pd{background:var(--violet);box-shadow:0 0 0 3px #ede9fe}
+.pdiv{height:1px;background:var(--line2);margin:5px 8px}
+
+/* legend / footer line */
+.legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--sub);padding:2px 2px 0}
+.legend .lg{display:flex;align-items:center;gap:5px}
+.legend .lc{width:16px;height:16px;border-radius:5px;color:#fff;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.legend .sep{width:1px;height:13px;background:var(--line)}
+.legend .rt{display:flex;align-items:center;gap:5px}
+.legend .rdot{width:8px;height:8px;border-radius:50%}
+
+/* govern hint */
+.govhint{display:flex;align-items:center;gap:16px;font-size:11.5px;color:var(--faint);padding:9px 16px;border-top:1px solid var(--line);background:#fff}
+.govhint b{color:var(--sub);font-weight:600}
+.govhint .gx{display:flex;align-items:center;gap:6px}
+
+/* toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;font-size:12.5px;font-weight:600;padding:11px 18px;border-radius:10px;
+  opacity:0;transition:.25s;pointer-events:none;z-index:50;box-shadow:0 8px 24px rgba(15,23,42,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.samplebadge{position:fixed;top:64px;right:18px;background:#fff;border:1px solid var(--line);
+  font-size:10.5px;color:var(--sub);padding:4px 10px;border-radius:999px;z-index:20;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.samplebadge b{color:var(--aap-d)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span>Workload Runtime Builder</span></div>
+  <div class="scenario"><span class="dot"></span>AAP 고객사 킥오프 회의 준비</div>
+  <div class="pack">Domain Pack <b>회의</b> ▾</div>
+  <div class="spacer" style="flex:1"></div>
+  <div class="toggle">
+    <button class="on">구성</button>
+    <button class="off" data-soft>실행</button>
+    <button class="off" data-soft>관리</button>
+  </div>
+  <button class="runbtn" data-soft>▶ Run</button>
+</div>
+
+<div class="samplebadge">SAMPLE · <b>구성 뷰</b> — ②참석자 구성 단계</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT -->
+  <div class="col">
+
+    <!-- Workload Analysis -->
+    <div class="card">
+      <div class="card-h">
+        <span class="kicker">Workload Analysis</span>
+        <h3>업무 이해</h3>
+        <span class="desc">AAP가 요청을 먼저 해석 — 무엇을 / 무엇을 만들어야 하나</span>
+      </div>
+      <div class="analysis">
+        <div class="arow full"><span class="k">요청</span><span class="v"><span class="req">"다음 주 AAP 고객사 킥오프 회의 잡아줘. 참석자랑 일정, 자료까지 준비해줘."</span></span></div>
+        <div class="arow"><span class="k">유형</span><span class="v">킥오프 회의 준비</span></div>
+        <div class="arow"><span class="k">목적</span><span class="v">착수 범위·역할·일정·보안 조건 정리</span></div>
+        <div class="arow full"><span class="k">필요 산출물</span>
+          <span class="v outs">
+            <span>참석자</span><span>일정</span><span>자료 묶음</span><span>안건</span><span>회의록</span><span>후속 할 일</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Execution Plan -->
+    <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card-h">
+        <span class="kicker">Execution Plan</span>
+        <h3>실행 구조 구성</h3>
+        <span class="desc">작업 분해 → 각 단계 = 구성요소 조합 + 통제 라우팅</span>
+      </div>
+      <div class="planwrap">
+        <div class="pipe" id="pipe"></div>
+
+        <div class="detail">
+          <!-- customer console -->
+          <div class="panel">
+            <div class="panel-h">
+              <span class="ico">▤</span><span class="ttl">고객 콘솔 화면</span>
+              <span class="tag" id="ccTag">담당자가 보는 화면</span>
+            </div>
+            <div class="panel-b" id="ccBody"></div>
+          </div>
+          <!-- composition -->
+          <div class="panel">
+            <div class="panel-h">
+              <span class="ico" style="background:#eef2ff;color:#4f46e5">⛭</span>
+              <span class="ttl">구성요소 조합</span>
+              <span class="tag">AAP가 조합한 실행 재료</span>
+            </div>
+            <div class="panel-b" id="compBody"></div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="lg"><span class="lc" style="background:var(--A)">A</span>Agent</div>
+          <div class="lg"><span class="lc" style="background:var(--M)">M</span>Module</div>
+          <div class="lg"><span class="lc" style="background:var(--C)">C</span>Connector</div>
+          <div class="lg"><span class="lc" style="background:var(--P)">P</span>Policy</div>
+          <div class="lg"><span class="lc" style="background:var(--E)">E</span>Existing</div>
+          <div class="sep"></div>
+          <div class="rt"><span class="rdot" style="background:var(--auto)"></span>자동</div>
+          <div class="rt"><span class="rdot" style="background:var(--confirm)"></span>담당자 확인</div>
+          <div class="rt"><span class="rdot" style="background:var(--block)"></span>차단</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT : Component Palette -->
+  <div class="col">
+    <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card-h">
+        <span class="kicker">Component Palette</span>
+        <h3>구성요소</h3>
+      </div>
+      <div class="pal-intro">AAP가 보유한 실행 재료입니다. 선택한 단계에 <b style="color:var(--aap-d)">실제 쓰이는 요소만 점등</b>됩니다 — 모든 걸 Agent로 만들지 않습니다.</div>
+      <div class="pal" id="pal"></div>
+      <div class="govhint">
+        <b>관리 뷰에서 펼침 ▸</b>
+        <span class="gx">Run Trace</span>
+        <span class="gx">Governance</span>
+        <span class="gx">Skill Library</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────── Palette definition ───────── */
+const PALETTE = [
+  {type:'A', name:'Agent', items:[
+    {id:'ag_sup', name:'Supervisor'},
+    {id:'ag_part', name:'Participant Agent'},
+    {id:'ag_know', name:'Knowledge Agent'},
+    {id:'ag_agenda', name:'Agenda Agent'},
+    {id:'ag_min', name:'Minutes Agent'},
+  ]},
+  {type:'M', name:'Module', items:[
+    {id:'md_avail', name:'일정 가용성 계산'},
+    {id:'md_norm', name:'문서 정규화'},
+    {id:'md_sens', name:'민감도 분류'},
+    {id:'md_struct', name:'회의록 구조화'},
+  ]},
+  {type:'C', name:'Connector', items:[
+    {id:'cn_mail', name:'Mail'},
+    {id:'cn_cal', name:'Calendar'},
+    {id:'cn_docs', name:'Docs'},
+    {id:'cn_org', name:'Org Chart'},
+    {id:'cn_wf', name:'Workflow'},
+  ]},
+  {type:'P', name:'Policy', items:[
+    {id:'pol_ext', name:'외부 참석자 확인'},
+    {id:'pol_conf', name:'담당자 확인'},
+    {id:'pol_acc', name:'접근 권한'},
+    {id:'pol_share', name:'외부 공유'},
+    {id:'pol_work', name:'근무시간·회의실'},
+    {id:'pol_exec', name:'실행 승인'},
+  ]},
+  {type:'E', name:'Existing Solution', items:[
+    {id:'ex_gw', name:'그룹웨어'},
+    {id:'ex_kms', name:'KMS', asset:false},
+    {id:'ex_rpa', name:'RPA'},
+    {id:'ex_rag', name:'검색 / RAG'},
+    {id:'ex_dms', name:'문서관리시스템'},
+  ]},
+];
+
+/* ───────── Steps (sample: ①②③ interactive, ④⑤⑥ dim) ───────── */
+const STEPS = [
+  {
+    id:'s1', no:'①', label:'자료 확인', state:'done',
+    routes:[{k:'auto',t:'자동'}],
+    lit:['ag_know','md_norm','md_sens','cn_mail','cn_docs','pol_acc'],
+    console:`
+      <div class="cc-head"><div class="t">관련 자료 수집</div><div class="meta">12건 · 정규화 완료</div></div>
+      <div class="cc-list">
+        <div class="cc-item"><span class="ck">✓</span>제안서 v3.2<span class="sub">민감도 2등급</span></div>
+        <div class="cc-item"><span class="ck">✓</span>계약 초안 (검토본)<span class="sub">민감도 3등급</span></div>
+        <div class="cc-item"><span class="ck">✓</span>보안 요건서<span class="sub">민감도 3등급</span></div>
+        <div class="cc-item"><span class="ck">✓</span>직전 미팅 회의록<span class="sub">민감도 1등급</span></div>
+      </div>
+      <div class="cc-note">메일·문서함에서 관련 자료를 모아 <b>정규화·민감도 분류</b>까지 끝낸 상태입니다. 외부 공유 판단은 ④단계로 넘어갑니다.</div>`,
+    comp:[
+      {t:'A', label:'Agent', val:'Knowledge Agent'},
+      {t:'M', label:'Module', val:'문서 정규화 · 민감도 분류'},
+      {t:'C', label:'Connector', val:'Mail · Docs'},
+      {t:'P', label:'Policy', val:'접근 권한'},
+      {t:'E', label:'Existing', val:null},
+    ],
+    foot:`<span class="sup">Supervisor</span>가 Knowledge Agent에 자료 수집을 배정 → 정규화·분류는 Module가 처리. Agent는 1개면 충분합니다.`
+  },
+  {
+    id:'s2', no:'②', label:'참석자 구성', state:'active',
+    routes:[{k:'auto',t:'자동 · 내부 확정'},{k:'confirm',t:'확인 · 외부 초대'}],
+    lit:['ag_sup','ag_part','cn_org','cn_mail','pol_ext','pol_conf'],
+    console:`
+      <div class="cc-head"><div class="t">참석자 구성</div><div class="meta">후보 4명</div></div>
+      <div class="cc-group">
+        <div class="cc-glabel">내부 참석자<span class="pill auto">자동 확정</span></div>
+        <div class="person"><span class="av">김</span><div><div class="nm">김영업</div><div class="ro">영업대표 · 사업팀</div></div><span class="st ok">✓ 확정</span></div>
+        <div class="person"><span class="av">박</span><div><div class="nm">박PM</div><div class="ro">프로젝트 매니저</div></div><span class="st ok">✓ 확정</span></div>
+        <div class="person"><span class="av">이</span><div><div class="nm">이아키</div><div class="ro">솔루션 아키텍트</div></div><span class="st ok">✓ 확정</span></div>
+      </div>
+      <div class="cc-group">
+        <div class="cc-glabel">외부 참석자<span class="pill confirm">담당자 확인</span></div>
+        <div class="person flag"><span class="av">D</span><div><div class="nm">고객 DX팀장</div><div class="ro">고객사 · 외부 도메인</div></div>
+          <span class="st warn">초대 전 확인 <button class="miniact" data-soft>확인 요청</button></span></div>
+      </div>
+      <div class="cc-note">조직도·메일 이력으로 후보를 구성했습니다. 내부는 자동 확정, <b>외부 참석자는 정책상 담당자 확인</b>으로 라우팅됩니다 — 사람이 모든 걸 보는 게 아니라 책임이 걸린 1건만 확인합니다.</div>`,
+    comp:[
+      {t:'A', label:'Agent', val:'Participant Agent'},
+      {t:'C', label:'Connector', val:'Org Chart · Mail'},
+      {t:'P', label:'Policy', val:'외부 참석자 확인 · 담당자 확인'},
+      {t:'M', label:'Module', val:null},
+      {t:'E', label:'Existing', val:null},
+    ],
+    foot:`<span class="sup">Supervisor</span>가 Participant Agent에 참석자 구성을 위임 → Agent는 Org Chart·Mail Connector로 후보를 만들고, Policy가 외부 참석자를 <b>확인 라우팅</b>으로 분기합니다.`
+  },
+  {
+    id:'s3', no:'③', label:'일정 후보', state:'todo3',
+    routes:[{k:'auto',t:'자동'}],
+    lit:['ag_sup','md_avail','cn_cal','pol_work'],
+    console:`
+      <div class="cc-head"><div class="t">일정 후보</div><div class="meta">3안 · 가용성 반영</div></div>
+      <div class="cc-list">
+        <div class="cc-item"><span class="ck">①</span>6/24 (화) 14:00<span class="sub">가용 7/7 · 회의실 A</span></div>
+        <div class="cc-item"><span class="ck">②</span>6/25 (수) 10:00<span class="sub">가용 6/7</span></div>
+        <div class="cc-item"><span class="ck">③</span>6/26 (목) 15:00<span class="sub">가용 7/7 · 회의실 C</span></div>
+      </div>
+      <div class="cc-note">참석자 캘린더 가용성과 <b>근무시간·회의실 정책</b>을 반영해 후보 3안을 계산했습니다. 확정 초대는 참석자 확정 후 진행됩니다.</div>`,
+    comp:[
+      {t:'M', label:'Module', val:'일정 가용성 계산'},
+      {t:'C', label:'Connector', val:'Calendar'},
+      {t:'P', label:'Policy', val:'근무시간·회의실'},
+      {t:'A', label:'Agent', val:'Supervisor (조율)'},
+      {t:'E', label:'Existing', val:null},
+    ],
+    foot:`이 단계는 <b>Agent 없이 Module + Connector</b>로 충분합니다. 가용성 계산은 결정론적 Module이 처리 — 불필요하게 Agent를 띄우지 않습니다.`
+  },
+  {id:'s4', no:'④', label:'자료 묶음', state:'dim'},
+  {id:'s5', no:'⑤', label:'안건 초안', state:'dim'},
+  {id:'s6', no:'⑥', label:'시스템 반영', state:'dim'},
+];
+
+/* ───────── render palette ───────── */
+function renderPalette(litSet){
+  const el = document.getElementById('pal');
+  el.innerHTML = PALETTE.map(g=>{
+    const used = g.items.filter(it=>litSet.has(it.id)).length;
+    const items = g.items.map(it=>{
+      const lit = litSet.has(it.id);
+      const asset = it.asset;
+      return `<div class="pitem ${lit?'lit':''} ${asset?'asset':''}">
+        <span class="pd"></span>${it.name}
+        ${asset?'<span class="as-tag">kt ds</span>':''}
+      </div>`;
+    }).join('');
+    return `<div class="pgroup">
+      <div class="pg-h"><span class="gc ${g.type}">${g.type}</span><span class="gn">${g.name}</span><span class="gu">${used}/${g.items.length} 사용</span></div>
+      <div class="pitems">${items}</div>
+    </div><div class="pdiv"></div>`;
+  }).join('');
+}
+
+/* ───────── render pipeline ───────── */
+function renderPipe(activeId){
+  const el = document.getElementById('pipe');
+  let html='';
+  STEPS.forEach((s,i)=>{
+    if(i>0) html+=`<div class="psep">▸</div>`;
+    const interactive = s.state!=='dim';
+    let cls='pnode';
+    if(s.id===activeId) cls+=' active';
+    else if(s.state==='dim') cls+=' dim';
+    else if(s.state==='done' || s.id==='s1') cls+=' done';
+    html+=`<div class="${cls}" ${interactive?`data-step="${s.id}"`:''}>
+      <span class="num">${s.state==='dim'?s.no:(s.id===activeId?s.no:'✓')}</span>
+      <span class="pl">${s.label}</span>
+    </div>`;
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('[data-step]').forEach(n=>{
+    n.onclick=()=>selectStep(n.dataset.step);
+  });
+}
+
+/* ───────── select a step ───────── */
+function selectStep(id){
+  const s = STEPS.find(x=>x.id===id);
+  if(!s || s.state==='dim') return;
+  renderPipe(id);
+  // customer console
+  document.getElementById('ccBody').innerHTML = s.console;
+  bindSoft();
+  // composition
+  const routes = s.routes.map(r=>{
+    const map={auto:['auto','#ecfdf5','#a7f3d0','var(--auto)'],confirm:['confirm','#fffbeb','#fde68a','var(--confirm)'],block:['block','#fef2f2','#fecaca','var(--block)']};
+    const m=map[r.k];
+    return `<span class="croute" style="background:${m[1]};border:1px solid ${m[2]};color:${m[3]}">
+      <span class="rdot" style="width:7px;height:7px;border-radius:50%;background:${m[3]}"></span>${r.t}</span>`;
+  }).join('');
+  const lines = s.comp.map(c=>{
+    const v = c.val ? `<span class="nm">${c.val}</span>` : `<span class="none">— 이 단계에선 미사용</span>`;
+    return `<div class="comp-line"><span class="tchip ${c.t}">${c.t}</span>
+      <div class="cc"><span class="tn">${c.label}</span> &nbsp;${v}</div></div>`;
+  }).join('');
+  document.getElementById('compBody').innerHTML =
+    `<div class="comp-route">${routes}</div>${lines}<div class="comp-foot">${s.foot}</div>`;
+  // palette
+  renderPalette(new Set(s.lit));
+}
+
+/* ───────── soft (not-in-sample) clicks ───────── */
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function bindSoft(){
+  document.querySelectorAll('[data-soft]').forEach(b=>{
+    b.onclick=()=>toast('이 샘플은 [구성] 뷰의 ②참석자 구성 단계만 — 실행·관리·액션은 v0.1에서 제공됩니다.');
+  });
+}
+
+/* init */
+renderPipe('s2');
+selectStep('s2');
+bindSoft();
+</script>
+</body>
+</html>

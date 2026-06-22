@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP 회의 업무 작동 원리 (v0.13)</title>
+<style>
+  :root{
+    --bg:#f8fafc; --surf:#f9fafb; --surface:#ffffff; --ink:#0f172a; --slate:#334155; --muted:#64748b; --border:#e2e8f0; --line:#eef2f7;
+    --aap:#0d9488; --aap-ink:#0f766e; --aap-soft:#f0fdfa; --aap-border:#99f6e4;
+    --violet:#7c3aed; --violet-soft:#f5f3ff; --violet-border:#ddd6fe;
+    --amber:#d97706; --amber-soft:#fffbeb; --amber-ink:#92400e; --amber-border:#fde68a;
+    --green:#16a34a; --green-soft:#f0fdf4; --red:#dc2626; --red-soft:#fef2f2;
+    --shadow:0 8px 24px rgba(15,23,42,.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:13px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .app{display:grid;grid-template-rows:auto 1fr auto;height:100vh;overflow:hidden;}
+  .internal{display:none;} body.dev-on .internal{display:block;}
+
+  .top{background:#fff;border-bottom:1px solid var(--border);padding:9px 16px;display:flex;align-items:center;gap:16px;}
+  .top .req{flex:1;min-width:0;}
+  .top .rl{font-size:9.5px;color:#9ca3af;font-weight:800;}
+  .top .rt{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .top .und{display:flex;gap:14px;flex:0 0 auto;}
+  .top .und .ul{font-size:9.5px;color:#9ca3af;font-weight:800;}
+  .top .und .uv{font-size:12px;font-weight:700;} .top .und .uv.warn{color:var(--amber);}
+  .top .tg{font-size:11.5px;color:#475569;display:flex;align-items:center;gap:5px;cursor:pointer;}
+
+  .main{display:grid;grid-template-columns:38% 62%;gap:12px;padding:12px;overflow:hidden;}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:auto;}
+  .panel.left{padding:13px 14px;}
+  .panel.right{padding:11px 12px;}
+  .ph{font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:7px;}
+  .help{width:16px;height:16px;border-radius:50%;border:1px solid var(--border);color:var(--muted);font-size:10px;display:inline-flex;align-items:center;justify-content:center;cursor:help;}
+
+  /* ===== LEFT ===== */
+  .dd-rail{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0 9px;}
+  .ddx{width:21px;height:21px;border-radius:6px;background:#eef2f7;color:#94a3b8;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;}
+  .ddx.done{background:var(--aap-soft);color:var(--aap);} .ddx.sel{background:var(--aap);color:#fff;box-shadow:0 0 0 3px var(--aap-soft);}
+  .dd-cur{display:flex;align-items:center;gap:9px;}
+  .dd-no{width:30px;height:30px;border-radius:8px;background:var(--aap);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .dd-lb{font-size:15px;font-weight:800;}
+  .dd-st{margin-left:auto;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;background:var(--aap-soft);color:var(--aap);}
+  .dd-st.warn{background:var(--amber-soft);color:var(--amber);} .dd-st.done{background:var(--green-soft);color:var(--green);}
+  .dd-desc{font-size:12px;color:var(--muted);margin:6px 0 12px;}
+
+  .cons-h{font-size:9.5px;color:#9ca3af;font-weight:800;letter-spacing:.03em;margin-bottom:5px;}
+  .console{border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden;margin-bottom:12px;}
+  .con-bar{background:var(--ink);color:#e2e8f0;font-size:10.5px;padding:6px 11px;display:flex;align-items:center;gap:8px;}
+  .con-bar .dot{width:7px;height:7px;border-radius:50%;background:#475569;} .con-bar b{color:#fff;font-weight:700;}
+  .con-body{padding:11px 13px;}
+  .chat-u{background:var(--aap);color:#fff;border-radius:11px 11px 4px 11px;padding:8px 11px;font-size:12px;display:inline-block;max-width:90%;}
+  .crow{border:1px solid var(--border);border-radius:9px;padding:7px 10px;margin-bottom:6px;font-size:12px;background:#fff;}
+  .crow.warn{border-color:var(--amber-border);background:var(--amber-soft);color:var(--amber-ink);}
+  .crow.ok{border-color:#bbf7d0;background:var(--green-soft);}
+  .opt{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;margin-bottom:5px;font-size:12px;}
+  .opt .ck{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--aap);background:var(--aap);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .opt .ck.off{background:#fff;color:transparent;border-color:#cbd5e1;}
+  .opt small{color:var(--muted);margin-left:auto;}
+  .cbtn{font-size:11.5px;padding:6px 12px;border-radius:8px;background:var(--aap);color:#fff;border:none;cursor:pointer;font-weight:700;}
+  .cbtn.ghost{background:#fff;color:var(--slate);border:1px solid var(--border);}
+  .ctag{display:inline-block;font-size:10px;border:1px solid var(--border);border-radius:6px;padding:2px 7px;margin:0 3px 3px 0;color:#475569;background:var(--surf);}
+
+  /* click-to-reveal detail tabs */
+  .dtabs{display:flex;gap:5px;flex-wrap:wrap;}
+  .dtab{font-size:11px;font-weight:700;padding:6px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#475569;cursor:pointer;}
+  .dtab.on{border-color:var(--aap);background:var(--aap-soft);color:var(--aap-ink);}
+  .dtab-body{margin-top:8px;min-height:20px;}
+  .dtb{font-size:12px;color:var(--slate);border:1px solid var(--border);border-radius:10px;background:var(--surf);padding:9px 11px;}
+  .dtb.need{border-color:var(--amber-border);background:var(--amber-soft);color:var(--amber-ink);}
+  .dtb .di{display:none;color:#64748b;font-family:Consolas,monospace;font-size:11px;margin-top:6px;border-top:1px dashed var(--border);padding-top:6px;}
+  body.dev-on .dtb .di{display:block;}
+
+  /* ===== RIGHT : architecture map (v0.56 탭2 이식) ===== */
+  .arch-loop{display:flex;align-items:center;gap:4px;flex-wrap:wrap;border:1px solid var(--border);border-radius:10px;background:var(--surf);padding:6px 9px;margin-bottom:7px;}
+  .alh{display:flex;flex-direction:column;line-height:1.1;margin-right:5px;} .alh{font-size:9.5px;font-weight:800;color:var(--slate);} .alh small{font-size:7.5px;color:var(--muted);font-weight:700;}
+  .als{display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:7px;padding:3px 9px;background:#fff;opacity:.45;transition:.2s;}
+  .als b{font-size:10px;font-weight:800;color:var(--slate);} .als span{font-size:7.5px;color:var(--muted);font-weight:700;}
+  .als.on{opacity:1;border-color:var(--aap);background:var(--aap-soft);} .als.on b{color:var(--aap-ink);}
+  .ala{font-size:9px;color:#cbd5e1;font-weight:900;}
+  .arch-band{border:1px solid var(--border);border-radius:10px;background:var(--surf);padding:6px 10px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .arch-band.cust{margin-bottom:6px;} .arch-band.trust{margin-top:6px;background:#1e293b;border-color:#1e293b;}
+  .abh{display:flex;flex-direction:column;line-height:1.15;min-width:98px;} .abh b{font-size:9px;font-weight:800;color:var(--slate);} .abh span{font-size:7.5px;color:var(--muted);font-weight:700;}
+  .arch-band.trust .abh b{color:#fff;} .arch-band.trust .abh span{color:#94a3b8;}
+  .arch-banditems{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;}
+  .arch-bandcell{font-size:9px;font-weight:700;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:7px;padding:4px 9px;line-height:1.25;opacity:.5;transition:.2s;}
+  .arch-bandcell span{display:block;font-size:7.5px;font-weight:600;color:var(--muted);margin-top:1px;}
+  .arch-bandcell.on{opacity:1;border-color:var(--aap);background:var(--aap-soft);box-shadow:0 0 0 2px rgba(13,148,136,.18);}
+  .arch-band.trust .arch-bandcell{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.18);color:#e2e8f0;}
+  .arch-band.trust .arch-bandcell.on{opacity:1;border-color:var(--aap);background:rgba(13,148,136,.34);}
+  .arch-stack{display:flex;flex-direction:column;gap:5px;}
+  .arch-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:7px;align-items:stretch;border:1px solid var(--border);border-radius:10px;background:#fff;padding:6px 8px;min-height:46px;transition:.2s;}
+  .arch-row .arrowhead{display:flex;flex-direction:column;justify-content:center;gap:2px;border-right:1px solid var(--line);padding-right:5px;}
+  .arch-row .arl{display:flex;align-items:center;gap:5px;}
+  .arch-row .arn{width:19px;height:19px;border-radius:6px;background:#e2e8f0;color:var(--slate);font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .arch-row .arnm{font-size:9.5px;font-weight:800;color:var(--slate);line-height:1.1;}
+  .arch-row .armark{font-size:7px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:5px;padding:1px 4px;width:fit-content;margin-top:2px;}
+  .arch-cells{display:flex;flex-wrap:wrap;gap:5px;align-content:center;}
+  .arch-cell{position:relative;border:1px solid var(--border);border-radius:8px;background:var(--surf);padding:4px 8px;cursor:default;max-width:100%;opacity:.4;transition:.2s;}
+  .arch-cell .act{font-size:9.5px;font-weight:800;color:var(--slate);line-height:1.15;display:block;}
+  .arch-cell .acs{font-size:7.5px;font-weight:600;color:var(--muted);line-height:1.2;margin-top:1px;max-width:230px;}
+  .arch-row.core{border:1.5px solid var(--aap);background:linear-gradient(135deg,#f0fdfa,#fff);}
+  .arch-row.core .arn{background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;} .arch-row.core .arnm{color:var(--aap-ink);}
+  .arch-row.ds{border:1.5px solid var(--violet);background:linear-gradient(135deg,#f5f3ff,#fff);}
+  .arch-row.ds .arn{background:var(--violet);color:#fff;} .arch-row.ds .arnm{color:var(--violet);}
+  .arch-row.ds .armark{color:var(--violet);background:var(--violet-soft);border-color:var(--violet-border);}
+  .arch-badge{display:inline-block;font-size:7px;font-weight:900;color:#fff;background:var(--violet);border-radius:4px;padding:1px 5px;margin-top:2px;}
+  .arch-mini{display:flex;flex-wrap:wrap;align-items:center;gap:3px;width:100%;margin-top:3px;padding-top:3px;border-top:1px dashed var(--border);}
+  .arch-mini .amk{font-size:7px;font-weight:800;color:var(--muted);text-transform:uppercase;}
+  .arch-mini .amc{font-size:8px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:5px;padding:1px 5px;}
+  .arch-mini .ama{font-size:8px;color:var(--aap);font-weight:900;}
+  .arch-cell.hl{opacity:1;border-color:var(--aap);background:linear-gradient(135deg,#ecfdf5,#fff);box-shadow:0 0 0 2px rgba(13,148,136,.32);}
+  .arch-cell.hl .act{color:var(--aap-ink);}
+  .arch-cell .hlseq{position:absolute;top:-8px;left:-7px;width:16px;height:16px;border-radius:50%;background:var(--aap);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(13,148,136,.5);}
+  .arch-cell .hldo{display:block;font-size:7.5px;font-weight:700;color:var(--aap-ink);margin-top:2px;}
+  .arch-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:9px;font-size:9px;font-weight:700;color:var(--slate);}
+  .arch-legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:3px;vertical-align:-1px;}
+
+  .bot{background:#fff;border-top:1px solid var(--border);padding:7px 16px;display:flex;align-items:center;gap:12px;}
+  .bot .bstep{font-size:12px;color:var(--muted);} .bot .bstep b{color:var(--ink);}
+  .bot .spacer{flex:1;}
+  .btn{font-size:12px;padding:7px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;cursor:pointer;color:var(--ink);}
+  .btn.primary{background:var(--aap);color:#fff;border-color:var(--aap);} .btn.sm{padding:5px 10px;font-size:11px;}
+
+  [data-tip]{cursor:help;}
+  #tip{position:fixed;z-index:60;max-width:280px;background:var(--ink);color:#f1f5f9;font-size:11px;line-height:1.5;padding:8px 11px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:none;pointer-events:none;}
+  #gSpot{position:fixed;z-index:100;border-radius:12px;box-shadow:0 0 0 9999px rgba(15,23,42,.55);border:2px solid var(--aap);transition:all .32s;pointer-events:none;display:none;}
+  #gCursor{position:fixed;z-index:102;pointer-events:none;transition:left .35s,top .35s;display:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));}
+  #gBubble{position:fixed;z-index:102;width:300px;background:#fff;border-radius:13px;box-shadow:0 18px 50px rgba(0,0,0,.3);padding:14px 16px;display:none;transition:left .35s,top .35s;}
+  #gBubble .gn{font-size:10.5px;color:var(--aap);font-weight:800;} #gBubble .gt{font-size:14px;font-weight:800;margin:1px 0 5px;}
+  #gBubble .gtx{font-size:12px;color:#374151;} #gBubble .gctl{display:flex;gap:7px;margin-top:12px;align-items:center;} #gBubble .gctl .spacer{flex:1;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="req"><div class="rl">요청</div><div class="rt">다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘.</div></div>
+    <div class="und"><div><div class="ul">이해한 업무</div><div class="uv">킥오프 회의 준비</div></div><div><div class="ul">확인 필요</div><div class="uv warn">외부 초대·자료 공유</div></div></div>
+    <label class="tg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
+  </div>
+
+  <div class="main">
+    <section class="panel left">
+      <div class="ph">회의 업무 드릴다운 <span class="help" data-tip="회의 업무가 AAP 안에서 어떤 세부 업무로 나뉘는지 보여줍니다.">?</span></div>
+      <div class="dd-rail" id="ddRail"></div>
+      <div class="dd-cur" id="ddCur"></div>
+      <div class="dd-desc" id="ddDesc"></div>
+      <div class="cons-h">고객 화면</div>
+      <div class="console"><div class="con-bar"><span class="dot"></span><b>회의 업무 지원</b> · 대한제조그룹</div><div class="con-body" id="conBody"></div></div>
+      <div class="dtabs" id="dtabs"></div>
+      <div class="dtab-body" id="dtabBody"></div>
+    </section>
+
+    <section class="panel right">
+      <div class="ph">AAP 작동 구조 <span class="help" data-tip="선택한 회의 업무를 처리하는 AAP 구성요소가 점등됩니다. 지나는 순서가 번호로 표시됩니다.">?</span></div>
+      <div id="archMap" style="margin-top:9px;"></div>
+      <div class="arch-legend"><span><i style="background:var(--aap)"></i>이 단계 경유</span><span><i style="background:#f5f3ff;border:1px solid var(--violet)"></i>kt ds 차별화 (L4·L7)</span><span><i style="background:#1e293b"></i>전 영역 통제</span></div>
+    </section>
+  </div>
+
+  <div class="bot"><div class="bstep" id="bstep"></div><div class="spacer"></div><button class="btn primary" id="guideBtn">처리 흐름 보기</button></div>
+</div>
+
+<div id="tip"></div>
+<div id="gSpot"></div>
+<svg id="gCursor" width="22" height="22" viewBox="0 0 24 24"><path d="M4 2l6.5 17 2.3-6.7 6.7-2.3z" fill="#0f172a" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg>
+<div id="gBubble"></div>
+
+<script>
+/* ===== AAP 아키텍처 캐논 (v0.56 탭2 · 도메인 무관) ===== */
+const ARCH_LOOP=[{s:'Data',l:'L5'},{s:'Semantic',l:'L4'},{s:'Reasoning',l:'L3·L6'},{s:'Decision',l:'L7'},{s:'Action',l:'L1·L8'},{s:'Learning',l:'L7'}];
+const ARCH_CUST={h:'Customer Environment',s:'고객 자산 · 입력 기반',items:[{t:'Data Platform',s:'Lakehouse·BI'},{t:'Business Systems',s:'그룹웨어·메일·캘린더'},{t:'Knowledge Assets',s:'문서·회의록·KMS'}]};
+const ARCH_TRUST={h:'Trust · Security',s:'전 영역 횡단 통제',items:[{t:'IAM·SSO·RBAC',s:'접근 권한'},{t:'감사·근거·이력',s:'Explainability'},{t:'PII·DLP',s:'데이터 보호'},{t:'폐쇄망·On-prem',s:'배포 경계'}]};
+const ARCH_LAYERS=[
+ {id:'L1',ko:'경험 / 접근',cells:[{id:'l1-portal',t:'에이전트 포털'},{id:'l1-copilot',t:'코파일럿 / 챗 UI'},{id:'l1-admin',t:'관리자 콘솔'},{id:'l1-api',t:'API Gateway / SDK'}]},
+ {id:'L2',ko:'설계 / 개발',cells:[{id:'l2-studio',t:'에이전트 설계',s:'Low-Code'},{id:'l2-wf',t:'프롬프트·워크플로우'},{id:'l2-toolreg',t:'Tool Registry'},{id:'l2-agentreg',t:'Agent Registry',badge:'자사 검증 Agent'}]},
+ {id:'L3',ko:'에이전트 실행환경',accent:'core',mini:['입력 처리','계획','행동 실행','응답 생성'],cells:[
+   {id:'l3-access',t:'접근',s:'REST·gRPC·Event'},
+   {id:'l3-core',t:'코어 · 실행 엔진',s:'메모리·모델 게이트웨이·도구 실행·가드레일'},
+   {id:'l3-orch',t:'오케스트레이션·멀티에이전트',s:'Supervisor·Task Routing·A2A'},
+   {id:'l3-hitl',t:'HITL 런타임 게이트',s:'Runtime Review'}]},
+ {id:'L4',ko:'지식 / 시맨틱',accent:'ds',mark:'★ kt ds 차별화',cells:[{id:'l4-onto',t:'온톨로지·시맨틱 모델'},{id:'l4-kg',t:'도메인 지식그래프'},{id:'l4-store',t:'하이브리드 지식 스토어'},{id:'l4-ctx',t:'컨텍스트 조합·근거'}]},
+ {id:'L5',ko:'데이터 / 연동',mini:['수집','정제','정규화','변환'],cells:[{id:'l5-conn',t:'연결·수집',s:'DB·API·SaaS·커넥터',badge:'AI:ON-U (OCR)'},{id:'l5-proc',t:'데이터 처리·파이프라인'},{id:'l5-mgmt',t:'데이터 관리',s:'스키마·품질'}]},
+ {id:'L6',ko:'AI 품질 / 평가',cells:[{id:'l6-trace',t:'실행 추적',s:'Decision Log'},{id:'l6-eval',t:'품질·근거 평가',badge:'Antbot'},{id:'l6-rai',t:'RAI·안정성'},{id:'l6-cost',t:'성능·비용',badge:'BEAST'},{id:'l6-fb',t:'사용자 피드백'}]},
+ {id:'L7',ko:'컨트롤 / 거버넌스',accent:'ds',mark:'★ kt ds 차별화',cells:[{id:'l7-policy',t:'정책 관리·통제'},{id:'l7-perm',t:'에이전트 권한'},{id:'l7-hitl',t:'HITL 승인 기준'},{id:'l7-improve',t:'Self-Improving',s:'운영 학습 자산화'},{id:'l7-guard',t:'사용량·비용 가드레일'}]},
+ {id:'L8',ko:'인프라',cells:[{id:'l8-gpu',t:'컴퓨팅·GPU'},{id:'l8-k8s',t:'컨테이너·K8s'},{id:'l8-net',t:'네트워크·보안'},{id:'l8-store',t:'스토리지·DB'},{id:'l8-cloud',t:'온프레/클라우드'}]},
+];
+const ARCH_CELL={}; ARCH_LAYERS.forEach(L=>L.cells.forEach(c=>ARCH_CELL[c.id]=c));
+
+/* ===== 회의 업무 12 세부 단계 (좌측 드릴다운 + 고객 화면 + 우측 아키텍처 trace) ===== */
+const WORK=[
+ {id:'request',label:'요청 확인',st:'확인',sc:'',desc:'한 줄 요청에서 회의 준비가 시작됩니다. 바로 예약하지 않고 부족한 정보부터 확인합니다.',
+  console:`<div class="chat-u">다음 주 AAP 고객사 킥오프 회의 잡아줘. 관련 부서 사람들 넣고, 지난번 제안 자료랑 회의록도 같이 정리해줘.</div>
+   <div class="crow" style="margin-top:8px;color:#64748b">정해지지 않은 것 · 고객사명 · 참석자 · 일시 · 공유 자료 승인</div>`,
+  in:'사용자 요청 한 줄', out:'회의 준비 업무 시작', review:'요청 의도 보완 필요 여부', wb:'없음', dev:'Raw Request',
+  loop:['Data'], cust:[1], trust:[], cells:[{id:'l1-copilot',do:'AI 포털에서 회의 요청 수신'}]},
+ {id:'intent',label:'업무 이해',st:'확인',sc:'',desc:'요청을 킥오프 회의 준비 업무로 정리합니다. 목적·산출물·확인 항목이 함께 잡힙니다.',
+  console:`<div class="crow"><b>킥오프 회의 준비</b></div><div class="crow">목적 · 착수 범위·역할·일정·보안 조건 정리</div><div class="crow warn">확인 필요 · 외부 고객 초대 · 자료 공유</div>`,
+  in:'사용자 요청 · 이전 고객 미팅 정보', out:'킥오프 회의 준비 업무 · 회의 목적 · 필요 산출물', review:'외부 고객 포함 여부 · 자료 공유 여부', wb:'회의 준비안', dev:'Meeting Event',
+  loop:['Semantic'], cust:[2], trust:[], cells:[{id:'l4-onto',do:'킥오프 회의 의미화'},{id:'l4-ctx',do:'회의 목적·산출물 근거'},{id:'l7-policy',do:'외부 공유 정책 플래그'}]},
+ {id:'materials',label:'자료 확인',st:'준비',sc:'',desc:'메일·문서함·이전 회의록·조직도에서 회의 준비에 필요한 근거를 모읍니다.',
+  console:`<div class="crow">관련 메일 14건 · 이전 회의록 1건</div><div class="crow">제안·아키텍처 자료 6건 · 고객 Q&A 1건</div><div class="crow">관련 부서 후보 5개</div>`,
+  in:'메일 · 문서함 · 이전 회의록 · 제안 자료 · 조직도', out:'관련 자료 묶음 · 참고 근거 목록 · 공유 제한 후보', review:'외부 공유 가능 자료 · 마스킹 필요 여부', wb:'자료 폴더 · 첨부 후보', dev:'Context Package',
+  loop:['Data','Semantic'], cust:[0,1,2], trust:[0], cells:[{id:'l5-conn',do:'메일·문서·조직도 수집'},{id:'l5-proc',do:'정제·정규화'},{id:'l4-kg',do:'관련 자료 연결'},{id:'l4-ctx',do:'근거 묶음 구성'}]},
+ {id:'parts',label:'참석자 구성',st:'준비',sc:'',desc:'조직도·이전 회의 참여자·메일 참여자를 바탕으로 참석자 후보를 준비합니다.',
+  console:`<div class="opt"><span class="ck">✓</span>김영업 · 영업<small>고객 메일 8건</small></div><div class="opt"><span class="ck">✓</span>박PM · PM<small>제안 범위</small></div><div class="opt"><span class="ck">✓</span>이아키 · AI 아키텍트<small>자료 작성</small></div><div class="opt"><span class="ck off"></span>계약 담당<small>선택</small></div><div class="crow" style="color:#64748b">외부 · 고객 DX팀장 · IT기획</div>`,
+  in:'조직도 · 이전 회의 참석자 · 최근 메일 참여자 · 회의 목적', out:'필수 참석자 · 선택 참석자 · 외부 참석자 후보', review:'최종 참석자 · 외부 고객 포함 여부', wb:'캘린더 초대 · 메일 수신자 · 자료 공유 권한', dev:'Candidate Set',
+  loop:['Semantic','Reasoning'], cust:[1], trust:[], cells:[{id:'l4-kg',do:'조직도 역할 연결'},{id:'l3-core',do:'참석자 추천 Agent'},{id:'l3-orch',do:'Task Routing 배분'},{id:'l6-eval',do:'참석 충족도 평가'}]},
+ {id:'sched',label:'일정 후보',st:'준비',sc:'',desc:'참석자 캘린더와 회의 시간 조건으로 일정 후보를 계산합니다.',
+  console:`<div class="opt"><span class="ck">✓</span>1안 · 6/24(수) 10:00<small>충돌 없음</small></div><div class="opt"><span class="ck off"></span>2안 · 6/25(목) 14:00</div><div class="opt"><span class="ck off"></span>3안 · 6/26(금) 09:30</div>`,
+  in:'참석자 후보 · 캘린더 · 회의 시간 조건', out:'일정 후보 3개 · 충돌 정보 · 대체 시간', review:'최종 일정', wb:'캘린더 초안 · 회의실 예약', dev:'Time Candidate Set',
+  loop:['Data','Reasoning'], cust:[1], trust:[], cells:[{id:'l5-conn',do:'참석자 캘린더 조회'},{id:'l3-core',do:'일정 최적화 Agent'},{id:'l6-eval',do:'시간 충돌 검증'},{id:'l1-portal',do:'일정 후보 표시'}]},
+ {id:'matbundle',label:'자료 묶음',st:'준비',sc:'',desc:'회의 전 배포 자료를 공유 가능·내부 제외로 나눕니다.',
+  console:`<div class="crow ok">공유 가능 · 제안 자료 · 4-2 아키텍처 · Q&A</div><div class="crow warn">내부 제외 · 상세 설계 자료 (마스킹)</div>`,
+  in:'관련 문서 · 제안 자료 · 이전 회의록 · 보안 검토사항', out:'공유 가능 자료 · 내부 제외 자료 · 배포 자료', review:'외부 공유 범위 · 내부 자료 제외', wb:'자료 폴더 · 공유 링크 · 초대 메일', dev:'Material Package',
+  loop:['Reasoning','Decision'], cust:[2], trust:[2], cells:[{id:'l5-conn',do:'문서 수집'},{id:'l3-core',do:'자료 패키지 Agent'},{id:'l7-policy',do:'공유 가능/제한 분류'},{id:'l3-hitl',do:'마스킹 검토 게이트'}]},
+ {id:'agenda',label:'안건 초안',st:'준비',sc:'',desc:'회의 목적과 고객 관심사로 안건 초안과 논의 순서를 만듭니다.',
+  console:`<div class="crow">1. 목적 확인 · 2. 적용 후보 업무</div><div class="crow">3. 데이터·시스템 확인 · 4. 아키텍처 매핑</div><div class="crow">5. 보안 조건 · 6. 다음 액션</div>`,
+  in:'회의 목적 · 고객 관심사 · 이전 미팅 · 적용 후보 업무', out:'안건 초안 · 논의 순서 · 확인 질문', review:'안건 순서 · 고객 공유 문구', wb:'회의록 템플릿 · 초대 메일 본문', dev:'Agenda Draft',
+  loop:['Semantic','Reasoning'], cust:[2], trust:[], cells:[{id:'l4-onto',do:'회의 유형 안건 의미화'},{id:'l4-ctx',do:'이전 Q&A 근거'},{id:'l3-core',do:'안건 작성 Agent'}]},
+ {id:'check',label:'확인 항목',st:'확인 필요',sc:'warn',desc:'외부 초대·자료 공유처럼 책임이 있는 항목은 자동 실행하지 않고 담당자가 확인합니다.',
+  console:`<div class="crow ok">바로 처리 · 자료 폴더 · 안건 초안 · 회의록 템플릿</div><div class="crow warn">담당자 확인 · 참석자 · 외부 초대 · 자료 공유 · 문구</div><div class="crow" style="border-color:#fecaca;background:#fef2f2;color:#b91c1c">공유 제한 · 내부 상세 자료</div><div style="margin-top:8px"><button class="cbtn">확인하고 반영</button></div>`,
+  in:'참석자 후보 · 자료 묶음 · 안건 초안 · 정책 기준', out:'바로 처리 항목 · 담당자 확인 항목 · 제한 항목', review:'외부 초대 · 자료 공유 · 메일 문구', wb:'실행 가능 항목 목록', dev:'Coordination Result · Human Review Decision',
+  loop:['Reasoning','Decision'], cust:[], trust:[0,1], cells:[{id:'l6-eval',do:'위험·적합도 평가'},{id:'l7-policy',do:'자동/검토/제한 분기'},{id:'l7-hitl',do:'담당자 확인 기준'},{id:'l3-hitl',do:'런타임 검토 게이트'}]},
+ {id:'writeback',label:'시스템 반영',st:'반영',sc:'done',desc:'담당자가 확인한 항목만 캘린더·문서함·메일 초안에 반영됩니다.',
+  console:`<div class="crow ok">✓ 캘린더 등록 · 회의실 예약 · 화상 링크</div><div class="crow ok">✓ 자료 폴더 · 회의록 템플릿</div><div class="crow warn">⏳ 고객 초대 메일 · 발송 대기</div>`,
+  in:'담당자가 확인한 회의 준비안', out:'캘린더 초안 · 회의실 예약 · 자료 폴더 · 메일 초안 · 회의록 템플릿', review:'외부 발송 승인', wb:'캘린더 · 메일 · 문서함 · 회의실 · 워크플로우', dev:'Action Result',
+  loop:['Decision','Action'], cust:[1], trust:[1], cells:[{id:'l3-core',do:'Writeback Agent'},{id:'l1-portal',do:'실행 결과 표시'},{id:'l8-store',do:'캘린더·문서함 반영'},{id:'l6-trace',do:'Action Log 적재'}]},
+ {id:'during',label:'회의 중 기록',st:'진행',sc:'',desc:'회의 중 발언과 진행 상태를 결정사항·후속 할 일 후보로 정리합니다.',
+  console:`<div class="crow">안건 진행 1/6 · 참석 6/7</div><div class="crow">결정 후보 · PoC 범위는 회의 업무부터</div><div class="crow">할 일 후보 · 그룹웨어 API 목록 공유</div>`,
+  in:'회의 발언 · 안건 진행 · 채팅 · 참석 상태', out:'회의 기록 · 결정사항 후보 · 후속 할 일 후보 · 보류사항', review:'공식 결정사항 · 고객 공유 표현', wb:'회의록 초안', dev:'Raw Meeting Record',
+  loop:['Data','Reasoning'], cust:[1], trust:[], cells:[{id:'l5-conn',do:'발언·채팅 수집'},{id:'l4-onto',do:'결정·이슈 의미화'},{id:'l3-core',do:'회의 기록 Agent'},{id:'l6-trace',do:'기록 적재'}]},
+ {id:'after',label:'회의 후 정리',st:'완료',sc:'done',desc:'회의 기록을 회의록과 후속 할 일로 정리합니다. 확정은 담당자 확인이 필요합니다.',
+  console:`<div class="crow">회의록 · 결정 3 · 보류 2 · 리스크 1</div><div class="crow">고객 IT기획 · API 목록 / 6·28</div><div class="crow">KT DS AI · 데모 초안 / 7·2</div>`,
+  in:'회의 기록 · 결정사항 후보 · 후속 할 일 후보', out:'회의록 · 결정사항 · 후속 할 일 · 담당자·기한', review:'회의록 확정 · 할 일 담당자 · 기한', wb:'To-do · 후속 메일 · 프로젝트 관리', dev:'Official Minutes · Action Item Set',
+  loop:['Reasoning','Decision','Action'], cust:[1], trust:[1], cells:[{id:'l4-ctx',do:'결정·할 일 구조화'},{id:'l3-core',do:'회의록·액션 Agent'},{id:'l7-hitl',do:'회의록 확정 검토'},{id:'l8-store',do:'To-do 등록'}]},
+ {id:'reuse',label:'재사용',st:'저장',sc:'done',desc:'이번 회의 준비에서 수정된 기준을 다음 회의 준비에 재사용합니다.',
+  console:`<div class="crow ok">킥오프 회의 준비 패턴 저장</div><div class="crow">참석자 추천 기준 · 자료 묶음 기준</div><div class="crow">처리 과정 다시 보기</div>`,
+  in:'처리 이력 · 담당자 수정 · 회의 결과', out:'회의 준비 패턴 · 참석자 추천 기준 · 자료 묶음 기준 · 안건 템플릿', review:'재사용 범위', wb:'다음 회의 준비 · 업무 템플릿', dev:'Skill Update · Run Trace',
+  loop:['Learning'], cust:[2], trust:[1], cells:[{id:'l6-fb',do:'담당자 수정 피드백'},{id:'l7-improve',do:'운영 학습 자산화'},{id:'l4-onto',do:'추천 기준 갱신'},{id:'l6-trace',do:'Run Trace 보존'}]},
+];
+const idxOf=id=>WORK.findIndex(w=>w.id===id);
+const W=id=>WORK.find(w=>w.id===id);
+
+const GUIDE=[ 'request','intent','materials','parts','check','writeback','during','after','reuse' ];
+const GBUB={request:'한 줄 요청에서 회의 준비가 시작됩니다. 바로 예약하지 않고 부족한 정보부터 찾습니다.',
+ intent:'요청을 킥오프 회의 준비 업무로 정리합니다.',materials:'메일·문서함·조직도에서 근거를 모으고, 외부 공유가 어려운 자료는 확인 대상으로 분리합니다.',
+ parts:'참석자·일정·자료·안건이 세부 작업으로 나뉘어 각각 후보가 준비됩니다.',check:'바로 처리할 일과 담당자 확인이 필요한 일, 공유가 제한된 일을 나눕니다.',
+ writeback:'확인된 항목만 캘린더·문서함·메일에 실제로 반영됩니다.',during:'회의 중 발언이 결정사항·후속 할 일 후보로 정리됩니다.',
+ after:'회의 기록이 회의록과 후속 할 일로 정리됩니다.',reuse:'이번 처리 경험이 다음 회의 준비의 추천 기준·템플릿으로 저장됩니다.'};
+
+const STATE={sel:'parts', tab:'out', guideOn:false, gi:0};
+
+/* ===== render ===== */
+function renderDrill(){
+  const rail=document.getElementById('ddRail');rail.innerHTML='';const ci=idxOf(STATE.sel);
+  WORK.forEach((w,i)=>{const e=document.createElement('div');e.className='ddx'+(STATE.sel===w.id?' sel':(i<ci?' done':''));e.textContent=i+1;e.setAttribute('data-tip',w.label);e.onclick=()=>setSel(w.id);rail.appendChild(e);});
+  const w=W(STATE.sel),i=ci;
+  document.getElementById('ddCur').innerHTML=`<span class="dd-no">${String(i+1).padStart(2,'0')}</span><span class="dd-lb">${w.label}</span><span class="dd-st ${w.sc}">${w.st}</span>`;
+  document.getElementById('ddDesc').textContent=w.desc;
+  document.getElementById('conBody').innerHTML=w.console;
+}
+function renderTabs(){
+  const w=W(STATE.sel);const tabs=[['in','입력'],['out','생성 결과'],['review','담당자 확인'],['wb','반영 대상']];
+  document.getElementById('dtabs').innerHTML=tabs.map(([k,l])=>`<button class="dtab${STATE.tab===k?' on':''}" data-tab="${k}">${l}</button>`).join('');
+  document.querySelectorAll('.dtab').forEach(b=>b.onclick=()=>{STATE.tab=b.getAttribute('data-tab');renderTabs();});
+  const v={in:w.in,out:w.out,review:w.review,wb:w.wb}[STATE.tab];
+  const need=STATE.tab==='review'&&v&&v!=='없음';
+  document.getElementById('dtabBody').innerHTML=`<div class="dtb ${need?'need':''}">${v}<div class="di">내부 처리 · ${w.dev}</div></div>`;
+}
+function renderArch(){
+  const w=W(STATE.sel);const tr={loop:new Set(w.loop),cust:w.cust,trust:w.trust};
+  const seq={};w.cells.forEach((c,k)=>seq[c.id]={n:k+1,do:c.do});
+  const loop=`<div class="arch-loop"><span class="alh">AAP 추론 루프<small>이 단계 경유 순서</small></span>`+
+    ARCH_LOOP.map((x,k)=>`<span class="als${tr.loop.has(x.s)?' on':''}"><b>${x.s}</b><span>${x.l}</span></span>`+(k<ARCH_LOOP.length-1?'<span class="ala">▶</span>':'')).join('')+`</div>`;
+  const band=(D,type,on)=>`<div class="arch-band ${type}"><div class="abh"><b>${D.h}</b><span>${D.s}</span></div><div class="arch-banditems">`+
+    D.items.map((x,k)=>`<div class="arch-bandcell${on.includes(k)?' on':''}">${x.t}<span>${x.s}</span></div>`).join('')+`</div></div>`;
+  const cell=c=>{const s=seq[c.id];const sub=c.s?`<span class="acs">${c.s}</span>`:'';const badge=c.badge?`<span class="arch-badge">${c.badge}</span>`:'';
+    return `<div class="arch-cell ${s?'hl':''}" data-tip="${c.t}${c.s?' · '+c.s:''}">${s?`<span class="hlseq">${s.n}</span>`:''}<span class="act">${c.t}</span>${sub}${badge}${s?`<span class="hldo">${s.do}</span>`:''}</div>`;};
+  const stack=`<div class="arch-stack">`+ARCH_LAYERS.map(L=>{
+    const rc='arch-row'+(L.accent==='core'?' core':(L.accent==='ds'?' ds':''));
+    const mark=L.mark?`<span class="armark">${L.mark}</span>`:'';
+    const mini=L.mini?`<div class="arch-mini"><span class="amk">미니플로우</span>`+L.mini.map((m,k)=>`<span class="amc">${m}</span>`+(k<L.mini.length-1?'<span class="ama">→</span>':'')).join('')+`</div>`:'';
+    return `<div class="${rc}"><div class="arrowhead"><div class="arl"><span class="arn">${L.id.replace('L','')}</span><span class="arnm">${L.ko}</span></div>${mark}</div><div class="arch-cells">${L.cells.map(cell).join('')}${mini}</div></div>`;
+  }).join('')+`</div>`;
+  document.getElementById('archMap').innerHTML=loop+band(ARCH_CUST,'cust',tr.cust)+stack+band(ARCH_TRUST,'trust',tr.trust);
+}
+function renderBot(){const i=idxOf(STATE.sel);document.getElementById('bstep').innerHTML=`현재 단계 <b>${String(i+1).padStart(2,'0')} / 12</b> · ${W(STATE.sel).label}`;}
+function setSel(id){STATE.sel=id;renderDrill();renderTabs();renderArch();renderBot();}
+
+/* tooltip */
+const TIP=document.getElementById('tip');
+document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(t){TIP.textContent=t.getAttribute('data-tip');TIP.style.display='block';const r=t.getBoundingClientRect();TIP.style.left=Math.min(r.left,window.innerWidth-300)+'px';let top=r.bottom+8;if(top+TIP.offsetHeight>window.innerHeight)top=r.top-TIP.offsetHeight-8;TIP.style.top=Math.max(8,top)+'px';}else if(!e.target.closest('#tip'))TIP.style.display='none';});
+
+/* Guide */
+let GT=null;
+function startGuide(){STATE.guideOn=true;STATE.gi=0;['gSpot','gCursor','gBubble'].forEach(id=>document.getElementById(id).style.display='block');gotoGuide(0);}
+function stopGuide(){STATE.guideOn=false;['gSpot','gCursor','gBubble'].forEach(id=>document.getElementById(id).style.display='none');}
+function gotoGuide(i){if(i<0||i>=GUIDE.length)return;STATE.gi=i;const id=GUIDE[i];setSel(id);
+  const t=document.querySelector('.console');if(!t)return;GT=t;
+  try{t.scrollIntoView({block:'center',behavior:'instant'});}catch(e){}
+  requestAnimationFrame(()=>requestAnimationFrame(positionGuide));setTimeout(positionGuide,90);
+  const b=document.getElementById('gBubble');const w=W(id);
+  b.innerHTML=`<div class="gn">${i+1} / ${GUIDE.length}</div><div class="gt">${w.label}</div><div class="gtx">${GBUB[id]}</div>
+   <div class="gctl"><button class="btn sm" ${i===0?'disabled':''} id="gPrev">이전</button><div class="spacer"></div><button class="btn sm" id="gStop">중지</button><button class="btn sm primary" id="gNext">${i===GUIDE.length-1?'완료':'다음'}</button></div>`;
+  document.getElementById('gPrev').onclick=()=>gotoGuide(i-1);document.getElementById('gStop').onclick=stopGuide;document.getElementById('gNext').onclick=()=>i===GUIDE.length-1?stopGuide():gotoGuide(i+1);}
+function positionGuide(){if(!STATE.guideOn||!GT)return;const r=GT.getBoundingClientRect();
+  const sp=document.getElementById('gSpot');sp.style.left=(r.left-6)+'px';sp.style.top=(r.top-6)+'px';sp.style.width=(r.width+12)+'px';sp.style.height=(r.height+12)+'px';
+  const cu=document.getElementById('gCursor');cu.style.left=(r.right-28)+'px';cu.style.top=(r.top+22)+'px';
+  const b=document.getElementById('gBubble');let bl=r.right+18;if(bl+300>window.innerWidth)bl=r.left-318;if(bl<8)bl=8;let bt=r.top;if(bt+b.offsetHeight>window.innerHeight)bt=window.innerHeight-b.offsetHeight-12;b.style.left=bl+'px';b.style.top=Math.max(8,bt)+'px';}
+
+document.getElementById('guideBtn').onclick=()=>STATE.guideOn?stopGuide():startGuide();
+document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
+window.addEventListener('resize',positionGuide);document.addEventListener('scroll',()=>{if(STATE.guideOn)positionGuide();},true);
+document.addEventListener('keydown',e=>{if(!STATE.guideOn)return;if(e.key==='ArrowRight')gotoGuide(STATE.gi+1);if(e.key==='ArrowLeft')gotoGuide(STATE.gi-1);if(e.key==='Escape')stopGuide();});
+
+setSel('parts');
+(function(){const q=new URLSearchParams(location.search);if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
+ const s=q.get('sel');if(s&&W(s))setSel(s);if(q.get('guide')==='1'){startGuide();const g=parseInt(q.get('g'),10);if(!isNaN(g))gotoGuide(g);}})();
+</script>
+</body>
+</html>
