@@ -1191,11 +1191,6 @@ window.AAP_CORE={
     if(STATE.view==='run')restoreStep();
     toast('이 변경을 유형(팩) 기본으로 승격했습니다 — 같은 유형의 모든 케이스에 적용됩니다');
   },
-  /* 워크플로우 빌더(wfeditor.js) 블록 팔레트용 — 전 팩 union·dedup 한 5타입 자산 카탈로그(도메인 무관).
-     [{key,tk,ty,type,ic,name,L,desc,usedBy}]. 코어가 이미 buildAssetCatalog 로 dedup·정규화. */
-  getAssetCatalog:()=>{ try{ return buildAssetCatalog(); }catch(e){ return []; } },
-  /* 5타입 메타(라벨·계층) — 빌더 팔레트가 임의 hex 없이 토큰만 쓰게 */
-  typeKeyOf:(v)=>dcTypeKey(v,'wf.type'),
   toast:(m)=>toast(m),
 };
 

@@ -25,24 +25,10 @@
     {k:'Connector', cls:'tC', ty:'tyC', L:'L5', ic:'folder'},
     {k:'Policy',    cls:'tP', ty:'tyP', L:'L7', ic:'shield'},
   ];
-  /* 제어 블록 메타(타입 색 중립 = Policy 계열 회색톤 재사용 안 함 → 자체 ctl 클래스). L2(설계·개발)=흐름 로직. */
-  const CTL_META={cls:'tCtl', ty:'tyCtl', L:'L2', ic:'git-branch'};
   const TYPE_KEYS=TYPES.map(t=>t.k);
-  function typeMeta(k){ if(k==='Conditional'||k==='Loop')return {k, cls:CTL_META.cls, ty:CTL_META.ty, L:CTL_META.L, ic:(CONTROL.find(c=>c.k===k)||{}).ic||CTL_META.ic}; return TYPES.find(t=>t.k===k)||TYPES[0]; }
-  /* 블록 종류(결정론 Action vs 비결정론 Use LLM) — core.blockKind 와 동일 규약(Agent=LLM, 그 외=결정론).
-     팔레트·dry-run 이 일관된 라벨/색을 쓰게 한다(온톨로지 L4 정합). */
-  function blockKind(typeKey){ return typeKey==='Agent'?'llm':'det'; }
-  function kindLabel(kind){ return kind==='llm'?'Use LLM':'Action'; }
-  /* 제어 블록(Conditional·Loop) — 결정론 흐름 제어. 캐논 단계 안에 얹는 논리 블록(타입 색 중립). */
-  const CONTROL=[
-    {k:'Conditional', ic:'git-branch', desc:'조건 분기 — 값에 따라 경로를 나눕니다(결정론).'},
-    {k:'Loop',        ic:'repeat',     desc:'반복 — 목록·재시도 루프를 돕니다(결정론).'},
-  ];
-  const isControl=k=>CONTROL.some(c=>c.k===k);
-  /* op.comp/badge → 타입 키 추정(코어 evidType 와 동일 휴리스틱 · 도메인 무관).
-     빌더가 추가한 블록은 o.wfType 에 명시 타입(제어 블록 포함)을 보존 → 라운드트립 정확. */
+  const typeMeta=k=>TYPES.find(t=>t.k===k)||TYPES[0];
+  /* op.comp/badge → 5타입 키 추정(코어 evidType 와 동일 휴리스틱 · 도메인 무관) */
   function opType(o){
-    if(o&&o.wfType&&(TYPE_KEYS.includes(o.wfType)||isControl(o.wfType)))return o.wfType;
     const t=(o.comp||'')+' '+(o.badge||'');
     if(/정책|Policy|게이트|HITL|차단|승인|통제|마스킹|DLP|PII/.test(t))return 'Policy';
     if(/Connector|커넥터|연결|수집|연동/.test(t))return 'Connector';
@@ -107,21 +93,6 @@
     host.querySelectorAll('[data-wv]').forEach(e=>e.onclick=()=>{ host._wfView=e.dataset.wv; renderEditor(pack); });
     const rs=$('wfReset'); if(rs)rs.onclick=()=>{ if(window.AAP_CORE.clearPackOverride)window.AAP_CORE.clearPackOverride(pack.id); };
     if(view==='edit')wireEdit(pack);
-    /* 캔버스 노드 클릭 = 단계 선택(팔레트 추가 대상) — 그래프/편집 공통 */
-    if(view==='graph')wireGraphSelect(pack);
-    /* 3패널 빌더: 좌 팔레트 · 우 Run/디버거 (호스트 있으면 함께 렌더) */
-    renderPalette(pack);
-    renderRun(pack);
-  }
-  /* 현재 팔레트 추가 대상 단계 인덱스(없으면 0). 캔버스에서 단계 클릭으로 변경. */
-  let _selStep=0;
-  function selStepIdx(){ if(!M||!M.steps.length)return 0; return Math.min(Math.max(_selStep,0),M.steps.length-1); }
-  function wireGraphSelect(pack){
-    const host=$('wfEditor'); if(!host)return;
-    const si=selStepIdx();
-    host.querySelectorAll('.plg-task').forEach((g,i)=>{ g.style.cursor='pointer';
-      if(i===si)g.classList.add('sel');
-      g.onclick=()=>{ _selStep=i; renderPalette(pack); renderEditor(pack); }; });
   }
 
   /* ── 노드 그래프 시각화 (8단계 캐논 레인 × 5타입 구성요소 노드 + HITL 게이트 + 엣지) ──
@@ -158,9 +129,7 @@
 
   /* ── 편집 뷰 (단계별 구성요소 추가/교체/삭제 + HITL 게이트 토글) ── */
   function renderEdit(){
-    /* 제어 블록(Conditional·Loop) 등 5타입 외 현재값도 옵션에 포함(편집 시 의도치 않게 타입 바뀜 방지) */
-    const selKeys=(cur)=>TYPE_KEYS.includes(cur)?TYPE_KEYS:TYPE_KEYS.concat([cur]);
-    const typeSel=(si,ci,cur)=>`<select class="pl-ty-sel" data-si="${si}" data-ci="${ci}">${selKeys(cur).map(k=>`<option ${k===cur?'selected':''}>${k}</option>`).join('')}</select>`;
+    const typeSel=(si,ci,cur)=>`<select class="pl-ty-sel" data-si="${si}" data-ci="${ci}">${TYPE_KEYS.map(k=>`<option ${k===cur?'selected':''}>${k}</option>`).join('')}</select>`;
     const stepCard=(s,si)=>`<div class="wf-step ${s.hitl?'gated':''}">
       <div class="wf-step-h">
         <span class="wf-step-n">${String(si+1).padStart(2,'0')}</span>
@@ -232,11 +201,10 @@
         const newOps=[];
         so.comps.forEach((c,i)=>{
           const m=typeMeta(c.type);
-          if(byName[c.name]){ /* 기존 op 보존 + 빌더 명시 타입 기록(라운드트립). 원 L 유지=근거 충실 */
-            const ex=byName[c.name]; ex.wfType=c.type; newOps.push(ex);
-          } else { /* 신규 구성요소 op 합성(근거 레일·8계층 반영용 최소 필드). 제어 블록도 op 로 가시화 */
-            const ctl=isControl(c.type);
-            newOps.push({ g:i, feed:ctl?`${c.name}`:`${c.name} 가동`, out:ctl?'흐름 제어':`${m.k} 처리`, L:m.L, comp:c.name, wfType:c.type });
+          if(byName[c.name]){ /* 기존 op 보존 + 타입 바뀌면 L 갱신은 하지 않음(원 L 유지=근거 충실) */
+            newOps.push(byName[c.name]);
+          } else { /* 신규 구성요소 op 합성(근거 레일·8계층 반영용 최소 필드) */
+            newOps.push({ g:i, feed:`${c.name} 가동`, out:`${m.k} 처리`, L:m.L, comp:c.name });
           }
         });
         /* g(병렬 그룹) 재배치: 보존 op 의 g 를 유지하되 최소 그룹 보장 */
@@ -253,7 +221,7 @@
     const items={Agent:[],Module:[],'기존 솔루션':[],Connector:[],Policy:[]};
     /* 편집기가 보여주는 것과 동일하게 '적용 후 현재 work 전체'의 단계별 구성요소에서 집계
        (modelFromPack = 단계 내 comp 라벨 중복 제거). 부분 델타에서도 미편집 단계 보존. */
-    modelFromPack(pack).steps.forEach(s=>{ s.comps.forEach(c=>{ const k=typeMeta(c.type).k; if(!(k in cnt))return; /* 제어 블록은 5타입 compose 칩 집계 제외 */ cnt[k]++; if(items[k].length<6&&!items[k].includes(c.name))items[k].push(c.name); }); });
+    modelFromPack(pack).steps.forEach(s=>{ s.comps.forEach(c=>{ const k=typeMeta(c.type).k; cnt[k]++; if(items[k].length<6&&!items[k].includes(c.name))items[k].push(c.name); }); });
     /* sub(타입 설명)은 원본 compose 에서 타입별로 보존(blank 방지) */
     const subMap={Agent:'전문 작업',Module:'재사용 기능','기존 솔루션':'Buy·Integrate',Connector:'시스템 연동',Policy:'통제·권한'};
     ((pack._base&&pack._base.compose)||pack.compose||[]).forEach(c=>{ if(c&&c.t&&c.sub)subMap[c.t]=c.sub; });
@@ -263,124 +231,6 @@
     pack.gates=gateSteps.map((w,i)=>`★ HITL ${i+1} ${w.label}`);
     pack._dcDone=false; /* compose 재정규화 필요 */
     return pack;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     좌 패널 · 블록 팔레트 (풀 3패널 빌더) — 5타입 자산(전 팩 union) + 제어 블록
-     ───────────────────────────────────────────────────────────────────────
-     클릭 = 현재 선택 단계(_selStep)에 블록 추가 → 편집 모델 M 갱신 → commit(영속) → 캔버스 반영.
-     자산 = AAP_CORE.getAssetCatalog()(코어가 전 팩 dedup·정규화). 결정론 Action / 비결정론 Use LLM 분리.
-     ═══════════════════════════════════════════════════════════════════════ */
-  let _palOpen=null;   /* 펼친 타입 그룹 키(아코디언) */
-  function paletteAssets(){
-    const all=(window.AAP_CORE&&window.AAP_CORE.getAssetCatalog&&window.AAP_CORE.getAssetCatalog())||[];
-    /* ty(tyA..tyP) → 5타입 키로 그룹핑 */
-    const byKey={Agent:[],Module:[],'기존 솔루션':[],Connector:[],Policy:[]};
-    all.forEach(a=>{ const tk=(window.AAP_CORE&&window.AAP_CORE.typeKeyOf)?window.AAP_CORE.typeKeyOf(a.ty||a.type):'A';
-      const kmap={A:'Agent',M:'Module',S:'기존 솔루션',C:'Connector',P:'Policy'}; const k=kmap[tk]||'Agent';
-      byKey[k].push({name:a.name, ic:a.ic, desc:a.desc, L:a.L}); });
-    return byKey;
-  }
-  function renderPalette(pack){
-    const host=$('wfPalette'); if(!host)return;
-    if(!M)M=modelFromPack(pack);
-    const si=selStepIdx(); const cur=M.steps[si];
-    const assets=paletteAssets();
-    const grp=(t)=>{ const list=assets[typeMeta(t).k]||[]; const open=_palOpen===t;
-      const head=`<button class="wfp-grp-h ${open?'on':''} ${typeMeta(t).cls}" data-pg="${t}">
-        <span class="wfp-dot"></span><span class="wfp-grp-n">${t}</span>
-        <span class="wfp-kind ${blockKind(t)}">${kindLabel(blockKind(t))}</span>
-        <span class="wfp-grp-c">${list.length}</span><span class="wfp-car">${ICO(open?'chevron-down':'chevron-right')}</span></button>`;
-      const body=open?`<div class="wfp-items">${list.length?list.map(a=>`<button class="wfp-item ${typeMeta(t).cls}" data-add-name="${esc(a.name)}" data-add-type="${t}" data-tip="${esc(a.desc||'')}">${ICO(typeMeta(t).ic)}<span>${esc(a.name)}</span><span class="wfp-L">${a.L||''}</span></button>`).join(''):'<div class="wfp-empty">등록된 자산 없음</div>'}
-        <button class="wfp-item custom ${typeMeta(t).cls}" data-add-name="새 ${t}" data-add-type="${t}">${ICO('plus')}<span>새 ${t} 블록</span></button></div>`:'';
-      return `<div class="wfp-grp">${head}${body}</div>`;
-    };
-    const ctlGrp=()=>{ const open=_palOpen==='__ctl__';
-      const head=`<button class="wfp-grp-h ctl ${open?'on':''}" data-pg="__ctl__"><span class="wfp-dot"></span><span class="wfp-grp-n">제어</span><span class="wfp-kind det">결정론</span><span class="wfp-grp-c">${CONTROL.length}</span><span class="wfp-car">${ICO(open?'chevron-down':'chevron-right')}</span></button>`;
-      const body=open?`<div class="wfp-items">${CONTROL.map(c=>`<button class="wfp-item ctl" data-add-name="${c.k}" data-add-type="${c.k}" data-tip="${esc(c.desc)}">${ICO(c.ic)}<span>${c.k}</span></button>`).join('')}</div>`:'';
-      return `<div class="wfp-grp">${head}${body}</div>`;
-    };
-    host.innerHTML=`
-      <div class="wfp-head">${ICO('layers')}블록 팔레트</div>
-      <div class="wfp-target">추가 대상 단계 · <b>${cur?esc(cur.label):'—'}</b><span class="wfp-target-sub">캔버스에서 단계를 클릭해 바꿉니다</span></div>
-      <div class="wfp-legend"><span class="wfp-lg det">Action = 결정론</span><span class="wfp-lg llm">Use LLM = 비결정론(온톨로지 경유)</span></div>
-      ${TYPE_KEYS.map(grp).join('')}
-      ${ctlGrp()}
-      <div class="wfp-note">${ICO('info')}Action 블록은 온톨로지 Action(자동/사람 확인)과, Use LLM 블록은 온톨로지를 통한 데이터 접근과 연결됩니다.</div>`;
-    host.querySelectorAll('[data-pg]').forEach(e=>e.onclick=()=>{ const k=e.dataset.pg; _palOpen=_palOpen===k?null:k; renderPalette(pack); });
-    host.querySelectorAll('[data-add-name]').forEach(e=>e.onclick=()=>addBlock(pack, e.dataset.addType, e.dataset.addName));
-  }
-  /* 팔레트 블록 추가 = 선택 단계 comps 에 push → commit(영속). 중복 이름은 ' (2)' 부여. */
-  function addBlock(pack, type, name){
-    if(!M)M=modelFromPack(pack);
-    const si=selStepIdx(); const s=M.steps[si]; if(!s)return;
-    let nm=name||('새 '+type); let n=nm, i=2;
-    while(s.comps.some(c=>c.name===n)){ n=nm+' ('+(i++)+')'; }
-    s.comps.push({type, name:n});
-    commit(pack);   /* override 저장 → 코어 reapply → renderDesign 재호출(캔버스·요약·run 갱신) */
-    if(window.AAP_CORE&&window.AAP_CORE.toast)window.AAP_CORE.toast(`'${s.label}' 단계에 ${kindLabel(blockKind(type))} 블록 추가: ${n}`);
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     우 패널 · Run / 디버거 (풀 3패널 빌더) — 선택 워크플로우 dry-run(결정론 시뮬)
-     ───────────────────────────────────────────────────────────────────────
-     단계별 블록 실행 흐름을 순차 시뮬: 블록 결정론/LLM 표시 + 합성 산출물 + HITL 게이트 멈춤.
-     실제 LLM 은 Phase3 — 지금은 결정론 시뮬(재현 가능). 테스트 입력 + 실행 히스토리.
-     ═══════════════════════════════════════════════════════════════════════ */
-  let _runInput='';
-  let _runHist=[];   /* [{ts, ok, steps, blocks}] */
-  function dryRun(pack){
-    if(!M)M=modelFromPack(pack);
-    const trace=[]; let blocks=0, llm=0, det=0, gates=0, paused=false;
-    M.steps.forEach((s,si)=>{
-      const stepBlocks=s.comps.map(c=>{ const kind=blockKind(c.type); blocks++; if(kind==='llm')llm++; else det++;
-        return { type:c.type, name:c.name, kind, ctl:isControl(c.type),
-          out: isControl(c.type)?'경로 분기/반복 평가' : (kind==='llm'?`${c.name} 추론 결과(온톨로지 경유)`:`${c.name} 처리 결과(규칙)`) };
-      });
-      const gate=s.hitl; if(gate)gates++;
-      trace.push({ idx:si+1, label:s.label, gate, blocks:stepBlocks, paused:gate });
-      if(gate)paused=true;  /* HITL 게이트 = 사람 확인 멈춤(시뮬에선 표시만) */
-    });
-    return { trace, blocks, llm, det, gates, ok:gates>0 };
-  }
-  function renderRun(pack){
-    const host=$('wfRun'); if(!host)return;
-    if(!M)M=modelFromPack(pack);
-    const r=dryRun(pack);
-    const stepHtml=r.trace.map(t=>`
-      <div class="wfr-step ${t.gate?'gate':''}">
-        <div class="wfr-step-h"><span class="wfr-n">${String(t.idx).padStart(2,'0')}</span><b>${esc(t.label)}</b>${t.gate?`<span class="wfr-gate">${ICO('flag')}HITL 멈춤</span>`:''}</div>
-        ${t.blocks.length?t.blocks.map(b=>`<div class="wfr-blk ${b.ctl?'ctl':typeMeta(b.type).cls}">
-          <span class="wfr-blk-kind ${b.kind}">${b.ctl?'제어':kindLabel(b.kind)}</span>
-          <span class="wfr-blk-n">${esc(b.name)}</span>
-          <span class="wfr-blk-out">→ ${esc(b.out)}</span></div>`).join(''):'<div class="wfr-empty">블록 없음 — 팔레트에서 추가</div>'}
-      </div>`).join('');
-    const histHtml=_runHist.length?_runHist.slice(-4).reverse().map(h=>`<div class="wfr-hist-i ${h.ok?'ok':'block'}">${ICO(h.ok?'check-circle':'alert-triangle')}${h.ts} · ${h.blocks}블록 · LLM ${h.llm}/결정론 ${h.det} · HITL ${h.gates}</div>`).join(''):'<div class="wfr-empty">아직 실행 기록 없음</div>';
-    host.innerHTML=`
-      <div class="wfr-head">${ICO('play')}Run · 디버거<span class="wfr-sub">결정론 dry-run · 실제 LLM은 Phase3</span></div>
-      <div class="wfr-input">
-        <label>테스트 입력</label>
-        <textarea id="wfrIn" rows="2" placeholder="예: 6월 정기 회의 요청 / 손해사정 신규 접수 …">${esc(_runInput)}</textarea>
-      </div>
-      <div class="wfr-stat">
-        <span class="wfr-st">블록 <b>${r.blocks}</b></span>
-        <span class="wfr-st llm">LLM <b>${r.llm}</b></span>
-        <span class="wfr-st det">결정론 <b>${r.det}</b></span>
-        <span class="wfr-st gate">HITL <b>${r.gates}</b></span>
-      </div>
-      ${r.gates?'':`<div class="wfr-block-warn">${ICO('alert-triangle')}HITL 게이트 0개 — 저장·실행 차단(자율 운영 안전 전제)</div>`}
-      <button class="cp-btn primary sm wfr-go" id="wfrGo" ${r.gates?'':'disabled'}>${ICO('play')}dry-run 실행</button>
-      <div class="wfr-flow" id="wfrFlow">${stepHtml}</div>
-      <div class="wfr-hist-h">실행 히스토리</div>
-      <div class="wfr-hist">${histHtml}</div>`;
-    const ta=$('wfrIn'); if(ta)ta.onchange=()=>{ _runInput=ta.value; };
-    const go=$('wfrGo'); if(go&&!go.disabled)go.onclick=()=>{
-      const rr=dryRun(pack);
-      _runHist.push({ ts:new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}), ok:rr.ok, blocks:rr.blocks, llm:rr.llm, det:rr.det, gates:rr.gates });
-      if(window.AAP_CORE&&window.AAP_CORE.toast)window.AAP_CORE.toast(`dry-run 완료 — ${rr.blocks}블록(LLM ${rr.llm}/결정론 ${rr.det}) · HITL ${rr.gates}관문`);
-      renderRun(pack);
-      const fl=$('wfrFlow'); if(fl)fl.classList.add('ran'); setTimeout(()=>{ const f=$('wfrFlow'); if(f)f.classList.remove('ran'); },700);
-    };
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -453,5 +303,5 @@
   }
 
   /* ── 외부 노출(코어가 사용) ── */
-  window.AAP_WFEDITOR={ renderEditor, applyOverride, modelFromPack, renderCaseTuner, renderPalette, renderRun };
+  window.AAP_WFEDITOR={ renderEditor, applyOverride, modelFromPack, renderCaseTuner };
 })();
