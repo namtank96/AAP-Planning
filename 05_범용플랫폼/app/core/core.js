@@ -178,8 +178,20 @@ const groupsOf=w=>[...new Set(w.ops.map(o=>o.g))].sort((a,b)=>a-b);
    케이스 목록·진행상태·decisions·trace 를 저장/복원. 손상·없음 시 안전 초기화.
    ========================================================================= */
 const LS_NS='aap.v1.';
+/* 스키마 버전 — 상태 모델이 바뀔 때마다 올린다. 저장본 버전이 다르거나(구버전 잔재) 없으면
+   aap.v1.* 를 안전 초기화·재시드 → '옛 localStorage 가 새 코드를 깨는' 문제 방지. */
+const SCHEMA_VER=2;
 function lsGet(k,fb){ try{const v=localStorage.getItem(LS_NS+k);return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
 function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(e){} }
+function lsClearAll(){ try{const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf(LS_NS)===0)rm.push(k);}rm.forEach(k=>localStorage.removeItem(k));}catch(e){} }
+/* boot/loadApp 진입 시 1회: 버전 불일치(또는 미기록인데 기존 데이터 존재) → 초기화. 일치/완전 신규면 통과. */
+function lsCheckSchema(){
+  let stored=null; try{stored=localStorage.getItem(LS_NS+'schema');}catch(e){}
+  if(stored!==null && String(JSON.parse(stored))===String(SCHEMA_VER))return; /* 정상 */
+  let hadData=false; try{hadData=!!localStorage.getItem(LS_NS+'cases');}catch(e){}
+  if(stored===null && !hadData){ lsSet('schema',SCHEMA_VER); return; } /* 완전 신규 */
+  lsClearAll(); lsSet('schema',SCHEMA_VER); /* 구버전/불일치 → 안전 초기화 */
+}
 
 /* APP = 코어가 책임지는 인스턴스성 모델(도메인 무관). cases=인스턴스 배열, active=열린 케이스 id
    pack = 현재 런타임 컨텍스트(열린 케이스의 packId). 인박스는 전 팩 통합 → pack 은 '모드'가 아니라
@@ -187,8 +199,9 @@ function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(
 /* projects[] = P4 프로젝트(케이스 묶음) 차원. 추가 레이어일 뿐 — 케이스의 projectId(옵셔널)로 느슨히 연결.
    projectsOn = '프로젝트별 보기' 토글(기본 OFF=현행 인박스 100% 유지). 둘 다 영속(도메인 무관). */
 const APP={cases:[], projects:[], active:null, view:'inbox', pack:null, typeFilter:'all', catSel:null, projectsOn:false};
-function saveApp(){ lsSet('cases',APP.cases); lsSet('projects',APP.projects); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); lsSet('projectsOn',APP.projectsOn); }
+function saveApp(){ lsSet('schema',SCHEMA_VER); lsSet('cases',APP.cases); lsSet('projects',APP.projects); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); lsSet('projectsOn',APP.projectsOn); }
 function loadApp(){
+  lsCheckSchema();
   const cs=lsGet('cases',null);
   if(Array.isArray(cs)) APP.cases=cs.filter(c=>c&&c.id&&c.packId);
   const pj=lsGet('projects',null);
