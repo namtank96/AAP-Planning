@@ -659,6 +659,54 @@ body.aap-drawer-on .run-evid:not(.wp-aap){flex:0 0 372px;width:372px;border-left
 .reov .rst{font-size:12px;font-weight:700;} .reov .rsd{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:10.5px;color:var(--faint);margin-top:2px;}
 @media(max-width:1080px){ .op-split{flex-direction:column;} .op-aside{border-left:none;border-top:1px solid var(--border);} }
 
+/* ===== 계약 조작형 결정 콘솔(단일 케이스형) — caseModel 슬롯 패널 + verdict 카드 + 룩업 =====
+   채용 리스트형과 다른 모양, 같은 프레임워크. 색은 기존 토큰만(신규 hex 0). */
+.ct-wh{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.ct-wh .op-t{font-size:13.5px;font-weight:800;} .ct-wh .op-c{font-size:11px;color:var(--faint);}
+.ct-slot-more{margin-left:auto;font-family:inherit;font-size:10.5px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-border);border-radius:7px;padding:3px 9px;cursor:pointer;}
+.ct-slots{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:8px;}
+.ct-slots.rest{margin-top:2px;}
+.ct-slot{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 11px;}
+.ct-slot.risk{border-color:var(--red-border);background:var(--red-soft);}
+.ct-slot.gap{border-color:var(--amber-border);background:var(--amber-soft);}
+.ct-slot-k{font-size:10.5px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.ct-slot-src{font-size:8.5px;font-weight:800;color:var(--faint);background:var(--surf);border-radius:5px;padding:1px 6px;}
+.ct-slot.risk .ct-slot-src{background:#fff;} .ct-slot.gap .ct-slot-src{background:#fff;}
+.ct-slot-v{font-size:13px;font-weight:700;color:var(--ink);margin-top:3px;}
+.ct-slot.risk .ct-slot-v{color:var(--red);} .ct-slot.gap .ct-slot-v{color:var(--amber-ink);}
+.ct-slot-na{font-size:11px;font-weight:600;color:var(--faint);}
+/* verdict 카드 */
+.ct-vd-wrap{margin:13px 0 4px;}
+.ct-vd{border:1.5px solid var(--border);border-radius:13px;padding:14px 16px;background:#fff;}
+.ct-vd.ok{border-color:#bbf7d0;background:var(--green-soft);} .ct-vd.warn{border-color:var(--amber-border);background:var(--amber-soft);}
+.ct-vd.risk{border-color:var(--red-border);background:var(--red-soft);} .ct-vd.info{background:var(--surf);}
+.ct-vd-top{display:flex;align-items:flex-start;gap:11px;}
+.ct-vd-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;color:#fff;}
+.ct-vd.ok .ct-vd-ic{background:var(--green);} .ct-vd.warn .ct-vd-ic{background:var(--amber);} .ct-vd.risk .ct-vd-ic{background:var(--red);}
+.ct-vd-ic .ic{width:17px;height:17px;}
+.ct-vd-h{font-size:16px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.ct-vd.ok .ct-vd-h{color:#15803d;} .ct-vd.warn .ct-vd-h{color:var(--amber-ink);} .ct-vd.risk .ct-vd-h{color:var(--red);}
+.ct-vd-tag{font-size:9px;font-weight:800;color:var(--faint);background:#fff;border:1px solid var(--border);border-radius:5px;padding:1px 6px;letter-spacing:.03em;}
+.ct-vd-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.ct-vd-basis{margin-top:11px;font-size:12px;color:var(--slate);line-height:1.6;background:#fff;border:1px solid var(--border);border-radius:9px;padding:9px 11px;}
+.ct-vd-bk{display:block;font-size:9px;font-weight:800;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}
+.ct-vd-rule{margin-top:7px;font-size:10.5px;color:var(--faint);font-weight:600;} .ct-vd-rule b{color:var(--slate);font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;}
+.ct-vchips{margin-top:9px;} .ct-vchips-k{display:block;font-size:9px;font-weight:800;color:var(--faint);text-transform:uppercase;margin-bottom:5px;}
+.ct-vchip{display:inline-block;font-size:10.5px;color:var(--slate);background:#fff;border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;} .ct-vchip b{color:var(--ink);}
+.ct-vd-inline{padding:1px 7px;border-radius:6px;} .ct-vd-inline.ok{color:#15803d;} .ct-vd-inline.warn{color:var(--amber-ink);} .ct-vd-inline.risk{color:var(--red);}
+.op-hitlbar.auto{background:linear-gradient(180deg,var(--green-soft),#fff);border-color:#bbf7d0;}
+.op-hitlbar.auto .op-hi{color:#15803d;} .op-hitlbar.auto .op-hbtn{background:var(--green);}
+.op-hs{font-size:10.5px;color:var(--muted);margin-top:3px;max-width:440px;}
+/* 참조 룩업(aside) */
+.ct-lks{padding:6px 15px 4px;}
+.ct-lk{margin-bottom:10px;}
+.ct-lk-h{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--slate);margin-bottom:5px;} .ct-lk-h .ic{width:13px;height:13px;color:var(--aap);}
+.ct-lk-r{display:flex;gap:8px;font-size:10.5px;padding:2px 0;border-bottom:1px dashed var(--line);}
+.ct-lk-r.hit{background:var(--aap-soft);border-radius:5px;padding:3px 6px;border-bottom:none;}
+.ct-lk-k{flex:0 0 86px;font-weight:700;color:var(--muted);} .ct-lk-r.hit .ct-lk-k{color:var(--aap-ink);}
+.ct-lk-v{color:var(--slate);}
+.ct-lk-foot{margin-top:5px;font-size:10.5px;color:var(--slate);background:var(--surf);border-radius:6px;padding:4px 8px;} .ct-lk-foot b{color:var(--aap-ink);}
+
 /* ===== 「업무 진행」 탭 — 단계 프로세스 · HITL · AAP 작동 (코어 일반) ===== */
 .run-surface.ws-on-progress .con-head{padding:0;}   /* 업무 진행 탭 = 헤더 숨김(탭 바가 상단) */
 .run-surface .con-body.ws-progress-body{padding:18px 26px 40px;}

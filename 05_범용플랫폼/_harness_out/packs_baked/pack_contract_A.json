@@ -1,0 +1,1732 @@
+{
+  "id": "contract_A",
+  "label": "계약 관리",
+  "flow": [
+    {
+      "id": "sp1",
+      "label": "계약 건 접수·유형 분류",
+      "kind": "input",
+      "loopPhase": "Data",
+      "explain": "현업/구매가 신규·갱신·변경 건을 접수하면 계약유형(매매·용역·임대·NDA·MOU 등)·거래처·금액·기간을 식별하고 계약마스터에 신규 케이스를 생성한다(월 80건 인입)."
+    },
+    {
+      "id": "sp2",
+      "label": "문서 수집·핵심정보 추출",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "SharePoint의 계약서 PDF를 수집하고 금액·기간·자동갱신·통지기한·관할·준거법 등 핵심 메타데이터를 추출해 구조화한다(스캔/이미지 PDF는 추출 신뢰도 저하 가능)."
+    },
+    {
+      "id": "sp3",
+      "label": "필수조항 누락 점검",
+      "kind": "auto",
+      "loopPhase": "Semantic",
+      "explain": "계약유형별 필수조항 체크리스트(손해배상·해지·비밀유지·관할·준거법·하자담보 등)와 대조해 누락 항목을 식별한다(규정 기반 결정론 판정)."
+    },
+    {
+      "id": "sp4",
+      "label": "표준템플릿 편차 대조",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "자사 표준계약서 대비 조항 변경·삭제·추가를 대조하나, A사 표준템플릿이 디지털화 안 됨(데이터 갭)으로 자동대조 불가 → 편차 의심 시 법무검토로 우회한다."
+    },
+    {
+      "id": "sp5",
+      "label": "독소(위험)조항 탐지",
+      "kind": "auto",
+      "loopPhase": "Learning",
+      "explain": "무제한 손해배상·일방 해지·과도한 위약벌·자동갱신 독소·관할 불리·지재권 양도 등 위험조항을 패턴/규칙으로 탐지하고 위험등급을 산정한다(룰 기반 1차, 신종/문맥의존은 HITL)."
+    },
+    {
+      "id": "sp6",
+      "label": "금액·위임전결 결재선 산정",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "계약금액을 위임전결 구간(팀장 10M·본부장 100M·CFO 500M·대표 초과)에 매핑해 결재선을 자동 구성한다(금액 구간 결정론 매핑, 제조업 발주연동 금액 ERP FI 대조).",
+      "gate": {
+        "label": "금액·위임전결 결재선 산정",
+        "decisions": [
+          {
+            "key": "reject",
+            "label": "반려",
+            "toast": "반려 처리"
+          },
+          {
+            "key": "review1",
+            "label": "법무검토",
+            "toast": "법무검토 처리"
+          },
+          {
+            "key": "auto",
+            "label": "자동승인",
+            "toast": "자동승인 처리"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sp7",
+      "label": "만기·자동갱신·통지기한 점검",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "계약기간·만기일·자동갱신 여부·갱신거절 통지기한을 추출해 통지 데드라인을 산정하고 알림 일정을 등록한다(날짜 산술=결정론)."
+    },
+    {
+      "id": "sp8",
+      "label": "인지세·법정요건 점검",
+      "kind": "auto",
+      "loopPhase": "Reasoning",
+      "explain": "계약유형·금액에 따른 인지세 과세대상 여부·세액을 산정하고 전자계약 인지세 요건을 점검한다(과세표·금액 기준 결정론)."
+    },
+    {
+      "id": "sp9",
+      "label": "거래처 제재·신용 리스크 점검",
+      "kind": "auto",
+      "loopPhase": "Reasoning",
+      "explain": "거래처마스터·ERP와 대조해 제재리스트·거래정지·신용등급·중복거래처를 점검한다(제재리스트 매칭=결정론, 평판·간접 리스크=HITL)."
+    },
+    {
+      "id": "sp10",
+      "label": "분기 판정(자동승인/법무검토/반려)",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "점검 결과를 종합해 보수적 임계(낮은 위험 허용도)로 자동승인·법무검토(HITL)·반려를 분기한다 — A사 리스크 성향상 경계 건은 폭넓게 법무검토로 회부.",
+      "gate": {
+        "label": "분기 판정(자동승인/법무검토/반려)",
+        "decisions": [
+          {
+            "key": "reject",
+            "label": "반려",
+            "toast": "반려 처리"
+          },
+          {
+            "key": "review1",
+            "label": "법무검토",
+            "toast": "법무검토 처리"
+          },
+          {
+            "key": "auto",
+            "label": "자동승인",
+            "toast": "자동승인 처리"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sp11",
+      "label": "법무 심층검토(HITL)",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "자동대조 불가한 템플릿 편차·신종 독소조항·문맥의존 위험·고액/비표준 건을 법무팀이 심층 검토하고 수정요청·조건부승인·반려를 결정한다.",
+      "gate": {
+        "label": "법무 심층검토(HITL)",
+        "decisions": [
+          {
+            "key": "ok",
+            "label": "확인·진행",
+            "toast": "확인했습니다"
+          },
+          {
+            "key": "revise",
+            "label": "보완 요청",
+            "toast": "보완을 요청합니다"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sp12",
+      "label": "결재·체결 진행",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "확정된 위임전결 결재선을 따라 전자결재를 상신·승인받고 서명·체결을 진행한다(온프레미스 결재, 국외이전 금지 준수).",
+      "gate": {
+        "label": "결재·체결 진행",
+        "decisions": [
+          {
+            "key": "reject",
+            "label": "반려",
+            "toast": "반려 처리"
+          },
+          {
+            "key": "review1",
+            "label": "법무검토",
+            "toast": "법무검토 처리"
+          },
+          {
+            "key": "auto",
+            "label": "자동승인",
+            "toast": "자동승인 처리"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sp13",
+      "label": "계약관리대장 등록·후속 알림",
+      "kind": "auto",
+      "loopPhase": "Learning",
+      "explain": "체결 완료 건을 자체구축 계약관리 시스템 대장에 등록(read-write)하고 만기·갱신통지 알림과 사후 모니터링을 활성화한다."
+    }
+  ],
+  "io": {
+    "inputs": [
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "contractStartDate",
+        "label": "계약 시작일"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "contractEndDate",
+        "label": "계약 만기일"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "autoRenewal",
+        "label": "자동갱신 조항 존재 여부"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "renewalNoticeDays",
+        "label": "갱신거절 통지기한(일)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "governingLaw",
+        "label": "준거법"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "jurisdiction",
+        "label": "관할 법원"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "clausesPresent",
+        "label": "추출된 조항 목록(손해배상·해지·비밀유지·하자담보 등)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "pdfExtractConfidence",
+        "label": "PDF 텍스트 추출 신뢰도(0~1)"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "templateDigitalized",
+        "label": "표준템플릿 디지털화 존재 여부"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "templateDeviation",
+        "label": "표준템플릿 대비 편차(조항 변경·삭제·추가)"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "reputationRisk",
+        "label": "거래처 평판·간접 리스크 판단"
+      }
+    ],
+    "connectors": [
+      {
+        "id": "c_자체구축_계약관리_시스템(계약",
+        "label": "자체구축 계약관리 시스템(계약마스터·대장)",
+        "system": "계약관리",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_ERP(MM/FI_거래",
+        "label": "SAP ERP(MM/FI 거래처·발주금액·신용)",
+        "system": "ERP",
+        "stub": true
+      },
+      {
+        "id": "c_SharePoint_문서저장소",
+        "label": "SharePoint 문서저장소(계약서 PDF)",
+        "system": "문서저장소",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_API_커넥터(read",
+        "label": "SAP API 커넥터(read·온프레미스 내부망)",
+        "system": "ERP",
+        "stub": true
+      },
+      {
+        "id": "c_계약관리_DB_커넥터(read",
+        "label": "계약관리 DB 커넥터(read-write)",
+        "system": "계약관리",
+        "stub": true
+      },
+      {
+        "id": "c_SharePoint_파일_커넥",
+        "label": "SharePoint 파일 커넥터(read·온프레미스)",
+        "system": "문서저장소",
+        "stub": true
+      },
+      {
+        "id": "c_온프레미스_전자결재_커넥터(결",
+        "label": "온프레미스 전자결재 커넥터(결재 상신·회신)",
+        "system": "계약관리",
+        "stub": true
+      }
+    ],
+    "editable": [
+      {
+        "key": "th_route_hitl",
+        "label": "법무검토(HITL) 회부 — 보수 성향 낮은 임계",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_route_reject",
+        "label": "반려",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_liability_cap",
+        "label": "고위험 독소조항(배상 과대) — 법무검토",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_penalty_cap",
+        "label": "과도 위약벌 — 고위험",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_renewal_notice",
+        "label": "갱신거절 통지기한 임박 — 즉시 알림",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_renewal_overdue",
+        "label": "통지기한 도과 — 자동갱신 위험·긴급 검토",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_pdf_confidence",
+        "label": "추출 신뢰도 미달 — 문서 보완/수기 검토",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_amount_match",
+        "label": "ERP 발주금액 불일치 — 보완 회부",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_stamp_taxable",
+        "label": "인지세 과세대상",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      }
+    ]
+  },
+  "caseModel": {
+    "slots": [
+      {
+        "key": "contractType",
+        "label": "계약유형(매매/용역/임대/NDA/MOU 등)",
+        "type": "enum",
+        "source": "자체구축 계약관리(계약마스터)",
+        "extract": "rule"
+      },
+      {
+        "key": "contractNature",
+        "label": "신규/갱신/변경 구분",
+        "type": "enum",
+        "source": "자체구축 계약관리(계약마스터)",
+        "extract": "rule"
+      },
+      {
+        "key": "counterpartyId",
+        "label": "거래처 ID",
+        "type": "string",
+        "source": "자체구축 계약관리(거래처마스터)",
+        "extract": "rule"
+      },
+      {
+        "key": "contractAmount",
+        "label": "계약금액(KRW)",
+        "type": "number",
+        "source": "자체구축 계약관리(계약마스터)",
+        "extract": "rule"
+      },
+      {
+        "key": "contractStartDate",
+        "label": "계약 시작일",
+        "type": "date",
+        "source": "SharePoint(계약서PDF) → 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "contractEndDate",
+        "label": "계약 만기일",
+        "type": "date",
+        "source": "SharePoint(계약서PDF) → 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "autoRenewal",
+        "label": "자동갱신 조항 존재 여부",
+        "type": "boolean",
+        "source": "SharePoint(계약서PDF) → 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "renewalNoticeDays",
+        "label": "갱신거절 통지기한(일)",
+        "type": "number",
+        "source": "SharePoint(계약서PDF) → 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "governingLaw",
+        "label": "준거법",
+        "type": "string",
+        "source": "SharePoint(계약서PDF) → 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "jurisdiction",
+        "label": "관할 법원",
+        "type": "string",
+        "source": "SharePoint(계약서PDF) → 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "clausesPresent",
+        "label": "추출된 조항 목록(손해배상·해지·비밀유지·하자담보 등)",
+        "type": "array",
+        "source": "SharePoint(계약서PDF) → 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "missingMandatoryClauses",
+        "label": "필수조항 누락 목록",
+        "type": "array",
+        "source": "rule(필수조항표 대조 결과)",
+        "extract": "rule"
+      },
+      {
+        "key": "pdfExtractConfidence",
+        "label": "PDF 텍스트 추출 신뢰도(0~1)",
+        "type": "number",
+        "source": "SharePoint(계약서PDF) → OCR/추출",
+        "extract": "doc"
+      },
+      {
+        "key": "templateDigitalized",
+        "label": "표준템플릿 디지털화 존재 여부",
+        "type": "boolean",
+        "source": "gap",
+        "extract": "manual"
+      },
+      {
+        "key": "templateDeviation",
+        "label": "표준템플릿 대비 편차(조항 변경·삭제·추가)",
+        "type": "array",
+        "source": "gap",
+        "extract": "manual"
+      },
+      {
+        "key": "toxicClauseHits",
+        "label": "독소조항 패턴 매칭 결과(무제한배상·일방해지·과도위약벌 등)",
+        "type": "array",
+        "source": "rule(독소조항 패턴표 매칭)",
+        "extract": "rule"
+      },
+      {
+        "key": "riskGrade",
+        "label": "위험등급(고/중/저)",
+        "type": "enum",
+        "source": "rule(독소조항·편차 종합)",
+        "extract": "rule"
+      },
+      {
+        "key": "approverLine",
+        "label": "위임전결 결재선",
+        "type": "array",
+        "source": "rule(금액→위임전결표 매핑)",
+        "extract": "rule"
+      },
+      {
+        "key": "erpPoAmount",
+        "label": "ERP 발주금액(대조용)",
+        "type": "number",
+        "source": "SAP(MM/FI)",
+        "extract": "connector"
+      },
+      {
+        "key": "amountMatchesPo",
+        "label": "계약금액-ERP 발주금액 정합 여부",
+        "type": "boolean",
+        "source": "rule(계약금액 vs SAP 발주금액 대조)",
+        "extract": "rule"
+      },
+      {
+        "key": "stampTaxDue",
+        "label": "인지세 과세대상 여부",
+        "type": "boolean",
+        "source": "rule(계약유형·금액→인지세표)",
+        "extract": "rule"
+      },
+      {
+        "key": "stampTaxAmount",
+        "label": "인지세 세액(KRW)",
+        "type": "number",
+        "source": "rule(인지세 과세표 산정)",
+        "extract": "rule"
+      },
+      {
+        "key": "sanctionListHit",
+        "label": "거래처 제재리스트/거래정지 해당 여부",
+        "type": "boolean",
+        "source": "자체구축 계약관리(거래처마스터)·SAP(거래처) 대조",
+        "extract": "rule"
+      },
+      {
+        "key": "creditGrade",
+        "label": "거래처 신용등급",
+        "type": "enum",
+        "source": "SAP(FI) 거래처 신용",
+        "extract": "connector"
+      },
+      {
+        "key": "reputationRisk",
+        "label": "거래처 평판·간접 리스크 판단",
+        "type": "enum",
+        "source": "gap",
+        "extract": "manual"
+      },
+      {
+        "key": "noticeDeadline",
+        "label": "갱신거절 통지 데드라인",
+        "type": "date",
+        "source": "rule(만기일·통지기한 날짜 산술)",
+        "extract": "rule"
+      },
+      {
+        "key": "compositeRiskScore",
+        "label": "종합 위험점수",
+        "type": "number",
+        "source": "rule(점검결과 가중합)",
+        "extract": "rule"
+      },
+      {
+        "key": "routeDecision",
+        "label": "분기 판정(자동승인/법무검토/반려)",
+        "type": "enum",
+        "source": "rule(결정표 route)",
+        "extract": "rule"
+      }
+    ]
+  },
+  "knowledge": {
+    "lookupTables": [
+      {
+        "id": "lt_mandatory_clauses",
+        "description": "계약유형별 필수조항 체크리스트(누락 시 점검). 보수 성향상 권리·책임·분쟁 조항을 넓게 필수로 포함.",
+        "entries": [
+          {
+            "match": "type=매매",
+            "result": "손해배상·하자담보·해지·소유권이전·대금지급·관할·준거법"
+          },
+          {
+            "match": "type=용역",
+            "result": "손해배상·해지·비밀유지·납품/검수·지재권귀속·관할·준거법"
+          },
+          {
+            "match": "type=임대",
+            "result": "손해배상·해지·원상복구·보증금·차임·관할·준거법"
+          },
+          {
+            "match": "type=NDA",
+            "result": "비밀유지·정보반환/파기·계약기간·손해배상·관할·준거법"
+          },
+          {
+            "match": "type=MOU",
+            "result": "구속력범위·비밀유지·유효기간·관할·준거법"
+          }
+        ]
+      },
+      {
+        "id": "lt_approval_line",
+        "description": "policy.approvalDelegation(팀장10M·본부장100M·CFO500M·대표 초과) 금액구간→결재권자 매핑. 결정론.",
+        "entries": [
+          {
+            "match": "amount <= 10,000,000",
+            "result": "팀장"
+          },
+          {
+            "match": "10,000,000 < amount <= 100,000,000",
+            "result": "본부장"
+          },
+          {
+            "match": "100,000,000 < amount <= 500,000,000",
+            "result": "CFO"
+          },
+          {
+            "match": "amount > 500,000,000",
+            "result": "대표"
+          }
+        ]
+      },
+      {
+        "id": "lt_stamp_tax",
+        "description": "인지세법 기준 계약금액 구간별 과세대상·정액 인지세(증서 1통 기준).",
+        "entries": [
+          {
+            "match": "amount <= 10,000,000",
+            "result": "비과세(0원)"
+          },
+          {
+            "match": "10,000,000 < amount <= 30,000,000",
+            "result": "20,000원"
+          },
+          {
+            "match": "30,000,000 < amount <= 50,000,000",
+            "result": "40,000원"
+          },
+          {
+            "match": "50,000,000 < amount <= 100,000,000",
+            "result": "70,000원"
+          },
+          {
+            "match": "100,000,000 < amount <= 1,000,000,000",
+            "result": "150,000원"
+          },
+          {
+            "match": "amount > 1,000,000,000",
+            "result": "350,000원"
+          }
+        ]
+      },
+      {
+        "id": "lt_toxic_clause_patterns",
+        "description": "독소(위험)조항 패턴→위험등급 사전. 룰 매칭 1차, 문맥의존/신종은 HITL.",
+        "entries": [
+          {
+            "match": "무제한 손해배상 / 배상한도 미설정",
+            "result": "고위험"
+          },
+          {
+            "match": "상대방 일방 임의해지",
+            "result": "고위험"
+          },
+          {
+            "match": "과도한 위약벌(계약금액 20% 초과)",
+            "result": "고위험"
+          },
+          {
+            "match": "지재권 전부 양도/포괄 라이선스",
+            "result": "중위험"
+          },
+          {
+            "match": "당사 불리 관할/외국 준거법",
+            "result": "중위험"
+          },
+          {
+            "match": "자동갱신+장기 통지기한 독소",
+            "result": "중위험"
+          },
+          {
+            "match": "패턴 미매칭(신종/문맥의존)",
+            "result": "HITL회부"
+          }
+        ]
+      },
+      {
+        "id": "lt_credit_threshold",
+        "description": "거래처 신용등급 임계(보수 성향: 임계 높게 설정해 검토 폭넓게).",
+        "entries": [
+          {
+            "match": "creditGrade in [A,B,C]",
+            "result": "정상"
+          },
+          {
+            "match": "creditGrade = D",
+            "result": "법무검토 권고"
+          },
+          {
+            "match": "creditGrade in [E,F] or 거래정지",
+            "result": "반려/제재점검"
+          }
+        ]
+      }
+    ],
+    "decisionTables": [
+      {
+        "id": "dt_route",
+        "description": "종합 분기 판정(자동승인/법무검토/반려). riskAppetite=보수 반영: 임계 낮게·경계대역 넓게 법무검토(HITL)로 라우팅. 치명 결격은 반려.",
+        "rules": [
+          {
+            "when": "sanctionListHit = true OR creditGrade in [E,F] OR 거래정지 = true",
+            "then": "반려(치명 결격)"
+          },
+          {
+            "when": "missingMandatoryClauses 中 손해배상/해지/준거법/관할 등 핵심조항 누락",
+            "then": "반려(핵심 필수조항 누락)"
+          },
+          {
+            "when": "amountMatchesPo = false (ERP 발주금액 불일치)",
+            "then": "반려(금액 정합 실패·요청자 보완)"
+          },
+          {
+            "when": "pdfExtractConfidence < 0.7 OR 핵심필드 누락",
+            "then": "법무검토(추출 신뢰도 저하·문서 보완)"
+          },
+          {
+            "when": "templateDigitalized = false AND (신규 OR 변경 건)",
+            "then": "법무검토(템플릿 편차 자동대조 불가 갭 → HITL 보완)"
+          },
+          {
+            "when": "toxicClauseHits 中 고위험 1건 이상",
+            "then": "법무검토(독소조항 심층검토)"
+          },
+          {
+            "when": "riskGrade = 중 OR compositeRiskScore >= 30",
+            "then": "법무검토(보수 임계·경계대역 회부)"
+          },
+          {
+            "when": "reputationRisk = 의심 이상 OR creditGrade = D",
+            "then": "법무검토(평판·신용 간접 리스크)"
+          },
+          {
+            "when": "missingMandatoryClauses = [] AND toxicClauseHits = [] AND templateDigitalized = true AND amountMatchesPo = true AND sanctionListHit = false AND compositeRiskScore < 30 AND pdfExtractConfidence >= 0.7",
+            "then": "자동승인(결재선 자동구성→상신)"
+          },
+          {
+            "when": "위 어느 규칙에도 해당하지 않는 경계 건",
+            "then": "법무검토(보수 기본값: 모호 시 HITL)"
+          }
+        ]
+      },
+      {
+        "id": "dt_credit_score_weight",
+        "description": "compositeRiskScore 가중 산정(점검 결과→점수). 보수 성향상 위험요소 가중 높게.",
+        "rules": [
+          {
+            "when": "toxicClauseHits 고위험 1건",
+            "then": "+40"
+          },
+          {
+            "when": "toxicClauseHits 중위험 1건",
+            "then": "+20"
+          },
+          {
+            "when": "missingMandatoryClauses 비핵심 1건",
+            "then": "+15"
+          },
+          {
+            "when": "templateDigitalized = false",
+            "then": "+25"
+          },
+          {
+            "when": "creditGrade = D",
+            "then": "+20"
+          },
+          {
+            "when": "pdfExtractConfidence < 0.8",
+            "then": "+10"
+          }
+        ]
+      }
+    ],
+    "thresholds": [
+      {
+        "id": "th_route_hitl",
+        "expr": "compositeRiskScore >= 30",
+        "flag": "법무검토(HITL) 회부 — 보수 성향 낮은 임계"
+      },
+      {
+        "id": "th_route_reject",
+        "expr": "sanctionListHit = true OR (핵심 필수조항 누락) OR amountMatchesPo = false",
+        "flag": "반려"
+      },
+      {
+        "id": "th_liability_cap",
+        "expr": "배상한도 미설정 OR 배상한도 > 계약금액 × 2",
+        "flag": "고위험 독소조항(배상 과대) — 법무검토"
+      },
+      {
+        "id": "th_penalty_cap",
+        "expr": "위약벌 > 계약금액 × 0.20",
+        "flag": "과도 위약벌 — 고위험"
+      },
+      {
+        "id": "th_renewal_notice",
+        "expr": "noticeDeadline - today() <= 30일",
+        "flag": "갱신거절 통지기한 임박 — 즉시 알림"
+      },
+      {
+        "id": "th_renewal_overdue",
+        "expr": "today() > noticeDeadline",
+        "flag": "통지기한 도과 — 자동갱신 위험·긴급 검토"
+      },
+      {
+        "id": "th_pdf_confidence",
+        "expr": "pdfExtractConfidence < 0.7",
+        "flag": "추출 신뢰도 미달 — 문서 보완/수기 검토"
+      },
+      {
+        "id": "th_amount_match",
+        "expr": "abs(contractAmount - erpPoAmount) > 0",
+        "flag": "ERP 발주금액 불일치 — 보완 회부"
+      },
+      {
+        "id": "th_stamp_taxable",
+        "expr": "contractAmount > 10,000,000",
+        "flag": "인지세 과세대상"
+      }
+    ]
+  },
+  "seeds": [
+    {
+      "label": "표준 매매계약 — 전 조건 충족 자동승인",
+      "expectedRoute": "자동승인(결재선 자동구성→상신)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "매매"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-10231 / (주)한성정밀소재"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "42000000"
+        },
+        {
+          "slot": "contractStartDate",
+          "value": "2026-07-01"
+        },
+        {
+          "slot": "contractEndDate",
+          "value": "2027-06-30"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "손해배상·하자담보·해지·소유권이전·대금지급·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "templateDeviation",
+          "value": "[]"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "42000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "B"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.93"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "0"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "저"
+        },
+        {
+          "slot": "approverLine",
+          "value": "본부장"
+        },
+        {
+          "slot": "stampTaxDue",
+          "value": "true"
+        },
+        {
+          "slot": "stampTaxAmount",
+          "value": "40000"
+        }
+      ]
+    },
+    {
+      "label": "제재리스트 거래처 — 치명 결격 반려",
+      "expectedRoute": "반려(치명 결격)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "용역"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-20887 / 대성기공테크(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "88000000"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "손해배상·해지·비밀유지·납품/검수·지재권귀속·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "88000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "true"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "E"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.9"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "고"
+        }
+      ]
+    },
+    {
+      "label": "필수조항 누락 매매 — 핵심조항 누락 반려",
+      "expectedRoute": "반려(핵심 필수조항 누락)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "매매"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-13455 / 우진금속(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "63000000"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "대금지급·소유권이전·하자담보"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "손해배상·해지·준거법·관할"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "63000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "B"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.88"
+        }
+      ]
+    },
+    {
+      "label": "ERP 발주금액 불일치 — 금액 정합 실패 반려",
+      "expectedRoute": "반려(금액 정합 실패·요청자 보완)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "매매"
+        },
+        {
+          "slot": "contractNature",
+          "value": "변경"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-11902 / 삼화정공(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "150000000"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "손해배상·하자담보·해지·소유권이전·대금지급·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "false"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "135000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "A"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.91"
+        },
+        {
+          "slot": "approverLine",
+          "value": "CFO"
+        }
+      ]
+    },
+    {
+      "label": "스캔 품질 저하 계약서 — 추출 신뢰도 저하 법무검토",
+      "expectedRoute": "법무검토(추출 신뢰도 저하·문서 보완)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "용역"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-15670 / 동양엔지니어링(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "55000000"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "손해배상·해지·비밀유지·납품/검수·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "55000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "C"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.58"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "10"
+        }
+      ]
+    },
+    {
+      "label": "표준템플릿 미디지털화 신규건 — 템플릿 갭 법무검토",
+      "expectedRoute": "법무검토(템플릿 편차 자동대조 불가 갭 → HITL 보완)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "임대"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-18044 / 부천산업단지관리공단"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "36000000"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "손해배상·해지·원상복구·보증금·차임·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "false"
+        },
+        {
+          "slot": "templateDeviation",
+          "value": "미확인(템플릿 디지털화 부재)"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "36000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "B"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.9"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "25"
+        }
+      ]
+    },
+    {
+      "label": "무제한 배상 독소조항 — 고위험 독소 법무검토",
+      "expectedRoute": "법무검토(독소조항 심층검토)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "용역"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-12290 / 글로벌오토파츠코리아(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "210000000"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "손해배상·해지·비밀유지·납품/검수·지재권귀속·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "무제한 손해배상 / 배상한도 미설정"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "templateDeviation",
+          "value": "배상한도 조항 삭제"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "210000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "B"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.92"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "고"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "40"
+        },
+        {
+          "slot": "approverLine",
+          "value": "CFO"
+        }
+      ]
+    },
+    {
+      "label": "중위험·경계대역 NDA — 보수 임계 법무검토",
+      "expectedRoute": "법무검토(보수 임계·경계대역 회부)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "NDA"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-16711 / 니혼세이미츠상사"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "0"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "비밀유지·정보반환/파기·계약기간·손해배상·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "당사 불리 관할/외국 준거법"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "governingLaw",
+          "value": "일본법"
+        },
+        {
+          "slot": "jurisdiction",
+          "value": "도쿄지방재판소"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "B"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.89"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "중"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "30"
+        }
+      ]
+    },
+    {
+      "label": "신용 D등급 거래처 — 평판·신용 간접 리스크 법무검토",
+      "expectedRoute": "법무검토(평판·신용 간접 리스크)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "매매"
+        },
+        {
+          "slot": "contractNature",
+          "value": "갱신"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-14008 / 태평양주물공업(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "47000000"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "손해배상·하자담보·해지·소유권이전·대금지급·관할·준거법"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "erpPoAmount",
+          "value": "47000000"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "D"
+        },
+        {
+          "slot": "reputationRisk",
+          "value": "의심"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.9"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "20"
+        },
+        {
+          "slot": "autoRenewal",
+          "value": "true"
+        },
+        {
+          "slot": "renewalNoticeDays",
+          "value": "60"
+        }
+      ]
+    },
+    {
+      "label": "패턴 미매칭 신종조항 모호건 — 보수 기본값 법무검토",
+      "expectedRoute": "법무검토(보수 기본값: 모호 시 HITL)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "MOU"
+        },
+        {
+          "slot": "contractNature",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyId",
+          "value": "CP-19320 / 한국로보틱스연구조합"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "0"
+        },
+        {
+          "slot": "clausesPresent",
+          "value": "구속력범위·비밀유지·유효기간·관할·준거법·공동개발성과물 귀속(신종)"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "toxicClauseHits",
+          "value": "패턴 미매칭(신종/문맥의존)"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "amountMatchesPo",
+          "value": "true"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "B"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.86"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "15"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "중"
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "type": "Agent",
+      "name": "계약심사 오케스트레이터 Agent",
+      "L": "L3",
+      "connectsTo": ""
+    },
+    {
+      "type": "Agent",
+      "name": "문서 추출 Agent(PDF 메타데이터·조항 추출)",
+      "L": "L3",
+      "connectsTo": "SharePoint"
+    },
+    {
+      "type": "Agent",
+      "name": "독소조항·위험 탐지 Agent(룰 1차)",
+      "L": "L3",
+      "connectsTo": ""
+    },
+    {
+      "type": "Agent",
+      "name": "거래처 리스크 점검 Agent(제재·신용 대조)",
+      "L": "L3",
+      "connectsTo": "SAP"
+    },
+    {
+      "type": "Module",
+      "name": "필수조항 누락 점검 엔진(결정론)",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "Module",
+      "name": "위임전결 결재선 산정 엔진(금액구간 매핑)",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "Module",
+      "name": "만기·자동갱신 통지기한 산정 엔진(날짜 산술)",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "Module",
+      "name": "인지세 과세·세액 산정 엔진",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "Module",
+      "name": "종합 분기 판정 엔진(dt_route·임계)",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "자체구축 계약관리 시스템(계약마스터·대장)",
+      "L": "L5",
+      "connectsTo": "계약관리"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "SAP ERP(MM/FI 거래처·발주금액·신용)",
+      "L": "L5",
+      "connectsTo": "ERP"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "SharePoint 문서저장소(계약서 PDF)",
+      "L": "L5",
+      "connectsTo": "문서저장소"
+    },
+    {
+      "type": "Connector",
+      "name": "SAP API 커넥터(read·온프레미스 내부망)",
+      "L": "L5",
+      "connectsTo": "ERP"
+    },
+    {
+      "type": "Connector",
+      "name": "계약관리 DB 커넥터(read-write)",
+      "L": "L5",
+      "connectsTo": "계약관리"
+    },
+    {
+      "type": "Connector",
+      "name": "SharePoint 파일 커넥터(read·온프레미스)",
+      "L": "L5",
+      "connectsTo": "문서저장소"
+    },
+    {
+      "type": "Connector",
+      "name": "온프레미스 전자결재 커넥터(결재 상신·회신)",
+      "L": "L5",
+      "connectsTo": "계약관리"
+    },
+    {
+      "type": "Policy",
+      "name": "온프레미스 전용·개인정보 국외이전 금지 가드레일",
+      "L": "L7",
+      "connectsTo": ""
+    },
+    {
+      "type": "Policy",
+      "name": "보수 리스크 임계 정책(낮은 임계·HITL 폭넓게)",
+      "L": "L7",
+      "connectsTo": ""
+    },
+    {
+      "type": "Policy",
+      "name": "위임전결 권한 정책(팀장10M·본부장100M·CFO500M·대표)",
+      "L": "L7",
+      "connectsTo": ""
+    },
+    {
+      "type": "Policy",
+      "name": "HITL 법무 심층검토 라우팅 정책(템플릿갭·신종독소·평판)",
+      "L": "L7",
+      "connectsTo": ""
+    }
+  ],
+  "compose": [
+    {
+      "t": "Agent",
+      "sub": "전문 작업",
+      "cls": "tA",
+      "n": 4,
+      "items": [
+        "계약심사 오케스트레이터 Agent",
+        "문서 추출 Agent(PDF 메타데이터·조항 추출)",
+        "독소조항·위험 탐지 Agent(룰 1차)",
+        "거래처 리스크 점검 Agent(제재·신용 대조)"
+      ]
+    },
+    {
+      "t": "Module",
+      "sub": "재사용 기능",
+      "cls": "tM",
+      "n": 5,
+      "items": [
+        "필수조항 누락 점검 엔진(결정론)",
+        "위임전결 결재선 산정 엔진(금액구간 매핑)",
+        "만기·자동갱신 통지기한 산정 엔진(날짜 산술)",
+        "인지세 과세·세액 산정 엔진",
+        "종합 분기 판정 엔진(dt_route·임계)"
+      ]
+    },
+    {
+      "t": "기존 솔루션",
+      "sub": "Buy·Integrate",
+      "cls": "tS",
+      "n": 3,
+      "items": [
+        "자체구축 계약관리 시스템(계약마스터·대장)",
+        "SAP ERP(MM/FI 거래처·발주금액·신용)",
+        "SharePoint 문서저장소(계약서 PDF)"
+      ]
+    },
+    {
+      "t": "Connector",
+      "sub": "시스템 연동",
+      "cls": "tC",
+      "n": 4,
+      "items": [
+        "SAP API 커넥터(read·온프레미스 내부망)",
+        "계약관리 DB 커넥터(read-write)",
+        "SharePoint 파일 커넥터(read·온프레미스)",
+        "온프레미스 전자결재 커넥터(결재 상신·회신)"
+      ]
+    },
+    {
+      "t": "Policy",
+      "sub": "통제·권한",
+      "cls": "tP",
+      "n": 4,
+      "items": [
+        "온프레미스 전용·개인정보 국외이전 금지 가드레일",
+        "보수 리스크 임계 정책(낮은 임계·HITL 폭넓게)",
+        "위임전결 권한 정책(팀장10M·본부장100M·CFO500M·대표)",
+        "HITL 법무 심층검토 라우팅 정책(템플릿갭·신종독소·평판)"
+      ]
+    }
+  ],
+  "gates": [
+    "독소조항 패턴표에 미매칭된 신종·문맥의존 조항(예: 공동개발 성과물 귀속, 변형된 책임전가 문구)은 룰 1차 탐지로 위험등급을 확정할 수 없음. 룰이 'HITL회부'를 산출한 케이스는 법무 담당자가 조항 의미를 해석해 위험등급을 보완해야 함.",
+    "표준템플릿이 디지털화되어 있지 않아(source=gap, extract=manual) 시스템이 templateDeviation(조항 변경·삭제·추가)을 자동 대조할 수 없음. 신규·변경 건에서 사람이 표준 대비 편차를 수기 점검해 채워야 자동 판정 가능.",
+    "reputationRisk(거래처 평판·간접 리스크)는 source=gap·extract=manual 슬롯으로 신용등급만으로 산출 불가. 신용 D등급 등 경계 거래처는 평판·언론·계열 리스크를 사람이 판단해 '의심 이상' 여부를 보완해야 분기 결정에 반영됨.",
+    "PDF 추출 신뢰도가 임계(0.7) 미만이면 계약 시작일·만기일·조항 등 핵심필드의 정확성을 보장할 수 없음. 사람이 원문 대조로 문서를 보완하기 전에는 자동 판정을 멈춰야 함.",
+    "무제한 배상·배상한도 미설정·과도 위약벌 등 고위험 독소조항은 계약 협상·수정 권한이 걸린 결정이라 자동승인 불가. 법무가 한도 설정·문구 수정 협상 여부를 판단해야 함."
+  ],
+  "stepLoop": {
+    "sp1": "Data",
+    "sp2": "Data",
+    "sp3": "Semantic",
+    "sp4": "Decision",
+    "sp5": "Learning",
+    "sp6": "Decision",
+    "sp7": "Data",
+    "sp8": "Reasoning",
+    "sp9": "Reasoning",
+    "sp10": "Decision",
+    "sp11": "Decision",
+    "sp12": "Decision",
+    "sp13": "Learning"
+  },
+  "govern": [
+    {
+      "k": "Policy",
+      "v": "책임 지점 자동 차단 후 승인(HITL 게이트)."
+    },
+    {
+      "k": "Run Trace",
+      "v": "요청→판정→분기→반영 전 구간 기록."
+    },
+    {
+      "k": "Evaluation",
+      "v": "evaluate(case,knowledge) 결정론 판정·근거(basis) 추적."
+    },
+    {
+      "k": "Skill Library",
+      "v": "유형·룰·패턴 재사용 자산화."
+    }
+  ],
+  "surfaceSpec": {
+    "icon": "🗂️",
+    "title": "계약 관리",
+    "customer": "고객",
+    "owner": "담당자",
+    "tabs": [
+      "개요",
+      "판정",
+      "처리",
+      "기록"
+    ],
+    "_stub": true
+  },
+  "provenance": {
+    "generatedBy": "harness",
+    "adapter": "harness_to_pack_v0.1",
+    "domain": "contract",
+    "reviewedBy": null
+  },
+  "_adapterNotes": [
+    "flow·loopPhase·gate 분류 = 휴리스틱(어댑터 v0.1). app/ 세션이 정통화(Pack Contract v2 2b).",
+    "caseModel·knowledge·seeds·components = 하니스 출력 1:1 통과(정밀).",
+    "surfaceSpec = stub. io.editable.recompute = evaluate() (코어 표준, N3 §D).",
+    "route 분기는 knowledge.decisionTables가 SSOT — flow gate decisions는 그 라벨 미러."
+  ]
+}

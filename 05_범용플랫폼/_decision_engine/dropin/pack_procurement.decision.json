@@ -1,0 +1,1869 @@
+{
+  "id": "procurement",
+  "label": "11룰 procurement — 하니스 자동생성+evaluate게이트 통과본",
+  "caseModel": {
+    "slots": [
+      {
+        "key": "case_id"
+      },
+      {
+        "key": "requester"
+      },
+      {
+        "key": "department"
+      },
+      {
+        "key": "purchase_type"
+      },
+      {
+        "key": "budget_code"
+      },
+      {
+        "key": "delivery_due"
+      },
+      {
+        "key": "line_items"
+      },
+      {
+        "key": "order_amount"
+      },
+      {
+        "key": "vendor_id"
+      },
+      {
+        "key": "is_new_vendor"
+      },
+      {
+        "key": "vendor_status"
+      },
+      {
+        "key": "vendor_credit_grade"
+      },
+      {
+        "key": "vendor_biz_no_valid"
+      },
+      {
+        "key": "vendor_due_diligence"
+      },
+      {
+        "key": "quote_count"
+      },
+      {
+        "key": "quote_amount"
+      },
+      {
+        "key": "quote_vendor"
+      },
+      {
+        "key": "quote_valid_until"
+      },
+      {
+        "key": "quote_extract_confidence"
+      },
+      {
+        "key": "spec_attached"
+      },
+      {
+        "key": "spec_match"
+      },
+      {
+        "key": "contract_unit_price"
+      },
+      {
+        "key": "unit_price_deviation_pct"
+      },
+      {
+        "key": "deviation_justified"
+      },
+      {
+        "key": "budget_remaining"
+      },
+      {
+        "key": "budget_after_order"
+      },
+      {
+        "key": "budget_usage_pct"
+      },
+      {
+        "key": "split_score"
+      },
+      {
+        "key": "split_intent_judged"
+      },
+      {
+        "key": "approval_line"
+      },
+      {
+        "key": "route"
+      },
+      {
+        "key": "po_number"
+      },
+      {
+        "key": "commitment_status"
+      },
+      {
+        "key": "today"
+      },
+      {
+        "key": "split_score_review_threshold"
+      },
+      {
+        "key": "unit_price_deviation_threshold"
+      },
+      {
+        "key": "budget_usage_review_threshold"
+      },
+      {
+        "key": "quote_confidence_threshold"
+      },
+      {
+        "key": "auto_approve_amount_cap"
+      }
+    ]
+  },
+  "knowledge": {
+    "route": {
+      "rules": [
+        {
+          "id": "R01_budget_overrun",
+          "outcome": "REJECT",
+          "label": "반려 (예산 초과 발주 금지 — 하드 가드레일)",
+          "basis": "발주 후 잔여예산이 음수이면 예산 초과 발주로 하드 차단",
+          "when": {
+            "<": [
+              "$budget_after_order",
+              0
+            ]
+          }
+        },
+        {
+          "id": "R02_vendor_compliance_block",
+          "outcome": "REJECT",
+          "label": "반려 (벤더 컴플라이언스 하드 차단)",
+          "basis": "벤더가 제재·거래정지 상태이거나 사업자번호가 유효하지 않으면 하드 차단",
+          "when": {
+            "any": [
+              {
+                "in": [
+                  "$vendor_status",
+                  [
+                    "제재",
+                    "거래정지"
+                  ]
+                ]
+              },
+              {
+                "==": [
+                  "$vendor_biz_no_valid",
+                  false
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R03_three_quote_required",
+          "outcome": "REJECT",
+          "label": "반려 (3견적 의무 미충족·보완요청)",
+          "basis": "발주금액 500만원 이상·단가계약이 아니면서 견적이 3건 미만이면 3견적 의무 미충족",
+          "when": {
+            "all": [
+              {
+                ">=": [
+                  "$order_amount",
+                  5000000
+                ]
+              },
+              {
+                "!=": [
+                  "$purchase_type",
+                  "단가계약"
+                ]
+              },
+              {
+                "<": [
+                  "$quote_count",
+                  3
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R04_evidence_missing",
+          "outcome": "REJECT",
+          "label": "반려 (증빙 미충족·보완요청)",
+          "basis": "사양서 미첨부이거나 견적 유효기한이 오늘 이전이면 증빙 미충족",
+          "when": {
+            "any": [
+              {
+                "==": [
+                  "$spec_attached",
+                  false
+                ]
+              },
+              {
+                "<": [
+                  "$quote_valid_until",
+                  "$today"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R05_split_suspect",
+          "outcome": "LEGAL_REVIEW",
+          "label": "구매검토(HITL) — 쪼개기 의심, 결재 회부 (구매팀장 의도 판정)",
+          "basis": "쪼개기 점수가 검토 임계 이상이면 자동 처리를 막고 의도 판정",
+          "when": {
+            ">=": [
+              "$split_score",
+              "$split_score_review_threshold"
+            ]
+          }
+        },
+        {
+          "id": "R06_new_vendor",
+          "outcome": "LEGAL_REVIEW",
+          "label": "구매검토(HITL) — 신규 벤더 실사 수기 확인(구매 담당자)",
+          "basis": "신규 벤더이면 실사 수기 확인을 위해 검토",
+          "when": {
+            "==": [
+              "$is_new_vendor",
+              true
+            ]
+          }
+        },
+        {
+          "id": "R07_unit_price_deviation",
+          "outcome": "LEGAL_REVIEW",
+          "label": "구매검토(HITL) — 단가 편차 초과(편차 사유 정당성 판단)",
+          "basis": "단가 편차율이 임계를 초과하면 편차 사유 정당성 판단",
+          "when": {
+            ">": [
+              "$unit_price_deviation_pct",
+              "$unit_price_deviation_threshold"
+            ]
+          }
+        },
+        {
+          "id": "R08_budget_imminent",
+          "outcome": "LEGAL_REVIEW",
+          "label": "구매검토(HITL) — 예산 임박 승급(보수 risk appetite)",
+          "basis": "예산 사용률이 검토 임계 이상이면 보수적 risk appetite로 승급",
+          "when": {
+            ">=": [
+              "$budget_usage_pct",
+              "$budget_usage_review_threshold"
+            ]
+          }
+        },
+        {
+          "id": "R09_extract_spec_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "구매검토(HITL) — 견적 추출·사양 일치 사람 확인",
+          "basis": "견적 추출 신뢰도가 임계 미만이거나 사양 일치가 모호하면 사람 확인",
+          "when": {
+            "any": [
+              {
+                "<": [
+                  "$quote_extract_confidence",
+                  "$quote_confidence_threshold"
+                ]
+              },
+              {
+                "==": [
+                  "$spec_match",
+                  "모호"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R10_auto_approve",
+          "outcome": "AUTO_APPROVE",
+          "label": "자동승인 (저위험·소액·규정 충족)",
+          "basis": "모든 결정론 점검(R01~R04)과 HITL 승급 사유(R05~R09)에 해당하지 않고 발주금액이 자동승인 상한 이하이면 자동승인",
+          "when": {
+            "all": [
+              {
+                "not": {
+                  "<": [
+                    "$budget_after_order",
+                    0
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "any": [
+                    {
+                      "in": [
+                        "$vendor_status",
+                        [
+                          "제재",
+                          "거래정지"
+                        ]
+                      ]
+                    },
+                    {
+                      "==": [
+                        "$vendor_biz_no_valid",
+                        false
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "all": [
+                    {
+                      ">=": [
+                        "$order_amount",
+                        5000000
+                      ]
+                    },
+                    {
+                      "!=": [
+                        "$purchase_type",
+                        "단가계약"
+                      ]
+                    },
+                    {
+                      "<": [
+                        "$quote_count",
+                        3
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "any": [
+                    {
+                      "==": [
+                        "$spec_attached",
+                        false
+                      ]
+                    },
+                    {
+                      "<": [
+                        "$quote_valid_until",
+                        "$today"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "not": {
+                  ">=": [
+                    "$split_score",
+                    "$split_score_review_threshold"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "==": [
+                    "$is_new_vendor",
+                    true
+                  ]
+                }
+              },
+              {
+                "not": {
+                  ">": [
+                    "$unit_price_deviation_pct",
+                    "$unit_price_deviation_threshold"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  ">=": [
+                    "$budget_usage_pct",
+                    "$budget_usage_review_threshold"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "any": [
+                    {
+                      "<": [
+                        "$quote_extract_confidence",
+                        "$quote_confidence_threshold"
+                      ]
+                    },
+                    {
+                      "==": [
+                        "$spec_match",
+                        "모호"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "<=": [
+                  "$order_amount",
+                  "$auto_approve_amount_cap"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R11_high_amount_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "구매검토(HITL) — 점검은 PASS이나 고액이라 결재선 승인 필요",
+          "basis": "모든 결정론 점검과 HITL 승급 사유에 해당하지 않으나 발주금액이 자동승인 상한을 초과하면 결재선 승인 필요",
+          "when": {
+            "all": [
+              {
+                "not": {
+                  "<": [
+                    "$budget_after_order",
+                    0
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "any": [
+                    {
+                      "in": [
+                        "$vendor_status",
+                        [
+                          "제재",
+                          "거래정지"
+                        ]
+                      ]
+                    },
+                    {
+                      "==": [
+                        "$vendor_biz_no_valid",
+                        false
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "all": [
+                    {
+                      ">=": [
+                        "$order_amount",
+                        5000000
+                      ]
+                    },
+                    {
+                      "!=": [
+                        "$purchase_type",
+                        "단가계약"
+                      ]
+                    },
+                    {
+                      "<": [
+                        "$quote_count",
+                        3
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "any": [
+                    {
+                      "==": [
+                        "$spec_attached",
+                        false
+                      ]
+                    },
+                    {
+                      "<": [
+                        "$quote_valid_until",
+                        "$today"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "not": {
+                  ">=": [
+                    "$split_score",
+                    "$split_score_review_threshold"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "==": [
+                    "$is_new_vendor",
+                    true
+                  ]
+                }
+              },
+              {
+                "not": {
+                  ">": [
+                    "$unit_price_deviation_pct",
+                    "$unit_price_deviation_threshold"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  ">=": [
+                    "$budget_usage_pct",
+                    "$budget_usage_review_threshold"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "any": [
+                    {
+                      "<": [
+                        "$quote_extract_confidence",
+                        "$quote_confidence_threshold"
+                      ]
+                    },
+                    {
+                      "==": [
+                        "$spec_match",
+                        "모호"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                ">": [
+                  "$order_amount",
+                  "$auto_approve_amount_cap"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "default": {
+        "id": "R99_fallback_review",
+        "outcome": "LEGAL_REVIEW",
+        "label": "구매검토(HITL) — 미분류, 결재선 판단 필요",
+        "basis": "위 어떤 룰에도 매칭되지 않은 케이스는 안전하게 사람 검토로 회부 (catch-all)"
+      }
+    }
+  },
+  "seeds": [
+    {
+      "label": "R1 반려 — 예산 초과 발주(하드 가드레일)",
+      "expectedRoute": "반려 (예산 초과 발주 금지 — 하드 가드레일)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04412"
+        },
+        {
+          "slot": "requester",
+          "value": "김도현(생산기술팀)"
+        },
+        {
+          "slot": "department",
+          "value": "생산기술팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-PRD-2026-018"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "order_amount",
+          "value": "42000000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "128-81-44021"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "3"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-15"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "38000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "-4000000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "81"
+        },
+        {
+          "slot": "split_score",
+          "value": "22"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "3"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.93"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R2 반려 — 벤더 거래정지(컴플라이언스 하드 차단)",
+      "expectedRoute": "반려 (벤더 컴플라이언스 하드 차단)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04455"
+        },
+        {
+          "slot": "requester",
+          "value": "이서연(설비보전팀)"
+        },
+        {
+          "slot": "department",
+          "value": "설비보전팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "MRO"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-MNT-2026-007"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-10"
+        },
+        {
+          "slot": "order_amount",
+          "value": "3200000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "214-86-33910"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "거래정지"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "CCC"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-05"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "15000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "11800000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "40"
+        },
+        {
+          "slot": "split_score",
+          "value": "10"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "0"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.95"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R3 반려 — 3견적 의무 미충족(≥5M·일반구매·견적 2건)",
+      "expectedRoute": "반려 (3견적 의무 미충족·보완요청)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04478"
+        },
+        {
+          "slot": "requester",
+          "value": "박준호(품질팀)"
+        },
+        {
+          "slot": "department",
+          "value": "품질보증팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-QA-2026-003"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-05"
+        },
+        {
+          "slot": "order_amount",
+          "value": "18500000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "305-81-77123"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "2"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-20"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "60000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "41500000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "55"
+        },
+        {
+          "slot": "split_score",
+          "value": "18"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "2"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.9"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R4 반려 — 증빙 미충족(사양서 누락·견적 만료)",
+      "expectedRoute": "반려 (증빙 미충족·보완요청)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04490"
+        },
+        {
+          "slot": "requester",
+          "value": "최민지(연구개발팀)"
+        },
+        {
+          "slot": "department",
+          "value": "R&D센터"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-RND-2026-021"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-25"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4200000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "117-81-20088"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "false"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-05-30"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "22000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "17800000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "48"
+        },
+        {
+          "slot": "split_score",
+          "value": "12"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "1"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.88"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R5 구매검토 — 쪼개기 의심(split_score≥70)",
+      "expectedRoute": "구매검토(HITL) — 쪼개기 의심, 결재 회부 (구매팀장 의도 판정)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04501"
+        },
+        {
+          "slot": "requester",
+          "value": "정우성(생산관리팀)"
+        },
+        {
+          "slot": "department",
+          "value": "생산관리팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-PRD-2026-009"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-18"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4850000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "201-81-55340"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "30000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "25150000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "62"
+        },
+        {
+          "slot": "split_score",
+          "value": "82"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "4"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.91"
+        },
+        {
+          "slot": "split_intent_judged",
+          "value": "미판정"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R6 구매검토 — 신규 벤더 실사 수기 확인",
+      "expectedRoute": "구매검토(HITL) — 신규 벤더 실사 수기 확인(구매 담당자)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04518"
+        },
+        {
+          "slot": "requester",
+          "value": "한지민(구매2팀)"
+        },
+        {
+          "slot": "department",
+          "value": "구매2팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-GEN-2026-014"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-12"
+        },
+        {
+          "slot": "order_amount",
+          "value": "3800000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "402-88-91200"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "BB"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-28"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "19000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "15200000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "51"
+        },
+        {
+          "slot": "split_score",
+          "value": "15"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "3"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.9"
+        },
+        {
+          "slot": "vendor_due_diligence",
+          "value": "미확인"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R7 구매검토 — 단가계약 편차 초과(>10%)",
+      "expectedRoute": "구매검토(HITL) — 단가 편차 초과(편차 사유 정당성 판단)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04533"
+        },
+        {
+          "slot": "requester",
+          "value": "오세훈(자재팀)"
+        },
+        {
+          "slot": "department",
+          "value": "자재구매팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "단가계약"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-MAT-2026-006"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-09"
+        },
+        {
+          "slot": "order_amount",
+          "value": "12600000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "133-81-40277"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "0"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "contract_unit_price",
+          "value": "12000"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "15"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "40000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "27400000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "58"
+        },
+        {
+          "slot": "split_score",
+          "value": "20"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.95"
+        },
+        {
+          "slot": "deviation_justified",
+          "value": "미판단"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R8 구매검토 — 예산 임박 승급(소진율≥90%)",
+      "expectedRoute": "구매검토(HITL) — 예산 임박 승급(보수 risk appetite)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04547"
+        },
+        {
+          "slot": "requester",
+          "value": "신영균(설비투자팀)"
+        },
+        {
+          "slot": "department",
+          "value": "설비투자팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "단가계약"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-CAPEX-2026-002"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-22"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4500000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "506-81-12345"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "0"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "contract_unit_price",
+          "value": "45000"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "2"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "5000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "500000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "93"
+        },
+        {
+          "slot": "split_score",
+          "value": "25"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.94"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R9 구매검토 — 견적 추출 신뢰도 미달·사양 모호",
+      "expectedRoute": "구매검토(HITL) — 견적 추출·사양 일치 사람 확인",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04560"
+        },
+        {
+          "slot": "requester",
+          "value": "윤하늘(R&D구매팀)"
+        },
+        {
+          "slot": "department",
+          "value": "R&D구매팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-RND-2026-030"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-20"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4900000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "118-81-66501"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "quote_amount",
+          "value": "4900000"
+        },
+        {
+          "slot": "quote_vendor",
+          "value": "대성정밀(주)"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-08-01"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "28000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "23100000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "44"
+        },
+        {
+          "slot": "split_score",
+          "value": "19"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "3"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.62"
+        },
+        {
+          "slot": "spec_match",
+          "value": "모호"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R10 자동승인 — 전PASS·소액(≤5M)",
+      "expectedRoute": "자동승인 (저위험·소액·규정 충족)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04572"
+        },
+        {
+          "slot": "requester",
+          "value": "강민석(총무팀)"
+        },
+        {
+          "slot": "department",
+          "value": "총무팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "MRO"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-GA-2026-011"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-08"
+        },
+        {
+          "slot": "order_amount",
+          "value": "1850000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "129-81-30055"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "A"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "24000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "22150000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "36"
+        },
+        {
+          "slot": "split_score",
+          "value": "8"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "1"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.96"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "label": "R11 구매검토 — 전PASS이나 고액(>5M, 결재선 승인 필요)",
+      "expectedRoute": "구매검토(HITL) — 점검은 PASS이나 고액이라 결재선 승인 필요",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04588"
+        },
+        {
+          "slot": "requester",
+          "value": "임재현(생산기술팀)"
+        },
+        {
+          "slot": "department",
+          "value": "생산기술팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-PRD-2026-024"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-30"
+        },
+        {
+          "slot": "order_amount",
+          "value": "68000000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "220-81-88440"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "AA"
+        },
+        {
+          "slot": "quote_count",
+          "value": "3"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-08-15"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "150000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "82000000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "50"
+        },
+        {
+          "slot": "split_score",
+          "value": "14"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "2"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.93"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "approval_line",
+          "value": "본부장"
+        },
+        {
+          "slot": "today",
+          "value": "2026-06-22"
+        },
+        {
+          "slot": "split_score_review_threshold",
+          "value": "70"
+        },
+        {
+          "slot": "unit_price_deviation_threshold",
+          "value": "10"
+        },
+        {
+          "slot": "budget_usage_review_threshold",
+          "value": "90"
+        },
+        {
+          "slot": "quote_confidence_threshold",
+          "value": "0.85"
+        },
+        {
+          "slot": "auto_approve_amount_cap",
+          "value": "5000000"
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "generatedBy": "harness+evaluate-in-the-loop",
+    "gatePass": true,
+    "reviewedBy": null
+  }
+}

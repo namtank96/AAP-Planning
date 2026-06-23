@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>작업 스트림 + 산출물 뷰어 목업 (Side A · v0.3)</title>
+<style>
+  :root{
+    --bg:#eef2f7; --surface:#fff; --surf:#f8fafc; --ink:#0f172a; --slate:#334155;
+    --muted:#64748b; --faint:#94a3b8; --border:#e4e9f0; --line:#eef2f6;
+    --aap:#0d9488; --aap-ink:#0f766e; --aap-soft:#f0fdfa; --aap-bd:#99f6e4;
+    --violet:#7c3aed; --cyan:#0891b2; --blue:#2563eb; --blue-soft:#eff6ff;
+    --amber:#d97706; --amber-soft:#fffbeb; --amber-bd:#fde68a; --amber-ink:#92400e;
+    --green:#16a34a; --green-soft:#f0fdf4; --red:#dc2626;
+    --shadow:0 6px 22px rgba(15,23,42,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  .ic{width:16px;height:16px;flex:0 0 auto;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* 상단바 — 제품 nav 없음. 작업 컨텍스트만 + 자동 작동 표시 */
+  .top{height:50px;flex:0 0 50px;display:flex;align-items:center;gap:12px;padding:0 18px;background:#fff;border-bottom:1px solid var(--border);}
+  .back{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:9px;padding:6px 10px;cursor:pointer;background:#fff;}
+  .tt{font-size:14px;font-weight:800;letter-spacing:-.2px;}
+  .tt .tm{font-size:11.5px;color:var(--faint);font-weight:600;margin-left:7px;}
+  .sp{flex:1;}
+  .running{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-bd);border-radius:20px;padding:5px 12px;}
+  .running .pls{width:8px;height:8px;border-radius:50%;background:var(--aap);animation:pls 1.2s ease-in-out infinite;}
+  @keyframes pls{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.7);}}
+  .me{display:flex;align-items:center;gap:8px;} .me .av{width:29px;height:29px;border-radius:50%;background:#dbe3ee;color:#475569;font-weight:700;font-size:12px;display:grid;place-items:center;} .me .nm{font-size:12px;font-weight:600;} .me .rl{font-size:10px;color:var(--faint);}
+
+  .wrap{flex:1;display:flex;min-height:0;}
+
+  /* ===== 좌측 = 작업 스트림 (자동 진행) ===== */
+  .stream{flex:1 1 56%;min-width:0;overflow:auto;padding:20px 24px 40px;}
+  .stream-h{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;font-weight:800;color:var(--aap-ink);letter-spacing:.03em;text-transform:uppercase;}
+  .stream-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+  .sline{position:relative;padding-left:30px;}
+  .sline::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:var(--line);}
+  .st{position:relative;margin-bottom:14px;animation:rise .5s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .st .nodeic{position:absolute;left:-30px;top:0;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--border);color:var(--faint);}
+  .st.done .nodeic{background:var(--aap);border-color:var(--aap);color:#fff;}
+  .st.cur .nodeic{background:#fff;border-color:var(--aap);color:var(--aap);animation:ring 1.3s ease-in-out infinite;}
+  @keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(13,148,136,.28);}50%{box-shadow:0 0 0 6px rgba(13,148,136,0);}}
+  .st.wait{opacity:.5;} .st.wait .nodeic{border-style:dashed;}
+  .st .nodeic .ic{width:12px;height:12px;}
+  .st-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 14px;}
+  .st.cur .st-card{border-color:var(--aap-bd);box-shadow:0 0 0 3px var(--aap-soft);}
+  .st-top{display:flex;align-items:center;gap:8px;}
+  .st-t{font-size:13.5px;font-weight:700;} .st.wait .st-t{font-weight:600;color:var(--slate);}
+  .st-when{margin-left:auto;font-size:10.5px;color:var(--faint);font-weight:700;font-variant-numeric:tabular-nums;}
+  .st-d{font-size:12px;color:var(--muted);margin-top:3px;}
+  .st-d b{color:var(--slate);font-weight:700;}
+  .st-foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .comp{font-size:9.5px;font-weight:700;border-radius:5px;padding:2px 7px;display:inline-flex;align-items:center;gap:4px;}
+  .comp.tyA{color:var(--aap-ink);background:var(--aap-soft);} .comp.tyS{color:#0e7490;background:var(--cyan-soft,#ecfeff);} .comp.tyC{color:var(--blue);background:var(--blue-soft);} .comp.tyP{color:var(--amber-ink);background:var(--amber-soft);}
+  .open-art{font-size:10.5px;font-weight:700;color:var(--aap);background:none;border:none;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:2px 0;}
+  .open-art .ic{width:12px;height:12px;}
+
+  /* HITL 인라인 결정 카드 (amber) */
+  .st.hitl .nodeic{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);}
+  .hitl-card{border:1.5px solid var(--amber-bd);background:linear-gradient(180deg,#fffdf6,#fff);border-radius:13px;padding:14px 16px;}
+  .hc-k{font-size:10px;font-weight:800;color:var(--amber-ink);letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+  .hc-t{font-size:15px;font-weight:800;} .hc-d{font-size:12px;color:var(--slate);margin-top:3px;}
+  .hc-cut{display:flex;gap:7px;margin:12px 0 6px;}
+  .cut{flex:1;border:1px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;background:#fff;}
+  .cut.on{border-color:var(--amber);background:var(--amber-soft);} .cut .cn{font-size:13px;font-weight:800;} .cut.on .cn{color:var(--amber-ink);} .cut .cs{font-size:10px;color:var(--muted);margin-top:1px;}
+  .hc-note{font-size:11px;color:var(--green);background:var(--green-soft);border:1px solid #bbf7d0;border-radius:7px;padding:6px 10px;margin:8px 0;}
+  .hc-acts{display:flex;gap:8px;margin-top:6px;}
+  .hbtn{font-size:13px;font-weight:700;font-family:inherit;border:1px solid var(--aap);background:var(--aap);color:#fff;border-radius:10px;padding:9px 16px;cursor:pointer;}
+  .hbtn.ghost{background:#fff;color:var(--aap-ink);} .hbtn.edit{margin-left:auto;background:#fff;color:var(--slate);border-color:var(--border);}
+
+  /* ===== 우측 = 산출물(파일) 뷰어 ===== */
+  .arts{flex:1 1 44%;min-width:0;background:#fff;border-left:1px solid var(--border);display:flex;flex-direction:column;}
+  .arts-h{display:flex;align-items:center;gap:8px;padding:13px 16px 0;}
+  .arts-h .at{font-size:12px;font-weight:800;color:var(--slate);letter-spacing:.02em;}
+  .arts-h .ac{font-size:10.5px;color:var(--faint);}
+  .files{display:flex;gap:5px;padding:9px 16px 0;flex-wrap:wrap;}
+  .file{font-size:11.5px;font-weight:700;color:var(--muted);background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:6px 11px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+  .file.on{background:#fff;color:var(--ink);border-color:var(--aap-bd);box-shadow:0 -1px 0 var(--aap) inset;}
+  .file.wait{opacity:.5;}
+  .file .fdot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:0 0 auto;} .file.wait .fdot{background:#cbd5e1;}
+  .doc{flex:1;overflow:auto;margin:13px 16px 18px;border:1px solid var(--border);border-radius:13px;padding:18px 20px;background:var(--surf);}
+  .doc-h{display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:14px;}
+  .doc-ic{width:34px;height:34px;border-radius:9px;background:var(--aap-soft);color:var(--aap-ink);display:grid;place-items:center;}
+  .doc-h h3{margin:0;font-size:15px;font-weight:800;} .doc-h .dm{font-size:11px;color:var(--muted);}
+  .doc-h .dl{margin-left:auto;font-size:10px;font-weight:700;color:var(--aap-ink);background:#fff;border:1px solid var(--aap-bd);border-radius:6px;padding:3px 9px;}
+  .dsec{font-size:10px;font-weight:800;color:var(--faint);letter-spacing:.04em;text-transform:uppercase;margin:15px 0 7px;}
+  .dsec:first-child{margin-top:0;}
+  .drow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+  .drow:last-child{border-bottom:none;}
+  .drow .av{width:28px;height:28px;border-radius:7px;background:#e8edf4;color:#475569;font-weight:700;font-size:11px;display:grid;place-items:center;flex:0 0 auto;}
+  .drow .dn{font-size:12.5px;font-weight:700;} .drow .dd{font-size:11px;color:var(--muted);}
+  .drow .dmid{flex:1;min-width:0;}
+  .drow .dmt{font-size:13px;font-weight:800;color:var(--aap-ink);}
+  .vtag{font-size:10px;font-weight:700;border-radius:6px;padding:2px 8px;}
+  .vtag.pass{color:var(--green);background:var(--green-soft);} .vtag.hold{color:var(--amber);background:var(--amber-soft);} .vtag.drop{color:var(--slate);background:#f1f5f9;}
+  .foot{flex:0 0 auto;text-align:center;font-size:10px;color:var(--faint);padding:6px;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <button class="back"><svg class="ic" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>내 업무</button>
+  <span class="tt">채용 1차 스크리닝<span class="tm">백엔드 개발자 2명 · 플랫폼개발팀</span></span>
+  <div class="sp"></div>
+  <span class="running"><span class="pls"></span>AAP 작업 중 · 6/9 단계</span>
+  <div class="me"><div class="av">이</div><div><div class="nm">이서연</div><div class="rl">인사팀</div></div></div>
+</div>
+
+<div class="wrap">
+
+  <!-- 좌측: 작업 스트림 (자동 진행 · 직접 누를 일 없음) -->
+  <section class="stream">
+    <div class="stream-h"><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>AAP 작업 흐름</div>
+    <div class="stream-sub">AAP가 요청을 받아 스스로 처리하고 있어요. <b>결정이 필요한 곳에서만 멈춥니다.</b></div>
+
+    <div class="sline">
+      <div class="st done" style="animation-delay:0s">
+        <span class="nodeic"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="st-card"><div class="st-top"><span class="st-t">요건 분석</span><span class="st-when">09:01</span></div>
+          <div class="st-d">요청을 직무 모델로 해석 → JD·매칭 가중(스킬50·경력30·도메인20) 정의</div>
+          <div class="st-foot"><span class="comp tyA">Agent</span><button class="open-art"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>JD 열기</button></div></div>
+      </div>
+      <div class="st done" style="animation-delay:.08s">
+        <span class="nodeic"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="st-card"><div class="st-top"><span class="st-t">이력서 수집·파싱</span><span class="st-when">09:03</span></div>
+          <div class="st-d">메일·문서함·채용사이트에서 <b>38건</b> 수집 → 글자 인식·정규화</div>
+          <div class="st-foot"><span class="comp tyC">Connector</span><span class="comp tyS">OCR 솔루션</span></div></div>
+      </div>
+      <div class="st done" style="animation-delay:.16s">
+        <span class="nodeic"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="st-card"><div class="st-top"><span class="st-t">매칭·랭킹</span><span class="st-when">09:05</span></div>
+          <div class="st-d">스킬·경력·도메인 가중 매칭 → <b>상위 10명</b> 랭킹</div>
+          <div class="st-foot"><span class="comp tyA">Agent</span><button class="open-art"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>스크리닝 리포트 열기</button></div></div>
+      </div>
+      <div class="st done" style="animation-delay:.24s">
+        <span class="nodeic"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="st-card"><div class="st-top"><span class="st-t">편향·개인정보 점검</span><span class="st-when">09:06</span></div>
+          <div class="st-d">보호속성 평가 제외 · PII 마스킹 — <b>통과</b></div>
+          <div class="st-foot"><span class="comp tyP">Policy</span></div></div>
+      </div>
+
+      <!-- HITL: 여기서만 멈춤 -->
+      <div class="st hitl cur" style="animation-delay:.32s">
+        <span class="nodeic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        <div class="hitl-card">
+          <div class="hc-k"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 17h.01M12 7v6"/><circle cx="12" cy="12" r="10"/></svg>여기서 당신의 결정이 필요해요</div>
+          <div class="hc-t">숏리스트 기준 정하기</div>
+          <div class="hc-d">AAP가 38명을 스크리닝했어요. 면접으로 넘길 컷을 정해 주세요. (가중치도 조정 가능)</div>
+          <div class="hc-cut">
+            <div class="cut"><div class="cn">≥ 90%</div><div class="cs">엄격 · 2명</div></div>
+            <div class="cut on"><div class="cn">≥ 85%</div><div class="cs">표준 · 6명</div></div>
+            <div class="cut"><div class="cn">≥ 80%</div><div class="cs">넓게 · 7명</div></div>
+          </div>
+          <div class="hc-note">✓ 이 결정은 이 채용 건에만 적용돼요. 정하면 AAP가 면접 일정 조율부터 이어서 자동 진행합니다.</div>
+          <div class="hc-acts"><button class="hbtn">이 기준으로 진행</button><button class="hbtn ghost">후보 비교표 보기</button><button class="hbtn edit">기준 직접 편집</button></div>
+        </div>
+      </div>
+
+      <div class="st wait" style="animation-delay:.4s">
+        <span class="nodeic"></span>
+        <div class="st-card"><div class="st-top"><span class="st-t">면접 일정 조율</span></div><div class="st-d">결정 후 AAP가 후보·면접관 캘린더를 교차해 슬롯을 잡습니다</div></div>
+      </div>
+      <div class="st wait" style="animation-delay:.46s">
+        <span class="nodeic"></span>
+        <div class="st-card"><div class="st-top"><span class="st-t">평가 취합 · 오퍼</span></div><div class="st-d">면접 후 평가 취합 → 오퍼안 (오퍼 발송은 다시 당신 승인)</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 우측: 산출물(파일) 뷰어 -->
+  <aside class="arts">
+    <div class="arts-h"><span class="at">산출물</span><span class="ac">AAP가 만든 문서 · 열어서 확인</span></div>
+    <div class="files">
+      <span class="file"><span class="fdot"></span>직무 기술서</span>
+      <span class="file on"><span class="fdot"></span>스크리닝 리포트</span>
+      <span class="file"><span class="fdot"></span>후보 비교표</span>
+      <span class="file wait"><span class="fdot"></span>면접 일정</span>
+      <span class="file wait"><span class="fdot"></span>오퍼</span>
+    </div>
+    <div class="doc">
+      <div class="doc-h"><span class="doc-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+        <div><h3>스크리닝 리포트</h3><div class="dm">지원 38 → 통과 6 · 보류 2 · 탈락 30</div></div>
+        <span class="dl">AAP 생성</span></div>
+
+      <div class="dsec">통과 (매칭 ≥ 85% · 리스크 없음)</div>
+      <div class="drow"><span class="av">정</span><div class="dmid"><div class="dn">정유진 · 96%</div><div class="dd">must·plus 충족 · 대용량 MSA 경험</div></div><span class="vtag pass">통과</span></div>
+      <div class="drow"><span class="av">박</span><div class="dmid"><div class="dn">박서준 · 89%</div><div class="dd">정합성 설계 강점 · 협업 최상</div></div><span class="vtag pass">통과</span></div>
+      <div class="drow"><span class="av">한</span><div class="dmid"><div class="dn">한도윤 · 87%</div><div class="dd">must·plus 균형 충족</div></div><span class="vtag pass">통과</span></div>
+
+      <div class="dsec">보류 (재검토)</div>
+      <div class="drow"><span class="av">이</span><div class="dmid"><div class="dn">이하늘 · 91%</div><div class="dd">기술 깊이 최상 · IC 역할 기대 차이 확인 필요</div></div><span class="vtag hold">보류</span></div>
+      <div class="drow"><span class="av">임</span><div class="dmid"><div class="dn">임재훈 · 88%</div><div class="dd">요건 적합 · 사내 중복 지원 확인 필요</div></div><span class="vtag hold">보류</span></div>
+
+      <div class="dsec">탈락 (사유 기록 · 30명)</div>
+      <div class="drow"><span class="av">윤</span><div class="dmid"><div class="dn">윤도현 · 60%</div><div class="dd">MSA·대용량 미충족 + 재직 안정성 신호</div></div><span class="vtag drop">탈락</span></div>
+    </div>
+    <div class="foot">목업 v0.3 · 좌 작업 스트림(자동) + 우 산출물 뷰어 · standalone · app/ 미접촉</div>
+  </aside>
+</div>
+
+</body>
+</html>

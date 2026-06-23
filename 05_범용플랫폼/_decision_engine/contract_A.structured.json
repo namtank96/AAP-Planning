@@ -1,0 +1,85 @@
+{
+  "_note": "pack_contract_A 의 route 를 evaluate.js DSL 로 구조화한 것. = 하니스가 향후 emit 해야 할 '평가 가능' 형태(현 baked 팩은 when 이 사람 문장). 슬롯은 타입 있는 값.",
+  "id": "contract_A",
+  "label": "계약 관리 · A사(제조·SAP·보수)",
+  "caseModel": {
+    "slots": [
+      { "key": "sanctionListHit", "type": "boolean" },
+      { "key": "tradeStopped", "type": "boolean" },
+      { "key": "creditGrade", "type": "enum", "values": ["A","B","C","D","E","F"] },
+      { "key": "missingMandatoryClauses", "type": "array" },
+      { "key": "amountMatchesPo", "type": "boolean" },
+      { "key": "pdfExtractConfidence", "type": "number" },
+      { "key": "templateDigitalized", "type": "boolean" },
+      { "key": "contractNature", "type": "enum", "values": ["신규","갱신","변경"] },
+      { "key": "toxicHighCount", "type": "number", "note": "고위험 독소조항 건수(파생: toxicClauseHits 중 고위험)" },
+      { "key": "riskGrade", "type": "enum", "values": ["저","중","고"] },
+      { "key": "compositeRiskScore", "type": "number" },
+      { "key": "reputationRisk", "type": "enum", "values": [null,"의심","심각"] }
+    ]
+  },
+  "knowledge": {
+    "route": {
+      "rules": [
+        { "id": "R1", "outcome": "REJECT", "label": "반려(치명 결격: 제재·신용 E/F·거래정지)",
+          "basis": "dt_route R1",
+          "when": { "any": [ {"==":["$sanctionListHit", true]}, {"in":["$creditGrade", ["E","F"]]}, {"==":["$tradeStopped", true]} ] } },
+        { "id": "R2", "outcome": "REJECT", "label": "반려(핵심 필수조항 누락)",
+          "basis": "dt_route R2 · lt_core_clause_set",
+          "when": { "intersects": ["$missingMandatoryClauses", ["손해배상","해지","준거법","관할"]] } },
+        { "id": "R3", "outcome": "REJECT", "label": "반려(ERP 금액 정합 실패)",
+          "basis": "dt_route R3 · th_amount_match",
+          "when": { "==": ["$amountMatchesPo", false] } },
+        { "id": "R4", "outcome": "LEGAL_REVIEW", "label": "법무검토(추출 신뢰도 저하)",
+          "basis": "dt_route R4 · th_pdf_confidence(0.7)",
+          "when": { "<": ["$pdfExtractConfidence", 0.7] } },
+        { "id": "R5", "outcome": "LEGAL_REVIEW", "label": "법무검토(템플릿 갭)",
+          "basis": "dt_route R5",
+          "when": { "all": [ {"==":["$templateDigitalized", false]}, {"in":["$contractNature", ["신규","변경"]]} ] } },
+        { "id": "R6", "outcome": "LEGAL_REVIEW", "label": "법무검토(고위험 독소조항)",
+          "basis": "dt_route R6 · toxicHighCount",
+          "when": { ">=": ["$toxicHighCount", 1] } },
+        { "id": "R7", "outcome": "LEGAL_REVIEW", "label": "법무검토(보수 임계·경계대역)",
+          "basis": "dt_route R7 · compositeRiskScore(30)",
+          "when": { "any": [ {"==":["$riskGrade", "중"]}, {">=":["$compositeRiskScore", 30]} ] } },
+        { "id": "R8", "outcome": "LEGAL_REVIEW", "label": "법무검토(평판·신용 간접 리스크)",
+          "basis": "dt_route R8 · th_credit_floor",
+          "when": { "any": [ {"in":["$reputationRisk", ["의심","심각"]]}, {"==":["$creditGrade", "D"]} ] } },
+        { "id": "R9", "outcome": "AUTO_APPROVE", "label": "자동승인(결재선 자동구성→상신)",
+          "basis": "dt_route R9 · 전 점검 PASS",
+          "when": { "all": [
+            {"empty": "$missingMandatoryClauses"},
+            {"==":["$toxicHighCount", 0]},
+            {"==":["$templateDigitalized", true]},
+            {"==":["$amountMatchesPo", true]},
+            {"==":["$sanctionListHit", false]},
+            {"<":["$compositeRiskScore", 30]},
+            {">=":["$pdfExtractConfidence", 0.7]}
+          ] } }
+      ],
+      "default": { "id": "R10", "outcome": "LEGAL_REVIEW", "label": "법무검토(보수 기본값: 모호 시 HITL)", "basis": "dt_route R10 catch-all" }
+    }
+  },
+  "seeds": [
+    { "label": "표준 매매계약 — 전 조건 충족", "expect": {"outcome":"AUTO_APPROVE","ruleId":"R9"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"B","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.93,"templateDigitalized":true,"contractNature":"신규","toxicHighCount":0,"riskGrade":"저","compositeRiskScore":0,"reputationRisk":null} },
+    { "label": "제재리스트 거래처", "expect": {"outcome":"REJECT","ruleId":"R1"},
+      "input": {"sanctionListHit":true,"tradeStopped":false,"creditGrade":"E","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.9,"templateDigitalized":true,"contractNature":"신규","toxicHighCount":0,"riskGrade":"고","compositeRiskScore":0,"reputationRisk":null} },
+    { "label": "필수조항 누락(손해배상·해지·준거법·관할)", "expect": {"outcome":"REJECT","ruleId":"R2"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"B","missingMandatoryClauses":["손해배상","해지","준거법","관할"],"amountMatchesPo":true,"pdfExtractConfidence":0.88,"templateDigitalized":true,"contractNature":"신규","toxicHighCount":0,"riskGrade":"저","compositeRiskScore":0,"reputationRisk":null} },
+    { "label": "ERP 발주금액 불일치", "expect": {"outcome":"REJECT","ruleId":"R3"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"A","missingMandatoryClauses":[],"amountMatchesPo":false,"pdfExtractConfidence":0.91,"templateDigitalized":true,"contractNature":"변경","toxicHighCount":0,"riskGrade":"저","compositeRiskScore":0,"reputationRisk":null} },
+    { "label": "스캔 품질 저하(pdf 0.58)", "expect": {"outcome":"LEGAL_REVIEW","ruleId":"R4"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"C","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.58,"templateDigitalized":true,"contractNature":"신규","toxicHighCount":0,"riskGrade":"저","compositeRiskScore":10,"reputationRisk":null} },
+    { "label": "표준템플릿 미디지털화 신규건", "expect": {"outcome":"LEGAL_REVIEW","ruleId":"R5"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"B","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.9,"templateDigitalized":false,"contractNature":"신규","toxicHighCount":0,"riskGrade":"저","compositeRiskScore":25,"reputationRisk":null} },
+    { "label": "무제한 배상 독소조항(고위험)", "expect": {"outcome":"LEGAL_REVIEW","ruleId":"R6"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"B","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.92,"templateDigitalized":true,"contractNature":"신규","toxicHighCount":1,"riskGrade":"고","compositeRiskScore":40,"reputationRisk":null} },
+    { "label": "중위험·경계대역 NDA(외국 준거법)", "expect": {"outcome":"LEGAL_REVIEW","ruleId":"R7"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"B","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.89,"templateDigitalized":true,"contractNature":"신규","toxicHighCount":0,"riskGrade":"중","compositeRiskScore":30,"reputationRisk":null} },
+    { "label": "신용 D등급·평판 의심", "expect": {"outcome":"LEGAL_REVIEW","ruleId":"R8"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"D","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.9,"templateDigitalized":true,"contractNature":"갱신","toxicHighCount":0,"riskGrade":null,"compositeRiskScore":20,"reputationRisk":"의심"} },
+    { "label": "패턴 미매칭 신종조항 모호건(라벨=R10)", "expect": {"outcome":"LEGAL_REVIEW","ruleId":"R10"},
+      "input": {"sanctionListHit":false,"tradeStopped":false,"creditGrade":"B","missingMandatoryClauses":[],"amountMatchesPo":true,"pdfExtractConfidence":0.86,"templateDigitalized":true,"contractNature":"신규","toxicHighCount":0,"riskGrade":"중","compositeRiskScore":15,"reputationRisk":null} }
+  ]
+}

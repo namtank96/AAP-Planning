@@ -1,0 +1,1967 @@
+{
+  "id": "procurement",
+  "label": "구매·조달",
+  "flow": [
+    {
+      "id": "intake",
+      "label": "구매품의 접수·정규화",
+      "kind": "input",
+      "loopPhase": "Data",
+      "explain": "전자조달(자체구축, DB 연동)에 현업이 올린 구매품의를 수신한다. 헤더(요청자·부서·예산코드·납기·구매유형)와 라인아이템(품목·사양·수량·단가·금액)을 파싱하고, 첨부 견적서PDF·사양서를 케이스에 바인딩한다. 월 200건(일 약 9~10건) 유입을 큐로 받아 케이스 슬롯(품목·금액·예산코드·벤더·구매유형)을 채운다. 견적서PDF는 LLM 추출(extract seam)로 금액·벤더·유효기간을 슬롯화하되 신뢰도 낮으면 HITL 플래그."
+    },
+    {
+      "id": "evidence_check",
+      "label": "필수 증빙·사양 충족 점검",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "구매유형·금액별로 요구되는 증빙 셋을 규정표로 판정한다: 견적서 유무·유효기간, 사양서 첨부, 5백만원 이상 3견적 의무, 단가계약품은 계약서 참조. 첨부 문서와 라인아이템(품목·사양·수량·금액)의 일치를 대조한다. 미충족이면 반려 후보, 형식 충족이나 사양 해석 모호 시 검토 후보로 마킹."
+    },
+    {
+      "id": "price_budget",
+      "label": "단가계약 편차·예산 잔액 점검",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "단가계약 마스터(structured)와 품의 단가를 대조해 편차율을 계산한다(허용 편차 초과 시 플래그). 예산마스터에서 해당 예산코드의 잔액을 read하고 발주 예정액을 차감 시뮬레이션해 '예산 초과 발주 금지' 제약을 검사한다(잔액 부족 = 하드 차단). 보수 risk appetite에 따라 잔액 임박(예: 90% 소진)·편차 초과는 검토로 올린다. SAP FI 예산 약정 전 단계의 결정론 계산."
+    },
+    {
+      "id": "split_detect",
+      "label": "분할발주(쪼개기) 의심 탐지",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "구매발주이력(structured)을 조회해 동일 요청자·동일/유사 벤더·동일 예산코드·근접 기간(예: N일 내)에 결재선·3견적 임계 직전 금액으로 분할된 패턴을 결정론으로 스코어링한다. 보수 risk appetite상 적극 탐지: 임계 직하 금액 반복, 같은 품목군 연속 발주 등을 신호로 묶어 쪼개기 의심 점수를 산출한다. 임계 초과 시 검토(HITL)로 강제 승급."
+    },
+    {
+      "id": "vendor_eligibility",
+      "label": "벤더 적격성 점검",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "벤더마스터(SAP MM, read-only)에서 사업자번호 유효·신용등급·제재(블랙리스트)·거래정지 상태를 조회한다. 기존 등록 벤더는 결정론 판정(제재/거래정지 = 하드 차단). 단, 신규 벤더 실사 보고서가 미디지털화(data gap)라 적격성 일부는 수기 → 신규 벤더 건은 검토(HITL)로 라우팅해 구매 담당자가 실사 결과를 확인한다."
+    },
+    {
+      "id": "approval_routing",
+      "label": "결재선 산정·분기 판정",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "앞 단계 점검 결과(증빙·편차·예산·쪼개기·벤더)를 종합해 위임전결 규정으로 결재선을 산정한다(팀장5M·구매팀장50M·본부장300M·CPO 초과). 전 점검 통과 & 저위험 & 소액이면 '자동승인', 플래그(편차 초과·쪼개기 의심·신규 벤더·예산 임박·증빙 모호)가 있으면 해당 결재선의 '구매검토(HITL)'로, 하드 위반(예산 초과·제재 벤더·증빙 미충족)이면 '반려'로 분기한다. 보수~중도 appetite상 경계 케이스는 검토로 기운다.",
+      "gate": {
+        "label": "결재선 산정·분기 판정",
+        "decisions": [
+          {
+            "key": "reject",
+            "label": "반려",
+            "toast": "반려 처리"
+          },
+          {
+            "key": "review1",
+            "label": "구매검토",
+            "toast": "구매검토 처리"
+          },
+          {
+            "key": "auto",
+            "label": "자동승인",
+            "toast": "자동승인 처리"
+          }
+        ]
+      }
+    },
+    {
+      "id": "po_writeback",
+      "label": "PO 생성·ERP 반영·기록",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "승인(자동 또는 결재 완료) 건에 대해 SAP MM에 PO를 생성(API, read-write)하고 FI 예산을 약정(commitment) 처리해 예산 잔액을 갱신한다. 전자조달에 발주 상태를 반영하고, 심사 근거(점검 결과·결재 이력·분기 사유)를 감사 로그로 적재한다. 반려 건은 보완 사유와 함께 현업에 회신한다. 온프레미스 전용 제약상 모든 처리·연동은 사내 시스템 경계 내에서 수행. 처리 결과·예외 패턴은 학습 자산(단가 편차 추세·쪼개기 룰 튜닝)으로 누적."
+    }
+  ],
+  "io": {
+    "inputs": [
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "vendor_due_diligence",
+        "label": "신규 벤더 실사 결과"
+      },
+      {
+        "stage": "intake",
+        "type": "file",
+        "key": "quote_amount",
+        "label": "견적 금액"
+      },
+      {
+        "stage": "intake",
+        "type": "file",
+        "key": "quote_vendor",
+        "label": "견적 벤더"
+      },
+      {
+        "stage": "intake",
+        "type": "file",
+        "key": "quote_valid_until",
+        "label": "견적 유효기간"
+      },
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "spec_match",
+        "label": "사양서↔품의 사양 일치 적정성"
+      },
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "deviation_justified",
+        "label": "편차 사유 정당성(시장가 변동 등)"
+      },
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "split_intent_judged",
+        "label": "쪼개기 의도 최종 판정"
+      }
+    ],
+    "connectors": [
+      {
+        "id": "c_전자조달_커넥터_(구매품의_접",
+        "label": "전자조달 커넥터 (구매품의 접수·발주상태 반영)",
+        "system": "전자조달(자체구축, DB, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_MM_커넥터_(PO_생",
+        "label": "SAP MM 커넥터 (PO 생성·구매발주이력 조회)",
+        "system": "ERP(SAP MM, API, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_FI_커넥터_(예산마스",
+        "label": "SAP FI 커넥터 (예산마스터 잔액 read·commitment 약정)",
+        "system": "ERP(SAP FI, API, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_벤더마스터_커넥터_(사업자·신",
+        "label": "벤더마스터 커넥터 (사업자·신용·제재·거래정지 조회)",
+        "system": "벤더마스터(SAP MM, API, read-only)",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_MM/FI_ERP_(P",
+        "label": "SAP MM/FI ERP (PO·예산·발주 시스템 오브 레코드)",
+        "system": "ERP(SAP, API, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_전자조달_시스템_(자체구축,_",
+        "label": "전자조달 시스템 (자체구축, 품의·견적 이력 소스)",
+        "system": "전자조달(자체구축, DB, read-write)",
+        "stub": true
+      }
+    ],
+    "editable": [
+      {
+        "key": "auto_approve_amount_cap",
+        "label": "자동승인 금액 상한(팀장 위임전결 구간·저위험 소액). 초과는 점검 PASS여도 결재선 검토.",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t1",
+        "label": "결재선=팀장",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t2",
+        "label": "결재선=구매팀장",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t3",
+        "label": "결재선=본부장",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t4",
+        "label": "결재선=CPO",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "three_quote_threshold",
+        "label": "3견적 의무 적용",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "budget_block",
+        "label": "예산 초과 — 하드 반려(절대 규칙)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "budget_usage_review_threshold",
+        "label": "예산 임박 — 검토 승급(보수 risk appetite, 90% 소진)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "unit_price_deviation_threshold",
+        "label": "단가계약 편차 초과 — 검토(허용 편차 10% 가정)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "split_score_review_threshold",
+        "label": "쪼개기 의심 — 검토 강제 승급(보수 risk appetite, 0~100 스코어)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "split_proximity_window",
+        "label": "쪼개기 근접 기간 신호(14일 내)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "split_near_threshold_band",
+        "label": "임계 직하 금액 반복 신호(임계의 90~100%)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "quote_confidence_threshold",
+        "label": "견적 추출 신뢰도 미달 — 사람 확인 플래그",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      }
+    ]
+  },
+  "caseModel": {
+    "slots": [
+      {
+        "key": "case_id",
+        "label": "케이스 ID",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 구매품의 접수 시 채번",
+        "extract": "connector"
+      },
+      {
+        "key": "requester",
+        "label": "구매 요청자(현업)",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 헤더 요청자",
+        "extract": "connector"
+      },
+      {
+        "key": "department",
+        "label": "요청 부서",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 헤더 부서",
+        "extract": "connector"
+      },
+      {
+        "key": "purchase_type",
+        "label": "구매유형(일반/단가계약/긴급/MRO)",
+        "type": "enum",
+        "source": "전자조달(자체구축, DB): 품의 헤더 구매유형 코드",
+        "extract": "rule"
+      },
+      {
+        "key": "budget_code",
+        "label": "예산코드",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 헤더 예산코드",
+        "extract": "connector"
+      },
+      {
+        "key": "delivery_due",
+        "label": "납기일",
+        "type": "date",
+        "source": "전자조달(자체구축, DB): 품의 헤더 납기",
+        "extract": "connector"
+      },
+      {
+        "key": "line_items",
+        "label": "라인아이템(품목·사양·수량·단가·금액)",
+        "type": "array",
+        "source": "전자조달(자체구축, DB): 품의 라인아이템",
+        "extract": "connector"
+      },
+      {
+        "key": "order_amount",
+        "label": "발주 예정 총액(원)",
+        "type": "number",
+        "source": "전자조달(자체구축, DB): 라인아이템 금액 합계",
+        "extract": "rule"
+      },
+      {
+        "key": "vendor_id",
+        "label": "벤더 사업자번호/코드",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 지정 벤더",
+        "extract": "connector"
+      },
+      {
+        "key": "is_new_vendor",
+        "label": "신규 벤더 여부",
+        "type": "boolean",
+        "source": "벤더마스터(SAP MM, read-only): 등록 여부 조회",
+        "extract": "rule"
+      },
+      {
+        "key": "vendor_status",
+        "label": "벤더 상태(정상/제재/거래정지)",
+        "type": "enum",
+        "source": "벤더마스터(SAP MM, read-only): 제재·거래정지 플래그",
+        "extract": "connector"
+      },
+      {
+        "key": "vendor_credit_grade",
+        "label": "벤더 신용등급",
+        "type": "string",
+        "source": "벤더마스터(SAP MM, read-only): 신용등급",
+        "extract": "connector"
+      },
+      {
+        "key": "vendor_biz_no_valid",
+        "label": "사업자번호 유효 여부",
+        "type": "boolean",
+        "source": "벤더마스터(SAP MM, read-only): 사업자 유효성",
+        "extract": "connector"
+      },
+      {
+        "key": "vendor_due_diligence",
+        "label": "신규 벤더 실사 결과",
+        "type": "enum",
+        "source": "gap: 신규 벤더 실사 보고서 미디지털화 → 구매 담당자 수기 확인",
+        "extract": "manual"
+      },
+      {
+        "key": "quote_count",
+        "label": "첨부 견적 수",
+        "type": "number",
+        "source": "전자조달(자체구축, DB): 첨부 견적서PDF 수 / 견적 이력",
+        "extract": "rule"
+      },
+      {
+        "key": "quote_amount",
+        "label": "견적 금액",
+        "type": "number",
+        "source": "견적서PDF: LLM 추출(금액)",
+        "extract": "doc"
+      },
+      {
+        "key": "quote_vendor",
+        "label": "견적 벤더",
+        "type": "string",
+        "source": "견적서PDF: LLM 추출(벤더)",
+        "extract": "doc"
+      },
+      {
+        "key": "quote_valid_until",
+        "label": "견적 유효기간",
+        "type": "date",
+        "source": "견적서PDF: LLM 추출(유효기간)",
+        "extract": "doc"
+      },
+      {
+        "key": "quote_extract_confidence",
+        "label": "견적 추출 신뢰도",
+        "type": "number",
+        "source": "견적서PDF: LLM 추출 신뢰도 스코어",
+        "extract": "llm"
+      },
+      {
+        "key": "spec_attached",
+        "label": "사양서 첨부 여부",
+        "type": "boolean",
+        "source": "전자조달(자체구축, DB): 첨부 사양서 유무",
+        "extract": "rule"
+      },
+      {
+        "key": "spec_match",
+        "label": "사양서↔품의 사양 일치 적정성",
+        "type": "enum",
+        "source": "gap: 기술 사양 동등성 해석 → 구매 담당자 판단(LLM 보조)",
+        "extract": "manual"
+      },
+      {
+        "key": "contract_unit_price",
+        "label": "단가계약 단가",
+        "type": "number",
+        "source": "단가계약 마스터(전자조달 DB / SAP MM 단가계약): 계약 단가",
+        "extract": "connector"
+      },
+      {
+        "key": "unit_price_deviation_pct",
+        "label": "단가계약 대비 편차율(%)",
+        "type": "number",
+        "source": "전자조달(자체구축, DB)+단가계약 마스터: (품의단가-계약단가)/계약단가 계산",
+        "extract": "rule"
+      },
+      {
+        "key": "deviation_justified",
+        "label": "편차 사유 정당성(시장가 변동 등)",
+        "type": "enum",
+        "source": "gap: 시장 맥락 해석 → 결재권자 판단",
+        "extract": "manual"
+      },
+      {
+        "key": "budget_remaining",
+        "label": "예산코드 잔액(원)",
+        "type": "number",
+        "source": "예산마스터(SAP FI, API read): 해당 예산코드 잔액",
+        "extract": "connector"
+      },
+      {
+        "key": "budget_after_order",
+        "label": "발주 후 예상 잔액(원)",
+        "type": "number",
+        "source": "예산마스터(SAP FI)+order_amount: 잔액-발주액 시뮬레이션",
+        "extract": "rule"
+      },
+      {
+        "key": "budget_usage_pct",
+        "label": "예산 소진율(%)",
+        "type": "number",
+        "source": "예산마스터(SAP FI): (소진액/배정액) 계산",
+        "extract": "rule"
+      },
+      {
+        "key": "split_score",
+        "label": "쪼개기 의심 점수",
+        "type": "number",
+        "source": "구매발주이력(SAP MM, API read): 동일 요청자·예산코드·근접기간·임계직하 패턴 스코어링",
+        "extract": "rule"
+      },
+      {
+        "key": "split_intent_judged",
+        "label": "쪼개기 의도 최종 판정",
+        "type": "enum",
+        "source": "gap: 분할 의도·정당성 → 구매팀장 판단",
+        "extract": "manual"
+      },
+      {
+        "key": "approval_line",
+        "label": "산정 결재선",
+        "type": "enum",
+        "source": "위임전결 규정(Policy)+order_amount: 금액 구간 룩업",
+        "extract": "rule"
+      },
+      {
+        "key": "route",
+        "label": "분기 판정(자동승인/구매검토/반려)",
+        "type": "enum",
+        "source": "심사 엔진: 결정론 점검 종합 분기",
+        "extract": "rule"
+      },
+      {
+        "key": "po_number",
+        "label": "생성 PO 번호",
+        "type": "string",
+        "source": "SAP MM(API, read-write): PO 생성 결과 채번",
+        "extract": "connector"
+      },
+      {
+        "key": "commitment_status",
+        "label": "FI 예산 약정 상태",
+        "type": "enum",
+        "source": "SAP FI(API, read-write): commitment 처리 결과",
+        "extract": "connector"
+      }
+    ]
+  },
+  "knowledge": {
+    "lookupTables": [
+      {
+        "id": "lut_approval_line",
+        "description": "위임전결 결재선 룩업 (policy.approvalDelegation: 팀장5M·구매팀장50M·본부장300M·CPO 초과). 금액 단위 원, M=백만원.",
+        "entries": [
+          {
+            "match": "order_amount <= 5000000",
+            "result": "팀장 (1차 결재)"
+          },
+          {
+            "match": "5000000 < order_amount <= 50000000",
+            "result": "구매팀장"
+          },
+          {
+            "match": "50000000 < order_amount <= 300000000",
+            "result": "본부장"
+          },
+          {
+            "match": "order_amount > 300000000",
+            "result": "CPO(최고구매책임자)"
+          }
+        ]
+      },
+      {
+        "id": "lut_three_quote",
+        "description": "3견적 의무표 (policy.threeQuoteRule: 5백만원 이상 3견적 의무, 단가계약품 제외).",
+        "entries": [
+          {
+            "match": "order_amount >= 5000000 AND purchase_type != '단가계약'",
+            "result": "필수 견적 수 = 3"
+          },
+          {
+            "match": "order_amount < 5000000",
+            "result": "필수 견적 수 = 1 (견적서 유무만)"
+          },
+          {
+            "match": "purchase_type == '단가계약'",
+            "result": "견적 면제 (계약서 참조)"
+          }
+        ]
+      },
+      {
+        "id": "lut_evidence_set",
+        "description": "구매유형별 필수 증빙 셋 (evidence_check 규정표).",
+        "entries": [
+          {
+            "match": "purchase_type == '일반구매'",
+            "result": "견적서(유효기간 내)+사양서 필수, ≥5M 시 3견적"
+          },
+          {
+            "match": "purchase_type == '단가계약'",
+            "result": "단가계약서 참조 필수, 견적 면제, 사양서 필수"
+          },
+          {
+            "match": "purchase_type == '긴급'",
+            "result": "견적서+긴급사유서 필수, 사후 3견적 보완 허용"
+          },
+          {
+            "match": "purchase_type == 'MRO'",
+            "result": "견적서 또는 단가계약 참조, 사양서 간소"
+          }
+        ]
+      },
+      {
+        "id": "lut_vendor_status",
+        "description": "벤더 상태별 처리 (벤더마스터 SAP MM 조회 결과 → 액션).",
+        "entries": [
+          {
+            "match": "vendor_status == '제재' OR vendor_status == '거래정지'",
+            "result": "하드 반려(컴플라이언스 차단)"
+          },
+          {
+            "match": "vendor_biz_no_valid == false",
+            "result": "하드 반려(사업자 무효)"
+          },
+          {
+            "match": "is_new_vendor == true",
+            "result": "구매검토(HITL) 강제 — 실사 수기 확인"
+          },
+          {
+            "match": "vendor_status == '정상' AND is_new_vendor == false",
+            "result": "통과"
+          }
+        ]
+      }
+    ],
+    "decisionTables": [
+      {
+        "id": "dt_route",
+        "description": "최종 분기 라우팅: 자동승인 / 구매검토(HITL) / 반려. 우선순위 = 하드위반(반려) > 플래그(검토) > 전PASS(자동승인). 보수 risk appetite상 경계 케이스는 검토로 기움.",
+        "rules": [
+          {
+            "when": "budget_after_order < 0",
+            "then": "반려 (예산 초과 발주 금지 — 하드 가드레일)"
+          },
+          {
+            "when": "vendor_status IN ('제재','거래정지') OR vendor_biz_no_valid == false",
+            "then": "반려 (벤더 컴플라이언스 하드 차단)"
+          },
+          {
+            "when": "order_amount >= 5000000 AND purchase_type != '단가계약' AND quote_count < 3",
+            "then": "반려 (3견적 의무 미충족·보완요청)"
+          },
+          {
+            "when": "spec_attached == false OR quote_valid_until < today",
+            "then": "반려 (증빙 미충족·보완요청)"
+          },
+          {
+            "when": "split_score >= split_score_review_threshold",
+            "then": "구매검토(HITL) — 쪼개기 의심, 자동승인 차단 (구매팀장 의도 판정)"
+          },
+          {
+            "when": "is_new_vendor == true",
+            "then": "구매검토(HITL) — 신규 벤더 실사 수기 확인(구매 담당자)"
+          },
+          {
+            "when": "unit_price_deviation_pct > unit_price_deviation_threshold",
+            "then": "구매검토(HITL) — 단가 편차 초과(편차 사유 정당성 판단)"
+          },
+          {
+            "when": "budget_usage_pct >= budget_usage_review_threshold",
+            "then": "구매검토(HITL) — 예산 임박 승급(보수 risk appetite)"
+          },
+          {
+            "when": "quote_extract_confidence < quote_confidence_threshold OR spec_match == '모호'",
+            "then": "구매검토(HITL) — 견적 추출·사양 일치 사람 확인"
+          },
+          {
+            "when": "모든 결정론 점검 PASS AND order_amount <= auto_approve_amount_cap",
+            "then": "자동승인 (저위험·소액·규정 충족)"
+          },
+          {
+            "when": "모든 결정론 점검 PASS AND order_amount > auto_approve_amount_cap",
+            "then": "구매검토(HITL) — 점검은 PASS이나 고액이라 결재선 승인 필요"
+          }
+        ]
+      },
+      {
+        "id": "dt_writeback",
+        "description": "승인·반려 확정 후 ERP 반영 분기 (po_writeback). 온프레미스 전용 — 사내 경계 내 처리.",
+        "rules": [
+          {
+            "when": "route == '자동승인' OR (route == '구매검토' AND 결재 완료)",
+            "then": "SAP MM PO 생성 + FI 예산 commitment 약정 + 전자조달 발주상태 반영 + 감사로그 적재"
+          },
+          {
+            "when": "ERP 약정 실패(commitment_status == 'fail')",
+            "then": "PO 롤백·재시도, 실패 지속 시 구매검토 회부"
+          },
+          {
+            "when": "route == '반려'",
+            "then": "전자조달에 반려상태 반영 + 보완사유 현업 회신(초안 LLM·발송 전 검토) + 감사로그 적재"
+          }
+        ]
+      }
+    ],
+    "thresholds": [
+      {
+        "id": "auto_approve_amount_cap",
+        "expr": "order_amount <= 5000000",
+        "flag": "자동승인 금액 상한(팀장 위임전결 구간·저위험 소액). 초과는 점검 PASS여도 결재선 검토."
+      },
+      {
+        "id": "approval_line_t1",
+        "expr": "order_amount <= 5000000",
+        "flag": "결재선=팀장"
+      },
+      {
+        "id": "approval_line_t2",
+        "expr": "order_amount <= 50000000",
+        "flag": "결재선=구매팀장"
+      },
+      {
+        "id": "approval_line_t3",
+        "expr": "order_amount <= 300000000",
+        "flag": "결재선=본부장"
+      },
+      {
+        "id": "approval_line_t4",
+        "expr": "order_amount > 300000000",
+        "flag": "결재선=CPO"
+      },
+      {
+        "id": "three_quote_threshold",
+        "expr": "order_amount >= 5000000 AND purchase_type != '단가계약'",
+        "flag": "3견적 의무 적용"
+      },
+      {
+        "id": "budget_block",
+        "expr": "budget_after_order < 0",
+        "flag": "예산 초과 — 하드 반려(절대 규칙)"
+      },
+      {
+        "id": "budget_usage_review_threshold",
+        "expr": "budget_usage_pct >= 90",
+        "flag": "예산 임박 — 검토 승급(보수 risk appetite, 90% 소진)"
+      },
+      {
+        "id": "unit_price_deviation_threshold",
+        "expr": "unit_price_deviation_pct > 10",
+        "flag": "단가계약 편차 초과 — 검토(허용 편차 10% 가정)"
+      },
+      {
+        "id": "split_score_review_threshold",
+        "expr": "split_score >= 70",
+        "flag": "쪼개기 의심 — 검토 강제 승급(보수 risk appetite, 0~100 스코어)"
+      },
+      {
+        "id": "split_proximity_window",
+        "expr": "동일 요청자·예산코드 발주 간격 <= 14일",
+        "flag": "쪼개기 근접 기간 신호(14일 내)"
+      },
+      {
+        "id": "split_near_threshold_band",
+        "expr": "order_amount >= 임계*0.9 AND order_amount < 임계 (5M/50M/300M 직하)",
+        "flag": "임계 직하 금액 반복 신호(임계의 90~100%)"
+      },
+      {
+        "id": "quote_confidence_threshold",
+        "expr": "quote_extract_confidence < 0.8",
+        "flag": "견적 추출 신뢰도 미달 — 사람 확인 플래그"
+      }
+    ]
+  },
+  "seeds": [
+    {
+      "label": "R1 반려 — 예산 초과 발주(하드 가드레일)",
+      "expectedRoute": "반려 (예산 초과 발주 금지 — 하드 가드레일)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04412"
+        },
+        {
+          "slot": "requester",
+          "value": "김도현(생산기술팀)"
+        },
+        {
+          "slot": "department",
+          "value": "생산기술팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-PRD-2026-018"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "order_amount",
+          "value": "42000000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "128-81-44021"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "3"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-15"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "38000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "-4000000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "81"
+        },
+        {
+          "slot": "split_score",
+          "value": "22"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "3"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.93"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        }
+      ]
+    },
+    {
+      "label": "R2 반려 — 벤더 거래정지(컴플라이언스 하드 차단)",
+      "expectedRoute": "반려 (벤더 컴플라이언스 하드 차단)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04455"
+        },
+        {
+          "slot": "requester",
+          "value": "이서연(설비보전팀)"
+        },
+        {
+          "slot": "department",
+          "value": "설비보전팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "MRO"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-MNT-2026-007"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-10"
+        },
+        {
+          "slot": "order_amount",
+          "value": "3200000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "214-86-33910"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "거래정지"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "CCC"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-05"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "15000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "11800000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "40"
+        },
+        {
+          "slot": "split_score",
+          "value": "10"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "0"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.95"
+        }
+      ]
+    },
+    {
+      "label": "R3 반려 — 3견적 의무 미충족(≥5M·일반구매·견적 2건)",
+      "expectedRoute": "반려 (3견적 의무 미충족·보완요청)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04478"
+        },
+        {
+          "slot": "requester",
+          "value": "박준호(품질팀)"
+        },
+        {
+          "slot": "department",
+          "value": "품질보증팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-QA-2026-003"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-05"
+        },
+        {
+          "slot": "order_amount",
+          "value": "18500000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "305-81-77123"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "2"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-20"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "60000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "41500000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "55"
+        },
+        {
+          "slot": "split_score",
+          "value": "18"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "2"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.9"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        }
+      ]
+    },
+    {
+      "label": "R4 반려 — 증빙 미충족(사양서 누락·견적 만료)",
+      "expectedRoute": "반려 (증빙 미충족·보완요청)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04490"
+        },
+        {
+          "slot": "requester",
+          "value": "최민지(연구개발팀)"
+        },
+        {
+          "slot": "department",
+          "value": "R&D센터"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-RND-2026-021"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-25"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4200000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "117-81-20088"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "false"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-05-30"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "22000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "17800000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "48"
+        },
+        {
+          "slot": "split_score",
+          "value": "12"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "1"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.88"
+        }
+      ]
+    },
+    {
+      "label": "R5 구매검토 — 쪼개기 의심(split_score≥70)",
+      "expectedRoute": "구매검토(HITL) — 쪼개기 의심, 자동승인 차단 (구매팀장 의도 판정)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04501"
+        },
+        {
+          "slot": "requester",
+          "value": "정우성(생산관리팀)"
+        },
+        {
+          "slot": "department",
+          "value": "생산관리팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-PRD-2026-009"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-18"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4850000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "201-81-55340"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "30000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "25150000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "62"
+        },
+        {
+          "slot": "split_score",
+          "value": "82"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "4"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.91"
+        },
+        {
+          "slot": "split_intent_judged",
+          "value": "미판정"
+        }
+      ]
+    },
+    {
+      "label": "R6 구매검토 — 신규 벤더 실사 수기 확인",
+      "expectedRoute": "구매검토(HITL) — 신규 벤더 실사 수기 확인(구매 담당자)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04518"
+        },
+        {
+          "slot": "requester",
+          "value": "한지민(구매2팀)"
+        },
+        {
+          "slot": "department",
+          "value": "구매2팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-GEN-2026-014"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-12"
+        },
+        {
+          "slot": "order_amount",
+          "value": "3800000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "402-88-91200"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "BB"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-28"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "19000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "15200000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "51"
+        },
+        {
+          "slot": "split_score",
+          "value": "15"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "3"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.9"
+        },
+        {
+          "slot": "vendor_due_diligence",
+          "value": "미확인"
+        }
+      ]
+    },
+    {
+      "label": "R7 구매검토 — 단가계약 편차 초과(>10%)",
+      "expectedRoute": "구매검토(HITL) — 단가 편차 초과(편차 사유 정당성 판단)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04533"
+        },
+        {
+          "slot": "requester",
+          "value": "오세훈(자재팀)"
+        },
+        {
+          "slot": "department",
+          "value": "자재구매팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "단가계약"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-MAT-2026-006"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-09"
+        },
+        {
+          "slot": "order_amount",
+          "value": "12600000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "133-81-40277"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "0"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "contract_unit_price",
+          "value": "12000"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "15"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "40000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "27400000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "58"
+        },
+        {
+          "slot": "split_score",
+          "value": "20"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.95"
+        },
+        {
+          "slot": "deviation_justified",
+          "value": "미판단"
+        }
+      ]
+    },
+    {
+      "label": "R8 구매검토 — 예산 임박 승급(소진율≥90%)",
+      "expectedRoute": "구매검토(HITL) — 예산 임박 승급(보수 risk appetite)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04547"
+        },
+        {
+          "slot": "requester",
+          "value": "신영균(설비투자팀)"
+        },
+        {
+          "slot": "department",
+          "value": "설비투자팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "단가계약"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-CAPEX-2026-002"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-22"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4500000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "506-81-12345"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "0"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "contract_unit_price",
+          "value": "45000"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "2"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "5000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "500000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "93"
+        },
+        {
+          "slot": "split_score",
+          "value": "25"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.94"
+        }
+      ]
+    },
+    {
+      "label": "R9 구매검토 — 견적 추출 신뢰도 미달·사양 모호",
+      "expectedRoute": "구매검토(HITL) — 견적 추출·사양 일치 사람 확인",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04560"
+        },
+        {
+          "slot": "requester",
+          "value": "윤하늘(R&D구매팀)"
+        },
+        {
+          "slot": "department",
+          "value": "R&D구매팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-RND-2026-030"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-20"
+        },
+        {
+          "slot": "order_amount",
+          "value": "4900000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "118-81-66501"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "quote_amount",
+          "value": "4900000"
+        },
+        {
+          "slot": "quote_vendor",
+          "value": "대성정밀(주)"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-08-01"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "28000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "23100000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "44"
+        },
+        {
+          "slot": "split_score",
+          "value": "19"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "3"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.62"
+        },
+        {
+          "slot": "spec_match",
+          "value": "모호"
+        }
+      ]
+    },
+    {
+      "label": "R10 자동승인 — 전PASS·소액(≤5M)",
+      "expectedRoute": "자동승인 (저위험·소액·규정 충족)",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04572"
+        },
+        {
+          "slot": "requester",
+          "value": "강민석(총무팀)"
+        },
+        {
+          "slot": "department",
+          "value": "총무팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "MRO"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-GA-2026-011"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-07-08"
+        },
+        {
+          "slot": "order_amount",
+          "value": "1850000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "129-81-30055"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "A"
+        },
+        {
+          "slot": "quote_count",
+          "value": "1"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-07-31"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "24000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "22150000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "36"
+        },
+        {
+          "slot": "split_score",
+          "value": "8"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "1"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.96"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        }
+      ]
+    },
+    {
+      "label": "R11 구매검토 — 전PASS이나 고액(>5M, 결재선 승인 필요)",
+      "expectedRoute": "구매검토(HITL) — 점검은 PASS이나 고액이라 결재선 승인 필요",
+      "input": [
+        {
+          "slot": "case_id",
+          "value": "PR-2026-04588"
+        },
+        {
+          "slot": "requester",
+          "value": "임재현(생산기술팀)"
+        },
+        {
+          "slot": "department",
+          "value": "생산기술팀"
+        },
+        {
+          "slot": "purchase_type",
+          "value": "일반구매"
+        },
+        {
+          "slot": "budget_code",
+          "value": "BG-PRD-2026-024"
+        },
+        {
+          "slot": "delivery_due",
+          "value": "2026-08-30"
+        },
+        {
+          "slot": "order_amount",
+          "value": "68000000"
+        },
+        {
+          "slot": "vendor_id",
+          "value": "220-81-88440"
+        },
+        {
+          "slot": "is_new_vendor",
+          "value": "false"
+        },
+        {
+          "slot": "vendor_status",
+          "value": "정상"
+        },
+        {
+          "slot": "vendor_biz_no_valid",
+          "value": "true"
+        },
+        {
+          "slot": "vendor_credit_grade",
+          "value": "AA"
+        },
+        {
+          "slot": "quote_count",
+          "value": "3"
+        },
+        {
+          "slot": "spec_attached",
+          "value": "true"
+        },
+        {
+          "slot": "quote_valid_until",
+          "value": "2026-08-15"
+        },
+        {
+          "slot": "budget_remaining",
+          "value": "150000000"
+        },
+        {
+          "slot": "budget_after_order",
+          "value": "82000000"
+        },
+        {
+          "slot": "budget_usage_pct",
+          "value": "50"
+        },
+        {
+          "slot": "split_score",
+          "value": "14"
+        },
+        {
+          "slot": "unit_price_deviation_pct",
+          "value": "2"
+        },
+        {
+          "slot": "quote_extract_confidence",
+          "value": "0.93"
+        },
+        {
+          "slot": "spec_match",
+          "value": "적정"
+        },
+        {
+          "slot": "approval_line",
+          "value": "본부장"
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "type": "Connector",
+      "name": "전자조달 커넥터 (구매품의 접수·발주상태 반영)",
+      "L": "L5",
+      "connectsTo": "전자조달(자체구축, DB, read-write)"
+    },
+    {
+      "type": "Connector",
+      "name": "SAP MM 커넥터 (PO 생성·구매발주이력 조회)",
+      "L": "L5",
+      "connectsTo": "ERP(SAP MM, API, read-write)"
+    },
+    {
+      "type": "Connector",
+      "name": "SAP FI 커넥터 (예산마스터 잔액 read·commitment 약정)",
+      "L": "L5",
+      "connectsTo": "ERP(SAP FI, API, read-write)"
+    },
+    {
+      "type": "Connector",
+      "name": "벤더마스터 커넥터 (사업자·신용·제재·거래정지 조회)",
+      "L": "L5",
+      "connectsTo": "벤더마스터(SAP MM, API, read-only)"
+    },
+    {
+      "type": "Module",
+      "name": "구매품의 정규화·슬롯 채움 모듈 (헤더·라인아이템 파싱)",
+      "L": "L3",
+      "connectsTo": "전자조달 커넥터"
+    },
+    {
+      "type": "Agent",
+      "name": "견적서 추출 에이전트 (견적서PDF→금액·벤더·유효기간, 신뢰도 스코어)",
+      "L": "L3",
+      "connectsTo": "전자조달 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "증빙·사양 충족 점검 모듈 (lut_evidence_set·lut_three_quote 결정론)",
+      "L": "L3",
+      "connectsTo": "구매품의 정규화 모듈"
+    },
+    {
+      "type": "Module",
+      "name": "단가계약 편차·예산 잔액 계산 모듈 (편차율·잔액 시뮬레이션 결정론)",
+      "L": "L3",
+      "connectsTo": "SAP FI 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "쪼개기 패턴 스코어링 모듈 (구매발주이력 룰 스코어)",
+      "L": "L3",
+      "connectsTo": "SAP MM 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "벤더 적격성 판정 모듈 (제재·거래정지·신규 분기)",
+      "L": "L3",
+      "connectsTo": "벤더마스터 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "결재선 산정·분기 라우팅 엔진 (lut_approval_line·dt_route)",
+      "L": "L3",
+      "connectsTo": "증빙·예산·쪼개기·벤더 점검 모듈"
+    },
+    {
+      "type": "Agent",
+      "name": "반려·보완요청 회신 초안 에이전트 (발송 전 사람 검토)",
+      "L": "L3",
+      "connectsTo": "전자조달 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "PO 생성·예산 약정 Writeback 모듈 (dt_writeback·롤백/재시도)",
+      "L": "L3",
+      "connectsTo": "SAP MM 커넥터"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "SAP MM/FI ERP (PO·예산·발주 시스템 오브 레코드)",
+      "L": "L5",
+      "connectsTo": "ERP(SAP, API, read-write)"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "전자조달 시스템 (자체구축, 품의·견적 이력 소스)",
+      "L": "L5",
+      "connectsTo": "전자조달(자체구축, DB, read-write)"
+    },
+    {
+      "type": "Policy",
+      "name": "위임전결 규정 가드 (팀장5M·구매팀장50M·본부장300M·CPO 초과)",
+      "L": "L7",
+      "connectsTo": "결재선 산정·분기 라우팅 엔진"
+    },
+    {
+      "type": "Policy",
+      "name": "예산 초과 발주 금지 하드 가드레일 (budget_block 절대 차단)",
+      "L": "L7",
+      "connectsTo": "단가계약 편차·예산 잔액 계산 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "벤더 컴플라이언스 가드 (제재·거래정지 하드 차단)",
+      "L": "L7",
+      "connectsTo": "벤더 적격성 판정 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "3견적 의무 가드 (≥5M·단가계약 외)",
+      "L": "L7",
+      "connectsTo": "증빙·사양 충족 점검 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "온프레미스 전용 경계 가드 (사내 시스템 외 연동 금지)",
+      "L": "L7",
+      "connectsTo": "PO 생성·예산 약정 Writeback 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "보수 risk appetite 승급 가드 (쪼개기·예산임박·편차 검토 라우팅)",
+      "L": "L7",
+      "connectsTo": "결재선 산정·분기 라우팅 엔진"
+    },
+    {
+      "type": "Module",
+      "name": "HITL 검토 큐 (구매검토 건 결재권자·담당자 라우팅)",
+      "L": "L7",
+      "connectsTo": "결재선 산정·분기 라우팅 엔진"
+    },
+    {
+      "type": "Module",
+      "name": "감사 로그·학습 자산 적재 모듈 (점검·결재·분기 사유·편차/쪼개기 추세)",
+      "L": "L8",
+      "connectsTo": "PO 생성·예산 약정 Writeback 모듈"
+    }
+  ],
+  "compose": [
+    {
+      "t": "Agent",
+      "sub": "전문 작업",
+      "cls": "tA",
+      "n": 2,
+      "items": [
+        "견적서 추출 에이전트 (견적서PDF→금액·벤더·유효기간, 신뢰도 스코어)",
+        "반려·보완요청 회신 초안 에이전트 (발송 전 사람 검토)"
+      ]
+    },
+    {
+      "t": "Module",
+      "sub": "재사용 기능",
+      "cls": "tM",
+      "n": 9,
+      "items": [
+        "구매품의 정규화·슬롯 채움 모듈 (헤더·라인아이템 파싱)",
+        "증빙·사양 충족 점검 모듈 (lut_evidence_set·lut_three_quote 결정론)",
+        "단가계약 편차·예산 잔액 계산 모듈 (편차율·잔액 시뮬레이션 결정론)",
+        "쪼개기 패턴 스코어링 모듈 (구매발주이력 룰 스코어)",
+        "벤더 적격성 판정 모듈 (제재·거래정지·신규 분기)"
+      ]
+    },
+    {
+      "t": "기존 솔루션",
+      "sub": "Buy·Integrate",
+      "cls": "tS",
+      "n": 2,
+      "items": [
+        "SAP MM/FI ERP (PO·예산·발주 시스템 오브 레코드)",
+        "전자조달 시스템 (자체구축, 품의·견적 이력 소스)"
+      ]
+    },
+    {
+      "t": "Connector",
+      "sub": "시스템 연동",
+      "cls": "tC",
+      "n": 4,
+      "items": [
+        "전자조달 커넥터 (구매품의 접수·발주상태 반영)",
+        "SAP MM 커넥터 (PO 생성·구매발주이력 조회)",
+        "SAP FI 커넥터 (예산마스터 잔액 read·commitment 약정)",
+        "벤더마스터 커넥터 (사업자·신용·제재·거래정지 조회)"
+      ]
+    },
+    {
+      "t": "Policy",
+      "sub": "통제·권한",
+      "cls": "tP",
+      "n": 6,
+      "items": [
+        "위임전결 규정 가드 (팀장5M·구매팀장50M·본부장300M·CPO 초과)",
+        "예산 초과 발주 금지 하드 가드레일 (budget_block 절대 차단)",
+        "벤더 컴플라이언스 가드 (제재·거래정지 하드 차단)",
+        "3견적 의무 가드 (≥5M·단가계약 외)",
+        "온프레미스 전용 경계 가드 (사내 시스템 외 연동 금지)"
+      ]
+    }
+  ],
+  "gates": [
+    "신규 벤더 실사 결과(vendor_due_diligence)는 source=gap — 신규 벤더 실사 보고서가 미디지털화되어 구매 담당자 수기 확인(extract=manual). 결정론 점검으로 적격성을 종결할 수 없어, is_new_vendor==true 케이스(R6)에서 자동승인을 차단하고 담당자 수기 실사 확인을 강제하는 HITL 게이트.",
+    "사양서↔품의 사양 일치 적정성(spec_match)은 source=gap — 기술 사양 동등성 해석을 구매 담당자가 판단(LLM 보조, extract=manual). 동등성은 결정론 규칙으로 확정 불가. spec_match=='모호'이거나 견적 추출 신뢰도 미달 시(R9) 사람 확인을 거는 HITL 게이트.",
+    "단가계약 대비 편차 사유 정당성(deviation_justified)은 source=gap — 시장가 변동 등 시장 맥락 해석을 결재권자가 판단(extract=manual). unit_price_deviation_pct>10%(R7)일 때 편차 자체는 결정론으로 탐지하나 정당성은 사람만 판정 가능하므로 결재권자 검토를 거는 HITL 게이트.",
+    "쪼개기 의도 최종 판정(split_intent_judged)은 source=gap — 분할 의도·정당성을 구매팀장이 판단(extract=manual). split_score는 결정론 패턴 스코어이나 의도는 사람만 판정. split_score>=70(R5)에서 자동승인을 차단하고 구매팀장 의도 판정을 강제하는 HITL 게이트.",
+    "모든 결정론 점검이 PASS여도 order_amount>auto_approve_amount_cap(5M)인 고액 케이스(R11)는 위임전결 규정상 결재선(구매팀장/본부장/CPO) 승인이 필수. 자동승인 권한 밖이므로 산정된 approval_line 결재권자에게 회부하는 HITL 게이트(점검 위반 아님·권한 경계)."
+  ],
+  "stepLoop": {
+    "intake": "Data",
+    "evidence_check": "Decision",
+    "price_budget": "Decision",
+    "split_detect": "Data",
+    "vendor_eligibility": "Data",
+    "approval_routing": "Decision",
+    "po_writeback": "Decision"
+  },
+  "govern": [
+    {
+      "k": "Policy",
+      "v": "책임 지점 자동 차단 후 승인(HITL 게이트)."
+    },
+    {
+      "k": "Run Trace",
+      "v": "요청→판정→분기→반영 전 구간 기록."
+    },
+    {
+      "k": "Evaluation",
+      "v": "evaluate(case,knowledge) 결정론 판정·근거(basis) 추적."
+    },
+    {
+      "k": "Skill Library",
+      "v": "유형·룰·패턴 재사용 자산화."
+    }
+  ],
+  "surfaceSpec": {
+    "icon": "🗂️",
+    "title": "구매·조달",
+    "customer": "고객",
+    "owner": "담당자",
+    "tabs": [
+      "개요",
+      "판정",
+      "처리",
+      "기록"
+    ],
+    "_stub": true
+  },
+  "provenance": {
+    "generatedBy": "harness",
+    "adapter": "harness_to_pack_v0.1",
+    "domain": "procurement",
+    "profile": null,
+    "reviewedBy": null
+  },
+  "_adapterNotes": [
+    "flow·loopPhase·gate 분류 = 휴리스틱(어댑터 v0.1). app/ 세션이 정통화(Pack Contract v2 2b).",
+    "caseModel·knowledge·seeds·components = 하니스 출력 1:1 통과(정밀).",
+    "surfaceSpec = stub. io.editable.recompute = evaluate() (코어 표준, N3 §D).",
+    "route 분기는 knowledge.decisionTables가 SSOT — flow gate decisions는 그 라벨 미러."
+  ]
+}

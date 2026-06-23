@@ -117,7 +117,7 @@ function saveOverrides(){ lsSet('packOverrides',_packOverrides||{}); }
    ★배포된 팩만 운영(인박스·On-Ramp 매칭·조합)에 편입. draft 는 스튜디오에서만 보임.
    시드 팩(meeting/voc/recruiting)=기본 deployed, 자동저작/격상/On-Ramp register=draft.
    packOverrides 와 동일한 persisted-map 패턴(코어가 저장·조회만). */
-const SEED_PACK_IDS=['meeting','voc','recruiting'];   /* 시드 = 기본 deployed */
+const SEED_PACK_IDS=['meeting','voc','recruiting','contract_a'];   /* 시드 = 기본 deployed (contract_a = bake된 계약 팩, N3 §E-A) */
 let _packStatus=null;
 function loadPackStatus(){ if(_packStatus)return _packStatus; _packStatus=lsGet('packStatus',{})||{}; return _packStatus; }
 function savePackStatus(){ lsSet('packStatus',_packStatus||{}); }
@@ -192,7 +192,7 @@ function hasCaseOverlay(c){ return !!caseOverridesOf(c); }
 let PACK, WORK, COMPONENTS, COMPOSE, TIMES;
 const idxOf=id=>WORK.findIndex(w=>w.id===id);
 const W=id=>WORK.find(w=>w.id===id);
-const groupsOf=w=>[...new Set(w.ops.map(o=>o.g))].sort((a,b)=>a-b);
+const groupsOf=w=>[...new Set((w&&w.ops||[]).map(o=>o.g))].sort((a,b)=>a-b);
 
 /* =========================================================================
    Pack Contract v2 · 단계 메타 접근자 (도메인 무관 · 코어가 stage.kind/loopPhase/gate/live 로 구동)
@@ -224,6 +224,8 @@ function stDecisions(w){ const g=w&&w.gate; return (g&&typeof g==='object'&&Arra
 function stDecision(w,key){ return stDecisions(w).find(d=>d.key===key)||{key,label:key==='yes'?'승인':'수정 요청',toast:''}; }
 /* compose 류 '조합 구성요소(casm)' 노출 단계 표식(특정 id 하드코딩 제거) */
 function stShowsCompose(w){ return !!(w&&w.showCompose); }
+/* 단계 role 라벨 폴백(role 미선언 flow 단계 — bake된 팩 graceful). kind→역할 표기. 도메인 무관. */
+function stRole(w){ const k=stKind(w); return k==='input'?'요청':k==='gate'?'결정':'AAP'; }
 
 /* =========================================================================
    영속성 (Phase 0) — localStorage 네임스페이스 aap.v1.*
@@ -232,7 +234,7 @@ function stShowsCompose(w){ return !!(w&&w.showCompose); }
 const LS_NS='aap.v1.';
 /* 스키마 버전 — 상태 모델이 바뀔 때마다 올린다. 저장본 버전이 다르거나(구버전 잔재) 없으면
    aap.v1.* 를 안전 초기화·재시드 → '옛 localStorage 가 새 코드를 깨는' 문제 방지. */
-const SCHEMA_VER=5;
+const SCHEMA_VER=6;   /* v6: 결정 런타임 caseData/verdict/thresholdOv + contract_a 팩 시드(N3 §D·E) */
 function lsGet(k,fb){ try{const v=localStorage.getItem(LS_NS+k);return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
 function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(e){} }
 function lsClearAll(){ try{const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf(LS_NS)===0)rm.push(k);}rm.forEach(k=>localStorage.removeItem(k));}catch(e){} }
@@ -311,7 +313,10 @@ const STATE={view:'inbox', sel:null, playing:false, decisions:{}, pickedTime:nul
   /* ── 워크스페이스 탭(코어 소유 · 도메인 무관 · transient) ──
      'mine' = 내 업무(결정 큐 워크스페이스) / 'progress' = 업무 진행(단계 프로세스·HITL·AAP 작동).
      wsStepOpen = 업무 진행 탭에서 펼친 단계 id 집합(세부 작업·근거). */
-  wsTab:'mine', wsStepOpen:new Set(), ioDone:{}};
+  wsTab:'mine', wsStepOpen:new Set(), ioDone:{},
+  /* ── 결정 런타임(N3 §D) — caseData = 케이스 슬롯값 맵(caseModel.slots), verdict = evaluate 결과 ──
+     thresholdOv = io.editable 로 사람이 조정한 임계 오버레이(케이스 격리). 도메인 무관(전부 데이터 주도). */
+  caseData:{}, verdict:null, thresholdOv:{}};
 const RUN={phase:'idle', reveal:0, timers:[], playTimer:null};
 function clearRun(){RUN.timers.forEach(clearTimeout);RUN.timers=[];clearTimeout(RUN.playTimer);}
 function extExcluded(){return PACK.extExcluded?PACK.extExcluded(STATE):false;}
@@ -320,9 +325,31 @@ function extExcluded(){return PACK.extExcluded?PACK.extExcluded(STATE):false;}
 function activeCase(){return APP.cases.find(c=>c.id===APP.active);}
 function newId(){return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 /* 팩 → 케이스 템플릿. 팩이 seeds/caseTemplate 를 안 줘도 workload/surfaceSpec 에서 자동 도출(코어 책임) */
+/* 시드 input[{slot,value}] (또는 평면 객체) → caseModel.slots 타입으로 강제한 caseData 맵.
+   결정 런타임(evaluate)이 바로 소비할 결정론 입력. 팩이 caseModel 없으면 빈 객체(graceful). 도메인 무관. */
+function coerceSlots(pack,seed){
+  const cm=pack&&pack.caseModel; if(!cm||!Array.isArray(cm.slots))return {};
+  const byKey={}; cm.slots.forEach(s=>byKey[s.key]=s);
+  /* seed.input = [{slot,value}] (bake된 팩) 또는 seed.caseData = 평면 객체 */
+  const raw={};
+  if(seed&&Array.isArray(seed.input))seed.input.forEach(p=>{ if(p&&p.slot!=null)raw[p.slot]=p.value; });
+  if(seed&&seed.caseData&&typeof seed.caseData==='object')Object.assign(raw,seed.caseData);
+  const out={};
+  Object.keys(raw).forEach(k=>{ out[k]=coerceVal(raw[k], byKey[k]&&byKey[k].type); });
+  return out;
+}
+function coerceVal(v,type){
+  if(v==null)return v;
+  if(type==='number'){ const n=typeof v==='number'?v:Number(String(v).replace(/[, _]/g,'')); return isNaN(n)?v:n; }
+  if(type==='boolean'){ if(typeof v==='boolean')return v; const s=String(v).trim().toLowerCase(); return s==='true'||s==='참'||s==='y'; }
+  if(type==='array'){ if(Array.isArray(v))return v; const s=String(v).trim();
+    if(s===''||s==='[]'||s==='없음')return []; return s.split(/[·,]/).map(x=>x.trim()).filter(Boolean); }
+  return v; /* string·enum·date = 원문 */
+}
 function caseTemplate(pack,seed){
   const wl=pack.workload||{}, ss=pack.surfaceSpec||{};
   return {
+    caseData:coerceSlots(pack,seed),   /* 결정 런타임 입력(슬롯값) — 케이스에 영속 */
     id:newId(), packId:pack.id,
     projectId:(seed&&seed.projectId)||null,  /* P4 옵셔널 — 없으면 미배정(정상 동작) */
     title:(seed&&seed.title)||ss.title||wl.type||pack.label,
@@ -373,9 +400,26 @@ function hydrateFromCase(c){
   packPersistKeys().forEach(k=>{ if(k in ps)STATE[k]=ps[k]; });
   /* io 활성화 기록(코어 일반 · 케이스 영속) */
   STATE.ioDone=(c.ioDone&&typeof c.ioDone==='object')?{...c.ioDone}:{};
+  /* ── 결정 런타임 hydrate(N3 §D) — 케이스 슬롯값·임계 오버레이 복원 후 evaluate 실행 ── */
+  STATE.caseData=(c.caseData&&typeof c.caseData==='object')?{...c.caseData}:{};
+  STATE.thresholdOv=(c.thresholdOv&&typeof c.thresholdOv==='object')?{...c.thresholdOv}:{};
+  STATE.verdict=null; evalCase();
   /* 팩 선언 transient 키 초기화(케이스 간 누수 방지 — 예: 열린 상세 모달) */
   clearPackTransient();
 }
+/* ── 결정 런타임 실행(코어 일반 · 도메인 무관) — N3 §D 표준 ──
+   팩이 caseModel+knowledge.route 를 주면 evaluate(caseData', knowledge) 실행 → STATE.verdict.
+   caseData' = 슬롯값 + 사람이 조정한 임계 오버레이(thresholdOv) 병합 → io.editable.recompute 의 백엔드.
+   knowledge·caseModel 없는 팩(회의·VOC·채용)은 no-op(graceful). 결정론. */
+function evalCase(){
+  STATE.verdict=null;
+  if(!PACK||!PACK.knowledge||!PACK.knowledge.route||!window.AAP_EVALUATE)return null;
+  const data={...(STATE.caseData||{}), ...(STATE.thresholdOv||{})};
+  try{ STATE.verdict=window.AAP_EVALUATE.evaluate(data, PACK.knowledge); }
+  catch(e){ if(window.console)console.warn('[AAP] evaluate 실패',e); STATE.verdict=null; }
+  return STATE.verdict;
+}
+window.AAP_evalCase=evalCase;
 function persistToCase(){
   const c=activeCase(); if(!c)return;
   c.sel=STATE.sel; c.decisions={...STATE.decisions}; c.pickedTime=STATE.pickedTime; c.meetPhase=STATE.meetPhase;
@@ -383,6 +427,8 @@ function persistToCase(){
   /* 팩 선언 키 영속(도메인 무관) */
   const ps={}; packPersistKeys().forEach(k=>{ if(k in STATE)ps[k]=STATE[k]; }); c.packState=ps;
   c.ioDone=(STATE.ioDone&&typeof STATE.ioDone==='object')?{...STATE.ioDone}:{};   /* io 활성화 기록 */
+  c.caseData=(STATE.caseData&&typeof STATE.caseData==='object')?{...STATE.caseData}:{};   /* 결정 슬롯값 영속 */
+  c.thresholdOv=(STATE.thresholdOv&&typeof STATE.thresholdOv==='object')?{...STATE.thresholdOv}:{};   /* 임계 오버레이 영속 */
   const pack=PACKS[c.packId], last=pack.work[pack.work.length-1];
   if(STATE.sel===last.id && RUN.phase==='done') c.done=true;
   saveApp();
@@ -564,7 +610,7 @@ function renderSeq(){
     const w=WORK[i],gm=stIsGateMark(w);let cls='snode'+(d===0?' active':' adj')+(gm?' gate':'')+(d<0?' past':'')+(d===0&&working?' working':'');
     if(d>0||(d===0&&i>0))html+=`<span class="sarrow">${_ICO('chevron-right')}</span>`;
     const tag=d===0?`<span class="snode-st">${working?'처리 중…':(RUN.phase==='await'?'확인 대기':'완료')}</span>`:'';
-    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${gm?_ICO('star'):''}</span>${tag}</div>`;}
+    html+=`<div class="${cls}" data-go="${w.id}"><span class="role">${w.role||stRole(w)}</span><span class="lab"><span class="sn">${String(i+1).padStart(2,'0')}</span>${w.label}${gm?_ICO('star'):''}</span>${tag}</div>`;}
   document.getElementById('seq').innerHTML=html;
   document.getElementById('seqProg').textContent=`${ci+1} / ${WORK.length}`;
   document.querySelectorAll('#seq .snode').forEach(e=>e.onclick=()=>setSel(e.dataset.go));
@@ -958,10 +1004,18 @@ function cmodalSpec(kind,C){
    ④ SVG 매칭 그래프 컨테이너(인라인 SVG · 외부 라이브러리 0).
    엔진은 도메인 무관. 채용 전용 컨트롤·recompute·그래프 데이터는 recruiting.js 의 surface 가 제공.
    ========================================================================= */
-/* ── ② 라이브 재분석 엔진 — 비침투 오버레이(#reov, .run-surface 마운트). 연속 클릭 잠금. ── */
+/* ── ② 라이브 재분석 엔진 — 비침투 오버레이(#reov, .run-surface 마운트). 연속 클릭 잠금. ──
+   사용자 지적 1·2: "휙 지나감 / 중간에 무엇을·어떤 근거로 작동하는지 안 보임".
+   → 각 단계가 충분히 머무르며(dwell↑) '작동 중'(파랑 펄스) → '완료'(체크)로 전이하고,
+     단계마다 mono 근거(basis: 어떤 슬롯/룩업/임계/식을 읽고·계산·판정했는지)를 노출한다.
+   step 스키마 = {t(제목), d(한 줄), basis(근거 mono 라인 — 무엇을 읽고/계산/판정), tag('읽기'|'대조'|'평가'|'판정')}.
+   결과로 점프(✕) → 중간 작동을 근거와 함께 펼쳐 보여준다(시간은 도메인 무관 코어가 통제). */
 var _LIVE_BUSY=false;
 function liveBusy(){ return _LIVE_BUSY; }
-/* opts = {intent, mono, steps:[{t,d}], onDone, busyEl} — steps spinner→✓ 후 onDone() 호출(결정론 recompute). */
+/* 단계 진행 타이밍(코어 일반 — 너무 빠르지 않게). reveal=등장, work=작동중 머무름, gap=다음까지. */
+const RE_T={ reveal:60, work:860, gap:180, done:420 };
+const RE_TAG={'읽기':'slot','대조':'lk','평가':'th','판정':'route'};
+/* opts = {intent, mono, steps:[{t,d,basis,tag}], onDone, busyEl} — steps 작동중→✓ 후 onDone() 호출(결정론 recompute). */
 function runReanalysis(opts){
   opts=opts||{};
   if(_LIVE_BUSY)return; _LIVE_BUSY=true;
@@ -971,39 +1025,70 @@ function runReanalysis(opts){
   /* 오버레이 1회 보장 */
   let ov=document.getElementById('reov');
   if(!ov){ ov=document.createElement('div'); ov.id='reov'; ov.className='reov';
-    ov.innerHTML=`<div class="recard"><div class="reh">${_ICO('zap')}AAP가 다시 분석 중</div><div class="resub" id="reint"></div><div class="reprog"><i id="reprog"></i></div><div id="resteps"></div></div>`;
+    ov.innerHTML=`<div class="recard"><div class="reh">${_ICO('zap')}<span>AAP가 다시 분석 중</span><span class="reph" id="reph"></span></div><div class="resub" id="reint"></div><div class="reprog"><i id="reprog"></i></div><div id="resteps"></div></div>`;
     rs.appendChild(ov);
   }
   const intEl=ov.querySelector('#reint'); if(intEl)intEl.textContent=opts.intent||'의도 변경 반영';
   const prog=ov.querySelector('#reprog'); if(prog)prog.style.width='0%';
   const cont=ov.querySelector('#resteps'); if(cont)cont.innerHTML='';
+  const phEl=ov.querySelector('#reph'); if(phEl)phEl.textContent='';
   ov.classList.add('show');
   const steps=(opts.steps&&opts.steps.length)?opts.steps:[
-    {t:'의도 해석', d:opts.intent||''},
-    {t:'재계산', d:opts.mono||''},
-    {t:'재랭킹·근거 갱신', d:'순위 비교 중…'},
+    {t:'의도 해석', d:opts.intent||'', tag:'읽기'},
+    {t:'재계산', d:opts.mono||'', tag:'평가'},
+    {t:'재랭킹·근거 갱신', d:'순위 비교 중…', tag:'판정'},
   ];
+  const n=steps.length;
   let i=0;
   function finish(){
     if(prog)prog.style.width='100%';
+    if(phEl)phEl.textContent='반영';
     setTimeout(()=>{ ov.classList.remove('show'); if(busyEl)busyEl.classList.remove('live-busy'); _LIVE_BUSY=false;
       if(opts.onDone)opts.onDone();
-    }, 280);
+    }, RE_T.done);
   }
   function next(){
-    if(i>=steps.length){ finish(); return; }
+    if(i>=n){ finish(); return; }
     const s=steps[i];
-    cont.insertAdjacentHTML('beforeend',`<div class="rstep" id="rs${i}"><div class="rsi spin" id="rsi${i}"></div><div><div class="rst">${s.t}</div><div class="rsd" id="rsd${i}">${s.d||''}</div></div></div>`);
-    setTimeout(()=>{ const e=document.getElementById('rs'+i); if(e)e.classList.add('vis'); },30);
+    const tagCls=RE_TAG[s.tag]||'';
+    /* 작동중 상태로 등장(파랑 펄스 spinner) — 충분히 머무름 → basis 노출 */
+    cont.insertAdjacentHTML('beforeend',
+      `<div class="rstep doing" id="rs${i}"><div class="rsi spin" id="rsi${i}"></div>`+
+      `<div class="rstx"><div class="rst">${s.t}${s.tag?`<span class="rtag ${tagCls}">${s.tag}</span>`:''}</div>`+
+      `<div class="rsd" id="rsd${i}">${s.d||''}</div>`+
+      `${s.basis?`<div class="rsb" id="rsb${i}">${s.basis}</div>`:''}</div></div>`);
+    if(phEl)phEl.textContent=`${i+1}/${n} · ${s.t}`;
+    setTimeout(()=>{ const e=document.getElementById('rs'+i); if(e)e.classList.add('vis'); },RE_T.reveal);
+    /* basis 가 뒤따라 타이핑되듯 등장(중간 작동 강조) */
+    if(s.basis)setTimeout(()=>{ const b=document.getElementById('rsb'+i); if(b)b.classList.add('on'); },RE_T.reveal+260);
     setTimeout(()=>{
+      const e=document.getElementById('rs'+i); if(e){ e.classList.remove('doing'); e.classList.add('ok'); }
       const icon=document.getElementById('rsi'+i); if(icon){ icon.classList.remove('spin'); icon.classList.add('done'); icon.innerHTML=_ICO('check'); }
-      if(prog)prog.style.width=Math.round((i+1)/steps.length*100)+'%';
-      i++; setTimeout(next,100);
-    }, 440);
+      if(prog)prog.style.width=Math.round((i+1)/n*100)+'%';
+      i++; setTimeout(next,RE_T.gap);
+    }, RE_T.work);
   }
   next();
 }
 window.AAP_LIVE={ run:runReanalysis, busy:liveBusy };
+
+/* ── 수치 트윈(깜빡임 제거 보강) — data-numtween="키" 의 옛값→새값으로 숫자만 부드럽게 모핑.
+   재렌더 직후 oldVals(capture)와 비교해 변한 값만 카운트업/다운. 깜빡 스냅 ✕. ── */
+function numCapture(container){ const m={}; if(!container)return m;
+  container.querySelectorAll('[data-numtween]').forEach(el=>{ m[el.dataset.numtween]=parseFloat((el.textContent||'').replace(/[^\d.\-]/g,'')); }); return m; }
+function numPlay(container, oldVals){ if(!container||!oldVals)return;
+  container.querySelectorAll('[data-numtween]').forEach(el=>{
+    const k=el.dataset.numtween, to=parseFloat((el.textContent||'').replace(/[^\d.\-]/g,'')), from=oldVals[k];
+    if(from==null||isNaN(from)||isNaN(to)||from===to)return;
+    const suf=el.dataset.numsuf||'', dec=el.textContent.indexOf('.')>=0?1:0, t0=performance.now(), dur=520;
+    el.classList.add('num-live');
+    function step(now){ const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3), v=from+(to-from)*e;
+      el.textContent=(dec?v.toFixed(1):Math.round(v))+suf;
+      if(p<1)requestAnimationFrame(step); else { el.textContent=(dec?to.toFixed(1):Math.round(to))+suf; el.classList.remove('num-live'); } }
+    requestAnimationFrame(step);
+  });
+}
+window.AAP_NUM={ capture:numCapture, play:numPlay };
 
 /* ── ③ FLIP — data-flip 키로 옛 위치 기록 → 재렌더 후 옛→새 위치 활강(깜빡임 제거). ──
    capture(container) = 재렌더 직전 호출(맵 반환). play(container, map) = 재렌더 직후 호출. */
@@ -1039,17 +1124,19 @@ function wireSteer(root){
     const key=b.dataset.steer, val=b.dataset.steerval;
     const meta=hk.steerHook(STATE,key,val)||{};
     afterStateChange();
-    if(meta.instant){ /* 즉시 반영(재분석 없이) = 분기 등 — FLIP 만 */
-      const c=document.querySelector('.run-surface .con-body'); const cap=flipCapture(c);
-      renderOpConsole(); requestAnimationFrame(()=>flipPlay(document.querySelector('.run-surface .con-body'),cap));
+    if(meta.instant){ /* 즉시 반영(재분석 없이) = 분기 등 — FLIP + 수치 트윈 */
+      const c=document.querySelector('.run-surface .con-body'); const cap=flipCapture(c), num=numCapture(c);
+      renderOpConsole(); requestAnimationFrame(()=>{ const cb=document.querySelector('.run-surface .con-body'); flipPlay(cb,cap); numPlay(cb,num); });
       if(meta.trace)STATE.trace.push(meta.trace); if(meta.toast)toast(meta.toast); return;
     }
     if(meta.trace)STATE.trace.push(meta.trace);
     const cont=document.querySelector('.run-surface .con-body');
-    const cap=flipCapture(cont);
+    const cap=flipCapture(cont), num=numCapture(cont);
     runReanalysis({ intent:meta.intent, mono:meta.mono, steps:meta.steps, onDone:()=>{
-      renderOpConsole();
-      requestAnimationFrame(()=>flipPlay(document.querySelector('.run-surface .con-body'),cap));
+      renderOpConsole();   /* 이 렌더에 한해 pack reflow 플래그(예: 슬롯→판정 pulse)가 살아있다 */
+      requestAnimationFrame(()=>{ const cb=document.querySelector('.run-surface .con-body'); flipPlay(cb,cap); numPlay(cb,num); });
+      /* pack 선언 reflow 키 = 1회 pulse 후 클리어(애니 끝난 뒤) → 다음 렌더부터 정상 */
+      if(hk.reflowKeys&&hk.reflowKeys.length)setTimeout(()=>{ hk.reflowKeys.forEach(k=>{ delete STATE[k]; }); },1200);
       afterStateChange();
     }});
   });
@@ -1470,7 +1557,7 @@ function renderRight(){
   }
   let assign='';
   gs.forEach((g,gi)=>{
-    const ops=w.ops.filter(o=>o.g===g);
+    const ops=(w.ops||[]).filter(o=>o.g===g);
     const stt=gi<RUN.reveal?'done':(gi===RUN.reveal&&RUN.phase==='working'?'doing':'wait');
     const par=ops.length>1;
     ops.forEach((o,oi)=>{
@@ -1524,7 +1611,7 @@ function drawerLog(){
 /* ===== Run Trace (코어 · 단계 완료 시 ops 누적 = 거버넌스 증거) ===== */
 function traceStep(w){
   if(STATE.traced.has(w.id))return;STATE.traced.add(w.id);
-  w.ops.forEach(o=>STATE.trace.push({st:w.label,t:`${o.feed} → ${o.out}`,L:o.L,k:KMAP[o.L]||''}));
+  (w.ops||[]).forEach(o=>STATE.trace.push({st:w.label,t:`${o.feed} → ${o.out}`,L:o.L,k:KMAP[o.L]||''}));
 }
 
 /* ===== 자율 실행 엔진 (코어 · 도메인 무관) ===== */
@@ -1739,7 +1826,7 @@ function renderOntology(P){
 function renderArchCoherence(P){
   P=P||PACK;
   const el=document.getElementById('archMap');if(!el)return;
-  const usedL=new Set();P.work.forEach(w=>w.ops.forEach(o=>usedL.add(o.L)));
+  const usedL=new Set();P.work.forEach(w=>(w.ops||[]).forEach(o=>usedL.add(o.L)));
   const loop=LOOP.map((s,i)=>`${i>0?'<span class="lsep">→</span>':''}<span class="ls ${s==='Learning'?'lp':''}">${s}</span>`).join('');
   const layers=LAYERS.map(L=>`<div class="ac-lyr ${usedL.has(L.id)?'used':''} ${L.star?'star':''}"><span class="lc">${L.id}</span><span class="ln">${L.ko}</span>${L.star?'<span class="lkt">★ kt ds</span>':''}<span class="lcap">${L.cap}</span></div>`).join('');
   el.innerHTML=`<div class="ac-loop">${loop}</div><div class="ac-layers">${layers}</div>
@@ -1751,9 +1838,9 @@ function renderPlan(P){
   const PROD=P.planProduces;
   const sel=w=>stIsLive(w)?`<span class="sel-human">${_ICO('flag')}시작·종료 신호</span>`:(stIsGate(w)?`<span class="sel-hitl">${_ICO('flag')}담당자 확인</span>`:(stIsInput(w)?`<span class="sel-human">사람 요청</span>`:`<span class="sel-auto">자동</span>`));
   const makes=w=>{const o=PROD[w.id]||[];return o.length?o.map(x=>`<b>${x}</b>`).join(' · '):'<i style="color:#94a3b8;font-style:normal">중간 처리</i>';};
-  const lays=w=>[...new Set(w.ops.map(o=>o.L))].map(l=>`<span>${l}</span>`).join('');
+  const lays=w=>[...new Set((w.ops||[]).map(o=>o.L))].map(l=>`<span>${l}</span>`).join('');
   let h=`<div class="plan-head"><div>#</div><div>단계</div><div>만드는 산출물</div><div>사람이 선택·확인</div><div>거치는 계층</div></div>`;
-  P.work.forEach((w,i)=>{h+=`<div class="plan-row ${stIsGateMark(w)?'gate':''}"><div class="pr-n">${i+1}</div><div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.role}</div></div><div class="pr-make">${makes(w)}</div><div class="pr-sel">${sel(w)}</div><div class="pr-lay">${lays(w)}</div></div>`;});
+  P.work.forEach((w,i)=>{h+=`<div class="plan-row ${stIsGateMark(w)?'gate':''}"><div class="pr-n">${i+1}</div><div><div class="pr-label">${w.label}</div><div class="pr-sub">${w.role||stRole(w)}</div></div><div class="pr-make">${makes(w)}</div><div class="pr-sel">${sel(w)}</div><div class="pr-lay">${lays(w)}</div></div>`;});
   document.getElementById('planTable').innerHTML=h;
 }
 /* =========================================================================

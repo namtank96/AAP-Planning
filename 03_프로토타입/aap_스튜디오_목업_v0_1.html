@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP화 스튜디오 목업 (Side B · 분해·배정·조립 → 고객 콘솔)</title>
+<style>
+  :root{
+    --bg:#eef2f7; --surface:#fff; --surf:#f8fafc; --ink:#0f172a; --slate:#334155;
+    --muted:#64748b; --faint:#94a3b8; --border:#e4e9f0; --line:#eef2f6;
+    --aap:#0d9488; --aap-ink:#0f766e; --aap-soft:#f0fdfa; --aap-bd:#99f6e4;
+    --violet:#7c3aed; --violet-soft:#f5f3ff; --violet-bd:#ddd6fe;
+    --cyan:#0891b2; --cyan-soft:#ecfeff; --cyan-bd:#a5f3fc;
+    --blue:#2563eb; --blue-soft:#eff6ff; --blue-bd:#bfdbfe;
+    --amber:#d97706; --amber-soft:#fffbeb; --amber-bd:#fde68a; --amber-ink:#92400e;
+    --green:#16a34a; --green-soft:#f0fdf4;
+    --shadow:0 6px 22px rgba(15,23,42,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  .ic{width:15px;height:15px;flex:0 0 auto;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* 상단바 = BD 도구(스튜디오) — 고객 제품과 구분(violet 메타 톤 악센트) */
+  .top{height:50px;flex:0 0 50px;display:flex;align-items:center;gap:11px;padding:0 18px;background:#fff;border-bottom:1px solid var(--border);}
+  .brand{display:flex;align-items:center;gap:8px;}
+  .brand .mk{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#6d28d9,#7c3aed);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;}
+  .brand b{font-size:14.5px;letter-spacing:-.2px;} .brand .sub{font-size:10.5px;color:var(--faint);}
+  .wl{margin-left:8px;font-size:12px;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:5px 11px;}
+  .wl b{color:var(--ink);font-weight:700;}
+  .sp{flex:1;}
+  .done-chip{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-bd);border-radius:20px;padding:5px 12px;}
+  .done-chip .d{width:7px;height:7px;border-radius:50%;background:var(--aap);}
+
+  /* 파이프라인 스트립 */
+  .pipe{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:9px 18px;background:#fff;border-bottom:1px solid var(--border);}
+  .pstep{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--slate);}
+  .pstep .pn{width:18px;height:18px;border-radius:50%;background:var(--aap);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;}
+  .pstep.conn .pn{background:var(--violet);}
+  .parrow{color:var(--faint);} .parrow .ic{width:14px;height:14px;}
+
+  .wrap{flex:1;display:flex;min-height:0;}
+
+  /* ===== 좌측 = AAP화 (분해→배정→조립) — 작동이 콘텐츠 ===== */
+  .studio{flex:1 1 58%;min-width:0;overflow:auto;padding:16px 20px 36px;}
+  .sec{margin-bottom:16px;}
+  .sec-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--slate);margin-bottom:9px;}
+  .sec-h .b{width:18px;height:18px;border-radius:50%;background:var(--aap);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;}
+  .sec-h .hint{margin-left:auto;font-size:10.5px;color:var(--faint);font-weight:600;}
+
+  /* 작업 카드 (분해+배정 통합) */
+  .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .tcard{border:1px solid var(--border);border-radius:11px;background:#fff;padding:10px 12px;}
+  .tc-h{display:flex;align-items:center;gap:7px;} .tid{font-size:9px;font-weight:800;color:#fff;background:var(--slate);border-radius:5px;padding:1px 6px;} .tc-nm{font-size:12.5px;font-weight:800;}
+  .tc-goal{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
+  .tc-comps{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;}
+  .cmp{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;border-radius:5px;padding:2px 6px;border:1px solid;}
+  .cmp .ic{width:11px;height:11px;}
+  .cmp.tA{color:var(--aap-ink);background:var(--aap-soft);border-color:var(--aap-bd);}
+  .cmp.tM{color:var(--violet);background:var(--violet-soft);border-color:var(--violet-bd);}
+  .cmp.tS{color:#0e7490;background:var(--cyan-soft);border-color:var(--cyan-bd);}
+  .cmp.tC{color:var(--blue);background:var(--blue-soft);border-color:var(--blue-bd);}
+  .cmp.tP{color:var(--amber-ink);background:var(--amber-soft);border-color:var(--amber-bd);}
+  .tc-why{margin-top:6px;font-size:9.5px;color:var(--slate);border-top:1px dashed var(--border);padding-top:6px;}
+  .tc-why b{color:var(--aap-ink);}
+
+  /* 조립 그래프 */
+  .asm{border:1px solid var(--border);border-radius:12px;background:var(--surf);padding:11px;}
+  .asm-par{font-size:8.5px;font-weight:800;color:var(--violet);text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:4px;margin-bottom:6px;} .asm-par .ic{width:11px;height:11px;color:var(--violet);}
+  .grow{display:flex;gap:7px;} .grow.solo{}
+  .gnode{flex:1;display:flex;flex-direction:column;gap:3px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:6px 8px;} .grow.solo .gnode{flex:0 1 56%;}
+  .gnode .tid{align-self:flex-start;} .gn-nm{font-size:10.5px;font-weight:800;} .gn-c{font-size:8.5px;color:var(--aap-ink);font-weight:700;}
+  .gar{display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 0;font-size:8.5px;color:var(--muted);font-weight:700;} .gar .ic{width:13px;height:13px;color:var(--aap);}
+  .gate{display:inline-flex;align-items:center;gap:4px;font-size:8.5px;font-weight:800;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-bd);border-radius:6px;padding:2px 7px;} .gate .ic{width:11px;height:11px;color:var(--amber);}
+
+  /* ===== 우측 = 연결: 고객 콘솔 미리보기 ===== */
+  .conn{flex:1 1 42%;min-width:0;background:linear-gradient(180deg,#faf5ff,#fff 90px);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:16px 18px;overflow:auto;}
+  .conn-lead{font-size:13px;font-weight:800;color:var(--violet);display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+  .conn-sub{font-size:11px;color:var(--muted);margin-bottom:13px;}
+  .conn-sub b{color:var(--slate);}
+  /* mini 고객 콘솔 */
+  .mini{border:1px solid var(--border);border-radius:13px;background:#fff;box-shadow:var(--shadow);overflow:hidden;}
+  .mini-top{display:flex;align-items:center;gap:7px;padding:8px 11px;border-bottom:1px solid var(--line);background:var(--surf);}
+  .mini-top .bk{font-size:10px;color:var(--faint);} .mini-top .mt{font-size:11.5px;font-weight:800;} .mini-top .run{margin-left:auto;font-size:9px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border-radius:20px;padding:2px 8px;}
+  .mini-body{display:flex;min-height:0;}
+  .mini-stream{flex:1.3;padding:10px 11px;border-right:1px solid var(--line);}
+  .mini-sh{font-size:9px;font-weight:800;color:var(--aap-ink);text-transform:uppercase;letter-spacing:.03em;margin-bottom:7px;}
+  .ms{display:flex;gap:7px;align-items:flex-start;margin-bottom:7px;}
+  .ms .dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;margin-top:1px;}
+  .ms.done .dot{background:var(--aap);color:#fff;} .ms.done .dot .ic{width:9px;height:9px;}
+  .ms.gate .dot{background:var(--amber-soft);border:1.5px solid var(--amber);}
+  .ms.wait .dot{background:#fff;border:1.5px dashed var(--border);}
+  .ms .mtx{font-size:10.5px;font-weight:700;} .ms.wait .mtx{color:var(--faint);font-weight:600;} .ms .md{font-size:9px;color:var(--muted);}
+  .ms.gate .mtx{color:var(--amber-ink);}
+  .mini-arts{flex:1;padding:10px 11px;background:var(--surf);}
+  .mf{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--slate);padding:5px 8px;border:1px solid var(--border);border-radius:7px;background:#fff;margin-bottom:5px;}
+  .mf .fd{width:6px;height:6px;border-radius:50%;background:var(--green);} .mf.wait{opacity:.5;} .mf.wait .fd{background:#cbd5e1;}
+  .conn-map{font-size:10px;color:var(--slate);background:var(--violet-soft);border:1px solid var(--violet-bd);border-radius:9px;padding:8px 11px;margin:12px 0;line-height:1.5;}
+  .conn-map b{color:var(--violet);}
+  .cta{display:flex;align-items:center;justify-content:center;gap:7px;font-size:13.5px;font-weight:800;font-family:inherit;color:#fff;background:var(--aap);border:none;border-radius:11px;padding:12px;cursor:pointer;box-shadow:0 4px 12px rgba(13,148,136,.22);}
+  .cta .ic{width:16px;height:16px;}
+  .cta-note{font-size:9.5px;color:var(--faint);text-align:center;margin-top:7px;}
+  .foot{text-align:center;font-size:9.5px;color:var(--faint);padding:8px;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><span class="mk">S</span><div><b>AAP화 스튜디오</b> <span class="sub">· 업무를 AAP로 만드는 곳 (BD)</span></div></div>
+  <span class="wl">업무: <b>백엔드 개발자 채용 스크리닝</b></span>
+  <div class="sp"></div>
+  <span class="done-chip"><span class="d"></span>AAP화 완료 · 작업 5 · 구성요소 6종 · 게이트 3</span>
+</div>
+
+<div class="pipe">
+  <div class="pstep"><span class="pn">1</span>업무 분해</div>
+  <span class="parrow"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  <div class="pstep"><span class="pn">2</span>구성요소 배정</div>
+  <span class="parrow"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  <div class="pstep"><span class="pn">3</span>실행 구조 조립</div>
+  <span class="parrow"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  <div class="pstep conn"><span class="pn">4</span>고객 콘솔 생성</div>
+</div>
+
+<div class="wrap">
+
+  <!-- 좌: AAP화 (분해→배정→조립) -->
+  <section class="studio">
+    <div class="sec">
+      <div class="sec-h"><span class="b">1·2</span> 업무 분해 + 구성요소 배정 <span class="hint">전부 Agent ✕ — 작업마다 적합한 것</span></div>
+      <div class="tgrid">
+        <div class="tcard"><div class="tc-h"><span class="tid">T1</span><span class="tc-nm">이력서 수집·파싱</span></div><div class="tc-goal">메일·문서·채용사이트에서 수집 → 글자 인식·정규화</div>
+          <div class="tc-comps"><span class="cmp tC"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>Connector</span><span class="cmp tS"><svg class="ic" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>OCR 솔루션</span></div>
+          <div class="tc-why"><b>왜?</b> 수집·인식은 기존 시스템 연동·솔루션이 정확 — LLM ✕</div></div>
+        <div class="tcard"><div class="tc-h"><span class="tid">T2</span><span class="tc-nm">매칭·랭킹</span></div><div class="tc-goal">스킬·경력·도메인 가중 매칭 → 상위 랭킹</div>
+          <div class="tc-comps"><span class="cmp tA"><svg class="ic" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Agent</span></div>
+          <div class="tc-why"><b>왜?</b> 역량 의미 매칭·랭킹은 추론(Agent) 적합</div></div>
+        <div class="tcard"><div class="tc-h"><span class="tid">T3</span><span class="tc-nm">편향·개인정보 점검</span></div><div class="tc-goal">보호속성 평가 제외 · PII 마스킹</div>
+          <div class="tc-comps"><span class="cmp tP"><svg class="ic" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.7 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.5 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg>Policy</span></div>
+          <div class="tc-why"><b>왜?</b> 통제·차별금지는 정책 엔진 — 양보 불가</div></div>
+        <div class="tcard"><div class="tc-h"><span class="tid">T4</span><span class="tc-nm">면접 일정 조율</span></div><div class="tc-goal">후보·면접관 캘린더 교차 → 슬롯</div>
+          <div class="tc-comps"><span class="cmp tA"><svg class="ic" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Agent</span><span class="cmp tC"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>캘린더</span></div>
+          <div class="tc-why"><b>왜?</b> 가용 교차는 캘린더 연동 + 조율 Agent</div></div>
+        <div class="tcard"><div class="tc-h"><span class="tid">T5</span><span class="tc-nm">평가 취합·오퍼</span></div><div class="tc-goal">면접 평가 취합 → 오퍼안</div>
+          <div class="tc-comps"><span class="cmp tA"><svg class="ic" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Agent</span><span class="cmp tM"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>보상밴드 검증</span></div>
+          <div class="tc-why"><b>왜?</b> 취합=Agent, 보상밴드 검증=결정론 모듈</div></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><span class="b">3</span> 실행 구조 조립 <span class="hint">의존성·병렬·사람 통제점(게이트)</span></div>
+      <div class="asm">
+        <div class="asm-par"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M4.9 4.9 9 9M15 15l4.1 4.1M4.9 19.1 9 15M15 9l4.1-4.1"/></svg> 병렬 — 의존성 없는 작업 동시</div>
+        <div class="grow">
+          <div class="gnode"><span class="tid">T1</span><span class="gn-nm">이력서 수집·파싱</span><span class="gn-c">Connector·솔루션</span></div>
+          <div class="gnode"><span class="tid">T2</span><span class="gn-nm">매칭·랭킹</span><span class="gn-c">Agent</span></div>
+          <div class="gnode"><span class="tid">T3</span><span class="gn-nm">편향·PII 점검</span><span class="gn-c">Policy</span></div>
+        </div>
+        <div class="gar"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg> 결과 확정 후 <span class="gate"><svg class="ic" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.7 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.5 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg> 숏리스트 기준 = 사람 결정</span></div>
+        <div class="grow solo"><div class="gnode"><span class="tid">T4</span><span class="gn-nm">면접 일정 조율</span><span class="gn-c">Agent·캘린더</span></div></div>
+        <div class="gar"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg> <span class="gate"><svg class="ic" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.7 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.5 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg> 면접 확인 · 오퍼 승인 = 사람</span></div>
+        <div class="grow solo"><div class="gnode"><span class="tid">T5</span><span class="gn-nm">평가 취합·오퍼</span><span class="gn-c">Agent·모듈</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 우: 연결 — 이게 고객 콘솔이 된다 -->
+  <aside class="conn">
+    <div class="conn-lead"><svg class="ic" viewBox="0 0 24 24" style="color:var(--violet)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>이렇게 AAP화하면, 고객이 쓸 화면</div>
+    <div class="conn-sub">위의 <b>분해·배정·조립</b>이 곧 고객(인사담당자) 콘솔의 <b>작업 흐름·산출물</b>이 됩니다.</div>
+
+    <div class="mini">
+      <div class="mini-top"><span class="bk">‹ 내 업무</span><span class="mt">채용 1차 스크리닝</span><span class="run">AAP 작업 중</span></div>
+      <div class="mini-body">
+        <div class="mini-stream"><div class="mini-sh">작업 흐름</div>
+          <div class="ms done"><span class="dot"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div><div class="mtx">이력서 수집·파싱</div><div class="md">= T1</div></div></div>
+          <div class="ms done"><span class="dot"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div><div class="mtx">매칭·랭킹</div><div class="md">= T2</div></div></div>
+          <div class="ms done"><span class="dot"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div><div class="mtx">편향·PII 점검</div><div class="md">= T3</div></div></div>
+          <div class="ms gate"><span class="dot"></span><div><div class="mtx">숏리스트 기준 — 결정 필요</div><div class="md">= 게이트</div></div></div>
+          <div class="ms wait"><span class="dot"></span><div><div class="mtx">면접 조율 · 평가·오퍼</div><div class="md">= T4·T5</div></div></div>
+        </div>
+        <div class="mini-arts"><div class="mini-sh">산출물</div>
+          <div class="mf"><span class="fd"></span>스크리닝 리포트</div>
+          <div class="mf"><span class="fd"></span>후보 비교표</div>
+          <div class="mf wait"><span class="fd"></span>면접 일정</div>
+          <div class="mf wait"><span class="fd"></span>오퍼</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="conn-map"><b>분해·배정 → 작업 흐름</b> · <b>게이트 → 사람 결정 지점</b> · <b>단계 산출물 → 파일 뷰어</b>. 같은 구조가 그대로 고객 화면이 됩니다.</div>
+
+    <button class="cta"><svg class="ic" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>이 고객 콘솔 생성 · 실행</button>
+    <div class="cta-note">생성 즉시 인박스에 편입 → 고객이 바로 사용</div>
+    <div class="foot">목업 v0.1 · Side B AAP화 스튜디오 · 좌 분해·배정·조립 → 우 고객 콘솔 · standalone</div>
+  </aside>
+</div>
+
+</body>
+</html>

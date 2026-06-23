@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>의도 반응형 테스트 (조작형 + 라이브 재분석 + 그래프)</title>
+<style>
+  :root{
+    --bg:#eef2f7; --surface:#fff; --surf:#f8fafc; --ink:#0f172a; --slate:#334155;
+    --muted:#64748b; --faint:#94a3b8; --border:#e4e9f0; --line:#eef2f6;
+    --aap:#0d9488; --aap-ink:#0f766e; --aap-soft:#f0fdfa; --aap-bd:#99f6e4;
+    --violet:#7c3aed; --violet-soft:#f5f3ff; --cyan:#0891b2;
+    --blue:#2563eb; --blue-soft:#eff6ff; --amber:#d97706; --amber-soft:#fffbeb; --amber-bd:#fde68a; --amber-ink:#92400e;
+    --green:#16a34a; --green-soft:#f0fdf4; --red:#dc2626;
+    --shadow:0 6px 22px rgba(15,23,42,.07);
+    --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  .ic{width:15px;height:15px;flex:0 0 auto;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+
+  .top{height:48px;flex:0 0 48px;display:flex;align-items:center;gap:11px;padding:0 18px;background:#fff;border-bottom:1px solid var(--border);}
+  .top .bk{font-size:12px;color:var(--muted);} .top b{font-size:14px;} .top .sub{font-size:11px;color:var(--faint);}
+  .sp{flex:1;}
+  .stat{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-bd);border-radius:20px;padding:4px 11px;}
+
+  /* 의도 주입 바 (chat ✕ · 인라인 조종) */
+  .steer{flex:0 0 auto;background:#fff;border-bottom:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .sg{display:flex;align-items:center;gap:6px;}
+  .sg .lab{font-size:10px;font-weight:800;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;}
+  .opt{font-size:11.5px;font-weight:700;font-family:inherit;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;}
+  .opt.on{background:var(--aap);color:#fff;border-color:var(--aap);}
+  .opt.flt.on{background:var(--blue);border-color:var(--blue);}
+  .opt.br.on{background:var(--amber);border-color:var(--amber);}
+  .steer-note{margin-left:auto;font-size:10.5px;color:var(--faint);display:flex;align-items:center;gap:5px;} .steer-note .ic{color:var(--aap);width:13px;height:13px;}
+
+  .wrap{flex:1;display:flex;min-height:0;position:relative;}
+
+  /* 좌 = 조작형 작업 화면 (후보) */
+  .work{flex:1 1 60%;min-width:0;overflow:auto;padding:14px 18px 30px;}
+  .wh{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+  .wh .t{font-size:13px;font-weight:800;} .wh .c{font-size:11px;color:var(--faint);}
+  .wh .cut{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-bd);border-radius:7px;padding:3px 9px;}
+  .row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border);border-radius:11px;padding:10px 13px;margin-bottom:7px;transition:.3s;position:relative;}
+  .row.in{box-shadow:0 0 0 2px var(--aap-soft);border-color:var(--aap-bd);}
+  .row.cutline{margin-top:14px;}
+  .row.cutline::before{content:"면접 대상 컷";position:absolute;top:-11px;left:13px;font-size:9px;font-weight:800;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-bd);border-radius:5px;padding:1px 7px;}
+  .rk{width:22px;font-size:13px;font-weight:800;color:var(--faint);text-align:center;flex:0 0 auto;}
+  .av{width:34px;height:34px;border-radius:9px;background:#e8edf4;color:#475569;font-weight:700;font-size:13px;display:grid;place-items:center;flex:0 0 auto;}
+  .rmain{flex:1;min-width:0;}
+  .rn{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px;} .rn .chg{font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;}
+  .chg.up{color:var(--green);background:var(--green-soft);} .chg.down{color:var(--red);background:var(--red-soft);} .chg.new{color:var(--violet);background:var(--violet-soft);}
+  .rc{font-size:11px;color:var(--muted);}
+  /* 근거 분해 바 (기여) */
+  .bd{display:flex;height:7px;border-radius:4px;overflow:hidden;width:130px;flex:0 0 auto;background:var(--surf);}
+  .bd i{display:block;height:100%;} .bd .sk{background:var(--aap);} .bd .ca{background:var(--blue);} .bd .dm{background:var(--cyan);}
+  .rmt{width:54px;text-align:right;flex:0 0 auto;} .rmt b{font-size:16px;font-weight:800;color:var(--aap-ink);} .rmt span{font-size:8.5px;color:var(--faint);font-weight:700;display:block;}
+  .rdel{flex:0 0 auto;width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--faint);display:grid;place-items:center;cursor:pointer;} .rdel:hover{color:var(--red);border-color:#fecaca;}
+  .bd-leg{display:flex;gap:10px;font-size:9.5px;color:var(--muted);margin:2px 0 10px 2px;} .bd-leg span{display:flex;align-items:center;gap:4px;} .bd-leg i{width:8px;height:8px;border-radius:2px;}
+  .hitl-bar{margin-top:14px;display:flex;align-items:center;gap:11px;background:linear-gradient(180deg,#fffdf6,#fff);border:1.5px solid var(--amber-bd);border-radius:12px;padding:12px 15px;}
+  .hitl-bar .hi{font-size:12px;font-weight:800;color:var(--amber-ink);} .hitl-bar .hs{font-size:11px;color:var(--amber-ink);}
+  .hitl-bar .hbtn{margin-left:auto;font-size:13px;font-weight:700;font-family:inherit;color:#fff;background:var(--amber);border:none;border-radius:9px;padding:9px 16px;cursor:pointer;}
+
+  /* 우 = 그래프 + AAP 흐름·근거 (보조) */
+  .side{flex:1 1 40%;min-width:0;background:#fff;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:auto;}
+  .sh{padding:12px 15px 0;font-size:11px;font-weight:800;color:var(--slate);} .sh span{font-size:10px;color:var(--faint);font-weight:600;margin-left:5px;}
+  .graph{margin:9px 15px;border:1px solid var(--border);border-radius:11px;background:var(--surf);}
+  svg{display:block;width:100%;height:230px;}
+  .flow{margin:4px 15px 16px;border-top:1px solid var(--line);padding-top:10px;}
+  .fstep{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--slate);padding:4px 0;}
+  .fstep .fd{width:14px;height:14px;border-radius:50%;background:var(--aap);color:#fff;display:grid;place-items:center;flex:0 0 auto;margin-top:1px;} .fstep .fd .ic{width:9px;height:9px;}
+  .fstep .ftx b{font-weight:700;} .fstep .fmono{font-family:var(--mono);font-size:10px;color:var(--faint);}
+
+  /* 라이브 재분석 = 상단 떠있는 작은 카드 (전체 덮기 ✕ · 비침투) */
+  .reov{position:absolute;top:10px;left:50%;transform:translateX(-50%) translateY(-8px);opacity:0;pointer-events:none;transition:.25s;z-index:20;}
+  .reov.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .recard{background:#fff;border:1px solid var(--aap-bd);border-radius:14px;box-shadow:0 14px 36px rgba(15,23,42,.16);width:400px;max-width:90vw;padding:14px 18px;}
+  .work.busy{opacity:.55;transition:opacity .2s;pointer-events:none;}
+  .reh{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;margin-bottom:3px;} .reh .ic{color:var(--aap);}
+  .resub{font-size:11px;color:var(--muted);margin-bottom:12px;}
+  .reprog{height:5px;border-radius:4px;background:var(--surf);overflow:hidden;margin-bottom:13px;} .reprog i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#0d9488);width:0;transition:width .4s;}
+  .rstep{display:flex;gap:9px;align-items:flex-start;padding:6px 0;opacity:0;transform:translateY(6px);transition:.3s;} .rstep.vis{opacity:1;transform:none;}
+  .rsi{width:20px;height:20px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;margin-top:1px;}
+  .rsi.spin{border:2px solid var(--aap-soft);border-top-color:var(--aap);animation:sp .7s linear infinite;} @keyframes sp{to{transform:rotate(360deg);}}
+  .rsi.done{background:var(--aap);color:#fff;} .rsi.done .ic{width:11px;height:11px;}
+  .rst{font-size:12px;font-weight:700;} .rsd{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:2px;}
+
+  /* HITL 모달 */
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.4);display:none;align-items:center;justify-content:center;z-index:40;} .modal.show{display:flex;}
+  .mc{background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.3);width:460px;max-width:92%;padding:20px 22px;}
+  .mh{font-size:15px;font-weight:800;} .ms{font-size:11.5px;color:var(--muted);margin:4px 0 14px;}
+  .ml{font-size:12px;padding:7px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;} .ml:first-of-type{border:none;}
+  .macts{display:flex;gap:9px;margin-top:16px;justify-content:flex-end;} .mb{font-size:13px;font-weight:700;font-family:inherit;border-radius:10px;padding:10px 18px;cursor:pointer;border:1px solid;} .mb.p{background:var(--aap);color:#fff;border-color:var(--aap);} .mb.g{background:#fff;color:var(--slate);border-color:var(--border);}
+  .foot{text-align:center;font-size:9.5px;color:var(--faint);padding:6px;}
+</style>
+</head>
+<body>
+
+<div class="top"><span class="bk">‹ 내 업무</span><b>채용 1차 스크리닝</b><span class="sub">백엔드 개발자 2명</span><div class="sp"></div><span class="stat" id="stat"><span class="ic"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>분석 완료 · 7명</span></div>
+
+<!-- 의도 주입 (chat ✕ · 인라인 조종) -->
+<div class="steer">
+  <div class="sg"><span class="lab">우선순위</span>
+    <button class="opt on" data-w="bal">균형</button>
+    <button class="opt" data-w="dom">도메인 중시</button>
+    <button class="opt" data-w="car">경력 중시</button>
+    <button class="opt" data-w="skl">스킬 중시</button>
+  </div>
+  <div class="sg"><span class="lab">필터</span>
+    <button class="opt flt" data-f="remote">재택 가능</button>
+    <button class="opt flt" data-f="senior">시니어</button>
+    <button class="opt flt" data-f="commerce">커머스 경험</button>
+  </div>
+  <div class="sg"><span class="lab">면접 범위(분기)</span>
+    <button class="opt br" data-s="top3">톱 3</button>
+    <button class="opt br on" data-s="6">표준 6</button>
+    <button class="opt br" data-s="all">넓게</button>
+  </div>
+  <span class="steer-note"><svg class="ic" viewBox="0 0 24 24"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg>기준을 바꾸면 AAP가 다시 분석합니다 (chat 아님 · 직접 조종)</span>
+</div>
+
+<div class="wrap">
+  <section class="work">
+    <div class="wh"><span class="t">후보 랭킹</span><span class="c" id="wc"></span><span class="cut" id="cutlab"></span></div>
+    <div class="bd-leg"><span><i style="background:var(--aap)"></i>스킬</span><span><i style="background:var(--blue)"></i>경력</span><span><i style="background:var(--cyan)"></i>도메인</span><span style="color:var(--faint)">· 막대 = 매칭 기여(근거)</span></div>
+    <div id="list"></div>
+    <div class="hitl-bar"><div><div class="hi">★ 숏리스트 확정 — 여기서 당신이 결정</div><div class="hs">이 기준·범위로 면접 대상을 확정합니다. (책임 걸린 지점 = HITL)</div></div><button class="hbtn" onclick="document.getElementById('modal').classList.add('show')">숏리스트 확정</button></div>
+  </section>
+
+  <aside class="side">
+    <div class="sh">매칭 그래프 <span>요건 ← 후보 · 굵기=매칭</span></div>
+    <div class="graph"><svg id="g" viewBox="0 0 320 230"></svg></div>
+    <div class="sh">AAP가 한 일 · 근거 <span>보조</span></div>
+    <div class="flow" id="flow"></div>
+  </aside>
+
+  <!-- 라이브 재분석 오버레이 -->
+  <div class="reov" id="reov"><div class="recard">
+    <div class="reh"><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>AAP가 다시 분석 중</div>
+    <div class="resub" id="reint">의도 변경 반영</div>
+    <div class="reprog"><i id="reprog"></i></div>
+    <div id="resteps"></div>
+  </div></div>
+</div>
+
+<!-- HITL 모달 -->
+<div class="modal" id="modal"><div class="mc">
+  <div class="mh">숏리스트를 확정할까요?</div>
+  <div class="ms">현재 기준·범위로 면접 대상이 확정됩니다. 외부(후보) 안내가 나가므로 사람이 확정합니다.</div>
+  <div id="mlist"></div>
+  <div class="macts"><button class="mb g" onclick="document.getElementById('modal').classList.remove('show')">더 조정</button><button class="mb p" onclick="document.getElementById('modal').classList.remove('show')">이대로 확정</button></div>
+</div></div>
+
+<div class="foot">목업 v0.1 · 의도 반응형 테스트 · 기준 바꾸면 라이브 재분석 → 결과·근거·그래프 변화 · standalone</div>
+
+<script>
+const CAND=[
+ {id:'c1',name:'정유진',ini:'정',cur:'쿠팡·시니어',dom:'커머스',lvl:'시니어',remote:true, sk:96,ca:95,dm:96},
+ {id:'c2',name:'이하늘',ini:'이',cur:'네이버·테크리드',dom:'검색',lvl:'시니어',remote:false, sk:97,ca:92,dm:80},
+ {id:'c3',name:'박서준',ini:'박',cur:'토스·백엔드',dom:'핀테크',lvl:'미들',remote:true, sk:84,ca:88,dm:94},
+ {id:'c4',name:'강지아',ini:'강',cur:'카카오·백엔드',dom:'커머스',lvl:'시니어',remote:false, sk:80,ca:92,dm:90},
+ {id:'c5',name:'한도윤',ini:'한',cur:'당근·백엔드',dom:'커머스',lvl:'미들',remote:true, sk:88,ca:86,dm:86},
+ {id:'c6',name:'서나윤',ini:'서',cur:'무신사·백엔드',dom:'커머스',lvl:'미들',remote:false, sk:82,ca:84,dm:90},
+ {id:'c7',name:'최민수',ini:'최',cur:'배민·백엔드',dom:'배달',lvl:'주니어',remote:true, sk:74,ca:70,dm:88},
+];
+const WSET={bal:{sk:50,ca:30,dm:20,lab:'균형'},dom:{sk:30,ca:20,dm:50,lab:'도메인 중시'},car:{sk:30,ca:50,dm:20,lab:'경력 중시'},skl:{sk:70,ca:20,dm:10,lab:'스킬 중시'}};
+let W='bal', filt={remote:false,senior:false,commerce:false}, scope='6', removed=new Set();
+let prevOrder=[];
+
+const wv=()=>WSET[W];
+function m(c){const w=wv();return Math.round(c.sk*w.sk/100 + c.ca*w.ca/100 + c.dm*w.dm/100);}
+function pool(){return CAND.filter(c=>!removed.has(c.id) && (!filt.remote||c.remote) && (!filt.senior||c.lvl==='시니어') && (!filt.commerce||c.dom==='커머스'));}
+function ranked(){return pool().slice().sort((a,b)=>m(b)-m(a));}
+function cutN(){const n=ranked().length;return scope==='top3'?Math.min(3,n):scope==='all'?n:Math.min(6,n);}
+
+function renderList(animateChange){
+  const arr=ranked(), w=wv(), cut=cutN();
+  document.getElementById('wc').textContent=`${arr.length}명 · ${w.lab}`;
+  document.getElementById('cutlab').textContent=`면접 대상 ${cut}명`;
+  const newOrder=arr.map(c=>c.id);
+  let html='';
+  arr.forEach((c,i)=>{
+    const sc=m(c), w=wv();
+    const skp=c.sk*w.sk/100, cap=c.ca*w.ca/100, dmp=c.dm*w.dm/100, tot=skp+cap+dmp||1;
+    let chg='';
+    if(animateChange){
+      const wasNew=!prevOrder.includes(c.id);
+      const oldI=prevOrder.indexOf(c.id);
+      if(wasNew)chg='<span class="chg new">NEW</span>';
+      else if(oldI>i)chg=`<span class="chg up">▲${oldI-i}</span>`;
+      else if(oldI<i)chg=`<span class="chg down">▼${i-oldI}</span>`;
+    }
+    html+=`<div class="row${i===cut&&cut<arr.length?' cutline':''}" data-cid="${c.id}">
+      <div class="rk">${i+1}</div><div class="av">${c.ini}</div>
+      <div class="rmain"><div class="rn">${c.name} ${chg}</div><div class="rc">${c.cur} · ${c.dom} · ${c.lvl}${c.remote?' · 재택':''}</div></div>
+      <div class="bd" title="스킬 ${Math.round(skp)} · 경력 ${Math.round(cap)} · 도메인 ${Math.round(dmp)}"><i class="sk" style="width:${skp/tot*100}%"></i><i class="ca" style="width:${cap/tot*100}%"></i><i class="dm" style="width:${dmp/tot*100}%"></i></div>
+      <div class="rmt"><b>${sc}</b><span>매칭</span></div>
+      <button class="rdel" title="이 후보 빼고 다시" onclick="removeCand('${c.id}')"><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>`;
+  });
+  const listEl=document.getElementById('list');
+  /* FLIP: 옛 위치 기록 → 재렌더 → 행이 옛 위치에서 새 위치로 부드럽게 활강(깜빡임 제거) */
+  const oldTop={}; listEl.querySelectorAll('[data-cid]').forEach(el=>oldTop[el.dataset.cid]=el.getBoundingClientRect().top);
+  listEl.innerHTML=html;
+  if(animateChange){
+    listEl.querySelectorAll('[data-cid]').forEach(el=>{
+      const c=el.dataset.cid;
+      if(oldTop[c]!=null){
+        const dy=oldTop[c]-el.getBoundingClientRect().top;
+        if(dy){ el.style.transition='none'; el.style.transform='translateY('+dy+'px)';
+          requestAnimationFrame(()=>{ el.style.transition='transform .5s cubic-bezier(.4,0,.2,1)'; el.style.transform=''; }); }
+      } else { el.style.opacity='0'; requestAnimationFrame(()=>{ el.style.transition='opacity .4s'; el.style.opacity=''; }); }
+    });
+  }
+  prevOrder=newOrder;
+  renderGraph(); renderMlist();
+}
+
+function renderGraph(){
+  const arr=ranked().slice(0,6), w=wv();
+  const cx=60, cy=115;
+  let edges='', nodes='';
+  arr.forEach((c,i)=>{
+    const ang=(-60+i*24)*Math.PI/180, R=200;
+    const x=cx+Math.cos(ang)*R*0.62+40, y=cy+Math.sin(ang)*100;
+    const sc=m(c), op=(sc-65)/35; // 65~100 → 0~1
+    const top=i===0;
+    edges+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${top?'#0d9488':'#94a3b8'}" stroke-width="${1+op*3.5}" stroke-opacity="${0.25+op*0.6}"/>`;
+    nodes+=`<g><circle cx="${x}" cy="${y}" r="${top?17:14}" fill="${top?'#0d9488':'#fff'}" stroke="${top?'#0d9488':'#cbd5e1'}" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="11" font-weight="700" fill="${top?'#fff':'#475569'}">${c.ini}</text><text x="${x}" y="${y+27}" text-anchor="middle" font-size="9" fill="#64748b">${sc}</text></g>`;
+  });
+  document.getElementById('g').innerHTML=
+    edges+
+    `<circle cx="${cx}" cy="${cy}" r="26" fill="#0f766e"/><text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">JD 요건</text><text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="8" fill="#99f6e4">${w.lab}</text>`+
+    nodes;
+}
+
+function renderFlow(intentText){
+  const w=wv();
+  document.getElementById('flow').innerHTML=`
+   <div class="fstep"><span class="fd"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div class="ftx"><b>이력서 수집·파싱</b><div class="fmono">38건 · 검사DB·채용사이트</div></div></div>
+   <div class="fstep"><span class="fd"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div class="ftx"><b>편향·PII 점검</b><div class="fmono">차별금지 P-03 · 통과</div></div></div>
+   <div class="fstep"><span class="fd"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div class="ftx"><b>매칭·랭킹 (현재 기준)</b><div class="fmono">가중 ${w.sk}/${w.ca}/${w.dm} · ${pool().length}명 재산출</div></div></div>
+   ${intentText?`<div class="fstep"><span class="fd" style="background:var(--violet)"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><div class="ftx"><b style="color:var(--violet)">의도 반영</b><div class="fmono">${intentText}</div></div></div>`:''}`;
+}
+
+function renderMlist(){
+  const arr=ranked().slice(0,cutN());
+  document.getElementById('mlist').innerHTML=arr.map((c,i)=>`<div class="ml"><span>${i+1}. ${c.name} · ${c.dom}</span><span style="font-weight:700;color:var(--aap-ink)">${m(c)}%</span></div>`).join('');
+}
+
+// ── 라이브 재분석 (호르무즈식) ──
+function runReanalysis(intent, mono){
+  if(window._busy)return; window._busy=true;
+  const work=document.querySelector('.work'); work.classList.add('busy');
+  const ov=document.getElementById('reov'); ov.classList.add('show');
+  document.getElementById('reint').textContent=intent;
+  const prog=document.getElementById('reprog'); prog.style.width='0%';
+  const before=ranked().map(c=>c.id);
+  const w=wv();
+  const steps=[
+    {t:'의도 해석',d:intent},
+    {t:'재가중 계산',d:'가중 → '+w.sk+'/'+w.ca+'/'+w.dm+(mono?' · '+mono:'')},
+    {t:'후보 재산출',d:pool().length+'명 매칭% 재계산 · 0.0'+(2+Math.floor(Math.random()*0))+'s'},
+    {t:'재랭킹·근거 갱신',d:'순위 비교 중…'},
+  ];
+  const cont=document.getElementById('resteps'); cont.innerHTML='';
+  let i=0;
+  function next(){
+    if(i>=steps.length){
+      prog.style.width='100%';
+      setTimeout(()=>{ ov.classList.remove('show'); work.classList.remove('busy'); window._busy=false;
+        renderList(true); renderFlow(intent);
+        document.getElementById('stat').innerHTML='<span class="ic"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>의도 반영 · 재분석 완료';
+      },300);
+      return;
+    }
+    const s=steps[i];
+    cont.insertAdjacentHTML('beforeend',`<div class="rstep" id="rs${i}"><div class="rsi spin" id="rsi${i}"></div><div><div class="rst">${s.t}</div><div class="rsd" id="rsd${i}">${s.d}</div></div></div>`);
+    setTimeout(()=>document.getElementById('rs'+i).classList.add('vis'),30);
+    setTimeout(()=>{
+      const icon=document.getElementById('rsi'+i); icon.classList.remove('spin'); icon.classList.add('done'); icon.innerHTML='<svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+      if(i===steps.length-1){ const after=ranked().map(c=>c.id); let ch=0; after.forEach((id,n)=>{const o=before.indexOf(id); if(o!==n)ch++;}); document.getElementById('rsd'+i).textContent='순위 변동 '+ch+'건 · 근거 갱신';}
+      prog.style.width=Math.round((i+1)/steps.length*100)+'%';
+      i++; setTimeout(next,110);
+    }, 460);
+  }
+  next();
+}
+
+// ── 조종 핸들러 ──
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{
+  if(b.dataset.w===W)return;
+  document.querySelectorAll('[data-w]').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  W=b.dataset.w; const w=wv();
+  runReanalysis(WSET[W].lab+' 우선', '스킬·경력·도메인 '+w.sk+'/'+w.ca+'/'+w.dm);
+});
+document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{
+  const f=b.dataset.f; filt[f]=!filt[f]; b.classList.toggle('on',filt[f]);
+  const labs={remote:'재택 가능자만',senior:'시니어만',commerce:'커머스 경험자만'};
+  runReanalysis('필터: '+(filt[f]?labs[f]:'해제'), '풀 '+pool().length+'명');
+});
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-s]').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  scope=b.dataset.s;
+  // 분기 = 다음 흐름 변경 (재분석 없이 즉시 컷 변경 + 흐름 분기 표시)
+  renderList(false);
+  const m={top3:'정밀 — 톱 3만 면접(빠른 채용)',6:'표준 — 6명 면접',all:'넓게 — 풀 확대(놓침 방지)'};
+  renderFlow('분기: '+m[scope]+' → 면접 일정 조율 단계가 이 범위로 진행');
+});
+window.removeCand=function(id){ removed.add(id); runReanalysis('이 후보 제외하고 재구성', '제외 후 '+pool().length+'명'); };
+
+renderList(false); renderFlow('');
+</script>
+</body>
+</html>

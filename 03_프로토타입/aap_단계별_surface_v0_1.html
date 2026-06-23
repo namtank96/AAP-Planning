@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>단계별 surface (다른 화면, 같은 프레임워크)</title>
+<style>
+  :root{
+    --bg:#eef2f7; --surface:#fff; --surf:#f8fafc; --ink:#0f172a; --slate:#334155;
+    --muted:#64748b; --faint:#94a3b8; --border:#e4e9f0; --line:#eef2f6;
+    --aap:#0d9488; --aap-ink:#0f766e; --aap-soft:#f0fdfa; --aap-bd:#99f6e4;
+    --violet:#7c3aed; --violet-soft:#f5f3ff; --cyan:#0891b2; --cyan-soft:#ecfeff;
+    --blue:#2563eb; --blue-soft:#eff6ff; --amber:#d97706; --amber-soft:#fffbeb; --amber-bd:#fde68a; --amber-ink:#92400e;
+    --green:#16a34a; --green-soft:#f0fdf4; --red:#dc2626;
+    --shadow:0 6px 22px rgba(15,23,42,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  .ic{width:15px;height:15px;flex:0 0 auto;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+
+  .top{height:48px;flex:0 0 48px;display:flex;align-items:center;gap:11px;padding:0 18px;background:#fff;border-bottom:1px solid var(--border);}
+  .top .bk{font-size:12px;color:var(--muted);} .top b{font-size:14px;} .top .sub{font-size:11px;color:var(--faint);}
+  .sp{flex:1;}
+  .fwbadge{font-size:10px;font-weight:700;color:var(--violet);background:var(--violet-soft);border:1px solid #ddd6fe;border-radius:20px;padding:4px 11px;}
+
+  /* 단계 strip — 같은 프레임워크, 단계마다 다른 surface */
+  .stages{flex:0 0 auto;display:flex;align-items:center;gap:4px;padding:9px 18px;background:#fff;border-bottom:1px solid var(--border);}
+  .sstep{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);padding:6px 12px;border-radius:9px;cursor:pointer;border:1px solid transparent;}
+  .sstep .sn{width:18px;height:18px;border-radius:50%;background:var(--surf);border:1px solid var(--border);font-size:10px;font-weight:800;color:var(--faint);display:grid;place-items:center;}
+  .sstep.done .sn{background:var(--aap);border-color:var(--aap);color:#fff;}
+  .sstep.on{background:var(--aap-soft);border-color:var(--aap-bd);color:var(--aap-ink);}
+  .sarrow{color:var(--faint);} .sarrow .ic{width:13px;height:13px;}
+
+  /* 의도 주입 바 (공통 프레임워크) */
+  .steer{flex:0 0 auto;background:#fff;border-bottom:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .sg{display:flex;align-items:center;gap:6px;} .sg .lab{font-size:10px;font-weight:800;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;}
+  .opt{font-size:11.5px;font-weight:700;font-family:inherit;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;}
+  .opt.on{background:var(--aap);color:#fff;border-color:var(--aap);}
+  .opt.br.on{background:var(--amber);border-color:var(--amber);}
+  .steer-note{margin-left:auto;font-size:10.5px;color:var(--faint);display:flex;align-items:center;gap:5px;} .steer-note .ic{color:var(--aap);width:13px;height:13px;}
+
+  .wrap{flex:1;display:flex;min-height:0;position:relative;}
+  .work{flex:1 1 60%;min-width:0;overflow:auto;padding:14px 18px 30px;}
+  .wh{display:flex;align-items:center;gap:9px;margin-bottom:11px;} .wh .t{font-size:13px;font-weight:800;} .wh .c{font-size:11px;color:var(--faint);}
+
+  /* 면접 슬롯 카드 */
+  .slot{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border);border-radius:11px;padding:11px 14px;margin-bottom:8px;}
+  .slot .av{width:34px;height:34px;border-radius:9px;background:#e8edf4;color:#475569;font-weight:700;font-size:13px;display:grid;place-items:center;}
+  .slot .sm{flex:1;} .slot .sn2{font-size:13.5px;font-weight:700;} .slot .sd{font-size:11px;color:var(--muted);}
+  .slot .time{font-size:12.5px;font-weight:800;color:var(--aap-ink);background:var(--aap-soft);border:1px solid var(--aap-bd);border-radius:8px;padding:5px 11px;}
+  .slot .panel{font-size:10.5px;color:var(--slate);background:var(--surf);border:1px solid var(--border);border-radius:7px;padding:4px 9px;}
+  .slot .ok{font-size:10px;font-weight:700;color:var(--green);background:var(--green-soft);border-radius:6px;padding:3px 8px;}
+  .slot .edit{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--faint);display:grid;place-items:center;cursor:pointer;}
+
+  /* 평가 스코어카드 */
+  .sc{background:#fff;border:1px solid var(--border);border-radius:13px;padding:14px 16px;margin-bottom:10px;}
+  .sc-h{display:flex;align-items:center;gap:10px;margin-bottom:11px;} .sc-h .av{width:38px;height:38px;border-radius:10px;background:var(--aap-soft);color:var(--aap-ink);font-weight:800;font-size:14px;display:grid;place-items:center;} .sc-h .nm{font-size:14.5px;font-weight:800;} .sc-h .cur{font-size:11px;color:var(--muted);} .sc-h .tot{margin-left:auto;text-align:right;} .sc-h .tot b{font-size:20px;font-weight:800;color:var(--aap-ink);} .sc-h .tot span{font-size:9px;color:var(--faint);font-weight:700;display:block;}
+  .rub{display:flex;align-items:center;gap:9px;margin-bottom:5px;} .rub .rk{font-size:11px;color:var(--slate);width:88px;flex:0 0 auto;} .rub .rk em{color:var(--faint);font-style:normal;font-size:9.5px;} .rub .rbar{flex:1;height:7px;border-radius:4px;background:var(--surf);overflow:hidden;} .rub .rbar i{display:block;height:100%;background:var(--aap);} .rub .rv{font-size:11px;font-weight:700;width:26px;text-align:right;}
+  .offer{border:1px solid var(--aap-bd);background:var(--aap-soft);border-radius:11px;padding:12px 15px;}
+  .offer h4{margin:0 0 8px;font-size:13px;color:var(--aap-ink);}
+  .orow{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #ccfbf1;} .orow:first-of-type{border:none;} .orow b{font-weight:700;}
+
+  .hitl-bar{margin-top:14px;display:flex;align-items:center;gap:11px;background:linear-gradient(180deg,#fffdf6,#fff);border:1.5px solid var(--amber-bd);border-radius:12px;padding:12px 15px;}
+  .hitl-bar .hi{font-size:12px;font-weight:800;color:var(--amber-ink);} .hitl-bar .hs{font-size:11px;color:var(--amber-ink);} .hitl-bar .hbtn{margin-left:auto;font-size:13px;font-weight:700;font-family:inherit;color:#fff;background:var(--amber);border:none;border-radius:9px;padding:9px 16px;cursor:pointer;}
+
+  .side{flex:1 1 40%;min-width:0;background:#fff;border-left:1px solid var(--border);overflow:auto;}
+  .sh{padding:13px 15px 0;font-size:11px;font-weight:800;color:var(--slate);} .sh span{font-size:10px;color:var(--faint);font-weight:600;margin-left:5px;}
+  .basis{margin:9px 15px;border:1px solid var(--border);border-radius:11px;background:var(--surf);padding:11px 13px;}
+  .brow{display:flex;justify-content:space-between;font-size:11.5px;padding:5px 0;border-top:1px solid var(--line);} .brow:first-child{border:none;} .brow .bk{color:var(--muted);} .brow .bv{font-weight:700;}
+  .brow .bv.g{color:var(--green);}
+  .flow{margin:6px 15px 16px;border-top:1px solid var(--line);padding-top:10px;}
+  .fstep{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--slate);padding:4px 0;} .fstep .fd{width:14px;height:14px;border-radius:50%;background:var(--aap);color:#fff;display:grid;place-items:center;} .fstep .fd .ic{width:9px;height:9px;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;font-size:12px;font-weight:600;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:50;} .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .foot{text-align:center;font-size:9.5px;color:var(--faint);padding:6px;}
+  .hide{display:none;}
+</style>
+</head>
+<body>
+
+<div class="top"><span class="bk">‹ 내 업무</span><b>채용 1차 스크리닝</b><span class="sub">백엔드 개발자 2명</span><div class="sp"></div><span class="fwbadge">같은 프레임워크 · 단계별 다른 화면</span></div>
+
+<div class="stages" id="stages">
+  <div class="sstep done"><span class="sn">✓</span>매칭·랭킹</div>
+  <span class="sarrow"><svg class="ic" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+  <div class="sstep on" data-stg="interview"><span class="sn">2</span>면접 조율</div>
+  <span class="sarrow"><svg class="ic" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+  <div class="sstep" data-stg="offer"><span class="sn">3</span>평가·오퍼</div>
+</div>
+
+<!-- 의도 주입 바 (단계별로 내용만 다름) -->
+<div class="steer" id="steer"></div>
+
+<div class="wrap">
+  <section class="work" id="work"></section>
+  <aside class="side" id="side"></aside>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="foot">목업 v0.1 · 단계별 surface · 면접 조율 / 평가·오퍼 — 매칭과 다른 화면이지만 같은 프레임워크(조작형+의도 steering+근거+HITL)</div>
+
+<script>
+let stg='interview', slotPref='무관', panel='표준', evalW='균형';
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._t);window._t=setTimeout(()=>t.classList.remove('show'),1800);}
+
+const SLOTS=[
+ {ini:'정',nm:'정유진',cur:'쿠팡·시니어 · 커머스',time:'6/24 (화) 14:00',pn:'오세훈·이서영'},
+ {ini:'박',nm:'박서준',cur:'토스·백엔드 · 핀테크',time:'6/24 (화) 16:00',pn:'오세훈·이서영'},
+ {ini:'한',nm:'한도윤',cur:'당근·백엔드 · 커머스',time:'6/25 (수) 10:00',pn:'오세훈·CTO'},
+];
+
+function renderSteer(){
+  const s=document.getElementById('steer');
+  if(stg==='interview'){
+    s.innerHTML=`
+     <div class="sg"><span class="lab">슬롯 선호</span>${['오전','오후','무관'].map(x=>`<button class="opt ${slotPref===x?'on':''}" data-pref="${x}">${x}</button>`).join('')}</div>
+     <div class="sg"><span class="lab">패널</span>${['표준','임원 포함'].map(x=>`<button class="opt ${panel===x?'on':''}" data-panel="${x}">${x}</button>`).join('')}</div>
+     <div class="sg"><span class="lab">분기</span><button class="opt br on">1차만</button><button class="opt br">1차+임원</button></div>
+     <span class="steer-note"><svg class="ic" viewBox="0 0 24 24"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg>바꾸면 AAP가 캘린더를 다시 교차합니다 (chat ✕)</span>`;
+    s.querySelectorAll('[data-pref]').forEach(b=>b.onclick=()=>{slotPref=b.dataset.pref;renderSteer();renderWork();toast('AAP가 '+slotPref+' 선호로 슬롯을 다시 잡았어요');});
+    s.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>{panel=b.dataset.panel;renderSteer();renderWork();toast('패널을 '+panel+'(으)로 재구성했어요');});
+  } else {
+    s.innerHTML=`
+     <div class="sg"><span class="lab">평가 가중</span>${['균형','기술 중시','협업 중시','성장 중시'].map(x=>`<button class="opt ${evalW===x?'on':''}" data-ew="${x}">${x}</button>`).join('')}</div>
+     <div class="sg"><span class="lab">오퍼 수준</span><button class="opt br on">표준</button><button class="opt br">상향</button><button class="opt br">하향</button></div>
+     <span class="steer-note"><svg class="ic" viewBox="0 0 24 24"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg>가중을 바꾸면 종합 점수가 다시 계산됩니다 (chat ✕)</span>`;
+    s.querySelectorAll('[data-ew]').forEach(b=>b.onclick=()=>{evalW=b.dataset.ew;renderSteer();renderWork();toast('평가 가중('+evalW+')으로 종합을 재계산했어요');});
+  }
+}
+
+function renderWork(){
+  const w=document.getElementById('work'), side=document.getElementById('side');
+  if(stg==='interview'){
+    const pf=slotPref==='오전'?'(오전대 우선)':slotPref==='오후'?'(오후대 우선)':'';
+    const pn=panel==='임원 포함'?'·CTO/임원':'';
+    w.innerHTML=`<div class="wh"><span class="t">면접 슬롯</span><span class="c">충돌 0 · 후보·면접관 캘린더 교차 ${pf}</span></div>`+
+      SLOTS.map(s=>`<div class="slot"><span class="av">${s.ini}</span><div class="sm"><div class="sn2">${s.nm}</div><div class="sd">${s.cur}</div></div><span class="time">${slotPref==='오전'?s.time.replace(/1[46]:00/,'10:00').replace('10:00','09:30'):s.time}</span><span class="panel">${s.pn}${pn}</span><span class="ok">가용</span><button class="edit" title="슬롯 조정" onclick="toast('슬롯을 직접 조정할 수 있어요')"><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>`).join('')+
+      `<div class="hitl-bar"><div><div class="hi">★ 면접 일정 확인 — 외부(후보) 안내 전</div><div class="hs">일정·패널을 확인하면 후보에게 안내가 나갑니다. (HITL)</div></div><button class="hbtn" onclick="toast('일정 확정 · 안내 발송')">일정 확정·발송</button></div>`;
+    side.innerHTML=`<div class="sh">캘린더 교차 근거 <span>보조</span></div>
+      <div class="basis"><div class="brow"><span class="bk">후보 가용</span><span class="bv g">3명 응답</span></div><div class="brow"><span class="bk">면접관</span><span class="bv">오세훈·이서영${pn?' · CTO':''}</span></div><div class="brow"><span class="bk">충돌</span><span class="bv g">0</span></div><div class="brow"><span class="bk">선호 반영</span><span class="bv">${slotPref}</span></div></div>
+      <div class="sh">AAP가 한 일 <span>보조</span></div>
+      <div class="flow"><div class="fstep"><span class="fd"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>후보·면접관 가용 조회</div><div class="fstep"><span class="fd"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>교집합 → 충돌 0 슬롯 ${SLOTS.length}건</div><div class="fstep"><span class="fd" style="background:var(--violet)"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>의도 반영: ${slotPref} · ${panel}</div></div>`;
+  } else {
+    const base={tech:5,collab:4,grow:4,org:4}; // 정유진
+    const W={'균형':[20,20,20,20,20],'기술 중시':[40,15,15,15,15],'협업 중시':[15,40,15,15,15],'성장 중시':[15,15,40,15,15]}[evalW];
+    const rub=[['기술 적합','tech',5],['협업·소통','collab',4],['성장 가능','grow',4],['조직 적합','org',4],['경력 깊이','car',4]];
+    const tot=Math.round((5*W[0]+4*W[1]+4*W[2]+4*W[3]+4*W[4])/100*20);
+    w.innerHTML=`<div class="wh"><span class="t">합격 후보 · 평가</span><span class="c">정유진 · 평가 가중 ${evalW}</span></div>
+      <div class="sc"><div class="sc-h"><span class="av">정</span><div><div class="nm">정유진</div><div class="cur">6년 · 쿠팡 · 커머스 · 매칭 96%</div></div><div class="tot"><b>${tot}</b><span>종합</span></div></div>
+        ${rub.map((r,i)=>`<div class="rub"><span class="rk">${r[0]} <em>×${W[i]}</em></span><span class="rbar"><i style="width:${r[2]*20}%"></i></span><span class="rv">${r[2]}.0</span></div>`).join('')}</div>
+      <div class="offer"><h4>오퍼 패키지</h4><div class="orow"><span>기본급</span><b>7,200만 · B2 상한 내</b></div><div class="orow"><span>사이닝</span><b>500만</b></div><div class="orow"><span>입사</span><b>7/15</b></div><div class="orow"><span>점검</span><b style="color:var(--green)">보상밴드 내 · 차별금지 통과</b></div></div>
+      <div class="hitl-bar"><div><div class="hi">★ 오퍼 승인 — 외부 발송 전</div><div class="hs">후보에게 나가는 마지막 단계. 사람이 최종 승인합니다. (HITL)</div></div><button class="hbtn" onclick="toast('오퍼 승인 · 발송')">오퍼 승인·발송</button></div>`;
+    side.innerHTML=`<div class="sh">평가 근거 <span>보조</span></div>
+      <div class="basis"><div class="brow"><span class="bk">종합 산식</span><span class="bv">루브릭 5항 × 가중</span></div><div class="brow"><span class="bk">현재 가중</span><span class="bv">${evalW}</span></div><div class="brow"><span class="bk">보상밴드</span><span class="bv g">B2 상한 내</span></div><div class="brow"><span class="bk">차별금지</span><span class="bv g">통과</span></div></div>
+      <div class="sh">AAP가 한 일 <span>보조</span></div>
+      <div class="flow"><div class="fstep"><span class="fd"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>면접 평가 취합</div><div class="fstep"><span class="fd"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>보상밴드·차별금지 점검</div><div class="fstep"><span class="fd" style="background:var(--violet)"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>의도 반영: 가중 ${evalW}</div></div>`;
+  }
+}
+
+document.querySelectorAll('[data-stg]').forEach(b=>b.onclick=()=>{
+  stg=b.dataset.stg;
+  document.querySelectorAll('.sstep').forEach(x=>x.classList.toggle('on',x.dataset.stg===stg));
+  renderSteer(); renderWork();
+});
+renderSteer(); renderWork();
+</script>
+</body>
+</html>

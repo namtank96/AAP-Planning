@@ -1,0 +1,11 @@
+<!DOCTYPE html><meta charset="utf-8">
+<iframe id="fr" src="index.html" style="width:1340px;height:840px;border:0"></iframe>
+<script>
+const fr=document.getElementById('fr');
+function $(s){return [...fr.contentDocument.querySelectorAll(s)];}
+fr.addEventListener('load',()=>{
+  setTimeout(()=>{ try{ const r=$('.ibx-row[data-open]').find(e=>/백엔드 개발자 2명 채용/.test(e.textContent)); if(r)r.click(); }catch(e){} },800);
+  setTimeout(()=>{ try{ const cm=fr.contentDocument.getElementById('cmodal'); if(cm){cm.classList.remove('show');cm.innerHTML='';} }catch(e){} },2000);
+  setTimeout(()=>{ try{ const b=$('[data-steer]').find(e=>/도메인/.test(e.textContent)); if(b)b.click(); document.title='steered'; }catch(e){document.title='E:'+e.message;} },2300);
+});
+</script>

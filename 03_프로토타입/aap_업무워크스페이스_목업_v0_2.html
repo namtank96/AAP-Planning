@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업무 워크스페이스 목업 (Side A · v0.2)</title>
+<style>
+  :root{
+    --bg:#eef2f7; --surface:#ffffff; --surf:#f8fafc; --ink:#0f172a; --slate:#334155;
+    --muted:#64748b; --faint:#94a3b8; --border:#e4e9f0; --line:#eef2f6;
+    --aap:#0d9488; --aap-ink:#0f766e; --aap-soft:#f0fdfa; --aap-bd:#99f6e4;
+    --violet:#7c3aed; --violet-soft:#f5f3ff; --cyan:#0891b2; --cyan-soft:#ecfeff;
+    --blue:#2563eb; --blue-soft:#eff6ff; --amber:#d97706; --amber-soft:#fffbeb;
+    --amber-bd:#fde68a; --amber-ink:#92400e; --green:#16a34a; --green-soft:#f0fdf4;
+    --red:#dc2626; --red-soft:#fef2f2;
+    --shadow:0 6px 22px rgba(15,23,42,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Pretendard","Inter","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  .ic{width:16px;height:16px;flex:0 0 auto;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* ===== 상단바 = 사람의 업무 워크스페이스 (제품 nav 아님) ===== */
+  .top{height:50px;flex:0 0 50px;display:flex;align-items:center;gap:12px;padding:0 20px;background:#fff;border-bottom:1px solid var(--border);}
+  .back{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:9px;padding:6px 11px;cursor:pointer;background:#fff;}
+  .wslab{font-size:12px;color:var(--faint);font-weight:600;}
+  .sp{flex:1;}
+  .aap-tg{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--slate);cursor:pointer;user-select:none;border:1px solid var(--border);border-radius:10px;padding:6px 11px;background:#fff;}
+  .aap-tg .sw{width:30px;height:17px;border-radius:20px;background:#cbd5e1;position:relative;transition:.2s;flex:0 0 auto;}
+  .aap-tg .sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:.2s;}
+  .aap-tg.on{color:var(--aap-ink);border-color:var(--aap-bd);background:var(--aap-soft);} .aap-tg.on .sw{background:var(--aap);} .aap-tg.on .sw::after{left:15px;}
+  .me{display:flex;align-items:center;gap:8px;} .me .av{width:29px;height:29px;border-radius:50%;background:#dbe3ee;color:#475569;font-weight:700;font-size:12px;display:grid;place-items:center;} .me .nm{font-size:12.5px;font-weight:600;} .me .rl{font-size:10.5px;color:var(--faint);}
+
+  .wrap{flex:1;display:flex;min-height:0;}
+  .main{flex:1;overflow:auto;padding:24px 26px 40px;}
+  .canvas{max-width:760px;margin:0 auto;}
+
+  /* 업무 헤더 — 'AAP에게 맡긴 한 업무' */
+  .th{margin-bottom:16px;}
+  .th-k{font-size:11px;font-weight:800;color:var(--aap-ink);letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+  .th-k .dot{width:6px;height:6px;border-radius:50%;background:var(--aap);}
+  .th h1{font-size:21px;font-weight:800;margin:0;letter-spacing:-.3px;}
+  .th .sub{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .th .sep{width:3px;height:3px;border-radius:50%;background:var(--faint);}
+  .th .prog{font-weight:700;color:var(--aap-ink);}
+
+  /* AAP가 해둔 일 (녹임 · 체크리스트) */
+  .done{background:linear-gradient(180deg,#fbfffe,#fff);border:1px solid var(--aap-bd);border-radius:14px;padding:13px 16px;margin-bottom:14px;}
+  .done-h{font-size:11px;font-weight:800;color:var(--aap-ink);letter-spacing:.03em;margin-bottom:9px;display:flex;align-items:center;gap:7px;}
+  .done-h .more{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--aap);background:none;border:none;font-family:inherit;cursor:pointer;}
+  .done-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;}
+  .done-i{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--slate);}
+  .done-i .ck{width:18px;height:18px;border-radius:50%;background:var(--aap-soft);color:var(--aap-ink);display:grid;place-items:center;flex:0 0 auto;}
+  .done-i .ck .ic{width:11px;height:11px;}
+  .done-i.res{color:var(--aap-ink);font-weight:700;} .done-i.res .ck{background:var(--aap);color:#fff;}
+
+  /* ★ 당신이 결정할 것 = 히어로 */
+  .deck{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px;}
+  .deck-h{display:flex;align-items:center;gap:9px;padding:14px 18px 11px;}
+  .deck-h .t{font-size:15px;font-weight:800;} .deck-h .c{font-size:11px;font-weight:800;color:#fff;background:var(--amber);border-radius:20px;padding:2px 9px;}
+  .deck-h .hint{margin-left:auto;font-size:11.5px;color:var(--faint);}
+  .q{display:flex;align-items:center;gap:14px;padding:15px 18px;border-top:1px solid var(--line);}
+  .q .qn{width:25px;height:25px;border-radius:8px;background:var(--amber-soft);color:var(--amber-ink);font-weight:800;font-size:12.5px;display:grid;place-items:center;flex:0 0 auto;}
+  .q .qmain{flex:1;min-width:0;}
+  .q .qt{font-size:14.5px;font-weight:700;}
+  .q .qd{font-size:12px;color:var(--muted);margin-top:2px;} .q .qd b{color:var(--slate);font-weight:700;}
+  .q .qbtn{font-size:13px;font-weight:700;font-family:inherit;border:1px solid var(--aap);background:var(--aap);color:#fff;border-radius:10px;padding:9px 17px;cursor:pointer;flex:0 0 auto;}
+  .q .qbtn.ghost{background:#fff;color:var(--aap-ink);}
+
+  /* 근거 · 후보 (결정 보조 · 작게) */
+  .ev-h{display:flex;align-items:center;gap:9px;margin:0 2px 9px;}
+  .ev-h .t{font-size:12.5px;font-weight:800;color:var(--slate);} .ev-h .s{font-size:11px;color:var(--faint);}
+  .ev-h .sort{margin-left:auto;display:flex;gap:3px;}
+  .ev-h .sort button{font-size:11px;font-weight:700;font-family:inherit;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:7px;padding:4px 9px;cursor:pointer;}
+  .ev-h .sort button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .evlist{background:#fff;border:1px solid var(--border);border-radius:13px;overflow:hidden;}
+  .ev-r{display:flex;align-items:center;gap:11px;padding:10px 15px;border-top:1px solid var(--line);cursor:pointer;}
+  .ev-r:first-child{border-top:none;} .ev-r:hover{background:var(--surf);}
+  .ev-r .av{width:30px;height:30px;border-radius:8px;background:#e8edf4;color:#475569;font-weight:700;font-size:12px;display:grid;place-items:center;flex:0 0 auto;}
+  .ev-r .nm{font-size:13px;font-weight:700;} .ev-r .cur{font-size:11px;color:var(--muted);}
+  .ev-r .mid{flex:1;min-width:0;}
+  .ev-r .sig{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 8px;flex:0 0 auto;}
+  .sig.ok{color:var(--green);background:var(--green-soft);} .sig.warn{color:var(--amber);background:var(--amber-soft);}
+  .ev-r .mt{font-size:14px;font-weight:800;color:var(--aap-ink);width:48px;text-align:right;flex:0 0 auto;}
+  .ev-more{padding:10px 15px;font-size:11.5px;font-weight:700;color:var(--muted);text-align:center;border-top:1px solid var(--line);cursor:pointer;}
+
+  .foot{text-align:center;font-size:10.5px;color:var(--faint);margin-top:24px;}
+
+  /* ===== AAP 작동 드로어 (토글 · 다크 엔진룸 · 5타입 색) ===== */
+  .drawer{width:0;flex:0 0 0;background:#0b1220;color:#e2e8f0;overflow:hidden;transition:width .25s cubic-bezier(.4,0,.2,1);}
+  .drawer.open{width:372px;flex:0 0 372px;border-left:1px solid #1e293b;}
+  .dwin{width:372px;height:100%;overflow:auto;padding:18px 18px 28px;}
+  .dw-h{display:flex;align-items:center;gap:8px;margin-bottom:4px;} .dw-h .di{width:25px;height:25px;border-radius:7px;background:#0f766e;color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;}
+  .dw-h b{font-size:14px;} .dw-x{margin-left:auto;background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;font-family:inherit;}
+  .dw-sub{font-size:11.5px;color:#94a3b8;margin-bottom:15px;line-height:1.5;}
+  .dw-sec{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#5eead4;margin:17px 0 8px;}
+  .dw-sec:first-of-type{margin-top:5px;}
+  .dw-leg{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px;}
+  .lg{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;color:#cbd5e1;} .lg i{width:7px;height:7px;border-radius:50%;}
+  .dt{border:1px solid #1e293b;border-radius:10px;padding:9px 11px;margin-bottom:7px;background:#0f1729;border-left-width:3px;}
+  .dt.tyA{border-left-color:#2dd4bf;} .dt.tyM{border-left-color:#a78bfa;} .dt.tyS{border-left-color:#22d3ee;} .dt.tyC{border-left-color:#60a5fa;} .dt.tyP{border-left-color:#fbbf24;}
+  .dt-h{display:flex;align-items:center;gap:7px;} .dt-id{font-size:9px;font-weight:800;color:#0b1220;background:#5eead4;border-radius:5px;padding:1px 6px;} .dt-nm{font-size:12.5px;font-weight:700;}
+  .dt-own{margin-left:auto;display:flex;gap:4px;}
+  .ty{font-size:9px;font-weight:800;border-radius:5px;padding:1px 6px;}
+  .ty.tyA{color:#2dd4bf;background:rgba(45,212,191,.13);} .ty.tyM{color:#a78bfa;background:rgba(167,139,250,.13);} .ty.tyS{color:#22d3ee;background:rgba(34,211,238,.13);} .ty.tyC{color:#60a5fa;background:rgba(96,165,250,.13);} .ty.tyP{color:#fbbf24;background:rgba(251,191,36,.13);}
+  .dt-d{font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.45;}
+  .gate{display:flex;align-items:center;gap:8px;font-size:12px;border:1px solid #3f2d12;background:#1c1408;border-radius:9px;padding:8px 11px;margin-bottom:6px;color:#fcd9a8;}
+  .gate .gd{width:7px;height:7px;border-radius:50%;background:#fbbf24;flex:0 0 auto;}
+  .log{font-size:11.5px;color:#cbd5e1;padding:5px 0;display:flex;gap:9px;} .log b{color:#5eead4;font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;}
+</style>
+</head>
+<body>
+
+<!-- 사람의 업무 워크스페이스 (제품 nav 아님 · 일반화 프레임) -->
+<div class="top">
+  <button class="back"><svg class="ic" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>내 업무</button>
+  <span class="wslab">업무 워크스페이스</span>
+  <div class="sp"></div>
+  <div class="aap-tg" id="aapTg"><span class="sw"></span>AAP 작동 보기</div>
+  <div class="me"><div class="av">이</div><div><div class="nm">이서연</div><div class="rl">인사팀</div></div></div>
+</div>
+
+<div class="wrap">
+  <main class="main">
+    <div class="canvas">
+
+      <!-- 이 업무 (AAP에게 맡긴 한 업무 · 채용은 그 중 하나) -->
+      <div class="th">
+        <div class="th-k"><span class="dot"></span>AAP에게 맡긴 업무</div>
+        <h1>채용 1차 스크리닝</h1>
+        <div class="sub">백엔드 개발자 2명 · 플랫폼개발팀<span class="sep"></span>맡긴 날 6/22<span class="sep"></span><span class="prog">진행 92%</span><span class="sep"></span>결정 <b style="color:var(--amber-ink)">3건</b> 남음</div>
+      </div>
+
+      <!-- AAP가 해둔 일 (녹임) -->
+      <div class="done">
+        <div class="done-h"><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px;color:var(--aap)"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>AAP가 해둔 일<button class="more" id="doneMore">어떻게 했는지 →</button></div>
+        <div class="done-grid">
+          <div class="done-i"><span class="ck"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>이력서 38건 수집·파싱</div>
+          <div class="done-i"><span class="ck"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>스킬·경력·도메인 매칭·랭킹</div>
+          <div class="done-i"><span class="ck"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>편향·개인정보 점검</div>
+          <div class="done-i res"><span class="ck"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>상위 후보 10명 정리됨</div>
+        </div>
+      </div>
+
+      <!-- ★ 당신이 결정할 것 (히어로) -->
+      <div class="deck">
+        <div class="deck-h"><span class="t">당신이 결정할 것</span><span class="c">3</span><span class="hint">나머지는 AAP가 처리했어요</span></div>
+        <div class="q">
+          <span class="qn">1</span>
+          <div class="qmain"><div class="qt">숏리스트 기준 정하기</div><div class="qd">지원 <b>38명</b> → 컷 <b>매칭 ≥ 85%</b>면 <b>6명</b>. 기준을 정하면 면접 대상이 확정돼요.</div></div>
+          <button class="qbtn">정하기</button>
+        </div>
+        <div class="q">
+          <span class="qn">2</span>
+          <div class="qmain"><div class="qt">면접 일정 확인</div><div class="qd"><b>3건</b> 제안 · 캘린더 교차 <b>충돌 0</b>. 확인하면 후보에게 안내가 나가요.</div></div>
+          <button class="qbtn ghost">확인</button>
+        </div>
+        <div class="q">
+          <span class="qn">3</span>
+          <div class="qmain"><div class="qt">오퍼 승인</div><div class="qd">정유진 · 기본급 <b>7,200만</b> · 보상밴드 내 · 차별금지 통과. 외부로 나가는 마지막 단계예요.</div></div>
+          <button class="qbtn ghost">검토</button>
+        </div>
+      </div>
+
+      <!-- 근거 · 후보 (결정 보조 · 작게) -->
+      <div class="ev-h"><span class="t">근거 · 상위 후보</span><span class="s">결정을 돕는 자료</span><div class="sort"><button class="on">매칭순</button><button>종합순</button></div></div>
+      <div class="evlist">
+        <div class="ev-r"><span class="av">정</span><div class="mid"><div class="nm">정유진</div><div class="cur">6년 · 쿠팡 · 커머스</div></div><span class="sig ok">추천</span><span class="mt">96%</span></div>
+        <div class="ev-r"><span class="av">이</span><div class="mid"><div class="nm">이하늘</div><div class="cur">8년 · 네이버 · 검색</div></div><span class="sig warn">역할 차이</span><span class="mt">91%</span></div>
+        <div class="ev-r"><span class="av">박</span><div class="mid"><div class="nm">박서준</div><div class="cur">5년 · 토스 · 핀테크</div></div><span class="sig ok">적합</span><span class="mt">89%</span></div>
+        <div class="ev-r"><span class="av">한</span><div class="mid"><div class="nm">한도윤</div><div class="cur">6년 · 당근 · 커머스</div></div><span class="sig ok">적합</span><span class="mt">87%</span></div>
+        <div class="ev-more">후보 10명 전체 보기 →</div>
+      </div>
+
+      <div class="foot">목업 v0.2 · Side A 업무 워크스페이스 (정지) · 더미데이터 · app/ 미접촉 standalone · 디자인 가이드 v0.1 정합</div>
+    </div>
+  </main>
+
+  <!-- AAP 작동 = 드로어 (기본 닫힘 · 다크 엔진룸 · 5타입 색) -->
+  <aside class="drawer" id="drawer">
+    <div class="dwin">
+      <div class="dw-h"><span class="di">A</span><b>AAP 작동</b><button class="dw-x" id="dwX">×</button></div>
+      <div class="dw-sub">이 업무를 AAP가 어떻게 분해·실행했는지. 평소엔 숨겨져 있고, 필요할 때만 봅니다.</div>
+
+      <div class="dw-sec">업무 분해 · 구성요소 배정</div>
+      <div class="dw-leg"><span class="lg"><i style="background:#2dd4bf"></i>Agent</span><span class="lg"><i style="background:#a78bfa"></i>Module</span><span class="lg"><i style="background:#22d3ee"></i>솔루션</span><span class="lg"><i style="background:#60a5fa"></i>Connector</span><span class="lg"><i style="background:#fbbf24"></i>Policy</span></div>
+      <div class="dt tyC"><div class="dt-h"><span class="dt-id">T1</span><span class="dt-nm">이력서 수집·파싱</span><span class="dt-own"><span class="ty tyC">Connector</span><span class="ty tyS">OCR</span></span></div><div class="dt-d">메일·문서함에서 38건 수집 → 스캔 문서 글자 인식·정규화</div></div>
+      <div class="dt tyA"><div class="dt-h"><span class="dt-id">T2</span><span class="dt-nm">요건 매칭·랭킹</span><span class="dt-own"><span class="ty tyA">Agent</span></span></div><div class="dt-d">스킬·경력·도메인 50/30/20 가중으로 매칭%·랭킹 산출</div></div>
+      <div class="dt tyP"><div class="dt-h"><span class="dt-id">T3</span><span class="dt-nm">편향·개인정보 점검</span><span class="dt-own"><span class="ty tyP">Policy</span></span></div><div class="dt-d">보호속성 평가 제외 · PII 마스킹 (양보 불가)</div></div>
+      <div class="dt tyA"><div class="dt-h"><span class="dt-id">T4</span><span class="dt-nm">면접 일정 조율</span><span class="dt-own"><span class="ty tyA">Agent</span><span class="ty tyC">캘린더</span></span></div><div class="dt-d">후보·면접관 캘린더 교차 → 충돌 0 슬롯 3건</div></div>
+
+      <div class="dw-sec">사람이 결정할 통제점 (HITL)</div>
+      <div class="gate"><span class="gd"></span>숏리스트 기준 — 자동 진행 안 함</div>
+      <div class="gate"><span class="gd"></span>면접 일정 확인 — 외부 안내 전</div>
+      <div class="gate"><span class="gd"></span>오퍼 승인 — 외부 발송 전</div>
+
+      <div class="dw-sec">처리 로그</div>
+      <div class="log"><b>09:02</b><span>이력서 38건 수집·OCR 파싱 완료</span></div>
+      <div class="log"><b>09:05</b><span>요건 매칭·랭킹 — 상위 10명 산출</span></div>
+      <div class="log"><b>09:06</b><span>편향 점검 통과 · PII 마스킹 적용</span></div>
+      <div class="log"><b>09:07</b><span>숏리스트 컷 후보 제시 — 사람 결정 대기</span></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const drawer=document.getElementById('drawer'), tg=document.getElementById('aapTg');
+  function setDrawer(on){drawer.classList.toggle('open',on);tg.classList.toggle('on',on);}
+  tg.onclick=()=>setDrawer(!drawer.classList.contains('open'));
+  document.getElementById('dwX').onclick=()=>setDrawer(false);
+  document.getElementById('doneMore').onclick=()=>setDrawer(true);
+</script>
+</body>
+</html>

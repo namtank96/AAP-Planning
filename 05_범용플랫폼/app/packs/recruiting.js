@@ -516,7 +516,7 @@
           <div class="op-rc">${c.yrs}년 · ${c.cur} · ${c.dom}${isRemote(c)?' · 재택':''}</div></div>
         <div class="op-bd" title="스킬 ${bd[0].contrib} · 경력 ${bd[1].contrib} · 도메인 ${bd[2].contrib}">
           <i class="sk" style="width:${bd[0].contrib/tot*100}%"></i><i class="ca" style="width:${bd[1].contrib/tot*100}%"></i><i class="dm" style="width:${bd[2].contrib/tot*100}%"></i></div>
-        <div class="op-rmt"><b>${sc}</b><span>매칭</span></div>
+        <div class="op-rmt"><b data-numtween="m-${c.id}" data-numsuf="">${sc}</b><span>매칭</span></div>
         <button class="op-rdel" data-opdrop="${c.id}" title="이 후보 빼고 다시">${I('x')}</button>
       </div>`;
     }).join('');
@@ -550,10 +550,11 @@
       const ang=(-58+i*23)*Math.PI/180, R=132;
       const x=cx+Math.cos(ang)*R+34, y=cy+Math.sin(ang)*92;
       const sc=mOf(C,c), op=Math.max(0,Math.min(1,(sc-65)/35)), top=i===0;
-      edges+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${top?'#0d9488':'#94a3b8'}" stroke-width="${1+op*3.5}" stroke-opacity="${0.25+op*0.55}"/>`;
-      nodes+=`<g><circle cx="${x}" cy="${y}" r="${top?16:13}" fill="${top?'#0d9488':'#fff'}" stroke="${top?'#0d9488':'#cbd5e1'}" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${top?'#fff':'#475569'}">${c.ini}</text><text x="${x}" y="${y+26}" text-anchor="middle" font-size="8.5" fill="#64748b">${sc}</text></g>`;
+      /* 엣지 굵기·투명도=매칭(steering 에 반응) · 노드 강조=1위. data-gk=후보ID(재렌더 간 안정 키→트랜지션). */
+      edges+=`<line class="op-gedge${top?' top':''}" data-gk="${c.id}" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${top?'#0d9488':'#94a3b8'}" stroke-width="${(1+op*3.5).toFixed(2)}" stroke-opacity="${(0.25+op*0.55).toFixed(2)}"/>`;
+      nodes+=`<g class="op-gnode${top?' top':''}" data-gk="${c.id}"><circle cx="${x}" cy="${y}" r="${top?16:13}" fill="${top?'#0d9488':'#fff'}" stroke="${top?'#0d9488':'#cbd5e1'}" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${top?'#fff':'#475569'}">${c.ini}</text><text x="${x}" y="${y+26}" text-anchor="middle" font-size="8.5" fill="#64748b">${sc}</text></g>`;
     });
-    return `<svg id="opGraph" viewBox="0 0 300 224">${edges}<circle cx="${cx}" cy="${cy}" r="25" fill="#0f766e"/><text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">JD 요건</text><text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="7.5" fill="#99f6e4">${WPRESET[wPresetOf(C)].lab}</text>${nodes}</svg>`;
+    return `<svg id="opGraph" class="op-greact" viewBox="0 0 300 224">${edges}<circle cx="${cx}" cy="${cy}" r="25" fill="#0f766e"/><text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">JD 요건</text><text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="7.5" fill="#99f6e4">${WPRESET[wPresetOf(C)].lab}</text>${nodes}</svg>`;
   }
   function opMatchAside(C){
     const w=normWeight(C), pool=intentPool(C);
@@ -621,7 +622,7 @@
     const sign=lvl==='up'?'800만':lvl==='down'?'없음':OFFER.sign;
     const rows=RUBRIC.map((r,i)=>`<div class="op-rub" data-flip="rub-${i}"><span class="rk">${r.k} <em>×${W[i]}</em></span><span class="rbar"><i style="width:${c.scores[i]*20}%"></i></span><span class="rv">${c.scores[i]}.0</span></div>`).join('');
     return `<div class="op-wh"><span class="op-t">합격 후보 · 평가</span><span class="op-c">${c.name} · 평가 가중 ${EVALW_LAB[wk]}</span></div>
-      <div class="op-sc"><div class="op-sc-h"><span class="recr-av lg">${c.ini}</span><div><div class="op-sc-nm">${c.name}</div><div class="op-sc-cur">${c.yrs}년 · ${c.cur} · 매칭 ${c.match}%</div></div><div class="op-sc-tot"><b>${tot}</b><span>종합</span></div></div>${rows}</div>
+      <div class="op-sc"><div class="op-sc-h"><span class="recr-av lg">${c.ini}</span><div><div class="op-sc-nm">${c.name}</div><div class="op-sc-cur">${c.yrs}년 · ${c.cur} · 매칭 ${c.match}%</div></div><div class="op-sc-tot"><b data-numtween="evtot">${tot}</b><span>종합</span></div></div>${rows}</div>
       <div class="op-offer"><h4>오퍼 패키지</h4>
         <div class="op-orow" data-flip="of-base"><span>기본급</span><b>${base} · ${OFFER.band}</b></div>
         <div class="op-orow" data-flip="of-sign"><span>사이닝</span><b>${sign}</b></div>
@@ -963,8 +964,17 @@
        반환 {intent,mono,steps?,instant?,trace?,toast?} 로 코어가 라이브 재분석/FLIP 을 구동. ── */
     steerHook:(S,key,val)=>{
       if(key==='weight'){ const p=WPRESET[val]; if(!p)return {}; S.recrWPreset=val; S.recrWeight={skill:p.skill,career:p.career,domain:p.domain};
+        /* 재분석을 '가중 적용 → 재산출 → 재랭킹 → 컷' 4단계로 펼쳐 각 단계 수치·근거를 보여줌(지적 1·2) */
+        const Cx={S}; const pool=(typeof intentPool==='function')?intentPool(Cx):CAND;
+        const th=(typeof cutThreshold==='function')?cutThreshold(Cx):85;
+        const pass=(typeof passCount==='function')?passCount(Cx,th):'—';
         return {intent:p.lab+' 우선', mono:'가중 → '+p.skill+'/'+p.career+'/'+p.domain,
-          steps:[{t:'의도 해석',d:p.lab},{t:'재가중 계산',d:'스킬·경력·도메인 '+p.skill+'/'+p.career+'/'+p.domain},{t:'후보 재산출',d:'매칭% 재계산'},{t:'재랭킹·근거 갱신',d:'순위 비교 중…'}],
+          steps:[
+            {t:'가중 적용',tag:'읽기',d:'스킬·경력·도메인 '+p.skill+'/'+p.career+'/'+p.domain,basis:'normWeight ← preset '+val+' · 합 100 정규화'},
+            {t:'매칭% 재산출',tag:'평가',d:pool.length+'명 점수 재계산',basis:'mOf = 스킬×'+p.skill+' + 경력×'+p.career+' + 도메인×'+p.domain+' (후보 '+pool.length+'명)'},
+            {t:'재랭킹',tag:'판정',d:'매칭% 내림차순 정렬',basis:'opRanked() · 동점은 종합점수 차순'},
+            {t:'컷 적용',tag:'판정',d:'컷 ≥'+th+'% → 통과 '+pass+'명',basis:'shortlistIds ← match ≥ '+th+'% · 면접 대상 확정'}
+          ],
           trace:{st:'매칭·랭킹',t:'우선순위 · '+p.lab+' (가중 '+p.skill+'/'+p.career+'/'+p.domain+')',L:'L4',k:''}}; }
       if(key==='filter'){ const f=Object.assign({remote:false,senior:false,commerce:false}, S.recrIntentFilt||{}); f[val]=!f[val]; S.recrIntentFilt=f;
         const lab={remote:'재택 가능자만',senior:'시니어만',commerce:'커머스 경험자만'}[val];
@@ -975,20 +985,29 @@
         return {instant:true, trace:{st:'매칭·랭킹',t:'면접 범위 분기 · '+m,L:'L3',k:''}, toast:m+' → 면접 조율이 이 범위로 진행'}; }
       if(key==='slotpref'){ S.recrSlotPref=val;
         return {intent:val+' 선호로 슬롯 재교차', mono:'캘린더 교집합 재계산',
-          steps:[{t:'선호 반영',d:val+'대 우선'},{t:'캘린더 교차',d:'후보·면접관 가용'},{t:'슬롯 재배치',d:'충돌 0 확인'}],
+          steps:[{t:'선호 반영',tag:'읽기',d:val+'대 우선',basis:'slotPref = '+val+' · 후보·면접관 가용 시간대 필터'},
+            {t:'캘린더 교차',tag:'대조',d:'후보 3 ∩ 면접관 가용',basis:'lookup: 후보 응답 ∩ 면접관 캘린더 → 후보 가용 슬롯'},
+            {t:'슬롯 재배치',tag:'판정',d:'충돌 0 확인',basis:'중복·겹침 검사 → 충돌 0 · 슬롯 확정'}],
           trace:{st:'면접 조율',t:'슬롯 선호 · '+val,L:'L5',k:''}}; }
-      if(key==='panel'){ S.recrPanel=val;
+      if(key==='panel'){ S.recrPanel=val; const exec=val==='임원 포함';
         return {intent:'패널 재구성 · '+val, mono:'면접관 가용 재확인',
-          steps:[{t:'패널 변경',d:val},{t:'면접관 가용',d:val==='임원 포함'?'CTO/임원 포함':'표준 패널'},{t:'슬롯 재확인',d:'충돌 0'}],
+          steps:[{t:'패널 변경',tag:'읽기',d:val,basis:'panel = '+val+(exec?' · CTO/임원 추가':' · 표준 2인')},
+            {t:'면접관 가용',tag:'대조',d:exec?'CTO/임원 포함':'표준 패널',basis:'lookup: 면접관 캘린더'+(exec?' + 임원 가용 교차':'')},
+            {t:'슬롯 재확인',tag:'판정',d:'충돌 0',basis:'패널 변경 후 슬롯 충돌 재검사 → 0'}],
           trace:{st:'면접 조율',t:'패널 · '+val,L:'L3',k:''}}; }
-      if(key==='evalw'){ S.recrEvalW=val;
+      if(key==='evalw'){ S.recrEvalW=val; const W5=EVALW[val]||EVALW.bal;
         return {intent:'평가 가중 · '+EVALW_LAB[val], mono:'루브릭 5항 재가중',
-          steps:[{t:'가중 변경',d:EVALW_LAB[val]},{t:'종합 재계산',d:'루브릭 5항 × 가중'},{t:'스코어 갱신',d:'종합 점수 재산출'}],
+          steps:[{t:'가중 변경',tag:'읽기',d:EVALW_LAB[val],basis:'루브릭 가중 ← '+W5.join('/')+' (합 100)'},
+            {t:'종합 재계산',tag:'평가',d:'루브릭 5항 × 가중',basis:'종합 = Σ(항목점수 × 가중)/100 × 20'},
+            {t:'스코어 갱신',tag:'판정',d:'종합 점수 재산출',basis:'합격 후보 종합점수 갱신 · 오퍼안 재구성'}],
           trace:{st:'평가·오퍼',t:'평가 가중 · '+EVALW_LAB[val],L:'L6',k:''}}; }
       if(key==='offerlvl'){ S.recrOfferLvl=val;
         const m={std:'표준',up:'상향',down:'하향(밴드 하한)'}[val];
+        const base=val==='up'?'7,600만':val==='down'?'6,800만':OFFER.base, sign=val==='up'?'800만':val==='down'?'없음':OFFER.sign;
         return {intent:'오퍼 수준 · '+m, mono:'보상밴드 재점검',
-          steps:[{t:'오퍼 수준',d:m},{t:'보상밴드 점검',d:'밴드 내 확인'},{t:'패키지 갱신',d:'기본급·사이닝 재산출'}],
+          steps:[{t:'오퍼 수준',tag:'읽기',d:m,basis:'offerLevel = '+val+' · 기준 패키지 대비 '+(val==='up'?'+상향':val==='down'?'하향':'유지')},
+            {t:'보상밴드 점검',tag:'대조',d:'밴드 내 확인',basis:'lookup: 직무 보상밴드 '+OFFER.band+' → '+base+' 밴드 내'},
+            {t:'패키지 갱신',tag:'판정',d:'기본급 '+base+' · 사이닝 '+sign,basis:'기본급·사이닝 재산출 · 차별금지 통과'}],
           trace:{st:'평가·오퍼',t:'오퍼 수준 · '+m,L:'L7',k:''}}; }
       return {};
     },

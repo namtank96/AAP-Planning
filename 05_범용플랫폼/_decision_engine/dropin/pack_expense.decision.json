@@ -1,0 +1,1238 @@
+{
+  "id": "expense",
+  "label": "11룰 expense — 하니스 자동생성+evaluate게이트 통과본",
+  "caseModel": {
+    "slots": [
+      {
+        "key": "claimId"
+      },
+      {
+        "key": "claimantId"
+      },
+      {
+        "key": "claimantGrade"
+      },
+      {
+        "key": "claimantDept"
+      },
+      {
+        "key": "approvalLine"
+      },
+      {
+        "key": "claimPurpose"
+      },
+      {
+        "key": "claimTotalAmount"
+      },
+      {
+        "key": "expenseDate"
+      },
+      {
+        "key": "submitDate"
+      },
+      {
+        "key": "periodGapDays"
+      },
+      {
+        "key": "expenseType"
+      },
+      {
+        "key": "lineAmount"
+      },
+      {
+        "key": "accountCode"
+      },
+      {
+        "key": "paymentMethod"
+      },
+      {
+        "key": "tripRegion"
+      },
+      {
+        "key": "tripDays"
+      },
+      {
+        "key": "gradeLimitAmount"
+      },
+      {
+        "key": "limitExcessAmount"
+      },
+      {
+        "key": "receiptImageId"
+      },
+      {
+        "key": "evidenceAttached"
+      },
+      {
+        "key": "ocrAmount"
+      },
+      {
+        "key": "ocrDate"
+      },
+      {
+        "key": "ocrMerchant"
+      },
+      {
+        "key": "ocrConfidence"
+      },
+      {
+        "key": "evidenceType"
+      },
+      {
+        "key": "isQualifiedEvidence"
+      },
+      {
+        "key": "amountMismatch"
+      },
+      {
+        "key": "cardStatementLine"
+      },
+      {
+        "key": "cardReconStatus"
+      },
+      {
+        "key": "merchantCategory"
+      },
+      {
+        "key": "accountMismatchFlag"
+      },
+      {
+        "key": "prohibitedItemFlag"
+      },
+      {
+        "key": "duplicateFlag"
+      },
+      {
+        "key": "splitFlag"
+      },
+      {
+        "key": "riskScore"
+      },
+      {
+        "key": "routeDecision"
+      },
+      {
+        "key": "routeReasons"
+      },
+      {
+        "key": "reviewPriority"
+      },
+      {
+        "key": "reviewerDecision"
+      },
+      {
+        "key": "deductionAmount"
+      },
+      {
+        "key": "exceptionJustification"
+      },
+      {
+        "key": "taxAdvisoryFlag"
+      },
+      {
+        "key": "siuInvestigateFlag"
+      },
+      {
+        "key": "erpDocNo"
+      },
+      {
+        "key": "taxCode"
+      },
+      {
+        "key": "costCenter"
+      },
+      {
+        "key": "writebackStatus"
+      },
+      {
+        "key": "auditSampleFlag"
+      }
+    ]
+  },
+  "knowledge": {
+    "route": {
+      "rules": [
+        {
+          "id": "R01_missing_required_evidence",
+          "outcome": "REJECT",
+          "label": "반려(필수증빙 누락)",
+          "basis": "증빙 미첨부 또는 적격증빙 아님+증빙없음 유형",
+          "when": {
+            "any": [
+              {
+                "==": [
+                  "$evidenceAttached",
+                  false
+                ]
+              },
+              {
+                "all": [
+                  {
+                    "==": [
+                      "$isQualifiedEvidence",
+                      false
+                    ]
+                  },
+                  {
+                    "==": [
+                      "$evidenceType",
+                      "증빙없음"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R02_prohibited_item",
+          "outcome": "REJECT",
+          "label": "반려(정책 위반)",
+          "basis": "금지품목 플래그(주류/개인경비/금지업종)",
+          "when": {
+            "==": [
+              "$prohibitedItemFlag",
+              true
+            ]
+          }
+        },
+        {
+          "id": "R03_period_deadline_over",
+          "outcome": "REJECT",
+          "label": "반려(청구 기간 도과)",
+          "basis": "청구 기간 도과(>90일)",
+          "when": {
+            ">": [
+              "$periodGapDays",
+              90
+            ]
+          }
+        },
+        {
+          "id": "R04_exact_duplicate",
+          "outcome": "REJECT",
+          "label": "반려(명백 중복 청구)",
+          "basis": "키 완전일치 명백 중복(claimant·date·merchant·amount)",
+          "when": {
+            "==": [
+              "$duplicateFlag",
+              true
+            ]
+          }
+        },
+        {
+          "id": "R05_limit_excess",
+          "outcome": "LEGAL_REVIEW",
+          "label": "검토(HITL: 한도 초과액 삭감/예외 판단)",
+          "basis": "한도 초과액 발생",
+          "when": {
+            ">": [
+              "$limitExcessAmount",
+              0
+            ]
+          }
+        },
+        {
+          "id": "R06_account_tax_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "검토(HITL: 계정·세무 확정)",
+          "basis": "계정 불일치 또는 세무 자문 필요",
+          "when": {
+            "any": [
+              {
+                "==": [
+                  "$accountMismatchFlag",
+                  true
+                ]
+              },
+              {
+                "==": [
+                  "$taxAdvisoryFlag",
+                  true
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R07_ocr_amount_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "검토(HITL: 수기 확인)",
+          "basis": "OCR 신뢰도 미달 또는 금액 불일치 허용오차(1000원) 초과",
+          "when": {
+            "any": [
+              {
+                "<": [
+                  "$ocrConfidence",
+                  0.8
+                ]
+              },
+              {
+                ">": [
+                  "$amountMismatch",
+                  1000
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R08_dup_split_recon_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "검토(HITL: 중복/분할/대사 소명)",
+          "basis": "근접 중복 또는 분할 또는 카드대사 불일치(명세없음/청구없음)",
+          "when": {
+            "any": [
+              {
+                "==": [
+                  "$duplicateFlag",
+                  true
+                ]
+              },
+              {
+                "==": [
+                  "$splitFlag",
+                  true
+                ]
+              },
+              {
+                "in": [
+                  "$cardReconStatus",
+                  [
+                    "명세없음",
+                    "청구없음"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R09_high_amount_high_risk_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "검토(HITL: 고액·고위험)",
+          "basis": "위험점수 ≥60 또는 청구총액 >200만",
+          "when": {
+            "any": [
+              {
+                ">=": [
+                  "$riskScore",
+                  60
+                ]
+              },
+              {
+                ">": [
+                  "$claimTotalAmount",
+                  2000000
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R10_auto_approve_low_amount",
+          "outcome": "AUTO_APPROVE",
+          "label": "자동승인",
+          "basis": "위 전부 미해당 AND 청구총액 ≤30만 AND 적격증빙",
+          "when": {
+            "all": [
+              {
+                "<=": [
+                  "$claimTotalAmount",
+                  300000
+                ]
+              },
+              {
+                "==": [
+                  "$isQualifiedEvidence",
+                  true
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R11_auto_approve_mid_amount",
+          "outcome": "AUTO_APPROVE",
+          "label": "자동승인(중액·정상)",
+          "basis": "위 전부 미해당 AND 30만<청구총액≤200만 AND 적격증빙 AND 위험점수<60",
+          "when": {
+            "all": [
+              {
+                ">": [
+                  "$claimTotalAmount",
+                  300000
+                ]
+              },
+              {
+                "<=": [
+                  "$claimTotalAmount",
+                  2000000
+                ]
+              },
+              {
+                "==": [
+                  "$isQualifiedEvidence",
+                  true
+                ]
+              },
+              {
+                "<": [
+                  "$riskScore",
+                  60
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "default": {
+        "id": "FB_manual_review",
+        "outcome": "LEGAL_REVIEW",
+        "label": "검토(미분류: 수기 판단)",
+        "basis": "어떤 룰에도 해당하지 않는 잔여 케이스는 안전하게 사람 검토로 회부"
+      }
+    }
+  },
+  "seeds": [
+    {
+      "label": "필수증빙 누락 반려 — 영수증 미첨부",
+      "expectedRoute": "반려(필수증빙 누락)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1001"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E10432"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "사원/대리"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "구매2팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "협력사 미팅 식대"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "38000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "식대"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "38000"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "개인선지출"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "false"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "증빙없음"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "false"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"EVIDENCE_MISSING\"]"
+        }
+      ]
+    },
+    {
+      "label": "정책 위반 반려 — 주류/유흥 가맹점",
+      "expectedRoute": "반려(정책 위반)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1002"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E20815"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "팀장"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "영업1팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "거래처 접대"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "180000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "접대"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "180000"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "merchantCategory",
+          "value": "주점/유흥"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "신용카드매출전표(법인카드)"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "prohibitedItemFlag",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"PROHIBITED_ALCOHOL\"]"
+        }
+      ]
+    },
+    {
+      "label": "청구 기간 도과 반려 — 경과 120일",
+      "expectedRoute": "반려(청구 기간 도과)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1003"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E11290"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "사원/대리"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "생산관리팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "지방 출장 교통비"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "45000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "일비"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "45000"
+        },
+        {
+          "slot": "expenseDate",
+          "value": "2026-02-10"
+        },
+        {
+          "slot": "submitDate",
+          "value": "2026-06-15"
+        },
+        {
+          "slot": "periodGapDays",
+          "value": "125"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "신용카드매출전표(법인카드)"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"PERIOD_DEADLINE_EXCEEDED\"]"
+        }
+      ]
+    },
+    {
+      "label": "명백 중복 청구 반려 — 키 완전일치",
+      "expectedRoute": "반려(명백 중복 청구)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1004"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E13571"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "사원/대리"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "품질보증팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "출장 식대"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "32000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "식대"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "32000"
+        },
+        {
+          "slot": "expenseDate",
+          "value": "2026-06-03"
+        },
+        {
+          "slot": "submitDate",
+          "value": "2026-06-10"
+        },
+        {
+          "slot": "periodGapDays",
+          "value": "7"
+        },
+        {
+          "slot": "ocrMerchant",
+          "value": "한솥도시락 화성점"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "개인선지출"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "현금영수증(지출증빙용)"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "duplicateFlag",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"DUPLICATE_EXACT\"]"
+        }
+      ]
+    },
+    {
+      "label": "한도 초과 검토 — 임원 숙박 한도 초과",
+      "expectedRoute": "검토(HITL: 한도 초과액 삭감/예외 판단)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1005"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E00231"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "임원"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "경영기획"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "서울 출장 숙박"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "260000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "숙박"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "260000"
+        },
+        {
+          "slot": "tripRegion",
+          "value": "국내"
+        },
+        {
+          "slot": "gradeLimitAmount",
+          "value": "200000"
+        },
+        {
+          "slot": "limitExcessAmount",
+          "value": "60000"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "세금계산서"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "검토"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"LIMIT_EXCESS\"]"
+        }
+      ]
+    },
+    {
+      "label": "계정·세무 검토 — 접대비 오분류 의심",
+      "expectedRoute": "검토(HITL: 계정·세무 확정)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1006"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E20815"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "팀장"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "영업1팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "임직원 회식(거래처 동반)"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "150000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "식대"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "150000"
+        },
+        {
+          "slot": "merchantCategory",
+          "value": "음식점(거래처 동반·접대 성격)"
+        },
+        {
+          "slot": "accountCode",
+          "value": "복리후생비"
+        },
+        {
+          "slot": "accountMismatchFlag",
+          "value": "true"
+        },
+        {
+          "slot": "taxAdvisoryFlag",
+          "value": "true"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "신용카드매출전표(법인카드)"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "검토"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"ACCOUNT_MISMATCH\",\"TAX_ADVISORY\"]"
+        }
+      ]
+    },
+    {
+      "label": "OCR 저신뢰/금액 불일치 검토 — 간이영수증",
+      "expectedRoute": "검토(HITL: 수기 확인)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1007"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E14802"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "사원/대리"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "연구개발팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "출장 식대"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "28000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "식대"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "28000"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "간이영수증"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "ocrAmount",
+          "value": "23000"
+        },
+        {
+          "slot": "ocrConfidence",
+          "value": "0.62"
+        },
+        {
+          "slot": "amountMismatch",
+          "value": "5000"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "현금"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "검토"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"OCR_LOW_CONFIDENCE\",\"AMOUNT_MISMATCH\"]"
+        }
+      ]
+    },
+    {
+      "label": "중복/분할/대사 소명 검토 — 분할+카드 명세없음",
+      "expectedRoute": "검토(HITL: 중복/분할/대사 소명)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1008"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E15643"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "팀장"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "구매1팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "거래처 식사(2건 분할)"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "118000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "식대"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "118000"
+        },
+        {
+          "slot": "gradeLimitAmount",
+          "value": "50000"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "splitFlag",
+          "value": "true"
+        },
+        {
+          "slot": "cardReconStatus",
+          "value": "명세없음"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "신용카드매출전표(법인카드)"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "검토"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"SPLIT_SUSPECT\",\"CARD_RECON_MISMATCH\"]"
+        }
+      ]
+    },
+    {
+      "label": "고액·고위험 검토 — 위험점수/고액",
+      "expectedRoute": "검토(HITL: 고액·고위험)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1009"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E00231"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "임원"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "경영기획"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "해외 출장 정산(종합)"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "3200000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "일비"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "3200000"
+        },
+        {
+          "slot": "tripRegion",
+          "value": "해외"
+        },
+        {
+          "slot": "tripDays",
+          "value": "5"
+        },
+        {
+          "slot": "riskScore",
+          "value": "68"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "세금계산서"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "검토"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[\"HIGH_AMOUNT\",\"RISK_SCORE_OVER\"]"
+        }
+      ]
+    },
+    {
+      "label": "소액 자동승인 — 정상 식대",
+      "expectedRoute": "자동승인",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1010"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E16720"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "사원/대리"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "총무팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "야근 식대"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "12000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "식대"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "12000"
+        },
+        {
+          "slot": "gradeLimitAmount",
+          "value": "40000"
+        },
+        {
+          "slot": "limitExcessAmount",
+          "value": "0"
+        },
+        {
+          "slot": "periodGapDays",
+          "value": "3"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "신용카드매출전표(법인카드)"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "ocrConfidence",
+          "value": "0.96"
+        },
+        {
+          "slot": "riskScore",
+          "value": "8"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "자동승인"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[]"
+        }
+      ]
+    },
+    {
+      "label": "중액·정상 자동승인 — 50만 출장 숙박",
+      "expectedRoute": "자동승인(중액·정상)",
+      "input": [
+        {
+          "slot": "claimId",
+          "value": "EXP-2406-1011"
+        },
+        {
+          "slot": "claimantId",
+          "value": "E15643"
+        },
+        {
+          "slot": "claimantGrade",
+          "value": "팀장"
+        },
+        {
+          "slot": "claimantDept",
+          "value": "구매1팀"
+        },
+        {
+          "slot": "claimPurpose",
+          "value": "부산 출장 숙박"
+        },
+        {
+          "slot": "claimTotalAmount",
+          "value": "550000"
+        },
+        {
+          "slot": "expenseType",
+          "value": "숙박"
+        },
+        {
+          "slot": "lineAmount",
+          "value": "110000"
+        },
+        {
+          "slot": "tripRegion",
+          "value": "국내"
+        },
+        {
+          "slot": "tripDays",
+          "value": "5"
+        },
+        {
+          "slot": "gradeLimitAmount",
+          "value": "120000"
+        },
+        {
+          "slot": "limitExcessAmount",
+          "value": "0"
+        },
+        {
+          "slot": "periodGapDays",
+          "value": "6"
+        },
+        {
+          "slot": "paymentMethod",
+          "value": "법인카드"
+        },
+        {
+          "slot": "evidenceAttached",
+          "value": "true"
+        },
+        {
+          "slot": "evidenceType",
+          "value": "세금계산서"
+        },
+        {
+          "slot": "isQualifiedEvidence",
+          "value": "true"
+        },
+        {
+          "slot": "ocrConfidence",
+          "value": "0.93"
+        },
+        {
+          "slot": "riskScore",
+          "value": "22"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "자동승인"
+        },
+        {
+          "slot": "routeReasons",
+          "value": "[]"
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "generatedBy": "harness+evaluate-in-the-loop",
+    "gatePass": true,
+    "reviewedBy": null
+  }
+}

@@ -69,6 +69,75 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### app/ run 조작형 콘솔 — 2차 작동 가시화 보강(기능/모션) (260623, aap-platform) 〔기획·UX / 표준·정의〕
+> 대상 = `05_범용플랫폼/app/` run 뷰 조작형 콘솔(opstage). **1차 디자인 마감(`core/platform-fix.css`) 불변** — 이번은 **기능/모션 JS** 위주(필요 트랜지션 CSS는 가이드 토큰·기존 클래스, 신규 hex 0). 사용자 지적 4건(①재분석 휙 지나감 ②중간 작동 근거 안 보임 ③깜빡임 ④동적 시각화 부족) 해소.
+- **(1) 라이브 재분석 속도·근거 (지적 1·2)** — `core.js runReanalysis` 재작성: 단계 타이밍을 코어 상수 `RE_T{reveal,work:860,gap,done}`로 통제(휙 ✕, 각 단계 충분히 머무름) + 단계 상태 전이 **작동중(파랑 펄스 spinner)→완료(✓)** + **step 스키마 확장 `{t,d,basis,tag}`**: `basis`=무엇을 읽고/계산/판정했는지 mono 라인(타이핑되듯 뒤따라 등장), `tag`=작동 유형(읽기/대조/평가/판정 색칩). 헤더에 진행 phase(`N/총·단계명`) 칩. → "결과로 점프" ✕ → **중간 작동을 근거와 함께** 노출.
+- **(2) 깜빡임 제거 (지적 3)** — 기존 FLIP(행 활강) 유지 + **수치 트윈 `AAP_NUM.capture/play`**(`data-numtween` 키의 옛→새 숫자 카운트업/다운, 깜빡 스냅 ✕). `wireSteer`의 재분석·즉시반영 양 경로에서 FLIP+수치트윈 동시 재생. 채용 매칭% (`data-numtween="m-<id>"`)·평가 종합점수(`evtot`)에 적용.
+- **(3) 동적 시각화 강화 (지적 4)** — SVG 매칭 그래프: 엣지/노드에 안정 키(`data-gk`)·클래스(`op-gedge/op-gnode/.top`) 부여 → 재렌더 시 **엣지가 허브에서 자라고(stroke-dashoffset) 노드가 팝(scale)**(가이드 §2: 모션=상태 전이, `prefers-reduced-motion` 가드). 엣지 굵기·노드 강조는 steering(가중)에 인라인 반응(기존). 계약 결정: **재판정 직후 verdict pulse**(`ct-vd.reflow` 1.1s, pack `reflowKeys`로 코어가 1회 후 클리어) — 슬롯→룩업→판정 흐름 하이라이트.
+- **펼친 재분석 단계(팩 데이터)** — 채용 가중: **가중 적용→매칭% 재산출→재랭킹→컷 적용**(각 수치·산식·통과 N). 계약 임계: **슬롯 읽기→룩업 대조→임계 평가→route 판정**(각 슬롯값·룩업표·임계 부등식·룰ID·결정론 재현). 슬롯/패널/평가가중/오퍼수준도 basis 보강.
+- **불변·검증** — `evaluate`·`case.overrides`·HITL·자산/로그/거버넌스·demo.js 안정 ID·file://·Lucide 인라인·코어 도메인 무관. `node --check` 전 파일 OK. 헤드리스(Edge): 채용 재분석 4단계·basis 4·tag 4·그래프 6엣지6노드·FLIP 무깜빡 / 계약 임계 evaluate 4단계 펼침·verdict pulse(`reflowSeen`)·임계 부등식(34≥20→법무검토) / **회의·VOC 무회귀**(stream 모델 유지·opRows 0). 임시 드라이버 삭제.
+
+### v0.46 (데모, 빌드 완료 · 260623)
+- **준비·공유 단계 좌측 요소 동기화(목업 유지) — 8단계 세분화 완성** — 준비(아티팩트 그리드)·공유(Confluence) 목업을 유지한 채 좌측 요소 점등을 우측 op reveal과 1:1 정렬. 준비: ops g0,0,1,2,2,3(자료수집·비정형 / 회의실·참석 / 마스킹·초대장 / RPA), 그리드 셀 PREP_STAGE 매핑(자료 g0·참석자/장소 g1·안건/초대장 g2) + RPA는 af-foot(g3). 공유: ops g0,1,2, confluenceView에 cf-chans 3채널(발송 b1·KMS b2·학습 b3)이 reveal과 점등. af-cell.doing·cf-ch.doing=파랑(좌우 통일). 〔기획·UX〕
+
+
+### v0.45 (데모, 빌드 완료 · 260623)
+- **버그①: 요청 접수 좌측 빈 화면 수정** — 보낸 뒤(working/done) 좌측을 포털 홈→요청 접수 카드(`requestCard`/`REQUEST_SUB` 2줄)로 전환해 우측 b1·b2(요청 수신·핵심 신호 추출)와 동기화. idle(보내기 전)만 포털 홈. 〔기획·UX〕
+- **버그②: 회의 자동 종료 수정** — 회의는 녹취·정리 끝나도 자동 종료 ✕ → `mend` 단계(REC 유지 + '■ 회의 종료' 버튼·'종료는 사람이 누릅니다')에서 대기, 사람이 누르면 `endMeeting()`→done(회의록 정리). 자동재생은 잠시 뒤 자동 누름. meeting ops g:0,1,2 순차화(STT→의미화→회의록). 〔기획·UX〕
+- **검토(좌측 세분화·우측 정합성)** — 요청·이해·구성·회의 4단계=줄글 a-i 동기화 완료(좌 a-i↔우 b-i 1:1, 계층·컴포넌트 정합). 승인①②=HITL 게이트(모달, 동기화 대신 추천 확정). **남은 세분화=준비(아티팩트 그리드)·공유(Confluence)** — 목업 유지하며 좌측 요소를 우측 op reveal과 1:1 정렬 예정. 〔기획·UX〕
+
+
+### app/ run 뷰 조작형 콘솔 디자인 마감 패스 (260623, aap-design) 〔표준·정의 / UX〕
+> 대상 = `05_범용플랫폼/app/` run(업무) 뷰의 **조작형 콘솔(opstage)** — 채용 매칭(matching/interview/evaloffer) · 계약 결정(check/route_gate) surface 공통. "데모 티 → 제품"으로 끌어올리는 **시각만** 마감(함수·로직·DOM id·data-* 불변, 신규 hex 0). 새 디자인 발명 ✕ → 기존 디자인 가이드(`04_디자인가이드/aap_platform_ui_design_guide_v0.1.md`) 일관 적용.
+> **전부 `core/platform-fix.css` override 레이어에 추가**(platform.css·JS 미수정 → 다른 세션 충돌 0).
+- **(1) 1뷰포트·가로 퍼짐 제거 (§6.7·§4.1)**: 근본 원인 = `.run-surface .con-head>*{max-width:760px;auto}`(platform.css)가 op 모드의 `.op-strip-wrap`을 760 중앙으로 몰아 **단계 strip이 가운데로 뜨고** 본문(op-split)은 풀폭이라 좌우 경계가 어긋남. → op 모드 한정 strip max-width 환원 + **strip·steer·본문(op-split)을 동일 `--op-maxw:1240px` 중앙정렬·`--op-padx:28px` 공유**로 좌우 경계 일치. op-main=흐름 / op-aside=`flex:0 0 360px` 고정 레일(비율→폭 캡으로 퍼짐 제어). 1240 캡으로 와이드 화면 양옆 여백 확보.
+- **(2) 타이포 통일 (§4·§4.3 타입 스케일)**: 기존 8.5~16px 난립을 `--fs-micro:9 / --fs-sub:11 / --fs-body:13 / --fs-h:15 / --fs-hero:17`로 수렴. 본문 상향(13), 마이크로 라벨만 9~11 UPPER+letter-spacing. strip 노드·steer 옵션·후보 행·슬롯·verdict·근거 라벨 전부 정합.
+- **(3) 네비 또렷 (§5.3)**: 단계 strip `.op-snode` 13px·`.op-sn` 21px·아이콘 키움, 현재/완료=weight 800·대기=opacity .62 위계 명확, 클릭 타겟 확대(padding 7/12).
+- **(4) 톤·카드 1스타일 (§2)**: HITL 바 데모틱 그라데이션 → `amber-soft` 단색(auto=green-soft), 카드 라운드 `--r-card:12px` 통일·옅은 `--shadow` 일관, aside 보조 레일 `--surf` 배경으로 차분히. 색=의미(teal 주체·amber HITL) 유지, red·장식색 0.
+- **모션**: 추가·변경 0 (§2 "상태 전이에만" 유지 — 기존 spin/FLIP 그대로).
+- **검증**: 헤드리스(Edge new headless · puppeteer-core 임시) — ① 채용 매칭(design) ② 계약 결정(check) 각각 1뷰포트·strip↔본문 경계 일치·폰트 통일·네비 또렷 확인. ③ 회의·VOC 스트림 폴백+HITL 모달 **무회귀**(op-* 스코프라 ws-on-stream 무영향). 임시 드라이버·스크린샷 삭제 완료.
+- **후속(2차 기능 패스 · 이번 범위 ✕)**: 재분석 속도·근거 강화·깜빡임·동적 시각화(모션 강화).
+
+### v0.44 (데모, 빌드 완료 · 260623)
+- **(1) 우측 상태 범례 제거 → 카드 self-라벨** — `buildFlow`에서 `.rg-leg.top`(상태 색인) 삭제. 카드마다 우측 상단 아이콘+문구로 상태 표기(`stLabel`: 작동중=로딩 스피너 / 완료=✓ / 준비중·대기=색점 `.rn-dot`). 〔기획·UX〕
+- **(2) 카드 높이 축소** — 폰트 유지하고 여백·줄간격 압축(rg-node padding 7/9→5/8·rn-nm/rn-desc margin·line-height·rn-caps/rn-more/cards-row/seqar/band). 우측 스크롤 최소화. 〔기획·UX〕
+- **(3) 좌측 상태 테두리 통일(좌우 일관)** — 진행중=파랑 / 완료=초록 / 대기=회색. compose·understand 동기화 라인 active를 teal→**파랑**(우측 doing과 일치), 결과 카드(`.kard`)에 단계 상태 테두리(`kdoing` 파랑·`kdone` 초록, `kardCls()`). 〔기획·UX〕
+- **(4) a-i↔b-i 동기화 확장 — understand** — `syncLines(SUB)` 공통 렌더로 일반화(compose·understand 공유), understand ops g:0,1,2 순차화, `UNDERSTAND_SUB[3]`(킥오프 파악→근거 수집→외부 공유 승인[risk]). 솔루션 목업 단계(prepare·meeting·share)는 목업 유지+요소 점등 정렬로 후속. 〔기획·UX〕
+
+
+### 하니스 — evaluate-in-the-loop 4도메인 전수 게이트 통과 + 드롭인 3팩 (260623, aap-lead) 〔표준·정의 / app/ 세션 핸드오프〕
+> 직전 evaluate-in-the-loop(계약)를 **N4(구매·경비)에도 이식** → 4도메인 전수 게이트 통과. app/ 무관(워크플로+_decision_engine).
+- **결과(독립 evaluate.js 재검증)**: 계약A 10/10·계약B 9/9·구매 11/11·경비 11/11, **slot drift 전부 0**. 게이트가 도메인 고유 결함 자동 해소(구매=config 임계 슬롯 6종 drift+임계값 seed 역산[3R]·라벨 부분문자열 오매칭 / 경비=th_amount_tolerance 리터럴 치환[1R]).
+- **★app/ 세션에 더 나은 데이터 공급**: `_decision_engine/dropin/`에 **3팩**(`pack_contract_A`·`pack_procurement`·`pack_expense`.decision.json) = 하니스 자동생성+게이트 통과+독립 재검증본(수기 0). ★현재 app/ 세션이 bake 계약 팩 + evaluate() 통합 중(아래 항목) → **이 게이트 통과본으로 교체 권장**(drift·자동승인 누출 없음 보장).
+- **부수 발견(개선안)**: 게이트 기대-outcome 도출이 seed 라벨 정규식("자동승인" 부분문자열) 의존 → seed에 `expectedOutcome` 명시로 정밀화.
+- 워크플로 인라인 게이트(evalGate)=`evaluate.js` 동형(2 워크플로 공유 로직). 〔표준·정의 후속〕
+
+### app/ 구현체 — 결정 런타임 `evaluate()` 통합 + bake된 계약 팩 "데이터 주도 조작형 결정 콘솔" (Phase 1, N3 §D·E 정합) (260623, aap-platform) 〔표준·정의 / 기획·UX〕
+> **목표 증명**: "채용은 예시일 뿐, 다른 도메인(계약)도 같은 조작형 화면을 자동으로 가진다" — 채용=리스트형(후보 랭킹), 계약=**단일 케이스형(슬롯+판정)**, 같은 프레임워크·다른 모양.
+- **① evaluate() 코어 드롭인**: `_decision_engine/evaluate.js` → `app/core/evaluate.js` 복사(원본 미수정) + `index.html`에 `<script src="core/evaluate.js">`(코어 src 앞). `window.AAP_EVALUATE` 노출. 코어에 **도메인 무관** `evalCase()` 추가 = 팩이 `caseModel`+`knowledge.route`를 주면 `evaluate({caseData, ...thresholdOv}, knowledge)` 실행→`STATE.verdict`. 케이스 open(`hydrateFromCase`)·임계 steering 시 재실행. **N3 §D 표준 = io.editable.recompute 의 백엔드가 evalCase**.
+- **② 결정층 1급 필드 + caseData 영속**: `STATE.caseData/verdict/thresholdOv` 추가. `caseTemplate`에 `coerceSlots`(seed `input[{slot,value}]`→caseModel.slots 타입강제: number/boolean/array) → 케이스에 영속(hydrate/persist). `caseModel`·`knowledge` 없는 팩(회의·VOC·채용)은 **graceful no-op**.
+- **③ 코어 graceful 가드(도메인 무관 · bake 팩 호환)**: `groupsOf`·`traceStep`·`renderRight`·`renderArchCoherence`·`renderPlan`이 `w.ops||[]` 허용, `renderSeq`/`renderPlan`이 `w.role||stRole(w)`(kind→역할 폴백). **계약 전용 코어 분기 0**.
+- **④ bake된 계약 팩 register**: `app/packs/contract_a.js`(JSON을 JS로 감싼 `window.AAP_PACKS.contract_a`). `SEED_PACK_IDS`에 `contract_a` 추가(기본 deployed)→카탈로그·인박스 등장. seed 4건. **knowledge.route = 실행 가능 안전 DSL**(bake JSON의 prose decisionTables를 DSL로 인코딩, 임계는 `$th_riskScore`/`$th_pdfConf` 슬롯 참조)→**seed 골든 4/4 통과**(AUTO/REVIEW/REVIEW/REJECT).
+- **⑤ 데이터 주도 조작형 결정 콘솔(surface.opstage)**: 채용과 **같은 척추**(steering→재계산→근거→HITL, `AAP_LIVE`/`wireSteer` 재사용). 슬롯 패널(caseModel.slots 값·출처·추출방식, risk/gap 강조) + 판정 카드(verdict outcome green/amber/red + **basis 근거** + ruleId) + 참조 룩업(필수조항·결재선·인지세) + **steering=io.editable 임계 2종**(추출 신뢰도·위험점수 → 라이브 재평가 → verdict·basis 갱신) + HITL 모달(분기 판정·체결). CSS는 기존 op-* 재사용 + ct-* 신규(**신규 hex 0**, 기존 토큰만).
+- **검증**(헤드리스 Edge · ASCII 임시 드라이버, 검증 후 삭제): 19/19 PASS — 팩 등록·evaluate 노출·시드 4건·caseData 채움·verdict 골든 4/4·**steering flip(스캔 케이스 임계 0.7→0.5: 법무검토→자동승인)**·op-console DOM(슬롯/판정/룩업/steering 버튼/4단 strip)·HITL 모달·인박스·카탈로그 계약 등장·**채용/회의/VOC 무회귀**. `node --check` 전 파일 OK. SCHEMA_VER 5→6(재시드).
+- **남은 것(다음 Phase)**: 채용 리스트형을 동일 표준으로 통합 / contract B·구매·경비 register(surface는 계약과 동형) / flow `next`(route verdict→gate 분기 바인딩) 정통화(v2 §8).
+
+### v0.43 (데모, 빌드 완료 · 260623)
+- **좌↔우 a-i↔b-i 세분 연계(동기화 재생) — compose 프로토타입** — 좌측 고객 화면 sub-라인이 한 줄씩 펼쳐질 때 우측 AAP 컴포넌트가 1:1로 점등(동기화). compose ops를 g:0,1,2,3 순차로 변경(병렬 2그룹→4단계)해 reveal 그룹과 좌측 a1~a4 인덱스를 일치. composeCard를 `COMPOSE_SUB[4]`(작업분해→데이터연결→배정→승인게이트) 동기화 렌더로 교체: `rev===i`면 active(스피너)·`rev>i`면 done(✓)·`rev<i`면 미노출, a4는 책임 지점이라 red. 방식 선택=AskUserQuestion '동기화 재생만'(번호 배지·호버 교차강조 제외), 범위='compose 먼저 프로토타입'. 상시·배경 레이어(백그라운드 AAP 구조)는 그대로 유지. 〔기획·UX〕
+
+
+### 하니스 고도화 — evaluate-in-the-loop (생성 루프 내 실행 검증 게이트) (260623, aap-lead) 〔표준·정의〕
+> harness/loop engineering 고도화(app/ 무관). 하니스 생성 루프(dslify 뒤)에 **인-프로세스 결정론 게이트(JS·에이전트 0)** 추가: 생성된 DSL을 실제 실행→①슬롯 drift(route 참조 ⊆ caseModel) ②seed 분기 커버리지 검사→실패 시 **evalFix 에이전트가 보완해 게이트 통과까지 루프**(run5). 13에이전트.
+- **결과: A·B 둘 다 1라운드에 게이트 PASS**(A 10/10·B 9/9). 표준 `_decision_engine/evaluate.js` 독립 재검증 동일(`verify_evalgate.js` 교차검증).
+- **★자가수복**: 직전 evaluate가 잡은 2결함을 게이트가 자동 해소 — ①`toxicHighCount` 슬롯 caseModel 추가+전 seed 값 주입(drift) ②**보완 룰 `R6B`(toxicUnmatchedCount≥1→LEGAL_REVIEW) 자동 생성**해 신종 모호 건 자동승인 누출 차단. = prose critic이 놓친 걸 **실행 게이트가 잡고 LLM이 고침.**
+- **의미**: 자기검증 = "prose critic" → **"prose + 실행 게이트" 2중**으로 진화. 자동 DSL이 "진짜로 도는" 것을 게이트가 보장 → 직전 "auto DSL 품질 게이트 필요" 항목 **해소**.
+- **드롭인 승격**: `_decision_engine/dropin/pack_contract_A.decision.json` = 하니스 자동생성+게이트 통과본(수기 0·독립 10/10). app/ 통합 무변(INTEGRATION.md ≈3줄+헬퍼).
+- 워크플로 인라인 엔진(`evalGate`/`_evalRoute`/`_cond`)=evaluate.js와 동형. 다음=procurement·경비도 evalGate 적용. 〔표준·정의 후속〕
+
+### v0.42 (데모, 빌드 완료 · 260623)
+- **우측 작동 흐름 폰트 확대(특히 카드)** — 단계 설명은 좌측 화면 툴팁(`#csGuide`)·우측엔 제거한 합의 유지 확인 후, 우측 전반 폰트를 키움. 카드(rn-nm 10.5→12.5·rn-desc 9.5→11·rn-lay 9.5→11.5·rn-ty/st/ccap·rg-node padding 5/8→7/9), Master(rm-tx b 11.5→13), 상시밴드(bg-nm 9.5→11.5·bg-d 8→9.5), 헤더(stage-h 9→10.5·trig-h 8.5→10·ph 14→15.5·범례 9→10) 등 29곳. 좁은 폭(1280)에서도 카드 헤더 한 줄 유지·오버플로우 없음 검증. 〔기획·UX〕
+
+
 ### v0.27-onramp (플랫폼 app/, 빌드 완료 · 260623) — On-Ramp(새 업무 요청) 강화 ①②③
 - 준비문서 `04_디자인가이드/aap_onramp_apply_prep_v0_1.md` + 검토 `aap_studio_enhancement_review_v0_1.md §1` 대로 구현. 백업=`_archive/app_v0_27_pre_onramp/`(core.js·icons.js·platform.css·platform-fix.css, baseline aa725f1). 〔플랫폼·구현〕
 - **③ 유형 인식 governed (top-N·신뢰도·근거)** — `matchPackByText` 가 `ranked[]`에 `hitToks`(근거 토큰) 추가, 임계 상수 `NC_MIN_HITS=2·NC_MIN_SCORE=0.14` 분리 + `ncCandQualifies()`. `renderNcReco` 가 단일 매칭 → **top-3 후보 카드**(`_ncRecoItem`: ty-badge + 신뢰도 바 `nc-conf` score% + 근거 `nc-why` hitToks). 후보 클릭=그 유형 실행, 임계 전부 미달이면 격상 유도 유지. 〔플랫폼·구현〕
@@ -670,5 +739,5 @@
 ## 6. 참조
 - 표준 스펙: `aap_platform_form_spec_v0_1.md` · `aap_runtime_expansion_strategy_v0_1.md` (같은 폴더)
 - capability·칩 원천: `01_선제안서/aap_proactive_offering_v0.7_260616.html` (`DEFAULT_ARCH_CHIPS`, `CHIP_TYPES`)
-- 현행 데모: `03_프로토타입/D_회의/aap_meeting_runtime_builder_v0_41.html` (좌측=결과·결정만[신뢰도 점수 등 근거·로직은 우측으로] · 끊김 없는 동적 흐름[증분 렌더+입자]·HITL 모달 축소·참석자 추가·어투 정리·업무순서 화살표 / 단계 설명=좌측 화면 툴팁·우측 진행바+스피너 동적화·범례 우정렬 / 좌측 = 기업 포털 홈 + 8단계 좌측 장면(파악/계획 카드·워크스페이스·Teams 코레오·Confluence)→우측 순차 점등 / 우측 = **AAP 작동 흐름 주제목(teal 엔진 헤더)+업무 순서 하위 레일**·3안 하이브리드·세부 토글·3계열 라벨 강화·좌우 색구분·반응형 / **HITL=게이트2+운영 트리거('회의 시작')1**, §2 구조 문법)
+- 현행 데모: `03_프로토타입/D_회의/aap_meeting_runtime_builder_v0_46.html` (준비·공유 좌측 동기화로 8단계 세분화 완성 · 요청 좌측 동기화·회의 종료 게이트 · 범례 제거·카드 self라벨·카드 압축·좌측 상태 테두리 통일·a-i↔b-i 동기화 compose+understand · 우측 폰트 확대[특히 카드] · 좌측=결과·결정만[신뢰도 점수 등 근거·로직은 우측으로] · 끊김 없는 동적 흐름[증분 렌더+입자]·HITL 모달 축소·참석자 추가·어투 정리·업무순서 화살표 / 단계 설명=좌측 화면 툴팁·우측 진행바+스피너 동적화·범례 우정렬 / 좌측 = 기업 포털 홈 + 8단계 좌측 장면(파악/계획 카드·워크스페이스·Teams 코레오·Confluence)→우측 순차 점등 / 우측 = **AAP 작동 흐름 주제목(teal 엔진 헤더)+업무 순서 하위 레일**·3안 하이브리드·세부 토글·3계열 라벨 강화·좌우 색구분·반응형 / **HITL=게이트2+운영 트리거('회의 시작')1**, §2 구조 문법)
 - 우측 레이아웃 비교 샘플: `03_프로토타입/D_회의/_sample_우측레이아웃_A_B_v0_1.html`

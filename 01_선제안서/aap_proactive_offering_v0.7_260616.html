@@ -1085,7 +1085,7 @@ tr:nth-child(even) td{background:var(--gray-50)}
 
   <div class="arch-legend2">
     <b>표기 기준</b>
-    <span class="lg"><i class="i-asset">Asset</i>활용 가능 자산 (kt ds·KT)</span>
+    <!-- 자사 asset 표기 보류 — 조사 후 재분류 예정: <span class="lg"><i class="i-asset">Asset</i>활용 가능 자산 (kt ds·KT)</span> -->
     <span class="lg"><i class="i-partner">Partner</i>외부·상용 조합 후보</span>
   </div>
   <div class="arch-distinct"><b>L7 컨트롤 · 거버넌스</b>는 Agent 실행을 운영 정책·승인·통제하는 <b>계층</b>이고, <b>Trust · Security 스파인</b>은 모든 계층에 공통 적용되는 보안·감사·배포 <b>기반</b>입니다(L7을 대체하지 않음).</div>
@@ -1099,6 +1099,61 @@ tr:nth-child(even) td{background:var(--gray-50)}
       <div class="lm-row"><span class="lm-loop">Action</span><span class="lm-layer">L1 경험/접근 · L8 인프라</span></div>
       <div class="lm-row"><span class="lm-loop">Learning</span><span class="lm-layer">L7 Self-Improving</span></div>
     </div>
+  </div>
+
+  <!-- 4-3. 표준 운영 객체와 산업 복제 -->
+  <h3 class="sub-h3" style="margin-top:26px">4-3. 표준 운영 객체와 산업 복제 구조</h3>
+  <p class="arch-section-lead">4-1 Operating Loop는 업무가 달라도 <strong>동일한 표준 운영 객체</strong>를 산출합니다. 이 객체 구조(<strong>공통 Runtime</strong>)는 산업이 바뀌어도 유지되고, 산업별 의미·정책 모델(<strong>Domain Pack</strong>)만 교체됩니다. 따라서 한 업무에서 검증한 운영 구조를 <strong>다른 산업·업무로 복제</strong>할 수 있습니다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:230px">표준 운영 객체</th>
+        <th>역할</th>
+        <th style="width:130px">산출 Loop 단계</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>업무 사건</strong> <span style="color:var(--muted);font-weight:600">Work Event</span></td><td>모호한 요청을 처리 가능한 업무 단위로 구조화 (유형·목적·필요 산출물·검토 지점 포함)</td><td>Semantic</td></tr>
+      <tr><td><strong>맥락 묶음</strong> <span style="color:var(--muted);font-weight:600">Context Package</span></td><td>관련 데이터·문서·시스템 맥락을 업무 건 단위로 수집·정리</td><td>Data · Semantic</td></tr>
+      <tr><td><strong>작업 그래프</strong> <span style="color:var(--muted);font-weight:600">Task Graph</span></td><td>업무 사건을 하위 작업으로 분해하고 처리 순서를 계획</td><td>Reasoning</td></tr>
+      <tr><td><strong>후보군</strong> <span style="color:var(--muted);font-weight:600">Candidate Set</span></td><td>각 작업의 처리·판단 후보를 생성</td><td>Reasoning</td></tr>
+      <tr><td><strong>조율 결과</strong> <span style="color:var(--muted);font-weight:600">Coordination Result</span></td><td>후보·정책·위험도를 종합해 자동·검토·승인·차단으로 분기</td><td>Decision</td></tr>
+      <tr><td><strong>실행 패키지</strong> <span style="color:var(--muted);font-weight:600">Execution Package</span></td><td>승인 가능한 형태로 정리된 실행 단위</td><td>Decision · Action</td></tr>
+      <tr><td><strong>검토·승인 이력</strong> <span style="color:var(--muted);font-weight:600">Human Review</span></td><td>책임이 따르는 수렴점에서의 사람 판단을 공식 이력으로 기록</td><td>Decision</td></tr>
+      <tr><td><strong>실행 결과</strong> <span style="color:var(--muted);font-weight:600">Action Result</span></td><td>승인된 결과의 업무 시스템 반영 결과(성공·보류·실패)</td><td>Action</td></tr>
+      <tr><td><strong>실행 이력</strong> <span style="color:var(--muted);font-weight:600">Run Trace</span></td><td>입력·조회·판단·승인·실행 전 과정을 추적·재현 가능한 로그</td><td>전 단계 (감사)</td></tr>
+      <tr><td><strong>운영 스킬</strong> <span style="color:var(--muted);font-weight:600">Skill Update</span></td><td>반복 가능한 업무 패턴을 다음 업무에 재사용할 자산으로 축적</td><td>Learning</td></tr>
+    </tbody>
+  </table>
+
+  <div class="loop-map" style="margin-top:14px">
+    <div class="loop-map-h">공통 Runtime 유지 · Domain Pack 교체 <small>산업 확장 = 화면 복제가 아니라 의미 모델 치환</small></div>
+    <div class="loop-map-grid" style="grid-template-columns:1fr 1fr">
+      <div class="lm-row"><span class="lm-loop">공통 유지</span><span class="lm-layer">표준 운영 객체 구조 · Loop 단계 · 검토·통제·감사 방식 · 운영 학습 구조</span></div>
+      <div class="lm-row"><span class="lm-loop">산업별 교체</span><span class="lm-layer">업무 용어·관계(Ontology) · 처리 절차 · 판단·정책 규칙 · 권한·연동 대상</span></div>
+    </div>
+  </div>
+
+  <p class="sub-note" style="margin-top:12px"><strong>같은 운영 구조, 다른 업무</strong> — 동일한 표준 운영 객체에 산업별 Domain Pack만 바꿔 끼웁니다.</p>
+  <div style="overflow-x:auto">
+    <table class="table-tight">
+      <thead>
+        <tr>
+          <th style="width:150px">운영 객체</th>
+          <th>회의 업무</th>
+          <th>손해사정</th>
+          <th>금융 내부통제</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>업무 사건</strong></td><td>회의 준비 사건</td><td>청구 심사 사건</td><td>통제 점검 사건</td></tr>
+        <tr><td><strong>맥락 묶음</strong></td><td>메일·캘린더·조직도·이전 회의록</td><td>청구서·약관·진단서·지급 이력</td><td>규정·승인 이력·거래 로그·권한</td></tr>
+        <tr><td><strong>핵심 판단</strong></td><td>참석자·일정·외부 공유 여부</td><td>보장 범위·지급·과실 판단</td><td>통제 위반·예외 승인 판단</td></tr>
+        <tr><td><strong>검토·승인(HITL)</strong></td><td>외부 초대·자료 공유 승인</td><td>지급·과실 승인, SIU 의뢰</td><td>예외 승인·감사 보고</td></tr>
+        <tr><td><strong>운영 스킬</strong></td><td>회의 준비 패턴</td><td>심사 판단 패턴</td><td>예외 처리 패턴</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
 
@@ -1779,6 +1834,77 @@ tr:nth-child(even) td{background:var(--gray-50)}
       <div class="trace-cell impl"><b>Feedback · Decision Log</b>Skill Catalog, Evaluation, Knowledge Update</div>
     </div>
   </div>
+
+  <h3 class="sub-h3">A-7. 표준 Runtime 자산화 · 산업 확장 전략</h3>
+  <p class="sub-note">한 업무에서 검증한 운영 구조를 <strong>표준 자산</strong>으로 분리하고, 산업별로는 <strong>Domain Pack만 교체</strong>해 확장 — 본문 <a href="#s4" style="color:var(--red);font-weight:800">4-3(표준 운영 객체)</a>의 사업화 실행 관점</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:200px">자산 묶음</th>
+        <th>구성</th>
+        <th style="width:120px">산업 확장 시</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Standard Runtime Kit</strong><br><span style="color:var(--muted);font-weight:600">표준 운영 키트</span></td>
+        <td>운영 객체 스키마(Work Event · Context Package · Task Graph · Coordination · Execution Package · Run Trace · Skill), HITL/Action Policy 템플릿, Writeback 패턴, Run Trace 템플릿</td>
+        <td><strong>공통 유지</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Domain Pack</strong><br><span style="color:var(--muted);font-weight:600">산업 의미 팩</span></td>
+        <td>도메인 온톨로지, 프로세스 맵, 판단 규칙(Decision Rule), 권한 매트릭스, 정책·위험 규칙, 근거 맵, 시스템 연동 맵, Vertical Skill 템플릿</td>
+        <td><strong>산업별 교체</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Demo / Proposal Pack</strong><br><span style="color:var(--muted);font-weight:600">제안·데모 자산</span></td>
+        <td>Whitebox Runtime 데모, 시나리오 스크립트, 화면 설계, 툴팁 사전, Run Trace Playback, 고객 유형별 메시지 변형</td>
+        <td>일부 교체</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="sub-note" style="margin-top:16px">표준화 핵심은 <strong>Agent 개수 추가가 아니라 5개 레벨의 역할·경계 표준화</strong>다. 이름이 아닌 <strong>역할군</strong>을, 자동화율이 아닌 <strong>자동·검토·승인·차단의 경계</strong>를 표준화한다.</p>
+  <div style="overflow-x:auto">
+    <table class="table-tight">
+      <thead>
+        <tr>
+          <th style="width:60px">레벨</th>
+          <th style="width:190px">표준화 대상</th>
+          <th>공통 역할 (유지)</th>
+          <th style="width:170px">산업별 가변 (교체)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>L1</strong></td><td><strong>Work Event</strong> 업무 사건</td><td>사건 공통 필드(유형·주체·산출물·위험도·HITL 지점·학습 대상)로 어떤 업무든 '사건'으로 수용</td><td>사건 유형·필드값</td></tr>
+        <tr><td><strong>L2</strong></td><td><strong>Context Package</strong> 맥락 묶음</td><td>발산 연료 — 관련 맥락을 건 단위로 수집·정리하는 역할</td><td>데이터 소스 구성</td></tr>
+        <tr><td><strong>L3</strong></td><td><strong>Agent Task Graph</strong> 역할군</td><td>Context · Domain · Evidence · Policy · Action · Review · Writeback · Learning Agent의 <strong>역할군</strong> 표준화(이름 ✕)</td><td>도메인 판단 로직</td></tr>
+        <tr><td><strong>L4</strong></td><td><strong>HITL · Action Policy</strong> 처리 경계</td><td>자동 · 검토 · 승인 · 차단 4단 처리 경로 정의</td><td>고객별 경계 기준</td></tr>
+        <tr><td><strong>L5</strong></td><td><strong>Operational Learning</strong> 운영 학습</td><td>Decision Log · Action Log · Feedback · Skill Library 축적 구조</td><td>산업별 스킬 내용</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="sub-note" style="margin-top:14px">산업 확장 우선순위는 <strong>이해 용이성 → 도메인 가치 → 통제 요구</strong> 순으로, 회의(공통 업무)로 작동 원리를 세우고 손해사정·내부통제(판단·통제 심화)로 가치를 입증한다(로드맵 연계 → <a href="#sappA" style="color:var(--red);font-weight:800">A-3</a>).</p>
+  <div style="overflow-x:auto">
+    <table class="table-tight">
+      <thead>
+        <tr>
+          <th style="width:50px">순위</th>
+          <th style="width:200px">확장 Pack</th>
+          <th>목적 · 강조점</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>1</strong></td><td><strong>Meeting Runtime Pack</strong><br><span style="color:var(--muted);font-weight:600">공통 업무</span></td><td>AAP 작동 원리를 가장 쉽게 설명하는 기준 데모 — 단, 임팩트가 작아 보이지 않도록 Writeback·HITL·Learning까지 보여줌</td></tr>
+        <tr><td><strong>2</strong></td><td><strong>Claim Assessment Pack</strong><br><span style="color:var(--muted);font-weight:600">손해사정</span></td><td>판단·근거·정책·HITL·Writeback이 강한 업무 — Business Semantic과 Decision Rule이 전면에, 고객 가치 큼</td></tr>
+        <tr><td><strong>3</strong></td><td><strong>Internal / Financial Control Pack</strong><br><span style="color:var(--muted);font-weight:600">금융·공공</span></td><td>규제·감사·권한·폐쇄망 대응 — 감사 가능한 Decision Log를 핵심으로 Trust·HITL 전면</td></tr>
+        <tr><td><strong>4</strong></td><td><strong>VOC Response Pack</strong><br><span style="color:var(--muted);font-weight:600">서비스·유통·통신</span></td><td>문의 → 정책 판단 → 보상·응대 → 후속 처리 연결 — 운영 로그·품질 평가가 자연스러움</td></tr>
+        <tr><td><strong>5</strong></td><td><strong>Manufacturing Quality Pack</strong><br><span style="color:var(--muted);font-weight:600">제조</span></td><td>설비·품질·공정·조치 이력 기반 — Data &amp; Inputs가 강하고 조치 추천·작업 지시 Writeback이 중요</td></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <!-- ============ 별첨 B · 내부 검토용 사업화 확장 항목 ============ -->
@@ -1963,7 +2089,7 @@ tr:nth-child(even) td{background:var(--gray-50)}
         { label:"검토·승인", chips:["HITL Console","Approval Queue"] },
         { label:"운영 이력", chips:["Audit View","Comment Trail"] }
       ],
-      assets:["Business Agent"], detail:[
+      /* 자사 asset 표기 보류 — 조사 후 재분류 예정: assets:["Business Agent"] */ detail:[
       { label:"사용자 접점", chips:["Agent Portal","Copilot / Chat UI","Knowledge Assistant","Admin Console"] },
       { label:"검토·승인", chips:["HITL Console","Evidence View","Approval Queue","Audit View","Comment Trail"] },
       { label:"접근·채널", chips:["API Gateway / SDK","Web Portal","Mobile App","Teams","Slack","Email"] }
@@ -1992,8 +2118,8 @@ tr:nth-child(even) td{background:var(--gray-50)}
         { label:"모델·도구·메모리", chips:["Model Gateway","Tool Calling","Memory / Context"] },
         { label:"판단·통제", chips:["HITL Runtime Gate","Runtime Guardrail"] }
       ],
-      assets:["BEAST"], detail:[] },
-    { no:"4", titleKo:"지식 / 시맨틱", titleEn:"Knowledge / Semantic", tier:"mid", mark:"★ kt ds 차별화",
+      /* 자사 asset 표기 보류 — 조사 후 재분류 예정: assets:["BEAST"] */ detail:[] },
+    { no:"4", titleKo:"지식 / 시맨틱", titleEn:"Knowledge / Semantic", tier:"mid",
       role:"문서·정책·업무 기준을 Agent가 사용할 업무 개념·관계·근거·컨텍스트로 변환하는 의미화 계층.",
       loop:["Semantic"],
       io:{ i:"문서 · 정책 · 업무 기준", p:"개념화 → 관계화 → 컨텍스트 조합 → 근거 제공", o:"Agent 사용 가능 업무 의미 · 근거" },
@@ -2016,7 +2142,7 @@ tr:nth-child(even) td{background:var(--gray-50)}
         { label:"문서 처리", chips:["OCR","Parser"] },
         { label:"검색·반영", chips:["Vector Index","Writeback"] }
       ],
-      assets:["AI:ON-U"], detail:[
+      /* 자사 asset 표기 보류 — 조사 후 재분류 예정: assets:["AI:ON-U"] */ detail:[
       { label:"연결·수집", chips:["DB Connector","API Connector","SaaS Connector","File / SFTP","Event / Batch"] },
       { label:"문서 처리", chips:["Document Processing","OCR","Parser","Chunking"] },
       { label:"검색·참조", chips:["Embedding","Vector Index","Retrieval Policy","Hybrid Search"] },
@@ -2032,13 +2158,13 @@ tr:nth-child(even) td{background:var(--gray-50)}
         { label:"품질·안정성", chips:["Quality Evaluation","RAI / Safety"] },
         { label:"피드백", chips:["User Feedback","Improvement Candidate"] }
       ],
-      assets:["Antbot"], detail:[
+      /* 자사 asset 표기 보류 — 조사 후 재분류 예정: assets:["Antbot"] */ detail:[
       { label:"실행 추적", chips:["Decision Log","Execution Trace","Replay / Audit Evidence"] },
       { label:"품질·근거 평가", chips:["Quality Evaluation","Grounding Evaluation","Evaluation Dataset"] },
       { label:"안전·책임 평가", chips:["RAI / Safety Evaluation","Regression Test"] },
       { label:"성능·비용·피드백", chips:["Performance / Cost Monitoring","User Feedback"] }
     ]},
-    { no:"7", titleKo:"컨트롤 / 거버넌스", titleEn:"Control / Governance", tier:"mid", mark:"★ kt ds 차별화",
+    { no:"7", titleKo:"컨트롤 / 거버넌스", titleEn:"Control / Governance", tier:"mid",
       role:"권한·정책·승인·위험·사용량 기준으로 Agent 실행을 통제하고 운영 개선(Self-Improving)을 승인하는 계층.",
       loop:["Decision","Action","Learning"],
       io:{ i:"판단 · 실행 요청", p:"정책 적용 → 권한 확인 → 위험 판단 → 승인 / HITL → 개선 승인", o:"자동 / 검토 / 보류 / 차단 + 개선 승인" },
