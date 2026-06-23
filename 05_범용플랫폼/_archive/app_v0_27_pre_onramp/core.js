@@ -679,11 +679,8 @@ function createCase(packId,seed){
   let key=packId;
   if(!key) key=(APP.typeFilter!=='all'&&PACKS[APP.typeFilter])?APP.typeFilter:(APP.pack&&PACKS[APP.pack]?APP.pack:Object.keys(PACKS)[0]);
   const pack=PACKS[key]; if(!pack)return;
-  /* ① 입력 다양화 · ② 명확화: seed.ioLines(파일·필드·명확화 답) 를 요청 텍스트에 mock 합류(실파싱 ✕). */
-  let req=(seed&&seed.request)||'';
-  if(seed&&Array.isArray(seed.ioLines)&&seed.ioLines.length){ req=(req?req+' · ':'')+seed.ioLines.join(' · '); }
   /* seed 에 request/projectId 가 있으면 caseTemplate 으로 전달(옵셔널 — 무회귀) */
-  const tseed=(req||(seed&&seed.projectId))?{request:req,projectId:seed&&seed.projectId}:null;
+  const tseed=(seed&&(seed.request||seed.projectId))?{request:seed.request,projectId:seed.projectId}:null;
   const c=caseTemplate(pack,tseed);
   _newSeq[key]=(_newSeq[key]||0)+1;
   c.title=(seed&&seed.title)?seed.title:`${pack.workload&&pack.workload.type?pack.workload.type:pack.label} · 신규 #${_newSeq[key]}`;
@@ -699,45 +696,36 @@ function packKeywords(pack){
   const wl=pack.workload||{};
   return _tokens([pack.label,wl.type,wl.purpose,(wl.outputs||[]).join(' ')].join(' '));
 }
-/* 매칭 인정 임계 — 겹친 토큰 ≥2 AND 점수 ≥0.14 (일반 동사 1~2개 우연 겹침은 신규로 흘려보냄). */
-const NC_MIN_HITS=2, NC_MIN_SCORE=0.14;
-/* 입력 텍스트 ↔ 각 팩 점수(겹친 토큰 수 / 팩 키워드 수, 0~1) + 근거 토큰(hitToks).
-   ★ ③ 유형 인식 governed: ranked[]=정렬된 전체 후보({id,score,hits,hitToks}). top-N 은 호출부에서 slice.
-   반환 호환: {packId(최고 매칭·임계 통과), score(최고 점수), ranked[]}. (기존 호출부 무회귀) */
+/* 입력 텍스트 ↔ 각 팩 점수(겹친 토큰 수 / 팩 키워드 수, 0~1). 최고 점수 팩과 점수를 반환. */
 function matchPackByText(text){
   const inTok=new Set(_tokens(text)); if(!inTok.size)return {packId:null,score:0,ranked:[]};
   /* ★배포된 팩만 매칭 대상 — draft 유형은 운영 인식에서 제외(배포해야 On-Ramp 편입) */
   const ranked=deployedPackIds().map(id=>{
-    const kw=packKeywords(PACKS[id]); if(!kw.length)return {id,score:0,hits:0,hitToks:[]};
-    let hits=0; const seen=new Set(); const hitToks=[];
-    kw.forEach(k=>{ if(inTok.has(k)&&!seen.has(k)){ hits++; seen.add(k); hitToks.push(k); } });
-    return {id,score:hits/Math.max(4,new Set(kw).size),hits,hitToks};
+    const kw=packKeywords(PACKS[id]); if(!kw.length)return {id,score:0,hits:0};
+    let hits=0; const seen=new Set();
+    kw.forEach(k=>{ if(inTok.has(k)&&!seen.has(k)){ hits++; seen.add(k); } });
+    return {id,score:hits/Math.max(4,new Set(kw).size),hits};
   }).sort((a,b)=>b.score-a.score);
+  /* 매칭 인정 = 겹친 토큰 ≥2 AND 점수 ≥0.14 (일반 동사 1~2개 우연 겹침은 신규로 흘려보냄 → 격상 유도) */
   const top=ranked[0];
-  return {packId:(top&&top.hits>=NC_MIN_HITS&&top.score>=NC_MIN_SCORE)?top.id:null, score:top?top.score:0, ranked};
+  return {packId:(top&&top.hits>=2&&top.score>=0.14)?top.id:null, score:top?top.score:0, ranked};
 }
-/* 후보가 매칭 임계를 통과했는가(top-N 표시 시 '실행' 가능 후보 판별). */
-function ncCandQualifies(r){ return !!(r&&r.hits>=NC_MIN_HITS&&r.score>=NC_MIN_SCORE); }
 /* ＋새 업무 요청 = On-Ramp 입구.
    유형을 미리 고르게 하지 ✕ → '업무 설명'을 입력받아 유형을 인식한다(정형화 완화).
    ① 입력이 기존 등록 유형과 매칭 → 그 유형으로 케이스 생성·실행(운영 루프).
    ② 매칭 안 됨(신규/비정형) → "AAP 흐름 없음 → 격상" 안내 + 격상 파이프라인 자동 진입(구성 루프).
    사용자가 인식 결과를 바꿀 수 있게(매칭 후보 칩 + 항상 '새 유형으로 격상' 선택지) 제공. */
 let _ncMenu=null;
-function closeNewCase(){ if(_ncMenu){ _ncMenu.remove(); _ncMenu=null; document.removeEventListener('mousedown',_ncOff,true); _ncIO={}; _ncClarifyAns={}; } }
+function closeNewCase(){ if(_ncMenu){ _ncMenu.remove(); _ncMenu=null; document.removeEventListener('mousedown',_ncOff,true); } }
 function _ncOff(ev){ if(_ncMenu&&!_ncMenu.contains(ev.target)&&!ev.target.closest('#newCaseBtn'))closeNewCase(); }
 function promptNewCase(anchor){
   if(_ncMenu){ closeNewCase(); return; } /* 토글 */
   const menu=document.createElement('div'); menu.id='newCaseMenu'; menu.className='nc-menu nc-onramp';
   _ncMenu=menu;
-  /* On-Ramp 세션 상태(이 패널이 열린 동안) — ① io 입력값 · ② 명확화 답을 모아 seed 로 실어보냄. */
-  _ncIO={}; _ncClarifyAns={};
   menu.innerHTML=`
     <div class="ncm-h">어떤 업무를 맡기시겠어요?</div>
     <div class="ncm-sub">업무를 설명하면 AAP가 유형을 인식합니다. 흐름이 있으면 바로 실행, 없으면 격상으로 안내합니다.</div>
     <textarea class="nc-ta" id="ncText" rows="3" placeholder="예) 신규 거래처 등록 심사를 맡기고 싶어요. 사업자·신용·제재 리스트를 확인하고 리스크를 판단해 승인 여부를 정해줘."></textarea>
-    <div class="nc-clarify" id="ncClarify" hidden></div>
-    <div class="nc-inputs" id="ncInputs" hidden></div>
     <div class="nc-reco" id="ncReco"></div>
     <div class="nc-acts" id="ncActs"></div>`;
   document.body.appendChild(menu);
@@ -748,120 +736,34 @@ function promptNewCase(anchor){
   renderNcReco('');
   setTimeout(()=>{ ta.focus(); document.addEventListener('mousedown',_ncOff,true); },0);
 }
-/* On-Ramp 세션 누적값 — ① io 입력(파일명·필드값) · ② 명확화 답 */
-let _ncIO={}, _ncClarifyAns={};
-/* ③ 후보 항목 1개 markup (top-N · 신뢰도 바 score% · 근거 hitToks). qualifies=임계 통과 후보(실행 가능). */
-function _ncRecoItem(r,primary){
-  const p=PACKS[r.id]; if(!p)return '';
-  const pct=Math.round(r.score*100);
-  const why=(r.hitToks&&r.hitToks.length)?`매칭 근거: '${r.hitToks.slice(0,4).join('·')}' 토큰 ${r.hits}`:'근거 토큰 없음';
-  return `<button class="nc-reco-i${primary?'':' alt'}" data-pick="${r.id}">
-    <span class="ty-badge ${typeTok(r.id)}">${dcText(p.label,'pack.label')}</span>
-    <span class="nc-conf"><i style="width:${pct}%"></i></span><span class="nc-conf-n">${pct}%</span>
-    <span class="nc-reco-go">이 유형으로 실행 ${_ICO('chevron-right')}</span>
-    <span class="nc-why">${why}</span>
-  </button>`;
-}
-/* ② 결정론 명확화 규칙 — 매칭 신뢰도 낮음(미통과)·근소 경합 시 1~2개 보완 질문(선택형 칩).
-   답은 _ncClarifyAns 에 누적 → seed.ioLines·재매칭 텍스트에 합류(실제 LLM 되묻기 ✕=Phase3). */
-function _ncClarifyQuestions(text,m){
-  const qs=[]; const top=m.ranked&&m.ranked[0], second=m.ranked&&m.ranked[1];
-  /* 규칙1: 임계 미통과(매칭 불명) → 업무 성격을 직접 물어 후보 라벨로 유도 */
-  if(!m.packId && top){
-    qs.push({key:'kind', q:'어떤 성격의 업무에 가까운가요?',
-      opts:deployedPackIds().slice(0,4).map(id=>({v:PACKS[id].label, pack:id}))});
-  }
-  /* 규칙2: 1·2위 점수가 근소(경합) → 둘 중 무엇인지 확인 */
-  else if(top&&second&&ncCandQualifies(second)&&(top.score-second.score)<0.08){
-    qs.push({key:'pick', q:'두 유형이 비슷해요. 어느 쪽인가요?',
-      opts:[{v:PACKS[top.id].label,pack:top.id},{v:PACKS[second.id].label,pack:second.id}]});
-  }
-  /* 규칙3: 입력이 너무 짧음 → 규모/목표 보완(매칭과 무관하게 seed 풍부화) */
-  if(_tokens(text).length<3){ qs.push({key:'scale', q:'규모나 목표를 한 가지만 알려주세요',
-    opts:[{v:'소규모(1~2건)'},{v:'정기·반복'},{v:'대량·일괄'}]}); }
-  return qs.slice(0,2);
-}
-/* 입력에 따라 인식 결과 + 입력 다양화 + 명확화 + 액션을 실시간 갱신 */
+/* 입력에 따라 인식 결과 + 액션을 실시간 갱신 */
 function renderNcReco(text){
   if(!_ncMenu)return;
   const reco=_ncMenu.querySelector('#ncReco'), acts=_ncMenu.querySelector('#ncActs');
-  const clarify=_ncMenu.querySelector('#ncClarify'), inputsEl=_ncMenu.querySelector('#ncInputs');
-  /* 명확화 답을 반영한 보강 텍스트로 매칭(②가 매칭을 실제로 개선) */
-  const augText=_ncAugText(text);
-  const m=matchPackByText(augText);
+  const m=matchPackByText(text);
   const matched=m.packId?PACKS[m.packId]:null;
   if(!text.trim()){
     reco.innerHTML=`<div class="nc-hint">${_ICO('search')} 업무를 입력하면 인식된 유형이 여기 표시됩니다.</div>`;
     acts.innerHTML=`<button class="cp-btn ghost sm" id="ncPromoteEmpty">${_ICO('rocket')}새 유형으로 격상하기</button>`;
-    if(clarify){clarify.hidden=true;clarify.innerHTML='';} if(inputsEl){inputsEl.hidden=true;inputsEl.innerHTML='';}
     _ncMenu.querySelector('#ncPromoteEmpty').onclick=()=>ncGoPromote(text);
     return;
   }
-  /* ③ top-N 후보(점수>0 인 것만, 최대 3) + 신뢰도 + 근거 */
-  const cands=(m.ranked||[]).filter(r=>r.score>0).slice(0,3);
-  if(cands.length){
-    const primaryId=matched?matched.id:cands[0].id;
-    reco.innerHTML=`<div class="nc-reco-h">인식된 유형 <span class="nc-reco-sub">신뢰도순</span></div>`+
-      cands.map(r=>_ncRecoItem(r, r.id===primaryId&&!!matched)).join('')+
-      (matched?'':`<div class="nc-noflow">${_ICO('alert-triangle')}<div><b>충분히 일치하는 흐름이 없습니다.</b><span>아래에서 유형을 고르거나, 신규·비정형이면 격상으로 운영 흐름을 만듭니다.</span></div></div>`);
-    acts.innerHTML=`<button class="cp-btn ${matched?'ghost':'primary'} sm" id="ncPromote">${_ICO('rocket')}${matched?'새 유형으로 격상하기':'격상 파이프라인으로 진행'}${matched?'':_ICO('arrow-right')}</button>`;
-    /* 후보 클릭 = 그 유형으로 실행(임계 통과 여부 무관 — 사용자가 명시 선택) */
-    reco.querySelectorAll('.nc-reco-i').forEach(b=>{ b.onclick=()=>{ const id=b.dataset.pick; const seed=ncSeed(text,id); closeNewCase(); createCase(id,seed); }; });
+  if(matched){
+    reco.innerHTML=`<div class="nc-reco-h">인식된 유형</div>
+      <button class="nc-reco-i" id="ncMatched"><span class="ty-badge ${typeTok(matched.id)}">${dcText(matched.label,'pack.label')}</span><span class="ncm-d">${(matched.workload&&matched.workload.type)||''}</span><span class="nc-reco-go">이 유형으로 실행 ${_ICO('chevron-right')}</span></button>
+      <div class="nc-alt">다른 유형으로 보거나, 흐름이 없으면 ↓</div>`;
+    acts.innerHTML=`<button class="cp-btn ghost sm" id="ncPromote">${_ICO('rocket')}새 유형으로 격상하기</button>`;
+    _ncMenu.querySelector('#ncMatched').onclick=()=>{ const seed=ncSeed(text); closeNewCase(); createCase(matched.id,seed); };
+    _ncMenu.querySelector('#ncPromote').onclick=()=>ncGoPromote(text);
   } else {
     reco.innerHTML=`<div class="nc-noflow">${_ICO('alert-triangle')}<div><b>이 업무는 아직 AAP 흐름이 없습니다.</b><span>신규·비정형 업무로 보입니다 — 분해→구성→HITL→격상으로 운영 가능한 흐름을 만듭니다.</span></div></div>`;
     acts.innerHTML=`<button class="cp-btn primary sm" id="ncPromote">${_ICO('rocket')}격상 파이프라인으로 진행${_ICO('arrow-right')}</button>`;
+    _ncMenu.querySelector('#ncPromote').onclick=()=>ncGoPromote(text);
   }
-  _ncMenu.querySelector('#ncPromote').onclick=()=>ncGoPromote(augText);
-  /* ① 입력 다양화 — 매칭/최고후보 팩의 io.inputs[] 로 동적 생성(없으면 숨김 = 텍스트만, 무회귀) */
-  _renderNcInputs(inputsEl, matched||PACKS[(cands[0]&&cands[0].id)]);
-  /* ② 명확화 — 결정론 규칙으로 질문 노출(없으면 숨김) */
-  _renderNcClarify(clarify, text, m);
 }
-/* 명확화 답을 텍스트에 합류해 매칭 보강(② 가 ③ 인식을 실제로 끌어올림) */
-function _ncAugText(text){ const ans=Object.values(_ncClarifyAns||{}).filter(Boolean); return ans.length?(text+' '+ans.join(' ')):text; }
-/* ① io.inputs 동적 렌더(type:file=mock 파일명·건수만 / type:field·기타=텍스트 필드). 값→_ncIO. */
-function _renderNcInputs(el,pack){
-  if(!el)return;
-  const ins=(pack&&pack.io&&Array.isArray(pack.io.inputs))?pack.io.inputs:[];
-  if(!ins.length){ el.hidden=true; el.innerHTML=''; return; }
-  el.hidden=false;
-  el.innerHTML=`<div class="nc-in-h">${_ICO('upload')}이 유형이 받는 입력 <span class="nc-in-sub">선택 입력 · 실제 파싱은 실행에서</span></div>`+
-    ins.map(io=>{
-      const k=io.key||io.label;
-      const cur=_ncIO[k];
-      if(io.type==='file'){
-        return `<label class="nc-drop" data-iok="${k}">${_ICO('file-text')}<span class="nc-drop-l">${dcText(io.label,'io.label')}</span><span class="nc-drop-v">${cur?cur:(io.hint||'파일 선택')}</span><input type="file" hidden multiple data-iofile="${k}"></label>`;
-      }
-      return `<div class="nc-field"><span class="nc-fl">${dcText(io.label,'io.label')}</span><input class="nc-fi" data-iofield="${k}" value="${cur?String(cur).replace(/"/g,'&quot;'):''}" placeholder="${io.hint||'입력'}"></div>`;
-    }).join('');
-  /* 파일 = mock(파일명·건수만 기록, 실파싱 ✕) */
-  el.querySelectorAll('input[type=file]').forEach(fi=>{ fi.onchange=()=>{ const k=fi.dataset.iofile; const n=fi.files.length;
-    _ncIO[k]= n? (n>1? `${fi.files[0].name} 외 ${n-1}건` : fi.files[0].name) : '';
-    const lab=el.querySelector(`.nc-drop[data-iok="${k}"] .nc-drop-v`); if(lab&&_ncIO[k])lab.textContent=_ncIO[k]; }; });
-  el.querySelectorAll('input.nc-fi').forEach(fe=>{ fe.oninput=()=>{ _ncIO[fe.dataset.iofield]=fe.value.trim(); }; });
-}
-/* ② 명확화 질문 칩 렌더 — 답 클릭 시 _ncClarifyAns 누적 + (pack 지정 칩이면) 그 유형으로 직접 실행 가능 */
-function _renderNcClarify(el,text,m){
-  if(!el)return;
-  const qs=_ncClarifyQuestions(text,m);
-  if(!qs.length){ el.hidden=true; el.innerHTML=''; return; }
-  el.hidden=false;
-  el.innerHTML=`<div class="nc-cl-h">${_ICO('help-circle')}몇 가지만 확인할게요</div>`+
-    qs.map(q=>`<div class="nc-cl-q" data-clq="${q.key}"><span class="nc-cl-qt">${q.q}</span><span class="nc-cl-opts">`+
-      q.opts.map(o=>`<button class="nc-cl-opt${_ncClarifyAns[q.key]===o.v?' on':''}" data-clk="${q.key}" data-clv="${o.v}"${o.pack?` data-clpack="${o.pack}"`:''}>${o.v}</button>`).join('')+
-    `</span></div>`).join('');
-  el.querySelectorAll('.nc-cl-opt').forEach(b=>{ b.onclick=()=>{
-    _ncClarifyAns[b.dataset.clk]=b.dataset.clv;
-    const ta=_ncMenu&&_ncMenu.querySelector('#ncText'); const txt=ta?ta.value:text;
-    renderNcReco(txt);   /* 답을 반영해 재매칭·재렌더 */
-  }; });
-}
-/* 입력 텍스트(+명확화·io) → 케이스 seed(제목·요청·ioLines). pickId=사용자가 고른 유형(옵셔널). */
-function ncSeed(text,pickId){ const t=String(text||'').trim(); if(!t&&!Object.keys(_ncIO||{}).length)return null;
-  const ioLines=[];
-  Object.keys(_ncIO||{}).forEach(k=>{ if(_ncIO[k])ioLines.push(`${k}: ${_ncIO[k]}`); });
-  Object.keys(_ncClarifyAns||{}).forEach(k=>{ if(_ncClarifyAns[k])ioLines.push(_ncClarifyAns[k]); });
-  return { title:(t||ioLines[0]||'새 업무').replace(/\s+/g,' ').slice(0,40), request:t.slice(0,160), ioLines }; }
+/* 입력 텍스트 → 케이스 seed(제목·요청) */
+function ncSeed(text){ const t=String(text||'').trim(); if(!t)return null;
+  return { title:t.replace(/\s+/g,' ').slice(0,40), request:t.slice(0,160) }; }
 /* 격상 진입 — 파이프라인(있으면)에 업무 설명 전달, 없으면 자동저작 오버레이 폴백 */
 function ncGoPromote(text){
   const t=String(text||'').trim();

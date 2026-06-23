@@ -1260,38 +1260,6 @@ textarea.au-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0
 .nc-noflow b{display:block;font-size:12px;color:var(--amber-ink);margin-bottom:2px;}
 .nc-noflow span{font-size:11px;color:var(--slate);line-height:1.5;}
 .nc-acts{margin-top:11px;display:flex;justify-content:flex-end;gap:8px;}
-/* ── On-Ramp 강화 (③ top-N 신뢰도·근거 / ① io.inputs / ② 명확화) — 토큰 var 사용 ── */
-.nc-reco-sub{font-weight:600;color:var(--faint);font-size:var(--fs-micro);text-transform:none;letter-spacing:0;margin-left:4px;}
-.nc-reco-i{flex-wrap:wrap;margin-bottom:6px;}
-.nc-reco-i.alt{background:var(--surface);border-color:var(--border);}
-.nc-reco-i.alt:hover{background:var(--line);}
-.nc-conf{display:inline-block;width:54px;height:5px;border-radius:var(--r-pill);background:var(--line);overflow:hidden;vertical-align:middle;margin:0 6px;}
-.nc-conf i{display:block;height:100%;background:var(--aap);border-radius:var(--r-pill);}
-.nc-conf-n{font-size:var(--fs-micro);font-weight:800;color:var(--aap-ink);}
-.nc-why{flex-basis:100%;display:block;font-size:var(--fs-micro);color:var(--faint);margin-top:3px;}
-.nc-inputs{display:flex;flex-direction:column;gap:var(--sp-2);margin:var(--sp-3) 0;}
-.nc-in-h{display:flex;align-items:center;gap:6px;font-size:var(--fs-sub);font-weight:800;color:var(--muted);}
-.nc-in-h .ic{width:13px;height:13px;}
-.nc-in-sub{font-weight:600;color:var(--faint);font-size:var(--fs-micro);}
-.nc-drop{display:flex;align-items:center;gap:var(--sp-2);border:1.5px dashed var(--border);border-radius:var(--r-node);
-  padding:var(--sp-3);font-size:var(--fs-sub);color:var(--muted);cursor:pointer;}
-.nc-drop:hover{border-color:var(--aap-border);background:var(--aap-soft);}
-.nc-drop .ic{width:14px;height:14px;flex:0 0 auto;}
-.nc-drop-v{margin-left:auto;font-size:var(--fs-micro);color:var(--faint);}
-.nc-field{display:flex;align-items:center;gap:var(--sp-2);}
-.nc-fl{font-size:var(--fs-sub);color:var(--faint);width:64px;flex:0 0 auto;}
-.nc-fi{flex:1;font-size:var(--fs-sub);border:1px solid var(--border);border-radius:var(--r-chip);padding:var(--sp-2) var(--sp-3);font-family:inherit;}
-.nc-fi:focus{outline:none;border-color:var(--aap);box-shadow:0 0 0 2px var(--aap-soft);}
-.nc-clarify{border:1px solid var(--amber-border);background:var(--amber-soft);border-radius:var(--r-node);padding:var(--sp-3);margin:var(--sp-2) 0;}
-.nc-cl-h{font-size:var(--fs-sub);font-weight:800;color:var(--amber-ink);display:flex;align-items:center;gap:6px;margin-bottom:var(--sp-2);}
-.nc-cl-h .ic{width:14px;height:14px;}
-.nc-cl-q{margin-bottom:var(--sp-2);}
-.nc-cl-qt{display:block;font-size:var(--fs-sub);color:var(--slate);margin-bottom:4px;}
-.nc-cl-opts{display:flex;flex-wrap:wrap;gap:5px;}
-.nc-cl-opt{font-family:inherit;font-size:var(--fs-micro);font-weight:700;color:var(--amber-ink);background:var(--surface);
-  border:1px solid var(--amber-border);border-radius:var(--r-pill);padding:3px 10px;cursor:pointer;}
-.nc-cl-opt:hover{background:#fff;}
-.nc-cl-opt.on{background:var(--amber);color:#fff;border-color:var(--amber);}
 /* 도메인 카탈로그 그리드 */
 .catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:11px;margin:4px 0 2px;}
 .cat-card{text-align:left;font-family:inherit;background:#fff;border:1px solid var(--border);border-top:3px solid var(--border);border-radius:12px;padding:13px 14px;cursor:pointer;transition:.12s;}

@@ -1,0 +1,44 @@
+/* =========================================================================
+   AAP Design Fix v0.1 — platform.css 다음에 로드되는 override (캐스케이드)
+   출처: 04_디자인가이드/aap_design_fix_patch_v0_1.md (부채 감사 D1·D3·D4 + a11y + 상태)
+   ★시각만. platform.css·로직 미수정 — 새 파일이라 다른 세션 작업과 충돌 0.
+   활성화: index.html <head> 의 platform.css 다음 줄에
+     <link rel="stylesheet" href="core/platform-fix.css">
+   ========================================================================= */
+
+/* ── D1. 스크롤바 비표시 + 스크롤 기능 유지 (가이드 §6.7.2) ── */
+*{ scrollbar-width:none; -ms-overflow-style:none; }
+*::-webkit-scrollbar{ width:0; height:0; }
+/* 스크롤 가능 신호 = 컨테이너 하단 fade 힌트(스크롤바 대체) */
+.scroll, .dom-body{ position:relative; }
+.scroll::after, .dom-body::after{
+  content:""; position:sticky; bottom:0; left:0; right:0; height:18px; display:block;
+  background:linear-gradient(transparent, var(--bg)); pointer-events:none; margin-top:-18px;
+}
+
+/* ── D3·D4. 토큰 스케일 정의 (가이드 §4.3) — 정의만, 룩 불변(점진 치환 기준) ── */
+:root{
+  --sp-1:4px; --sp-2:6px; --sp-3:9px; --sp-4:11px; --sp-5:14px; --sp-6:18px;
+  --r-chip:7px; --r-node:9px; --r-card:12px; --r-panel:15px; --r-pill:999px;
+  --fs-micro:9px; --fs-sub:11px; --fs-body:13px; --fs-h:15px; --fs-hero:17px;
+}
+
+/* ── 접근성 a11y (가이드 §5.12) — CSS 부분 ── */
+.gnav-i:focus-visible, .ty-chip:focus-visible, .cat-card:focus-visible, .cp-btn:focus-visible,
+.snode:focus-visible, .dom-tab:focus-visible, .wfp-grp-h:focus-visible, .ev-more:focus-visible,
+[data-domtab]:focus-visible, [tabindex]:focus-visible, button:focus-visible{
+  outline:2px solid var(--aap); outline-offset:2px; border-radius:var(--r-node);
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001ms !important; animation-iteration-count:1 !important;
+     transition-duration:.001ms !important; scroll-behavior:auto !important; }
+}
+
+/* ── 빈/로딩/에러 상태 패턴 (가이드 §5.11) — 공통 클래스 ── */
+.empty-state{ text-align:center; color:var(--faint); font-size:var(--fs-sub); padding:32px 16px; line-height:1.7; }
+.empty-state .es-act{ margin-top:10px; }
+.skeleton, .sk-box{ background:var(--line); border-radius:var(--r-card); min-height:48px; opacity:.6; }
+.err-block, .block-note{
+  border-left:3px solid var(--red); background:var(--red-soft);
+  border-radius:var(--r-node); padding:10px 13px; font-size:var(--fs-sub); color:var(--red);
+}

@@ -69,6 +69,164 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### v0.27-onramp (플랫폼 app/, 빌드 완료 · 260623) — On-Ramp(새 업무 요청) 강화 ①②③
+- 준비문서 `04_디자인가이드/aap_onramp_apply_prep_v0_1.md` + 검토 `aap_studio_enhancement_review_v0_1.md §1` 대로 구현. 백업=`_archive/app_v0_27_pre_onramp/`(core.js·icons.js·platform.css·platform-fix.css, baseline aa725f1). 〔플랫폼·구현〕
+- **③ 유형 인식 governed (top-N·신뢰도·근거)** — `matchPackByText` 가 `ranked[]`에 `hitToks`(근거 토큰) 추가, 임계 상수 `NC_MIN_HITS=2·NC_MIN_SCORE=0.14` 분리 + `ncCandQualifies()`. `renderNcReco` 가 단일 매칭 → **top-3 후보 카드**(`_ncRecoItem`: ty-badge + 신뢰도 바 `nc-conf` score% + 근거 `nc-why` hitToks). 후보 클릭=그 유형 실행, 임계 전부 미달이면 격상 유도 유지. 〔플랫폼·구현〕
+- **① 입력 다양화 (io.inputs)** — `_renderNcInputs(el,pack)` 가 매칭/최고후보 팩의 `io.inputs[]` 읽어 동적 렌더: `type:file`=**mock**(파일명·건수만, 실파싱 ✕ → `_ncIO`), 그 외=텍스트 필드. 값→`ncSeed.ioLines`→`createCase` 가 요청 텍스트에 합류. recruiting(file×2) 활용, meeting(빈 io)=텍스트만(무회귀). 〔플랫폼·구현〕
+- **② 명확화 질문** — `_ncClarifyQuestions(text,m)` 결정론 규칙 3종(임계 미통과→성격 질문 / 1·2위 근소 경합→택1 / 토큰<3→규모·목표). `_renderNcClarify` 가 `#ncClarify`에 선택형 칩 노출, 답→`_ncClarifyAns`→`_ncAugText`로 **재매칭 보강**(②가 ③ 인식 실제 향상)+`ncSeed.ioLines` 합류. 실제 LLM 되묻기=Phase3. 〔플랫폼·구현〕
+- 패널 markup에 `#ncClarify`·`#ncInputs` 슬롯 추가, `closeNewCase`가 세션 `_ncIO/_ncClarifyAns` 초기화. `icons.js`에 `help-circle` 추가. `platform.css` 말미에 On-Ramp 강화 CSS(토큰 var만, 신규 hex 0): `.nc-conf/.nc-why/.nc-inputs/.nc-drop/.nc-field/.nc-clarify/.nc-cl-*`. 〔플랫폼·구현/디자인〕
+- 무회귀: 기존 텍스트만 입력 동작·매칭→실행·미매칭→격상·`createCase`/`caseTemplate` 시그니처·반환 호환(`{packId,score,ranked}`)·io 빈 팩 텍스트 전용·코어 도메인 무관(io 읽기·top-N=일반 메커니즘). 검증=헤드리스 Chrome(웹시큐 해제 iframe 하네스, 임시 `?nctest` 훅 후 제거): top-N(recruiting 24%/4토큰·meeting 6%/1)·io.inputs(rec 2·meet 0)·명확화(short 2·ambig 1)·텍스트전용 seed(ioLines 0)·io seed 합류·메뉴 슬롯 존재·**JS 에러 0**, 본 index.html 부팅 무에러. 〔검증〕
+- 후속(다음 아티팩트): 자산 드로어(편집)·도메인팩 온톨로지 1급화·워크플로우 디버거. 〔후속〕
+
+### v0.41 (데모, 빌드 완료 · 260623)
+- **좌측 고객 화면 = 결과·결정만, 판단 근거·로직은 우측으로** — understandCard에서 `신뢰도 92%`(L6 AI 품질·평가 점수=엔진 로직) 제거. 좌측은 '무엇이 됐는가(결과)'+'사람이 결정할 지점(HITL)'만, 근거 4유형·로직·점수는 우측 노드 모달에만. HITL `cm-why` 한 줄(왜 확인해야 하나=책임 맥락)은 유지. 〔기획·UX/표준·정의〕
+
+
+### 하니스 DSL emit + evaluate end-to-end + 드롭인 패키지 (`_decision_engine/`, `dropin/`) (260623, aap-lead) 〔표준·정의 / app/ 세션 핸드오프〕
+> 계획(`~/.claude/plans/iterative-growing-aho.md`) Phase A·B. **app/ 무관.** 하니스에 `dslify` 단계 추가 → 검증된 prose route를 **평가 가능 DSL 자동 emit**(run4: A 9 rules+fallback, `excludedDisplaySlots:["riskGrade"]`=seed10 학습 반영). `verify_harness_dsl.js`로 evaluate.js에 직접 실행.
+> **★Explore 확인**: Pack Contract v2 **`flow`·`kind`·`loopPhase`·`gate.decisions`는 이미 코드 랜딩**(packs/meeting·voc·recruiting + core stKind/stLoop 204–219). **결정층(caseModel·knowledge·evaluate·flow `next`)만 공백** = 이 트랙이 채움. 런타임 `decide(v)`(core.js:1454)는 기록만.
+- **★핵심 발견 — evaluate가 prose critic이 놓친 2결함 표면화**: ①riskGrade를 분기서 뺐으나 보완 룰(toxicUnmatched) 없어 **신종 모호 건이 자동승인 누출**(분기 커버리지 구멍) ②route가 caseModel에 없는 파생 슬롯(toxicHighCount) 참조(슬롯 drift). outcome A 9/10·B 7/9. = **prose+severity는 못 잡고 실행 검증(evaluate)이 잡음.**
+- **권고(하니스 dslify v0.2)**: ①whenDSL을 caseModel.slots 키로만 제한 ②생성 루프에 **evaluate 게이트** 내장(route 참조 슬롯⊆caseModel·전 seed expectedRoute 라우팅). 통과해야 DSL 채택.
+- **드롭인 패키지(`_decision_engine/dropin/`)**: `evaluate.js`+**golden `pack_contract_A.decision.json`**(evaluate 10/10 검증)+`INTEGRATION.md`(랜딩 v2 정합 ≈3줄+헬퍼). **app/ 세션 통합**: ①evaluate.js→app/core + index.html `<script>` 1줄 ②팩에 caseModel·knowledge 필드 ③flow gate `next:{AUTO_APPROVE,LEGAL_REVIEW,REJECT}` + `nextStage` 헬퍼(playNext ~1467)에서 `AAP_EVALUATE.evaluate(caseData,PACK.knowledge).outcome`로 분기 ④pre-gate verdict.basis 근거 레일. knowledge 없는 기존 팩=선형 폴백(무회귀).
+- 본 건=문서·엔진·검증(코드 0 in app/). 〔표준·정의 / app/ 세션 핸드오프 후속〕
+
+### v0.40 (데모, 빌드 완료 · 260623)
+- **(1·내 추가제안) 우측 흐름 끊김 없이 동적화 — 증분 렌더** — `renderRight`를 `buildFlow`(구조 1회 생성, key=단계+expanded)+`updateFlowStates`(점등은 클래스 토글만)로 분리. reveal tick마다 DOM 재생성 안 함 → CSS 애니가 끊기지 않음. `.stages`에 **흐르는 입자(`.flow-spark`)** = 작동 중(.stages.working)에만 좌측 스파인을 따라 cyan 점이 내려감(@keyframes flowspark). 진행바·스피너→✓와 결합. 〔기획·UX/데모〕
+- **(2) HITL 모달 축소** — `.cmodal-card` max-width 540→412·padding 축소, `.cp-btn` 13→12px·padding 축소, ch-must/ch-sec/ch-op 컴팩트화. 좌측 화면 안에 한눈에 들어옴. 〔기획·UX〕
+- **(3) AI 어투 정리** — 'A · B' 식 가운뎃점(·)으로 문장+라벨 잇는 표기 폐기('꼭 확인해 주세요 · 책임 지점'→'꼭 확인할 책임 지점', 'AAP 추천 · 원하면'→'AAP 추천, 원하면'). 카드 desc 끝 **온점(.) 제거**(compNode·bg·trig·cm-why). 데이터 구분용 '·'(결정 3 · 후속 3 등)는 유지. 〔표준·정의/기획〕
+- **(4) HITL 참석자 추가 기능** — approve 모달 내부 참석자에 **'+ 참석자 추가'**(점선 칩). 클릭 시 ADDPOOL(강민재·윤서연·임도윤)에서 순차 추가→토글 on, `partsCount/partsNames`·결과 카드에 반영. 〔기획·UX〕
+- **(5) 업무 순서 화살표 복원** — 8단계 칩 사이 `›`(`.sarrow`) 7개 재배치(컴팩트). 〔기획·UX〕
+
+
+### app/ run 뷰 = 조작형 surface 종합 프레임워크 (steering+라이브 재분석+FLIP+SVG 그래프) (260623, aap-platform) 〔기획·UX / 표준·정의〕
+> 확정 디자인 목업 3종(`03_프로토타입/aap_의도반응형_테스트_v0_1.html`·`aap_단계별_surface_v0_1.html`·`aap_BD근거뷰_목업_v0_1.html`)을 app/ run 뷰에 이식. **메시지: "정해진 대로 보는 정적 화면 ✕ → 사람 의도에 따라 결과·흐름이 곳곳에서 갈라지는 조작형 작업 화면."** 메인=조작형 surface, 스트림/근거=보조. chat ✕ → **인라인 의도 steering**.
+- **코어 일반 프레임워크(도메인 무관, `core/core.js`)** — 신규 4종, 채용 전용 분기 0:
+  1. **라이브 재분석 엔진** `runReanalysis(opts)`→`window.AAP_LIVE.run/busy`. 비침투 상단 작은 카드(`#reov`, `.run-surface` 마운트·전체 덮기 ✕·메인만 `.live-busy` 흐림) + 진행바 + step spinner→✓ + 구체 수치(mono) + **연속 클릭 잠금(`_LIVE_BUSY`)**. 끝나면 onDone()=결정론 recompute.
+  2. **FLIP** `flipCapture/flipPlay`→`window.AAP_FLIP`. `data-flip` 키로 옛 위치 기록 → 재렌더 후 옛→새 위치 활강(innerHTML 통째 교체 깜빡임 제거).
+  3. **의도 steering 배선** `wireSteer(root)` — `[data-steer]`/`[data-steerval]` 클릭 → 팩 `surfaceHooks.steerHook(S,key,val)`→{intent,mono,steps?,instant?,trace?,toast?} → 라이브 재분석(또는 instant=분기 즉시) → FLIP 재렌더. recompute는 팩 소유(결정론).
+  4. **조작형 콘솔** `renderOpConsole()` + `hasOpSurface(C)` 게이트. 팩이 `surface.opstage(C)` 제공 시 = 상단 단계 strip(`opStageStrip`·코어 일반·`[data-opstep]` 탐색) + steering 바 + 조작형 main(메인) + 보조 aside(그래프·근거). **미제공 팩(회의·VOC)·비매칭 단계 = 기존 `streamSplit` 폴백(graceful·무회귀).**
+- **안정 ID·격리 보존**: `#surfHead`(strip+steer)·`#surfBody`(main+aside)·`#flow`/`#explain`/`#caseTune`(op-console선 `.op-hidden-mount` 숨김 마운트 — renderRight·demo 호환). `case.overrides`(P5)·HITL `decide`/`decideHook`/`#cmodal`·Contract v2·자동저작·wfeditor·삭제 전부 유지. 외부 라이브러리 0·인라인 SVG·Lucide 인라인.
+- **채용 팩(`packs/recruiting.js`, 플래그십 3단계 surface)** — 기존 결정론 엔진(`mOf`/`normWeight`/`cutThreshold`/`shortlistIds`/`breakdown`/`RUBRIC`) 재사용, 케이스 격리(`recrWPreset`/`recrIntentFilt`/`recrScope`/`recrSlotPref`/`recrPanel`/`recrEvalW`/`recrOfferLvl`/`recrDropped`):
+  - **매칭·랭킹**(design/shortlist_gate/screen) = 후보 랭킹 행(FLIP) + 근거 분해 막대(스킬 teal/경력 blue/도메인 cyan 기여) + 컷라인 + **우선순위(균형/도메인/경력/스킬)·필터(재택/시니어/커머스)·면접 범위 분기(톱3/표준6/넓게)** steering + **SVG 매칭 그래프**(요건 허브←후보·굵기=매칭) + HITL 바. 후보 빼기(`data-opdrop`)도 라이브 재분석.
+  - **면접 조율**(interview_gate) = 슬롯 카드 + 슬롯 선호·패널 steering + 캘린더 교차 근거.
+  - **평가·오퍼**(offer_gate/evaluate) = 스코어카드(루브릭) + 오퍼 패키지 + 평가 가중·오퍼 수준 steering.
+- **검증**: `node --check` 전 파일 OK. 로직 드라이버 = 재랭킹 확인(BAL: 정유진>이하늘>임재훈… / DOM: 이하늘 #2→#4·박서준 #4→#2 / SKL: 한도윤 #5→#3 — 의도별 순위 갈라짐). 헤드리스(Edge) = 매칭 단계 opbody/strip7/steer10/rows10/graph1/hitlbar1/flowmount1 + steer 클릭 시 reov·busy 활성 + 면접 slots3/steer5 + 평가 sc/offer OK. **무회귀**: meeting·voc·recr-intake = stream 폴백(op=0) 확인.
+- **다음**: 코어 steering/재분석/FLIP를 form spec §6 고도화 로드맵에 승격 후보 등재. 회의·VOC도 같은 프레임 깊은 surface(opstage) 작성 시 동일 메커니즘 즉시 적용.
+
+### 다리 2 — 코어 evaluate() 독립 구현·검증 (`_decision_engine/`, 드롭인) (260623, aap-lead) 〔표준·정의 / app/ 세션 핸드오프〕
+> 유저 "app 작업 따로 하고 붙일 수는?" → **결정 엔진은 UI 없이 단독 구현·검증 가능, 나중에 2줄로 붙임** 입증. `_decision_engine/evaluate.js`(도메인 무관 선언형 룰 해석기·순수·결정론·안전 DSL·`window.AAP_EVALUATE`+`module.exports`) + `contract_A.structured.json`(route DSL화) + `run_eval_test.js`. **app/ 무관·Node 검증.**
+- **검증**: contract_A 10 seed → **outcome(자동/검토/반려) 10/10 ✅·재현성 OK·추적성 OK(ruleId+basis)**. rule 9/10.
+- **★발견(중요)**: seed10 라벨 R10인데 실제 R7 발화 — `riskGrade=중`이 route R7에 끼어 라벨↔발화 불일치. **하니스 run2가 이미 식별(riskGrade 분기 배제)했으나 run3 severity가 minor로 통과시켜 baked 팩이 미수정 물려받음.** → **prose critic은 못 잡고 evaluate(실행)가 잡음.** 시사: ①하니스 route emit 시 표시용 파생(riskGrade) when 배제 ②baked 후 evaluate 실행 검증 2중.
+- **DSL**: all/any/not·비교 6·in·intersects·empty. ref `$slot`. route 첫매칭·outcome 3분기. 임의 코드 ✕(안전·하니스 emit 가능).
+- **드롭인(app/ 세션)**: `evaluate.js`→`app/core/evaluate.js` + index.html `<script>` 1줄 + 호출부 `AAP_EVALUATE.evaluate(case,PACK.knowledge)` 1곳(→flow next/basis). 전제=PACK.knowledge.route DSL 형태(하니스 emit 업그레이드, 이 트랙 다음).
+- **이 트랙 다음(app/ 무관)**: 하니스 S4 프롬프트를 **DSL when emit**으로 → 4팩 자동 DSL화 → 어댑터(다리1)→evaluate(다리2) 데이터로 전구간 자동 연결. 〔표준·정의 / app/ 세션 핸드오프〕
+
+### v0.39 (데모, 빌드 완료 · 260623)
+- **(1) 우측 흐름 동적화(호르무즈 프로토타입 기법 차용)** — rhead(고정 영역)에 **진행바**(단계 진행률 비례 채움·width 전환 매끄럽게) + '작동중' 카드에 **스피너**·'완료'에 **✓**. 데이터 흐름이 '돌아가는' 느낌 강화. 〔기획·UX〕
+- **(2) 단계 설명 → 좌측 화면 툴팁(`#csGuide`)으로 이동, 우측 `rg-expl` 삭제** — 고객 화면 위 다크 말풍선(아래 화살표 포인터)로 단계 설명 표시(역할·라벨 + guide). 우측에선 제거. 〔기획·UX〕
+- **(3) 상태 범례 우측 정렬**(`.rg-leg.top` justify-content flex-end, '상태' 라벨만 좌측). 〔기획·UX〕
+
+
+### 로드맵 — 스튜디오 4화면 고도화(새 업무 요청·도메인팩·워크플로우·자산) (`aap_studio_enhancement_roadmap_v0_1.md`) (260623, aap-lead) 〔기획·UX / app/ 세션 핸드오프〕
+> 유저: "4화면에 어떤 점이 고도화되면 좋겠나? 하니스·설계 중 app/ 기준으로." → 공통 축 = **하니스가 만든 결정층·evaluate·검증(severity)·재사용 레시피를 4화면에 흘려보내기**.
+- **새 업무 요청**: 키워드 분해→**bake 카탈로그 인식**(packs_baked)·드릴다운(analysis 명시지/암묵지)·격상 검증을 **§9 severity**로·고객 환경 입력 조건화·정직한 baked/신규 2분기.
+- **도메인팩**: 결정층(caseModel·knowledge·seeds) 1급 뷰·**검증 배지**(blocking0=✅)·프로파일 variant(A사/B사)·재사용 레시피 가시화·provenance lineage.
+- **워크플로우**: gate `next`↔route 결정테이블 **3분기 시각화**·kind/loopPhase 표면화·gate↔knowledge basis·**io.editable 라이브 튜닝→evaluate 재계산→seeds 재라우팅**(시뮬레이터화)·branch-coverage 검사.
+- **자산**: **knowledge 자산화**(임계 패밀리 5종·결재선표·정책금지룰셋 가로질러 재사용)·evaluate() 공유 모듈·Connector 자산+바인딩 상태·사용처 lineage·재사용률.
+- **우선순위**: 첫 도미노=**코어 evaluate()+결정층 1급 필드**(N3 §D, app/ 세션). 그 위에 4화면 동시 활성. 이 트랙은 bake 카탈로그·provenance·검증·공유 knowledge 자산 후보 공급(app/ 무관).
+- 본 건=로드맵 진단만(코드 0). app/ 구현은 단일 writer 세션이 Pack v2와 함께. 〔기획·UX / app/ 세션 핸드오프 후속〕
+
+### 다리 1 구현 — 하니스 출력 → 앱 Pack v2 어댑터 + 4개 bake (`_harness_out/adapter_harness_to_pack_v0_1.js`, `packs_baked/`) (260623, aap-lead) 〔표준·정의 / app/ 세션 핸드오프〕
+> N3 §C(다리 1) 참조 구현. `finalPack`(하니스 생성) → **Pack v2(flow+io+결정층)** 결정론 변환(LLM ✕·Node). 4개 bake: `pack_contract_A/B`·`pack_procurement`·`pack_expense`. **app/ 무관**(`_harness_out/`에만, `app/packs/`엔 미투입 — 단일 writer 협의 후 드롭).
+- **정밀(1:1 통과)**: `caseModel`·`knowledge`·`seeds`·`components` = 하니스 출력 그대로(어댑터 핵심 가치). **휴리스틱(v0.1)**: `flow`의 kind(input/auto/gate)·loopPhase·gate.decisions, surfaceSpec(stub) → app/ 세션이 v2 2b서 정통화.
+- **v2 정합**: `io.editable[].recompute='evaluate(case,knowledge)'`(v2 §3.2 백엔드=N3 §D), flow gate.decisions=route 결정테이블 라벨 미러(SSOT=knowledge), `provenance.reviewedBy:null`(미검토 표식). 결과: 슬롯 24~48·룰표 16~21·seed 9~11/팩, flow auto 우세+게이트 1~4(규정 심사 형태).
+- **재생성**: `node adapter_harness_to_pack_v0_1.js`(하니스 재실행→finalPack 변경 시 어댑터만 재실행).
+- **app/ 세션 후속**(packs_baked/README §app 연결): 코어 `evaluate()` 추가→knowledge 소비 / flow gate `next`↔route verdict 바인딩 / `pack_<id>.json`→`app/packs/<id>.js` 래핑·register / surfaceSpec·flow 정통화. 〔app/ 세션 핸드오프〕
+
+### v0.38 (데모, 빌드 완료 · 260623) — 다건
+- **(1)** 단계 설명을 업무순서 레일 바로 아래 항상 표시 + 그 아래 상태 범례(순서 뒤집음). **Run 중 검정 툴팁 생략**(narrate 미호출, 커서만 이동). 〔기획·UX〕
+- **(2)** HITL 확정 알림(토스트)을 **고객 화면 안 인-콘솔 토스트(`.ctoast`)**로(전체 정중앙 ✕). 〔기획·UX〕
+- **(3)** 우측 카드 '데이터·근거·산출물' 링크 = `margin-top:auto`로 **항상 카드 좌하단 고정**(세부 토글 유무 무관). 〔기획·UX〕
+- **(4) 8단계 좌측 장면 → 우측 순차 점등** — request=포털 AI바 / understand=파악 결과 카드 / compose=진행 계획 카드(T1~T5) / approve·commit=인-콘솔 확인 모달 / prepare=워크스페이스 채워짐 / **meeting=Teams(코멘트 시퀀스+커서로 녹음 ON→우측 STT 점등)** / share=Confluence 발행. **working/result 모달 제거**해 좌측 장면이 항상 보이게(`currentCM`=HITL choice만). 〔기획·UX/표준·정의〕
+- **(5)** **느리게**(reveal 1400·dwell 2400) + **일시정지/계속**(Run 3상태 ▶Run→❚❚일시정지→▶계속) + **단계 클릭=그 단계 1회 재생**(좌→우 점등 후 정착). 〔기획·UX〕
+- **(6)** AI 어투 제거(`—`·`~함.`→자연스럽게)·**그룹웨어→Works AI**. 〔기획·UX〕
+
+
+### 진단+설계 — 하니스↔앱 연계 진단 + 다리(N3) 핸드오프 (`aap_harness_app_bridge_n3_v0_1.md`) (260623, aap-lead) 〔표준·정의 / ★app/ 세션 핸드오프〕
+> 유저 진단 요청: "하니스 구성? '새 업무 요청'에서 확인되나? 스튜디오(도메인팩·워크플로우·자산)도 연계돼야." → **현 상태 = 3중 단절**(하니스 Claude Code 환경·앱 무관 / '새 업무 요청'=키워드 theater·옛 Pack / 앱에 evaluate() 없음). 앱 '새 업무 요청'→격상(pipeline.js)→genericAuthor→register→스튜디오 **배선은 있으나 결정층 없는 옛 Pack이 흘러 반쪽**.
+> **★Pack Contract v2와 보완 관계 확인**(충돌 0): v2=flow/io 구조 일반화 / **N3=그 단계 안 결정 룰 엔진**(caseModel·knowledge·evaluate). v2 §8 '열린 결정: next 분기 모델'과 직접 맞닿음.
+- **다리 3개 설계**: ①스키마 정합(하니스 출력→Pack v2 필드 매핑: subProcesses→flow·caseModel→io.inputs+결정층·knowledge→신규 결정층 필드·seeds→seeds) ②**evaluate(case,knowledge) 코어 표준**(안전 DSL·verdict basis·§9 severity 러너[N1b 학습]·route verdict가 v2 flow next 분기 결정·io.editable.recompute의 백엔드) ③소비 seam(오프라인 bake 권장 — pipeline.js propose* 자리에 꽂기).
+- **스튜디오 연계**: register 1번에 도메인팩(정의)·워크플로우(flow)·자산(components) 동시 — 배선 존재, 결정층만 흘려보내면 온전.
+- **★app/ 세션 핸드오프(§G·§H)**: 코어 evaluate()+안전 DSL+§9 러너·pipeline.js propose*→bake 연결·flow↔route next 바인딩은 **app/ 단일 writer 세션이 v2와 함께** 구현. 정합 포인트 5개 명시(next 선언형 통일·결정층 1급 필드·evaluate 코어 소유·severity 검증·@verdict basis). 하니스 S9→Pack v2 emit은 이 트랙 독립 진행 가능.
+- 본 건 = 진단·설계만(코드 0). 〔표준·정의 / app/ 세션 핸드오프 후속〕
+
+### app/ 구현체 — 인박스 개별 케이스 삭제 + 시드 좀비 방지 (260623, aap-platform) 〔기획·UX/표준·정의〕
+- **인박스 행 삭제 액션**(`core/core.js` `_inboxStatusGroups`): `.ibx-row`에 휴지통(Lucide `trash`, hover 노출) `data-del` 버튼 + **행 내 인라인 확인**(`삭제할까요? 삭제/취소`, `data-confirm/delyes/delno`). 실수 방지 2-스텝. 클릭 전파는 `renderInbox` 이벤트 바인딩에서 `.ibx-del/.ibx-confirm` 영역 차단. CSS는 `core/platform.css`(red 토큰·신규 hex 0).
+- **삭제 동작**(`core/core.js` 신규 `deleteCase(id)`): `APP.cases`에서 제거 → 케이스 객체 내부에 격리된 P5 델타(`case.overrides`)·trace·packState 동반 제거(별도 전역 저장소 없음) → `saveApp()` → 인박스/카운트 갱신. **활성 케이스 삭제 시** `clearActiveCaseOverlay()`(팩 레벨 복원)·`APP.active=null`·`setView('inbox')` 복귀.
+- **★시드 좀비 방지**: 시드마다 안정 키 `packId:seedIndex`를 케이스에 stamp(`c.seedKey`, `seedPack` 갱신) + 삭제 시 그 키를 영속 집합 `APP.deletedSeeds`(`aap.v1.deletedSeeds`)에 등록. `seedPack`이 **per-seed**로 바뀌어(기존 pack 단위 early-return 폐기) `deletedSeeds`·이미 존재하는 seedKey를 건너뜀 → 리로드 시 삭제 시드 부활 안 함. `SCHEMA_VER 4→5`(기존 케이스에 seedKey 부여 위해 1회 재시드).
+- **검증**(헤드리스 Edge CDP, 임시 드라이버 검증 후 삭제): ① 휴지통→확인→삭제 시 행 9→8·케이스 제거·`deletedSeeds`에 키 등록 ② 활성 케이스 삭제 시 `active null`·view `run→inbox` ③ 리로드 후 삭제 시드 **부활 안 함**·`deletedSeeds` 영속(total 9→7) ④ voc/recruiting 시드 무회귀. `node --check` 전 파일 OK.
+
+### v0.37 (데모, 빌드 완료 · 260623) — 다건 반영
+- **(1) 좌측 캡션** = `고객이 보는 서비스 화면`(괄호 'kt ds 업무 포털' 삭제)·**글씨 키움**. **'작동 안내'(수동 가이드 투어) 버튼 삭제**(누르면 01로 리셋 → 제거). 단계 설명(`w.guide`)은 업무 순서 레일 아래 단계 설명으로. 〔기획·UX〕
+- **(2) 우측 제목 위계** = **`AAP 작동 흐름` 단일 주제목(teal 엔진 헤더)** + **`업무 순서`(8단계)를 그 안의 하위 레일로 흡수**. 〔기획·UX〕
+- **(2) 반응형** — 큰 모니터 `zoom`(≥1700·≥2200)·좁은 화면 좌/우 스택(≤1024). 〔기획·UX〕
+- **(3) 좌/우 색 구분** — 좌=라이트 포털·우=**teal 엔진 헤더 + 쿨 톤(#edf2f8) 캔버스**. 〔기획·UX〕
+- **(3) 카드 세부 토글** — 분량 있는 카드(작업 분해 T1~T5·데이터 식별 4·캘린더 3안·자료 수집·발송안 점검)에 `▸ 세부 N` 인라인 토글(`op.sub`·`STATE.expanded`). 근거·산출물 모달 유지. 〔표준·정의 + UX〕
+- **(4) 3계열 구분 강화** — 상시·배경 / **"이 단계 작동 구성요소 · 업무 순서에 따라 바뀜"**(헤더+teal 좌측 바) / 맥락 트리거("· 맥락이 바뀔 때만") 라벨 명시. 〔표준·정의 + UX〕
+- **추가1: HITL 운영 트리거 '회의 시작'** — 게이트(🔴 책임 승인) 2 + **운영 트리거(▶ 사람이 시작) 1** 도입. 준비→회의 전환 시 Teams 켜진 뒤 사람이 '회의 시작'(자동재생은 자동 press). 업무 순서에 **트리거=파랑 점 / 게이트=amber 점** 구분. 〔표준·정의 + UX〕 *(표준 'HITL 2게이트' → '게이트 2 + 운영 트리거 1'로 확장 — §2 HITL 모델 갱신 대상)*
+- **추가2: 좌측 고객 화면 실제 솔루션 목업** — 회의 진행=**Teams 통화 뷰**(참석자 타일·발언자 강조·REC·실시간 자막) / 공유·기록=**Confluence 발행 뷰**(페이지·체크·발송 채널). 회의/공유 단계는 working 모달 대신 이 뷰로 진행 표시. 〔기획·UX〕
+
+### app/ 구현체 — 자동저작(AAP화)을 「분해·배정·조립 rich 시각화(G1) + 고객 콘솔 연결 미리보기(G2)」로 정렬 (목업 `03_프로토타입/aap_스튜디오_목업_v0_1.html` 정합) (260623, aap-platform) 〔기획·UX〕
+> 자동저작 결과가 칩 나열(빈약)·생성 후 즉시 run 점프(연결 안 보임)였던 갭 2개 해소. `core/authoring.js`만 수정(코어 도메인 무관·생성 팩 데이터에서 결정론 도출). 입력 소스(제조 품질·직접 입력)·딥링크(`?author=1|run|gen`)·register/load·Pack Contract v2 보존.
+- **① G1 — 분해·배정·조립 rich(파이프라인 완료 후 표면화)**: `decompose(pack)`가 `pack.work`의 **AAP 실행 단계(actor=aap, request·hitl 제외)를 작업 T1..Tn으로 표면화**. 각 작업 = 이름 + 목표(ops out 1~2 요약) + **배정 구성요소 5타입 색 배지**(`opType(op)`가 comp·feed·out 문자열로 P>C>S>M>A 우선순위 결정론 분류 → `.au-cmp.tA/tM/tS/tC/tP` + Lucide bot/boxes/database/plug/shield) + **"왜?"** 한 줄(`WHY`, 가장 비-Agent 타입 근거 = '전부 Agent ✕'). **조립 그래프**(`renderG1`): 작업을 HITL 게이트로 분절 → 게이트 사이 묶음=병렬(`.au-asm-par` '병렬 N')·게이트=amber(`.au-gate2` + `pack.gates` 라벨)·순서=↓.
+- **② G2 — 고객 콘솔 연결 미리보기(finish 교체)**: `finish()`가 즉시 run 점프 → **2열 split**(`.au-split` = 좌 G1 스튜디오 + 우 violet 메타 패널). `consolePreview(pack)` = mini 콘솔(작업 흐름 스트림=`work`에서 human 제외·gate 강조·첫 게이트 직전 done/이후 wait + 산출물 파일 탭=`products` 절반 ready) + **매핑 명시**(`분해·배정→작업 흐름`·`게이트→사람 결정`·`산출물→파일 뷰어`) + **[이 고객 콘솔 생성·실행] CTA**(`#auLoad` 유지). CTA → 기존 `register`+`load`(Side A 스트림 실행) — 즉시 점프 대신 미리보기 후 명시적 생성.
+- **③ 스튜디오 톤**: 자동저작=BD 도구 → violet 메타 악센트(`.au-conn` violet 그라데/테두리·`.au-conn-lead/.au-conn-map` violet·가이드 §6.5.5). 단 1차 CTA(teal)·구성요소 타입색은 규칙대로. `.cmp` 충돌 회피 위해 배지는 `.au-cmp`로 네임스페이스.
+- **파일**: `core/authoring.js`(TYPE/opType/composeKey/WHY·decompose·taskCard·renderG1·consolePreview·renderG2·finish 교체, `ic()` = AAP_ICON 인라인 SVG) · `core/platform.css`(`.auth-box:has(.au-split)` 1000px 확장·`.au-split/.au-studio/.au-conn`·G1 `.au-tgrid/.au-tcard/.au-cmp/.au-asm/.au-grow/.au-gnode/.au-gate2`·G2 `.au-mini/.au-ms/.au-mf/.au-conn-map/.au-cta`). **신규 hex 0**(가이드 토큰 + 기존 Solution cyan 팔레트만), Lucide 인라인(이모지 ✕), `node --check` 전 파일 통과. **헤드리스 검증**(임시 드라이버 iframe→`?author=1`→`#auGo`, 검증 후 삭제): ① 작업 카드 4 + 5타입 배지 14(tA/tM/tP/tC/tS 전부)·Lucide SVG 14 ② 조립 그래프·게이트(amber) 2·병렬 1 ③ 고객 콘솔 미리보기·스트림 6(done 2/gate 1)·산출물 4탭·매핑 명시 ④ CTA→오버레이 hidden·시퀀스레일 노출(Side A 실행) ⑤ `?author=run` 무회귀(콘솔 직행) 전부 OK.
+
+### app/ 구현체 — run 뷰를 「작업 스트림 + 산출물 뷰어」로 재구현 (자동 진행·스테퍼 제거·HITL 모달) (목업 `03_프로토타입/aap_작업스트림_목업_v0_3.html` 정합) (260623, aap-platform) 〔기획·UX/표준·정의〕
+> 사용자 불만 #1("자동으로 작동하는 것 같지 않다 — 내가 phase를 눌러 진행")을 해소. run 뷰 메인(상단 스테퍼 + 내업무/업무진행 2탭 + 워크스페이스 본문)을 **좌 자동 작업 스트림 + 우 산출물 뷰어**로 통째 대체(Claude 아티팩트/draft 패턴). **코어 도메인 무관 일반 도출**(flow·ops·products) — 채용 전용 분기 0. 회의·VOC 동일 구조 자동 적용·무회귀.
+- **① 자동 작업 스트림(좌·코어 일반)**: `streamLeft(C)`가 `WORK(flow)`를 위→아래 카드로 자동 누적. 상태 `strState`(완료✓/진행 pulse/대기 흐림, 게이트=결정 여부로 done/cur/wait). 카드 = role·라벨·시각(`strWhen`)·설명(`strDesc`=ops feed→out 또는 explain)·**구성요소 5타입 색 배지**(`strComps`=ops를 `evidType`로 tyA/M/S/C/P dedupe)·산출물 '열기' 링크(`artForStep`)·'자세히' 펼침(`strDetail`=explain+ops 전체). **상단 스테퍼·2탭 제거**(runtop `.seq`/`.rt-lab`/`.rt-prog` CSS 숨김·#seq DOM 유지=demo.js 호환). 상단 자동신호 = `renderRunAction` 'AAP 작업 중 · N/총 단계' pill(await=amber '여기서 결정이 필요해요'·done=완료).
+- **② 산출물 뷰어(우·코어 일반)**: `streamArts(C)`가 `PACK.products`(DLV)를 파일 탭 + 선택 문서로. 생성 시점=`products[k].readyAt`(stepId) 우선, 없으면 등장 순서 균등 배치(graceful). 생성 전=대기(흐림·클릭 불가), ready=`resolveDlv` 본문 렌더 + 열기/다운로드(stub). 좌측 산출물 링크→`STATE.artK`로 우측 해당 파일 열기. 회의·VOC products 있으면 표시, 없으면 '표시할 산출물 없음'.
+- **③ 자동 진행 메커니즘**: `openCase`→`restoreStep`(완료분 누적·현재 지점 복원) 직후 `autoAdvanceOnOpen` — 현재 단계가 게이트/라이브 await/완료가 **아니면** `STATE.playing=true`+`setSel`로 자동 재생 시작 → `revealOps`/`playNext`가 비-게이트 단계를 순차 자동 완료하며 **게이트(stIsGate)·라이브에서 멈춤**(사람 결정 대기·#cmodal 모달). 결정(`decide`) 후 `STATE.playing=true`+`playNext`로 **다시 자동 이어서 진행**. 사용자가 스테퍼 누를 일 0.
+- **④ HITL = #cmodal 오버레이 재사용**: 스트림 게이트 카드(amber·`data-strgate`)→`gotoGate`→`setSel`→`currentCM`='hitl'(또는 라이브=meetingStart/Live)→기존 `cmodal-card.wide`. 컷·가중 편집→결정론 재계산·P5 격리(`STATE.recrCut/recrWeight`·공유 불변)·`decide`/`decideHook` 전부 보존. io(`wsIoBar`/`ioActivate`)·`case.overrides`·자산/로그/거버넌스·자동저작·wfeditor·On-Ramp 보존.
+- **파일**: `core/core.js`(renderConsole 스트림 분기·streamSplit/Left/Arts·strState/When/Desc/Comps·artKeys/ReadyStepIdx/Ready/ForStep/curArtK·wireStream·autoAdvanceOnOpen·renderRunAction pill·decide 자동재개·STATE.artK transient) · `packs/recruiting.js`(products[].readyAt 5종·demo 시나리오 target #seq/.recr-board→.strm-left/.strm-arts) · `core/icons.js`(zap·alert-circle·download·external-link) · `core/platform.css`(.strm-split/.strm-left/.st/.hitl-card/.strm-arts/.file/.strm-doc + runtop 스테퍼 숨김·.rt-running pill + .con-body.stream-body·.ws-on-stream). 옛 `wsProgress`/`wsTabBar`/`wsStepDetail`은 미사용 잔존(무해). **신규 hex 0**(가이드 토큰만), `node --check` 전 파일 통과. **헤드리스 검증**: 채용(스트림 9카드·게이트 3·5타입 배지·산출물 5탭·결정→자동진행 done 3→5·art ready 1→4)·회의(8카드·라이브 게이트·6탭)·VOC(7카드·5탭) 전부 split 렌더·스테퍼 없음·ws-tabs 빈·게이트 모달 OK.
+
+### app/ 구현체 — run 뷰 워크스페이스 2탭화(내 업무/업무 진행) · HITL 모달 컷·가중 편집 · io(업로드·커넥터·editable) 실동작 · 프로세스 심화 (260623, aap-platform) 〔기획·UX/표준·정의〕
+> Side A(고객 워크스페이스) 고도화 4종. 옛 'AAP 작동 보기' 토글 드로어(#runEvid 다크 아사이드)를 **「업무 진행」 탭으로 흡수** — run 뷰가 '드로어를 켜야 보이는 작동'에서 '탭으로 항상 접근 가능한 단계·HITL·작동'으로. 코어 도메인 무관 메커니즘, 채용 분기 0.
+- **① 워크스페이스 2탭(코어 일반)**: `STATE.wsTab`('mine'|'progress', 코어 소유·케이스 전환 시 'mine' 리셋). `#wsTabs` 바(`wsTabBar`)를 run-surface 상단에. **내 업무**=기존 base(doneBand·결정 큐·evidList). **업무 진행**(`wsProgress`, 코어 일반 도출)=①WORK 전체 단계 타임라인(완료/진행/대기·role·ops 요약·loopPhase 배지·클릭 펼침) ②HITL 통제점(stIsGate amber·클릭→게이트 이동) ③AAP 작동(옛 드로어 흡수 — `#explain`/`#caseTune`/`#flow`를 `.wp-aap.run-evid` 다크 마운트로 이식, `renderRight` 재사용). **#flow/#explain/#caseTune/#seq/#surfHead/#surfBody 안정 ID 보존**(아사이드→탭 본문으로 단일 이전, 중복 ID 없음). `#aapTg`/`#aapTgX` 버튼 제거, `data-aapsee`('어떻게 했는지 →')는 `AAP_setWsTab('progress')`로 전환. 데모 투어 design 스텝은 `do.wsTab:'progress'`(demo.js applyDo 일반 지원)로 #flow 가시화.
+- **② HITL 모달 확대 + 컷·가중 편집(io.editable)**: HITL cmodal `.cmodal-card.wide`(560px·Notion 차분). 숏리스트 모달에 `editorBlock` — 프리셋(엄격≥90/표준≥85/넓게≥80)+컷 슬라이더+가중 2축 슬라이더(도메인=잔차·합 100). **격리(P5)**: 공유 `JOB.weight`·`c.match` 절대 미변경 → 케이스 단위 `STATE.recrCut`/`recrWeight`에만 저장(persistKeys 추가). `cutThreshold`/`mOf(C,c)`/`breakdown(c,C)`/`shortlistIds`/`passCount`가 STATE 우선 참조해 결정론 재산출 → 모달 미리보기·결정 큐·evidList·보드 카드의 후보수/매칭% 실시간 갱신. 슬라이더 드래그=라벨 라이브, change=전체 재계산(드래그 끊김 방지).
+- **③ io.inputs·connectors 실동작(결정론 mock·코어 일반)**: 코어 `wsIoBar`(내 업무 탭 상단)가 `PACK.io.inputs/connectors` 읽어 업로드(이력서+8·JD)·외부 소싱(잡코리아+12/사람인+9/링크드인+6) affordance 렌더. 클릭=`ioActivate` 결정론 핸들러(멱등·`entry.setKey`로 STATE 갱신·trace·`STATE.ioDone` 케이스 영속). 채용 surface `applicantsOf(C)`=기본+업로드+소싱이 헤더·doneBand·JD 스트립에 반영. **회의·VOC=io 빈 배열→미표시(graceful)**.
+- **④ 프로세스 심화**: 업무 진행 탭 단계 펼침(`STATE.wsStepOpen`·코어 일반)=`wsStepDetail` — ops 전체(comp 5타입 배지·feed→out·micro·detail 표)+step.explain('무엇을·무엇으로·어떤 근거로').
+- **파일**: `core/core.js`(STATE.wsTab/wsStepOpen/ioDone, renderConsole 2탭 분기, wsTabBar/wsProgress/wsStepDetail/wsIoBar/ioActivate/setWsTab, wireSurface data-wstab/wsstep/wsgate/ioinput/ioconn, renderCModal wide, hydrate/persist ioDone, aapTg 제거) · `packs/recruiting.js`(normWeight/mOf/cutOf/passCount/uploadsOf/sourcedOf/applicantsOf, editorBlock, 숏리스트 모달 재작성, io 채움, persistKeys, decideHook no=cut90, data-aapsee→탭) · `core/demo.js`(applyDo wsTab) · `core/icons.js`(upload·plug) · `core/platform.css`(.ws-tab/.io-bar/.io-chip/.wp-*/.ed-*/.cmodal-card.wide, .wp-aap.run-evid 오버라이드, evid-collapse :not(.wp-aap) 가드). **신규 hex 0**(가이드 토큰·기존 팔레트만), `node --check` 전 파일 통과.
+
+### 하니스 N4 — 도메인 확장(구매·경비) · 범용 시나리오 공장 입증 (`aap_harness_poc_result_v0_1.md` §10) (260623, aap-lead) 〔표준·정의〕
+> 같은 하니스(severity-aware critic 기본)로 **구매·조달 / 경비·지출** 신규 도메인 시나리오 생성 → 계약 아키타입과 가로질러 비교. 9 에이전트·542k 토큰·8.3분. 원본=`_harness_out/scenarios_procurement_expense_n4.json`. ※app/ 무관.
+- **결과: 구매·경비 둘 다 0회 pass**(무수정 1패스, severity critic 효과 일관). 구매=11 route 분기(3견적·단가편차·예산약정·쪼개기 split_score≥70·신규벤더 실사·벤더 컴플라이언스), 경비=12 route 분기(직급×비용×지역 한도표·법인카드 3-way 대사·정책금지룰셋·중복분할·OCR·riskScore≥85 SIU).
+- **★sharedArchetype(계약·구매·경비 가로질러 동일)**: 6단계 파이프라인·decide 2계층·route 3분기 서열(하드차단→HITL승급→자동승인 fallback)·gap↔게이트 1:1·임계 패밀리 5종(금액캡·결재선룩업·신뢰도컷 0.8·패턴탐지·소진초과)·결재선 위임전결표·writeback. **토큰 단위 공유.**
+- **★reuseRecipe(하니스 산출)**: 새 도메인 = ①슬롯 매핑 ②knowledge 4종(룩업·임계값·룰·정책금지) ③route 사유표 ④writeback 대상만 교체. 골격(파이프라인·decide 2계층·route 서열·gap↔게이트·임계 패밀리)은 고정.
+- **판정**: 하니스 트랙(가설 검증) **일단락** — 신뢰 가능(N1b)+범용(N4)+고객 변수 조건화(앞선 PoC) 3박자 확보.
+- **표준화 연결**: 이 6단계 파이프라인·임계 패밀리 5종·route 3분기 서열은 app/ Pack Contract v2 `decide/evaluate`가 도메인 무관 코어로 일반화할 때 **검증된 도메인 무관 골격**으로 참조 가능. 〔표준·정의 후속〕
+
+### app/ 구현체 — run 뷰 → 고객 업무 워크스페이스(근거 토글 드로어·결정 큐 히어로·스테퍼 강등·좌 nav 분리·채용 surface 재작성) (목업 `03_프로토타입/aap_업무워크스페이스_목업_v0_2.html` 정합) (260623, aap-platform) 〔기획·UX/표준·정의〕
+> 문제의식: run 뷰가 스테이지 재생 내레이션 + 운영자 껍데기 + 데모 흔적(페르소나·운영 콘솔·과대 ATS 보드)으로 "데모 재생"·"채용 SaaS"처럼 보임 → **"AAP에게 맡긴 한 업무를 처리하는 작업 공간"**으로 전환(채용=인사 업무 중 하나).
+- **A. 우측 근거 레일 → "AAP 작동 보기" 토글 드로어(코어·도메인 무관)**: `.run-evid`를 기본 숨김 + runtop 우상단 토글 스위치(`#aapTg`)로. 켜면 우측 **다크 엔진룸 드로어**(372px)로 **업무 분해·구성요소 배정**(5타입 색 카드 + 범례 + LLM/결정론 칩) / **사람이 결정할 통제점(HITL · amber, 대기/예정/완료)** / **처리 로그**(L배지) 노출. 토글 상태 `APP.collapse.aapDrawer` localStorage 영속(run 한정 노출). `#flow`/`#explain` 안정 ID 보존(데모/안정성). `renderRight()`가 ops→`.dt` 다크 카드 + `drawerGates()`/`drawerLog()`로 재구성.
+- **B. 중앙 = 업무 워크스페이스(채용 surface 재작성 · recruiting.js)**: ATS 보드(JD스트립+탭+풀보드) → 목업 워크스페이스. **업무 헤더**('AAP에게 맡긴 업무' 키 + "채용 1차 스크리닝" + 진행%·결정 N건) **페르소나 '한지원'·제품 브랜딩 제거**. **"AAP가 해둔 일" 밴드**(완료 auto 체크리스트). **"당신이 결정할 것 (N)" 결정 큐 히어로**(미결정 HITL 게이트 전면화 · 클릭→기존 HITL 모달 재사용). **"근거·상위 후보" 컴팩트 리스트**(풀 보드 ✕ · 후보 상세 candDetail 유지 · '파이프라인 전체 보기'는 접힘). 탭 탐색 제거.
+- **C. 결정 큐 = 코어 일반 도출(도메인 무관)**: 코어 `pendingGates()`가 `flow`의 `stIsGate` && 미decided 단계를 결정 큐 아이템으로 산출(state=pending/upcoming/done). `ctx()`에 `gates`/`openGate`/`gateDecided` 노출 → 팩 surface는 라벨·설명만 채움(채용·회의·VOC 동일 프레임). live 세션 게이트는 meetPhase 미완료=미결정.
+- **D. 스테이지 스테퍼 강등(코어)**: runtop `.seq`/`.snode`를 박스 스테퍼 → **배경 진행률 칩 스트립**(주 컨트롤 ✕, 클릭 되짚기 유지). 워크스페이스가 주인공.
+- **E. 좌측 운영자 nav 분리**: `body.run-active`에서 글로벌 nav(`.gnav`)·nav-toggle·운영 부제 숨김 → 목업처럼 **"‹ 내 업무"(인박스 복귀) 백 링크**만. run 외 뷰에선 nav 정상.
+- **적용 범위**: 채용=목업대로 깊게 재작성(플래그십). 회의·VOC=코어 일반 프레임(드로어 토글·결정 큐·스테퍼 강등·nav 숨김) 동일 적용 + surfaceSpec 본문 무회귀(워크스페이스 프레임 안에서 깨지지 않게).
+- **보존**: 결정론 엔진·수치, case.overrides(P5) 격리, HITL decide/decideHook/cmodal, 자산/로그/거버넌스, 자동저작·wfeditor·On-Ramp·pipeline, Contract v2 flow/stIsGate/stDecision, demo.js 안정 ID, file://(script src·외부 라이브러리 0), Lucide 인라인, 코어 도메인 무관(채용 전용=recruiting.js).
+- **검증(헤드리스 Edge)**: ① 채용 케이스=깨끗한 워크스페이스(좌 nav 숨김·드로어 닫힘·결정 큐 히어로·"AAP가 해둔 일" 밴드) ② 토글 → 드로어(분해·배정 5타입 색·통제점 amber·로그) ③ 결정 큐 → HITL 모달 → decide → 큐 갱신(pendingGates 재산출) ④ 회의·VOC 무회귀(워크스페이스 프레임 + 자기 surface + 동일 드로어). node --check 4파일 OK.
+
+### 하니스 N1b — critic severity 튜닝 결과 (`aap_harness_poc_result_v0_1.md` §9) (260623, aap-lead) 〔표준·정의〕
+> N1b: critic severity(blocking/minor) + cap 5 + fixer freeze 적용 후 resume 재실행(S1~S8 캐시). 9 에이전트·**176k 토큰·4.4분**(직전 fix-loop 1.33M의 1/7).
+- **결과: A사·B사 둘 다 첫 critic에서 즉시 pass(fix 0회)**. 검증 대상=캐시된 run1 원본 시나리오.
+- **★핵심 발견**: 직전 "A사 3회 미수렴(fail)"은 **시나리오 결함이 아니라 critic의 이분법(edge 갭을 hard-fail 취급)** 탓. blocking(핵심: route 전 분기 1:1 커버·추적성·gap 누출 없음·미정의 입력 없음) vs minor(edge: 단일 임계 seed·인지세 상위구간·문서용 임계·문구 긴장)를 가르자 **raw 출력이 수정 없이 pass**.
+- **정직한 한계**: fix 0회라 **cap·fixer freeze는 미발동**(blocking 없어 호출 안 됨). severity 단독이 효과 전부. → 하니스 기본값으로 **severity-aware critic 채택**.
+- **잔여 minor(비차단)**: 자동갱신 없음 분기 단독 seed·법무 후속 3결과 seed·인지세 상위구간·위약벌>10% 트리거 — route 본질 무관, freeze 1라운드로 선택적 마감 가능.
+- **표준화 연결**: 이 **severity 모델(blocking=데이터구동·분기커버·추적성·gap누출·미정의입력·재현성 / minor=edge)**을 app/ Pack Contract v2의 `decide/evaluate` 검증 러너 §9 기준으로 직접 채택 권장(과엄격 게이트가 비용·오판의 주원인이었음).
+- **다음**: N4 도메인 확장(구매·경비, 범용성 입증)▶권장 / N3 실행 표준 핸드오프 / (선택) freeze 1라운드로 minor 마감. 〔표준·정의 후속〕
+
 ### app/ 구현체 — 온톨로지 그래프화 (목록 → 노드 그래프 · 객체=노드/관계=엣지/Action=배지) (`04_디자인가이드/aap_layout_improvement_spec_v0_1.md` §3) (260623, aap-platform) 〔기획·UX〕
 > 명세 §3 후속(직전 레이아웃 v0.1이 "그래프화는 후속"으로 남긴 항목) 구현. 도메인 뷰 온톨로지 탭을 목록형 → **Palantir 톤 다크 엔진룸(`.plg-*` 재사용) SVG 노드 그래프**로. 객체=노드(teal)·관계=라벨 엣지·Action=객체 배지(자동 green/사람확인 amber). 코어가 ontology 데이터로 렌더 → **도메인 무관**, ontology 없는 팩(meeting/voc)은 generic 폴백 유지(무회귀). 안정 ID `#ontologyBox` 유지·뷰 키 불변·X1 dcText 전 텍스트 적용. file:// 동작·외부 라이브러리 0.
 - **백업**: 셸 cp/PowerShell 전부 차단 → 물리 백업 `_archive/app_v0_26_pre_ontograph/` 미생성. git 복원 기준 **HEAD c8a18cb**(변경 전). 변경 파일=`packs/recruiting.js`·`core/core.js`·`core/platform.css`.
@@ -512,5 +670,5 @@
 ## 6. 참조
 - 표준 스펙: `aap_platform_form_spec_v0_1.md` · `aap_runtime_expansion_strategy_v0_1.md` (같은 폴더)
 - capability·칩 원천: `01_선제안서/aap_proactive_offering_v0.7_260616.html` (`DEFAULT_ARCH_CHIPS`, `CHIP_TYPES`)
-- 현행 데모: `03_프로토타입/D_회의/aap_meeting_runtime_builder_v0_36.html` (좌측 = 기업 포털 홈 대시보드 / 우측 = 3안 하이브리드 컴팩트, 8단계 1줄·4상태 색·카드 면[caps≤3]+모달·상태 범례 상단·topbar 'Agentic AI Platform 데모 시연(회의업무)'·narration 커서→버튼·검정 툴팁 ×닫기·rg-expl 중복 해소, §2 구조 문법)
+- 현행 데모: `03_프로토타입/D_회의/aap_meeting_runtime_builder_v0_41.html` (좌측=결과·결정만[신뢰도 점수 등 근거·로직은 우측으로] · 끊김 없는 동적 흐름[증분 렌더+입자]·HITL 모달 축소·참석자 추가·어투 정리·업무순서 화살표 / 단계 설명=좌측 화면 툴팁·우측 진행바+스피너 동적화·범례 우정렬 / 좌측 = 기업 포털 홈 + 8단계 좌측 장면(파악/계획 카드·워크스페이스·Teams 코레오·Confluence)→우측 순차 점등 / 우측 = **AAP 작동 흐름 주제목(teal 엔진 헤더)+업무 순서 하위 레일**·3안 하이브리드·세부 토글·3계열 라벨 강화·좌우 색구분·반응형 / **HITL=게이트2+운영 트리거('회의 시작')1**, §2 구조 문법)
 - 우측 레이아웃 비교 샘플: `03_프로토타입/D_회의/_sample_우측레이아웃_A_B_v0_1.html`
