@@ -232,7 +232,7 @@ function stShowsCompose(w){ return !!(w&&w.showCompose); }
 const LS_NS='aap.v1.';
 /* 스키마 버전 — 상태 모델이 바뀔 때마다 올린다. 저장본 버전이 다르거나(구버전 잔재) 없으면
    aap.v1.* 를 안전 초기화·재시드 → '옛 localStorage 가 새 코드를 깨는' 문제 방지. */
-const SCHEMA_VER=4;
+const SCHEMA_VER=5;
 function lsGet(k,fb){ try{const v=localStorage.getItem(LS_NS+k);return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
 function lsSet(k,v){ try{localStorage.setItem(LS_NS+k,JSON.stringify(v));}catch(e){} }
 function lsClearAll(){ try{const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf(LS_NS)===0)rm.push(k);}rm.forEach(k=>localStorage.removeItem(k));}catch(e){} }
@@ -251,9 +251,11 @@ function lsCheckSchema(){
 /* projects[] = P4 프로젝트(케이스 묶음) 차원. 추가 레이어일 뿐 — 케이스의 projectId(옵셔널)로 느슨히 연결.
    projectsOn = '프로젝트별 보기' 토글(기본 OFF=현행 인박스 100% 유지). 둘 다 영속(도메인 무관). */
 /* collapse = 레이아웃 패널 접힘 상태(도메인 무관 · UI). 기본 전부 펼침(false). localStorage 영속(SCHEMA_VER 정합). */
+/* deletedSeeds = 사용자가 삭제한 시드 케이스의 안정 키('packId:seedIndex') 집합(좀비 방지) — 도메인 무관.
+   seedPack 이 재부팅 시 이 집합의 시드를 다시 깔지 않는다. 영속(aap.v1.deletedSeeds). */
 const APP={cases:[], projects:[], active:null, view:'inbox', pack:null, typeFilter:'all', catSel:null, projectsOn:false,
-  collapse:{nav:false, evid:false, wfpal:false, wfrun:false}, domTab:'overview'};
-function saveApp(){ lsSet('schema',SCHEMA_VER); lsSet('cases',APP.cases); lsSet('projects',APP.projects); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); lsSet('projectsOn',APP.projectsOn); lsSet('collapse',APP.collapse); lsSet('domTab',APP.domTab); }
+  collapse:{nav:false, evid:false, wfpal:false, wfrun:false, aapDrawer:false}, domTab:'overview', deletedSeeds:[]};
+function saveApp(){ lsSet('schema',SCHEMA_VER); lsSet('cases',APP.cases); lsSet('projects',APP.projects); lsSet('active',APP.active); lsSet('view',APP.view); lsSet('pack',APP.pack); lsSet('typeFilter',APP.typeFilter); lsSet('projectsOn',APP.projectsOn); lsSet('collapse',APP.collapse); lsSet('domTab',APP.domTab); lsSet('deletedSeeds',APP.deletedSeeds); }
 function loadApp(){
   lsCheckSchema();
   const cs=lsGet('cases',null);
@@ -265,8 +267,9 @@ function loadApp(){
   APP.pack=lsGet('pack',null);
   const tf=lsGet('typeFilter',null); if(typeof tf==='string')APP.typeFilter=tf;
   const po=lsGet('projectsOn',null); if(typeof po==='boolean')APP.projectsOn=po;
-  const cl=lsGet('collapse',null); if(cl&&typeof cl==='object'){ ['nav','evid','wfpal','wfrun'].forEach(k=>{ if(typeof cl[k]==='boolean')APP.collapse[k]=cl[k]; }); }
+  const cl=lsGet('collapse',null); if(cl&&typeof cl==='object'){ ['nav','evid','wfpal','wfrun','aapDrawer'].forEach(k=>{ if(typeof cl[k]==='boolean')APP.collapse[k]=cl[k]; }); }
   const dt=lsGet('domTab',null); if(['overview','ontology','arch'].includes(dt))APP.domTab=dt;
+  const ds=lsGet('deletedSeeds',null); if(Array.isArray(ds))APP.deletedSeeds=ds.filter(x=>typeof x==='string');
 }
 /* 프로젝트 헬퍼(도메인 무관) — id로 프로젝트 조회, 케이스의 projectId 정합성 폴백 */
 function projectById(id){ return APP.projects.find(p=>p&&p.id===id)||null; }
@@ -304,7 +307,11 @@ function typeBadge(packId){ return `<span class="ty-badge ${typeTok(packId)}">${
 
 /* ===== STATE = 현재 열린 케이스의 런타임 슬라이스(엔진이 직접 읽고 쓰는 뷰) =====
    케이스를 열면 케이스 객체에서 hydrate, 변경 시 케이스로 persist 해 영속화한다. */
-const STATE={view:'inbox', sel:null, playing:false, decisions:{}, pickedTime:null, meetPhase:'idle', previewK:null, baseOnly:false, opOpen:new Set(), trace:[], traced:new Set()};
+const STATE={view:'inbox', sel:null, playing:false, decisions:{}, pickedTime:null, meetPhase:'idle', previewK:null, baseOnly:false, opOpen:new Set(), trace:[], traced:new Set(),
+  /* ── 워크스페이스 탭(코어 소유 · 도메인 무관 · transient) ──
+     'mine' = 내 업무(결정 큐 워크스페이스) / 'progress' = 업무 진행(단계 프로세스·HITL·AAP 작동).
+     wsStepOpen = 업무 진행 탭에서 펼친 단계 id 집합(세부 작업·근거). */
+  wsTab:'mine', wsStepOpen:new Set(), ioDone:{}};
 const RUN={phase:'idle', reveal:0, timers:[], playTimer:null};
 function clearRun(){RUN.timers.forEach(clearTimeout);RUN.timers=[];clearTimeout(RUN.playTimer);}
 function extExcluded(){return PACK.extExcluded?PACK.extExcluded(STATE):false;}
@@ -359,10 +366,13 @@ function hydrateFromCase(c){
   if(!c.sel || !(PACK&&PACK.work||[]).some(w=>w.id===c.sel)){ STATE.sel=(PACK&&PACK.work&&PACK.work[0]&&PACK.work[0].id)||c.sel; }
   STATE.trace=Array.isArray(c.trace)?c.trace.slice():[]; STATE.traced=new Set(c.traced||[]);
   STATE.previewK=null; STATE.baseOnly=false; STATE.opOpen=new Set(); STATE.playing=false;
+  STATE.wsTab='mine'; STATE.wsStepOpen=new Set(); STATE.artK=null;   /* 케이스 전환 시 워크스페이스 탭/펼침/열린 산출물 초기화(transient) */
   /* 팩 선언 키 복원(도메인 무관) — 매번 초기화 후 저장된 값 주입(누수 방지) */
   packPersistKeys().forEach(k=>{ delete STATE[k]; });
   const ps=(c.packState&&typeof c.packState==='object')?c.packState:{};
   packPersistKeys().forEach(k=>{ if(k in ps)STATE[k]=ps[k]; });
+  /* io 활성화 기록(코어 일반 · 케이스 영속) */
+  STATE.ioDone=(c.ioDone&&typeof c.ioDone==='object')?{...c.ioDone}:{};
   /* 팩 선언 transient 키 초기화(케이스 간 누수 방지 — 예: 열린 상세 모달) */
   clearPackTransient();
 }
@@ -372,13 +382,53 @@ function persistToCase(){
   c.trace=STATE.trace.slice(); c.traced=[...STATE.traced];
   /* 팩 선언 키 영속(도메인 무관) */
   const ps={}; packPersistKeys().forEach(k=>{ if(k in STATE)ps[k]=STATE[k]; }); c.packState=ps;
+  c.ioDone=(STATE.ioDone&&typeof STATE.ioDone==='object')?{...STATE.ioDone}:{};   /* io 활성화 기록 */
   const pack=PACKS[c.packId], last=pack.work[pack.work.length-1];
   if(STATE.sel===last.id && RUN.phase==='done') c.done=true;
   saveApp();
 }
 
+/* =========================================================================
+   결정 큐 (Decision Queue) — 코어 일반 도출 (도메인 무관)
+   ───────────────────────────────────────────────────────────────────────
+   flow 의 모든 게이트 단계(stIsGate) 중 '아직 결정되지 않은(미decided)' 단계를
+   '사람이 결정할 것'으로 모은다. 표현(라벨·설명)은 팩 surface 가 채운다 →
+   채용·회의·VOC 모두 같은 프레임. live 세션 게이트는 meetPhase 미완료도 미결정으로 본다.
+   상태: pending(현재 도달·확인 대기) / upcoming(아직 도달 전) / done(결정됨).
+   ========================================================================= */
+function gateDecided(c, w){
+  if(!w)return false;
+  if(c.decisions && c.decisions[w.id])return true;
+  /* live 세션 게이트는 진행 완료(meetPhase==='done')도 '결정됨' 취급 */
+  if(stIsLive(w) && c.meetPhase==='done')return true;
+  return false;
+}
+/* 케이스 기준 미결정 게이트 목록(도메인 무관). 활성 케이스/STATE 와 무관하게 케이스 객체로 산출. */
+function pendingGatesFor(c){
+  const pack=c&&PACKS[c.packId]; if(!pack)return [];
+  const flow=pack.flow||pack.work||[];
+  const ci=flow.findIndex(w=>w.id===c.sel);
+  const dec={decisions:c.decisions||{}, meetPhase:c.meetPhase};
+  return flow.map((w,i)=>({w,i})).filter(({w})=>stIsGate(w)&&!gateDecided(dec,w))
+    .map(({w,i})=>({ id:w.id, label:w.label, role:w.role, reached:i<=ci,
+      state:i<=ci?'pending':'upcoming' }));
+}
+/* 활성 STATE 기준(실행 뷰 surface 용) — STATE.decisions/meetPhase/sel 로 산출. */
+function pendingGates(){
+  if(!PACK)return [];
+  const flow=WORK||[];
+  const ci=idxOf(STATE.sel);
+  const dec={decisions:STATE.decisions||{}, meetPhase:STATE.meetPhase};
+  return flow.map((w,i)=>({w,i})).filter(({w})=>stIsGate(w)&&!gateDecided(dec,w))
+    .map(({w,i})=>({ id:w.id, label:w.label, role:w.role, reached:i<=ci,
+      state:i<=ci?'pending':'upcoming' }));
+}
+
 /* surface 컨텍스트 (코어→팩) */
-function ctx(){return {S:STATE, R:RUN, idxOf, W, par:parTrack, times:TIMES, ex:extExcluded()};}
+function ctx(){return {S:STATE, R:RUN, idxOf, W, par:parTrack, times:TIMES, ex:extExcluded(),
+  gates:pendingGates, openGate:gotoGate, gateDecided:(id)=>!!STATE.decisions[id] };}
+/* 결정 큐 아이템 클릭 → 그 게이트 단계로 이동(HITL 모달 자동 노출). 도메인 무관. */
+function gotoGate(id){ if(!W(id))return; setSel(id); }
 function resolveDlv(k,C){const d=PACK.products[k];return {ic:d.ic,title:d.title,sub:typeof d.sub==='function'?d.sub(C):d.sub,body:typeof d.body==='function'?d.body(C):d.body};}
 
 /* ===== view 전환 (운영 콘솔 IA: inbox / run / govern / domain) ===== */
@@ -388,6 +438,9 @@ function setView(v){
   STATE.view=v; APP.view=v;
   document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   document.querySelectorAll('.view').forEach(s=>s.hidden=s.dataset.view!==v);
+  /* run 뷰 = 고객 업무 워크스페이스 → 운영자 글로벌 nav 숨김(좌측 nav 분리). run 외에서는 정상 노출. */
+  document.body.classList.toggle('run-active', v==='run');
+  if(typeof applyCollapse==='function')applyCollapse();   /* 드로어 노출을 run 한정으로 재적용 */
   if(v!=='run'&&STATE.playing)stopPlay();
   /* 시연 모드: 가이드 투어는 운영 화면 위 오버레이. 시연 뷰를 떠나도(투어가 다른 뷰를 조작 중일 땐 유지) */
   if(window.AAP_DEMO){ if(v==='demo')window.AAP_DEMO.renderDemoView(); }
@@ -416,18 +469,24 @@ function setPackRefs(key){
   COMPONENTS=PACK.components; COMPOSE=PACK.compose; TIMES=PACK.times;
   APP.pack=key;
 }
-/* 팩에 데모용 케이스가 없으면 시드(서로 다른 상태). 팩이 pack.seeds 를 주면 그걸, 없으면 단일 기본 케이스 */
+/* 팩에 데모용 케이스가 없으면 시드(서로 다른 상태). 팩이 pack.seeds 를 주면 그걸, 없으면 단일 기본 케이스.
+   ★시드 좀비 방지: 시드마다 안정 키('packId:index')를 케이스에 stamp(c.seedKey)하고,
+   이미 그 키의 케이스가 있거나 사용자가 삭제(APP.deletedSeeds)한 시드는 다시 깔지 않는다. */
 function seedPack(key){
-  if(APP.cases.some(c=>c.packId===key))return;
   const pack=PACKS[key];
   const seeds=pack.seeds||[{}];
-  seeds.forEach(s=>{ const c=caseTemplate(pack,s);
+  let added=false;
+  seeds.forEach((s,i)=>{
+    const seedKey=key+':'+i;
+    if(APP.deletedSeeds.includes(seedKey))return;            /* 사용자가 삭제한 시드 — 부활 금지 */
+    if(APP.cases.some(c=>c.seedKey===seedKey))return;        /* 이미 깔려있음 */
+    const c=caseTemplate(pack,s); c.seedKey=seedKey;
     /* seed 의 atStep 으로 진행 위치를, status 로 완료여부 초기화 */
     if(s.atStep&&pack.work.some(w=>w.id===s.atStep))c.sel=s.atStep;
     if(s.status==='done'){c.done=true;c.sel=pack.work[pack.work.length-1].id;}
-    APP.cases.push(c);
+    APP.cases.push(c); added=true;
   });
-  saveApp();
+  if(added)saveApp();
 }
 /* 케이스(인스턴스) 열기 → 런타임 STATE hydrate → 실행 뷰
    ★P5 격리: 이전 케이스 델타를 팩 레벨로 되돌린 뒤, 이 케이스의 델타만 활성 팩 파생본에 얹는다. */
@@ -442,6 +501,34 @@ function openCase(id){
   APP.active=id; hydrateFromCase(c);
   clearRun(); setRunBtn(false);
   setView('run'); renderSeq(); restoreStep(); renderRunAction(); saveApp();
+  autoAdvanceOnOpen();   /* ★ 업무를 열면 AAP가 자동으로 단계를 흘려보냄(스테퍼 수동 진행 없음) — 게이트에서만 멈춤 */
+}
+/* 업무 열기 직후 자동 진행: 현재 단계가 사람 결정(게이트·라이브 await)·완료가 아니면 자동 재생을 시작해
+   다음 게이트까지 스스로 흘러간다(playNext 가 게이트/회의에서 자동 정지). 도메인 무관. */
+function autoAdvanceOnOpen(){
+  const c=activeCase(); if(!c||c.done)return;
+  const w=W(STATE.sel);
+  if(stIsGate(w)||stIsLive(w))return;            /* 이미 게이트/라이브 대기 = 그 자리에서 멈춰 모달(사람 결정) */
+  STATE.playing=true; setRunBtn(true);
+  setSel(STATE.sel);                             /* 현재 단계 (재)실행 → revealOps → 자동 다음 단계 → … 게이트에서 정지 */
+}
+/* ===== 케이스(인스턴스) 삭제 — 코어 · 도메인 무관 =====
+   해당 케이스 + 그 케이스 객체에 격리된 P5 델타(case.overrides)·trace·런타임 슬라이스를 함께 제거한다
+   (델타·trace·packState 가 모두 케이스 객체 내부에 있어 case 제거로 정리됨 — 별도 전역 저장소 없음).
+   활성 케이스면 런타임 델타를 팩 레벨로 되돌리고 인박스로 복귀. 시드 케이스면 deletedSeeds 에 등록(좀비 방지). */
+function deleteCase(id){
+  const c=APP.cases.find(x=>x.id===id); if(!c)return false;
+  const wasActive=(APP.active===id);
+  /* 활성 케이스 삭제 → 얹힌 케이스 델타를 팩 레벨로 복원하고 실행 오버레이 해제 후 인박스 복귀 */
+  if(wasActive){ clearActiveCaseOverlay(); APP.active=null; }
+  /* 시드 케이스였다면 그 안정 키를 삭제 집합에 기록(재부팅 시 seedPack 이 다시 깔지 않게) */
+  if(c.seedKey && !APP.deletedSeeds.includes(c.seedKey)) APP.deletedSeeds.push(c.seedKey);
+  /* 케이스 제거(객체 내부의 overrides/trace/packState 도 함께 사라짐) */
+  APP.cases=APP.cases.filter(x=>x.id!==id);
+  saveApp();
+  if(wasActive){ setView('inbox'); }   /* setView 가 run 이탈 시 clearActiveCaseOverlay 보강 + 인박스 렌더 */
+  else if(STATE.view==='inbox'){ renderInbox(); }
+  return true;
 }
 /* 케이스가 '이미 실행에 진입했는가' = 첫 단계가 아니거나 어떤 결정이 누적됐거나 완료됨.
    미진입(첫 단계 · 결정 0 · 미완료) = 요청 트리거 대기(요청 접수만 된 새 케이스) → '▶ 실행'. */
@@ -542,7 +629,25 @@ function renderInbox(){
     h=_inboxStatusGroups(cs);
   }
   list.innerHTML=h;
-  list.querySelectorAll('[data-open]').forEach(e=>e.onclick=()=>openCase(e.dataset.open));
+  list.querySelectorAll('[data-open]').forEach(e=>e.onclick=(ev)=>{
+    /* 삭제 버튼/인라인 확인 영역 클릭은 행 열기로 전파시키지 않음 */
+    if(ev.target.closest('[data-del],[data-confirm],[data-delyes],[data-delno]'))return;
+    openCase(e.dataset.open);
+  });
+  /* 휴지통 → 행 내 인라인 확인(삭제/취소) 노출 */
+  list.querySelectorAll('[data-del]').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
+    const row=b.closest('.ibx-row'); if(!row)return;
+    row.classList.add('confirming');
+    const cf=row.querySelector('[data-confirm]'); if(cf)cf.hidden=false;
+  });
+  list.querySelectorAll('[data-delno]').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
+    const row=b.closest('.ibx-row'); if(!row)return;
+    row.classList.remove('confirming');
+    const cf=row.querySelector('[data-confirm]'); if(cf)cf.hidden=true;
+  });
+  list.querySelectorAll('[data-delyes]').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
+    if(deleteCase(b.dataset.delyes)) toast('업무를 삭제했습니다');
+  });
 }
 /* 상태(검토대기·진행·접수·완료) 그룹 마크업 — 현행 인박스 렌더를 그대로 헬퍼화(무회귀).
    토글 OFF=전체, ON=각 프로젝트 안에서 재사용. */
@@ -558,6 +663,8 @@ function _inboxStatusGroups(cs){
         <div class="ibx-main"><div class="ibx-t">${dcText(c.title,'case.title')} ${typeBadge(c.packId)}</div><div class="ibx-meta">${c.customer||typeLabel(c.packId)}${c.request?` · ${String(c.request).replace(/^["“]|["”]$/g,'').slice(0,46)}…`:''}</div></div>
         <div class="ibx-prog"><div class="ibx-bar"><i style="width:${pg}%"></i></div><div class="ibx-pn">${pg}%</div></div>
         <span class="ibx-st st-${st}">${STATUS[st].ko}</span>
+        <button class="ibx-del" data-del="${c.id}" title="이 업무 삭제" aria-label="이 업무 삭제">${_ICO('trash')}</button>
+        <span class="ibx-confirm" data-confirm="${c.id}" hidden>삭제할까요?<button class="ibc-yes" data-delyes="${c.id}">삭제</button><button class="ibc-no" data-delno="${c.id}">취소</button></span>
         <span class="ibx-go">${_ICO('chevron-right')}</span></div>`;
     });
     h+=`</div></div>`;
@@ -743,16 +850,381 @@ function cmodalSpec(kind,C){
   return '';
 }
 
+/* =========================================================================
+   조작형 surface 종합 프레임워크 (코어 일반 · 도메인 무관) — 목업 v0.1 3종 기준
+   ───────────────────────────────────────────────────────────────────────
+   "정적 화면 ✕ → 사람 의도에 따라 결과·흐름이 곳곳에서 갈라지는 조작형 작업 화면."
+   ① 인라인 의도 steering(재가중·필터·재지시·분기) — chat ✕.
+   ② 라이브 재분석 = 상단 비침투 작은 카드(전체 덮기 ✕) + 진행바 + spinner→✓ + 구체 수치 + 연속 클릭 잠금.
+   ③ FLIP = 행이 옛→새 위치로 활강(innerHTML 통째 교체로 인한 깜빡임 제거).
+   ④ SVG 매칭 그래프 컨테이너(인라인 SVG · 외부 라이브러리 0).
+   엔진은 도메인 무관. 채용 전용 컨트롤·recompute·그래프 데이터는 recruiting.js 의 surface 가 제공.
+   ========================================================================= */
+/* ── ② 라이브 재분석 엔진 — 비침투 오버레이(#reov, .run-surface 마운트). 연속 클릭 잠금. ── */
+var _LIVE_BUSY=false;
+function liveBusy(){ return _LIVE_BUSY; }
+/* opts = {intent, mono, steps:[{t,d}], onDone, busyEl} — steps spinner→✓ 후 onDone() 호출(결정론 recompute). */
+function runReanalysis(opts){
+  opts=opts||{};
+  if(_LIVE_BUSY)return; _LIVE_BUSY=true;
+  const rs=document.querySelector('.run-surface'); if(!rs){ _LIVE_BUSY=false; if(opts.onDone)opts.onDone(); return; }
+  /* busy = 메인 본문만 살짝 흐림(전체 덮기 ✕) */
+  const busyEl=opts.busyEl||document.querySelector('.run-surface .con-body'); if(busyEl)busyEl.classList.add('live-busy');
+  /* 오버레이 1회 보장 */
+  let ov=document.getElementById('reov');
+  if(!ov){ ov=document.createElement('div'); ov.id='reov'; ov.className='reov';
+    ov.innerHTML=`<div class="recard"><div class="reh">${_ICO('zap')}AAP가 다시 분석 중</div><div class="resub" id="reint"></div><div class="reprog"><i id="reprog"></i></div><div id="resteps"></div></div>`;
+    rs.appendChild(ov);
+  }
+  const intEl=ov.querySelector('#reint'); if(intEl)intEl.textContent=opts.intent||'의도 변경 반영';
+  const prog=ov.querySelector('#reprog'); if(prog)prog.style.width='0%';
+  const cont=ov.querySelector('#resteps'); if(cont)cont.innerHTML='';
+  ov.classList.add('show');
+  const steps=(opts.steps&&opts.steps.length)?opts.steps:[
+    {t:'의도 해석', d:opts.intent||''},
+    {t:'재계산', d:opts.mono||''},
+    {t:'재랭킹·근거 갱신', d:'순위 비교 중…'},
+  ];
+  let i=0;
+  function finish(){
+    if(prog)prog.style.width='100%';
+    setTimeout(()=>{ ov.classList.remove('show'); if(busyEl)busyEl.classList.remove('live-busy'); _LIVE_BUSY=false;
+      if(opts.onDone)opts.onDone();
+    }, 280);
+  }
+  function next(){
+    if(i>=steps.length){ finish(); return; }
+    const s=steps[i];
+    cont.insertAdjacentHTML('beforeend',`<div class="rstep" id="rs${i}"><div class="rsi spin" id="rsi${i}"></div><div><div class="rst">${s.t}</div><div class="rsd" id="rsd${i}">${s.d||''}</div></div></div>`);
+    setTimeout(()=>{ const e=document.getElementById('rs'+i); if(e)e.classList.add('vis'); },30);
+    setTimeout(()=>{
+      const icon=document.getElementById('rsi'+i); if(icon){ icon.classList.remove('spin'); icon.classList.add('done'); icon.innerHTML=_ICO('check'); }
+      if(prog)prog.style.width=Math.round((i+1)/steps.length*100)+'%';
+      i++; setTimeout(next,100);
+    }, 440);
+  }
+  next();
+}
+window.AAP_LIVE={ run:runReanalysis, busy:liveBusy };
+
+/* ── ③ FLIP — data-flip 키로 옛 위치 기록 → 재렌더 후 옛→새 위치 활강(깜빡임 제거). ──
+   capture(container) = 재렌더 직전 호출(맵 반환). play(container, map) = 재렌더 직후 호출. */
+function flipCapture(container){
+  const m={}; if(!container)return m;
+  container.querySelectorAll('[data-flip]').forEach(el=>{ m[el.dataset.flip]=el.getBoundingClientRect().top; });
+  return m;
+}
+function flipPlay(container, oldTop){
+  if(!container||!oldTop)return;
+  container.querySelectorAll('[data-flip]').forEach(el=>{
+    const k=el.dataset.flip;
+    if(oldTop[k]!=null){
+      const dy=oldTop[k]-el.getBoundingClientRect().top;
+      if(dy){ el.style.transition='none'; el.style.transform='translateY('+dy+'px)';
+        requestAnimationFrame(()=>{ el.style.transition='transform .5s cubic-bezier(.4,0,.2,1)'; el.style.transform=''; }); }
+    } else { el.style.opacity='0'; requestAnimationFrame(()=>{ el.style.transition='opacity .4s'; el.style.opacity=''; }); }
+  });
+}
+window.AAP_FLIP={ capture:flipCapture, play:flipPlay };
+
+/* 조작형 surface 활성 여부 — 팩이 surface.opstage 를 제공하고, 현재 단계가 그 surface 를 그릴 때.
+   미제공 팩(회의·VOC)은 false → 기존 streamSplit 스트림 모델로 graceful 폴백(무회귀). */
+function hasOpSurface(C){ return !!(PACK.surface&&PACK.surface.opstage&&PACK.surface.opstage(C)); }
+
+/* ── 의도 steering 핸들러(코어 일반) — [data-steer] 컨트롤 클릭 → 팩 steerHook 으로 STATE 갱신 →
+   라이브 재분석 애니 → FLIP 으로 조작형 본문 재렌더. recompute 는 팩(결정론)이 소유. ──
+   data-steer = 그룹키, data-steerval = 값. 팩 steerHook(S,key,val)→{intent,mono,steps?,instant?} 반환. */
+function wireSteer(root){
+  const hk=PACK.surfaceHooks; if(!hk||!hk.steerHook)return;
+  root.querySelectorAll('[data-steer]').forEach(b=>b.onclick=()=>{
+    if(_LIVE_BUSY)return;   /* 연속 클릭 잠금 */
+    const key=b.dataset.steer, val=b.dataset.steerval;
+    const meta=hk.steerHook(STATE,key,val)||{};
+    afterStateChange();
+    if(meta.instant){ /* 즉시 반영(재분석 없이) = 분기 등 — FLIP 만 */
+      const c=document.querySelector('.run-surface .con-body'); const cap=flipCapture(c);
+      renderOpConsole(); requestAnimationFrame(()=>flipPlay(document.querySelector('.run-surface .con-body'),cap));
+      if(meta.trace)STATE.trace.push(meta.trace); if(meta.toast)toast(meta.toast); return;
+    }
+    if(meta.trace)STATE.trace.push(meta.trace);
+    const cont=document.querySelector('.run-surface .con-body');
+    const cap=flipCapture(cont);
+    runReanalysis({ intent:meta.intent, mono:meta.mono, steps:meta.steps, onDone:()=>{
+      renderOpConsole();
+      requestAnimationFrame(()=>flipPlay(document.querySelector('.run-surface .con-body'),cap));
+      afterStateChange();
+    }});
+  });
+}
+
 /* ===== 실행 콘솔 렌더 (run 뷰 = 업무가 돌아가는 도메인 화면이 메인) =====
    유저 정정(되돌림): 실행 뷰 메인 = 'AAP 작동 구조'가 아니라 '그 업무가 실제로 돌아가는 화면'.
    per-도메인 surface(PACK.surface=ATS 보드 / surfaceSpec)를 #surfHead/#surfBody 에 렌더하고,
    단계 진행(RUN.phase/STATE.sel)에 따라 살아 움직이게 한다(surface 가 C=ctx 의 S/R 을 읽어 반영).
    HITL/결과/미리보기 오버레이(#cmodal)는 그대로. AAP 작동은 우측 얇은 근거 레일(renderRight). */
+/* run 메인 = 조작형 surface(opstage) ▷ 폴백 = 작업 스트림 + 산출물 뷰어 (목업 v0.3).
+   안정 ID 보존: #surfHead(숨김)·#surfBody(컨테이너)·#flow/#explain(숨김 마운트, renderRight·demo 호환). */
 function renderConsole(){
   const C=ctx();
-  const sh=document.getElementById('surfHead'); if(sh){ sh.innerHTML=surfHead(C); wireSurface(sh); }
-  const sb=document.getElementById('surfBody'); if(sb){ sb.innerHTML=surfBase(C); wireSurface(sb); }
+  if(hasOpSurface(C)){ renderOpConsole(); return; }
+  /* 워크스페이스 탭 바·헤더는 스트림 모델에서 사용 안 함(빈 채로 두고 CSS 로 접음) */
+  const tb=document.getElementById('wsTabs'); if(tb)tb.innerHTML='';
+  const sh=document.getElementById('surfHead'); if(sh){ sh.innerHTML=''; const rs=sh.closest('.run-surface'); if(rs){rs.classList.add('ws-on-stream'); rs.classList.remove('ws-on-progress'); rs.classList.remove('ws-on-op');} }
+  const sb=document.getElementById('surfBody');
+  if(sb){ sb.classList.add('stream-body'); sb.classList.remove('ws-progress-body'); sb.classList.remove('op-body');
+    sb.innerHTML=streamSplit(C); wireSurface(sb); wireStream(sb); }
   renderCModal();
+}
+/* ── 조작형 콘솔(opstage) — 상단 단계 strip + 의도 steering 바 + 조작형 본문(메인) + 보조 레이어 ──
+   레이아웃은 코어 일반(도메인 무관). strip/steer/main/aside HTML 은 팩 surface 가 제공.
+   안정 ID(#surfHead/#surfBody/#flow/#explain) 보존: surfHead=strip+steer, surfBody=main+aside. */
+function renderOpConsole(){
+  const C=ctx();
+  const tb=document.getElementById('wsTabs'); if(tb)tb.innerHTML='';
+  const rs=document.querySelector('.run-surface'); if(rs){ rs.classList.add('ws-on-op'); rs.classList.remove('ws-on-stream','ws-on-progress'); }
+  const sh=document.getElementById('surfHead');
+  const sb=document.getElementById('surfBody');
+  const op=PACK.surface.opstage(C)||{};
+  if(sh){ sh.innerHTML=`<div class="op-strip-wrap">${opStageStrip(C)}</div>${op.steer||''}`; }
+  if(sb){ sb.classList.add('op-body'); sb.classList.remove('stream-body','ws-progress-body');
+    sb.innerHTML=`<div class="op-split"><section class="op-main">${op.main||''}</section><aside class="op-aside">${op.aside||''}
+      <!-- 안정 ID 마운트(renderRight·demo 호환) — 조작형에선 숨김 -->
+      <div class="op-hidden-mount"><div id="explain"></div><div class="case-tune" id="caseTune"></div><div class="flow" id="flow"></div></div></aside></div>`;
+    wireSurface(sb); wireSteer(sh); wireSteer(sb);
+    /* 그래프(있으면) 팩이 직접 그리도록 hook */
+    if(PACK.surface.opgraph)PACK.surface.opgraph(C, sb.querySelector('#opGraph'));
+  }
+  renderCModal();
+}
+/* 단계 strip(코어 일반) — flow 의 게이트·주요 단계로 진행 strip. 클릭 = 그 단계로 탐색(setSel). */
+function opStageStrip(C){
+  const flow=WORK||[]; const ci=idxOf(STATE.sel);
+  /* strip 노드 = 팩이 surface.opStages 로 추린 핵심 단계, 없으면 전체 flow */
+  const nodes=(PACK.surface.opStages?PACK.surface.opStages(C):flow.map(w=>w.id));
+  return `<div class="op-strip">`+nodes.map((id,k)=>{
+    const w=W(id); if(!w)return '';
+    const wi=idxOf(id);
+    const st=wi<ci?'done':(wi===ci?'on':'wait');
+    const gate=stIsGate(w);
+    return `<button class="op-snode ${st}${gate?' gate':''}" data-opstep="${id}">
+      <span class="op-sn">${st==='done'?_ICO('check'):(gate?_ICO('user-check'):k+1)}</span>
+      <span class="op-sl">${dcText(w.label,'step.label')}</span></button>`+
+      (k<nodes.length-1?`<span class="op-sar">${_ICO('chevron-right')}</span>`:'');
+  }).join('')+`</div>`;
+}
+/* =========================================================================
+   작업 스트림 + 산출물 뷰어 (코어 일반 · 도메인 무관) — 목업 v0.3
+   ───────────────────────────────────────────────────────────────────────
+   좌 = flow 단계를 자동 누적하는 스트림(완료/진행/대기 · 5타입 구성요소 배지 · 산출물 링크 ·
+        게이트=결정 대기 amber 카드, 클릭→#cmodal 모달). 우 = PACK.products 산출물 뷰어.
+   채용 전용 분기 0 — flow/ops/products 에서 일반 도출. 회의·VOC 도 같은 셸(products 있으면 표시).
+   ========================================================================= */
+/* 스트림 단계 상태(done/cur/wait). 게이트는 결정 여부로 done/wait 보강. */
+function strState(i,ci,w){
+  if(stIsGate(w)){ const dec=gateDecided({decisions:STATE.decisions||{},meetPhase:STATE.meetPhase},w); if(dec)return 'done'; return i<=ci?'cur':'wait'; }
+  if(i<ci)return 'done'; if(i===ci)return (RUN.phase==='working'?'cur':'done'); return 'wait';
+}
+/* 단계 라벨 시각(결정론 더미 · TIMES 무관) — flow 순서로 09:00+분 누적. 표시용. */
+function strWhen(i){ const m=1+i*2; const hh=9+Math.floor(m/60), mm=m%60; return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+/* 단계 설명 1줄 = explain(태그 제거) 우선, 없으면 첫 op feed→out. */
+function strDesc(w){
+  if(w._strDesc!==undefined)return w._strDesc;
+  let d='';
+  const op0=(w.ops&&w.ops[0])||null;
+  if(op0)d=`${dcText(op0.feed,'op.feed')} → <b>${dcText(op0.out,'op.out')}</b>`;
+  else if(w.explain)d=String(w.explain).replace(/<[^>]+>/g,'').slice(0,90);
+  return d;
+}
+/* 단계에 배정된 구성요소 5타입 집합(ops 에서 dedupe, 최대 4) — 스트림 카드 배지. */
+function strComps(w){
+  const seen=new Set(), out=[];
+  (w.ops||[]).forEach(o=>{ const tk=evidType(o); const k=tk+'|'+(o.comp||''); if(seen.has(k))return; seen.add(k);
+    out.push({tk, nm:dcText(o.comp,'op.comp')}); });
+  return out.slice(0,4);
+}
+/* ── 산출물(products) 일반 도출 — 팩 products[k].readyAt(stepId)로 '생성 시점' 결정.
+   readyAt 없으면 products 등장 순서를 flow 길이에 균등 배치(graceful 폴백). 도메인 무관. */
+function artKeys(){ return PACK&&PACK.products?Object.keys(PACK.products):[]; }
+function artReadyStepIdx(k,ki,total){
+  const d=PACK.products[k];
+  if(d&&d.readyAt){ const j=idxOf(d.readyAt); if(j>=0)return j; }
+  const n=(WORK||[]).length; return Math.min(n-1, Math.round(((ki+1)/Math.max(1,total))*n)-1);
+}
+function artReady(k,ki,total){ return idxOf(STATE.sel)>=artReadyStepIdx(k,ki,total) || RUN.phase==='done'&&idxOf(STATE.sel)>=artReadyStepIdx(k,ki,total); }
+/* 단계에 연결된 산출물 키(있으면) — products[k].readyAt===step.id 인 첫 항목. 스트림 카드 '열기' 링크. */
+function artForStep(wid){ const ks=artKeys(); for(const k of ks){ const d=PACK.products[k]; if(d&&d.readyAt===wid)return k; } return null; }
+/* 현재 열린 산출물 키(transient) — 기본 = ready 된 마지막 것. */
+function curArtK(){
+  const ks=artKeys(); if(!ks.length)return null;
+  if(STATE.artK&&ks.includes(STATE.artK)&&artReady(STATE.artK,ks.indexOf(STATE.artK),ks.length))return STATE.artK;
+  let last=null; ks.forEach((k,i)=>{ if(artReady(k,i,ks.length))last=k; });
+  return last||ks[0];
+}
+function streamSplit(C){
+  return `<div class="strm-split">${streamLeft(C)}${streamArts(C)}</div>`;
+}
+function streamLeft(C){
+  const flow=WORK||[]; const ci=idxOf(STATE.sel); const total=artKeys().length;
+  const running=RUN.phase==='working';
+  let cards='';
+  flow.forEach((w,i)=>{
+    const st=strState(i,ci,w);
+    const gate=stIsGate(w);
+    const open=STATE.wsStepOpen&&STATE.wsStepOpen.has(w.id);
+    const ic=st==='done'?_ICO('check'):(gate&&st!=='done'?_ICO('shield'):'');
+    if(gate){
+      const decided=st==='done';
+      cards+=`<div class="st hitl ${st}" style="animation-delay:${Math.min(i*.05,.4)}s"><span class="nodeic">${ic||_ICO('shield')}</span>
+        <button class="hitl-card ${decided?'done':''}" data-strgate="${w.id}">
+          <div class="hc-k">${decided?_ICO('check'):_ICO('alert-circle')}${decided?'확인 완료':'여기서 결정이 필요해요'}</div>
+          <div class="hc-t">${dcText(w.label,'gate.label')}</div>
+          <div class="hc-d">${strDesc(w)||w.role||''}</div>
+          ${decided?`<span class="hc-done">${_ICO('check')}결정됨 — AAP가 이어서 진행했어요</span>`:(st==='cur'?`<span class="hc-cta">${_ICO('arrow-right')}결정하기</span>`:'')}
+        </button></div>`;
+      return;
+    }
+    const comps=strComps(w).map(c=>`<span class="comp ty${c.tk}">${c.nm}</span>`).join('');
+    const ak=artForStep(w.id);
+    const artLink=(ak&&st==='done')?`<button class="open-art" data-strart="${ak}">${_ICO('file-text')}${PACK.products[ak].title} 열기</button>`:'';
+    const hasDetail=(w.explain||(w.ops&&w.ops.length>1));
+    const exp=hasDetail?`<button class="st-exp" data-strexp="${w.id}">${_ICO(open?'chevron-down':'chevron-right')}${open?'접기':'자세히'}</button>`:'';
+    const spin=(st==='cur'&&running)?`<div class="st-spin"><span class="spin sm"></span>처리하고 있어요…</div>`:'';
+    cards+=`<div class="st ${st}" style="animation-delay:${Math.min(i*.05,.4)}s"><span class="nodeic">${ic}</span>
+      <div class="st-card">
+        <div class="st-top"><span class="st-role">${w.role||''}</span><span class="st-t">${dcText(w.label,'step.label')}</span><span class="st-when">${st==='wait'?'':strWhen(i)}</span></div>
+        ${st==='wait'?`<div class="st-d">${strDesc(w)}</div>`:`<div class="st-d">${strDesc(w)}</div>${spin}
+        <div class="st-foot">${comps}${artLink}${exp}</div>${open?strDetail(w):''}`}
+      </div></div>`;
+  });
+  const prog=`${Math.min(ci+1,flow.length)}/${flow.length}`;
+  return `<section class="strm-left">
+    <div class="strm-h">${_ICO('zap')}AAP 작업 흐름</div>
+    <div class="strm-sub">AAP가 요청을 받아 스스로 처리하고 있어요. <b>결정이 필요한 곳에서만 멈춥니다.</b> · ${prog}</div>
+    <div class="sline">${cards}</div>
+  </section>`;
+}
+/* 단계 펼침 세부(explain + ops 5타입) — 스트림 카드 내부. 도메인 무관. */
+function strDetail(w){
+  const ex=w.explain?`<div class="se-ex">${w.explain}</div>`:'';
+  const ops=(w.ops||[]).map(o=>{ const tk=evidType(o);
+    return `<div class="se-op"><span class="se-op-ty ty${tk}">${_TYKO[tk]}</span><div><span class="se-op-nm">${dcText(o.comp,'op.comp')}</span><div class="se-op-d">${dcText(o.feed,'op.feed')} → <b>${dcText(o.out,'op.out')}</b></div></div></div>`;
+  }).join('');
+  return `<div class="st-detail">${ex}${ops}</div>`;
+}
+function streamArts(C){
+  const ks=artKeys();
+  if(!ks.length)return `<aside class="strm-arts"><div class="arts-h"><span class="at">산출물</span></div><div class="strm-doc"><div class="strm-doc-wait">${_ICO('file-text')}이 업무에는 표시할 산출물이 없습니다.</div></div></aside>`;
+  const cur=curArtK();
+  const tabs=ks.map((k,i)=>{ const ready=artReady(k,i,ks.length); const on=k===cur;
+    return `<button class="file ${on?'on':''} ${ready?'':'wait'}" ${ready?`data-strartk="${k}"`:''}><span class="fdot"></span>${PACK.products[k].title}</button>`;
+  }).join('');
+  let doc;
+  const curReady=cur&&artReady(cur,ks.indexOf(cur),ks.length);
+  if(cur&&curReady){ const d=resolveDlv(cur,C);
+    doc=`<div class="strm-doc"><div class="strm-doc-h"><span class="strm-doc-ic">${typeof d.ic==='string'&&d.ic.length<=2?d.ic:_ICO(d.ic)}</span>
+      <div><h3>${d.title}</h3><div class="dm">${d.sub||''}</div></div><span class="dl">AAP 생성</span></div>
+      ${d.body}
+      <div class="strm-dl"><button data-strdl="open">${_ICO('external-link')}열기</button><button data-strdl="dl">${_ICO('download')}다운로드</button></div></div>`;
+  } else {
+    doc=`<div class="strm-doc"><div class="strm-doc-wait">${_ICO('clock')}아직 생성 전이에요.<br>AAP가 단계를 진행하면 여기에서 열립니다.</div></div>`;
+  }
+  return `<aside class="strm-arts">
+    <div class="arts-h"><span class="at">산출물</span><span class="ac">AAP가 만든 문서 · 열어서 확인</span></div>
+    <div class="files">${tabs}</div>
+    ${doc}
+  </aside>`;
+}
+/* 스트림 배선(코어 일반) — 게이트 카드→게이트 단계 이동(모달), 산출물 링크→우측 열기, 세부 펼침, 다운로드 stub. */
+function wireStream(root){
+  root.querySelectorAll('[data-strgate]').forEach(e=>e.onclick=()=>gotoGate(e.dataset.strgate));
+  root.querySelectorAll('[data-strart]').forEach(e=>e.onclick=()=>{ STATE.artK=e.dataset.strart; renderConsole(); });
+  root.querySelectorAll('[data-strartk]').forEach(e=>e.onclick=()=>{ STATE.artK=e.dataset.strartk; renderConsole(); });
+  root.querySelectorAll('[data-strexp]').forEach(e=>e.onclick=()=>{ const id=e.dataset.strexp; STATE.wsStepOpen=STATE.wsStepOpen||new Set(); STATE.wsStepOpen.has(id)?STATE.wsStepOpen.delete(id):STATE.wsStepOpen.add(id); renderConsole(); });
+  root.querySelectorAll('[data-strdl]').forEach(e=>e.onclick=()=>toast(e.dataset.strdl==='dl'?'다운로드를 시작합니다 (데모)':'산출물을 열었습니다 (데모)'));
+}
+
+/* 현재 워크스페이스 탭(기본 mine). 도메인 무관 surface state — STATE 소유. */
+function wsTab(){ return STATE.wsTab==='progress'?'progress':'mine'; }
+function setWsTab(t){ STATE.wsTab=(t==='progress')?'progress':'mine'; renderConsole(); }
+window.AAP_setWsTab=setWsTab;
+/* 2탭 바 — 「내 업무」(결정 큐) / 「업무 진행」(단계 프로세스·HITL·AAP 작동). 미결정 게이트 수 배지. */
+function wsTabBar(){
+  const tab=wsTab();
+  const pend=pendingGates().filter(g=>g.state==='pending').length;
+  return `<button class="ws-tab ${tab==='mine'?'on':''}" data-wstab="mine" data-tip="결정할 일과 AAP가 해둔 일 — 내 업무 워크스페이스">${_ICO('inbox')}내 업무${pend?`<span class="ws-tab-c">${pend}</span>`:''}</button>
+    <button class="ws-tab ${tab==='progress'?'on':''}" data-wstab="progress" data-tip="단계별 진행·사람 확인(HITL)·AAP가 어떻게 처리했는지">${_ICO('git-branch')}업무 진행</button>`;
+}
+/* =========================================================================
+   「업무 진행」 탭 — 코어 일반 도출(채용 분기 0). 세 묶음:
+   ① 업무 단계 프로세스 = WORK(flow) 전체를 타임라인 카드로(완료/진행/대기 + role + ops 요약 + loopPhase).
+   ② 사람 확인(HITL) 상태 = stIsGate 단계를 amber 로(대기/완료/예정).
+   ③ AAP 작동 = #explain/#caseTune/#flow 마운트 — renderRight 가 5타입 분해·통제점·로그를 채움.
+   회의·VOC 도 같은 도출(특수 슬롯 없으면 graceful). 라벨·ops·loopPhase 는 팩 데이터, 렌더는 일반.
+   ========================================================================= */
+function wsProgress(C){
+  const flow=WORK||[]; const ci=idxOf(STATE.sel);
+  /* ── ① 단계 프로세스 타임라인 ── */
+  let steps='';
+  flow.forEach((w,i)=>{
+    const st=i<ci?'done':(i===ci?'cur':'wait');
+    const gate=stIsGate(w);
+    const decided=gate&&gateDecided({decisions:STATE.decisions||{},meetPhase:STATE.meetPhase},w);
+    const lp=stLoop(w);
+    const open=STATE.wsStepOpen&&STATE.wsStepOpen.has(w.id);
+    /* ops 요약 = feed→out 의 첫 줄(읽고/한 것) */
+    const op0=(w.ops&&w.ops[0])||null;
+    const sum=op0?`${dcText(op0.feed,'op.feed')} → <b>${dcText(op0.out,'op.out')}</b>`:(w.role||'');
+    const stKo=st==='done'?'완료':(st==='cur'?'진행 중':'예정');
+    const gateBadge=gate?`<span class="wp-gate ${decided?'done':(st==='cur'?'now':'')}">${_ICO('user-check')}${decided?'확인됨':(st==='cur'?'확인 대기':'사람 확인')}</span>`:'';
+    /* 펼침 = 세부 작업·근거(ops 전체: comp 5타입 배지 + feed→out + micro + detail) + explain */
+    const detail=open?wsStepDetail(w):'';
+    steps+=`<div class="wp-step ${st}${gate?' gate':''}${open?' open':''}">
+      <div class="wp-rail"><span class="wp-dot">${st==='done'?_ICO('check'):(st==='cur'?'':i+1)}</span>${i<flow.length-1?'<span class="wp-line"></span>':''}</div>
+      <button class="wp-card" data-wsstep="${w.id}" data-tip="세부 작업·근거 펼치기">
+        <div class="wp-card-h"><span class="wp-lab">${dcText(w.label,'step.label')}</span>${lp?`<span class="wp-lp">${lp}</span>`:''}<span class="wp-state ${st}">${stKo}</span></div>
+        <div class="wp-sub"><span class="wp-role">${w.role||''}</span>${gateBadge}</div>
+        <div class="wp-sum">${sum}</div>
+        <span class="wp-more">${_ICO(open?'chevron-down':'chevron-right')}${open?'세부 접기':'세부 작업·근거'}</span>
+      </button>
+      ${detail}
+    </div>`;
+  });
+  const proc=`<div class="wp-sec-h">${_ICO('git-branch')}업무 단계 진행 <span class="wp-sec-s">${flow.length}단계 · ${Math.min(ci+1,flow.length)}/${flow.length}</span></div><div class="wp-steps">${steps}</div>`;
+  /* ── ② 사람 확인(HITL) 상태 ── */
+  const gates=flow.map((w,i)=>({w,i})).filter(({w})=>stIsGate(w));
+  let hitl='';
+  if(gates.length){
+    const dec={decisions:STATE.decisions||{},meetPhase:STATE.meetPhase};
+    hitl=`<div class="wp-sec-h amber">${_ICO('user-check')}사람이 확인할 통제점 (HITL) <span class="wp-sec-s">${gates.length}회</span></div>
+      <div class="wp-gates">`+gates.map(({w,i})=>{
+        const done=gateDecided(dec,w), cur=i===ci&&!done;
+        const sub=(w.gate&&typeof w.gate==='object'&&w.gate.label)?w.gate.label:(w.role||'');
+        return `<button class="wp-gate-row ${done?'done':(cur?'now':'')}" data-wsgate="${w.id}" data-tip="이 게이트 단계로 이동">
+          <span class="wp-gd"></span><span class="wp-gl">${dcText(w.label,'gate.label')}${sub&&sub!==w.label?` — ${dcText(sub,'gate.sub')}`:''}</span>
+          <span class="wp-gx">${done?'확인됨':(cur?'대기 중':'예정')}</span></button>`;
+      }).join('')+`</div>`;
+  }
+  /* ── ③ AAP 작동(옛 토글 드로어 흡수) = 다크 엔진룸 마운트(#explain/#caseTune/#flow) — renderRight 가 채움 ── */
+  const aap=`<div class="wp-sec-h">${_ICO('sparkles')}AAP가 어떻게 처리했는지 <span class="wp-sec-s">구성요소 배정 · 통제점 · 로그</span></div>
+    <div class="wp-aap run-evid">
+      <div class="dw-sub" id="explain"></div>
+      <div class="case-tune" id="caseTune"></div>
+      <div class="flow" id="flow"></div>
+    </div>`;
+  return `<div class="wp">${proc}${hitl}${aap}</div>`;
+}
+/* 단계 펼침 세부 — ops 전체(comp 5타입 배지 · feed→out · micro · detail) + explain. 도메인 무관. */
+function wsStepDetail(w){
+  const ops=(w.ops||[]).map(o=>{
+    const tk=evidType(o);
+    const micro=o.micro?`<div class="wp-micro">${o.micro.map(m=>`<span class="mc">${m}</span>`).join('')}</div>`:'';
+    const det=o.detail||'';
+    return `<div class="wp-op ty${tk}">
+      <div class="wp-op-h"><span class="wp-op-ty ty${tk}">${_TYKO[tk]}</span><span class="wp-op-nm">${dcText(o.comp,'op.comp')}</span><span class="wp-op-l">${o.L} ${LK[o.L]||''}</span></div>
+      <div class="wp-op-d">${dcText(o.feed,'op.feed')} → <b>${dcText(o.out,'op.out')}</b></div>${micro}${det}</div>`;
+  }).join('');
+  const ex=w.explain?`<div class="wp-explain">${w.explain}</div>`:'';
+  return `<div class="wp-detail">${ex}<div class="wp-ops">${ops}</div></div>`;
 }
 /* surface 내 산출물 보기 버튼(data-dlv)·다시(replay)·탭 전환(data-surftab) 배선 — 코어 책임(도메인 무관) */
 function wireSurface(root){
@@ -761,7 +1233,55 @@ function wireSurface(root){
   /* surface 탭 클릭 탐색(도메인 무관) — 팩 surface 가 STATE.activeTab 을 읽어 본문 렌더.
      탭 목록·라벨·본문은 팩 책임, 코어는 활성 탭 기록 + 재렌더만(자동 진행과 독립). */
   root.querySelectorAll('[data-surftab]').forEach(e=>e.onclick=()=>{ STATE.activeTab=e.dataset.surftab; renderConsole(); });
+  /* 워크스페이스 2탭 전환(코어 일반) */
+  root.querySelectorAll('[data-wstab]').forEach(e=>e.onclick=()=>setWsTab(e.dataset.wstab));
+  /* 업무 진행 탭: 단계 세부 펼침/접기 */
+  root.querySelectorAll('[data-wsstep]').forEach(e=>e.onclick=()=>{ const id=e.dataset.wsstep; STATE.wsStepOpen=STATE.wsStepOpen||new Set(); STATE.wsStepOpen.has(id)?STATE.wsStepOpen.delete(id):STATE.wsStepOpen.add(id); renderConsole(); });
+  /* 업무 진행 탭: HITL 통제점 클릭 → 그 게이트 단계로 이동(HITL 모달 자동 노출) */
+  root.querySelectorAll('[data-wsgate]').forEach(e=>e.onclick=()=>{ gotoGate(e.dataset.wsgate); });
+  /* io.inputs(자료 업로드) · io.connectors(외부 시스템 소싱) — 코어 일반 결정론 핸들러 */
+  root.querySelectorAll('[data-ioinput]').forEach(e=>e.onclick=()=>ioActivate('input',e.dataset.ioinput));
+  root.querySelectorAll('[data-ioconn]').forEach(e=>e.onclick=()=>ioActivate('connector',e.dataset.ioconn));
+  /* 조작형 콘솔: 단계 strip 클릭 → 그 단계로 탐색(setSel) */
+  root.querySelectorAll('[data-opstep]').forEach(e=>e.onclick=()=>{ if(!liveBusy())setSel(e.dataset.opstep); });
   wirePackHooks(root);
+}
+/* ===== io 슬롯(코어 일반 · 도메인 무관) — Pack Contract v2 §3.2 inputs·connectors =====
+   팩이 io.inputs/connectors 를 선언하면 「내 업무」 탭 상단에 업로드·소싱 affordance 를 렌더한다.
+   클릭 = 결정론 핸들러: 활성 키를 STATE.ioDone(케이스 영속)에 기록 + entry.setKey 로 도메인 상태 갱신 +
+   trace 누적 → 팩 surface 가 그 STATE 를 읽어 카운트를 결정론적으로 반영. 미선언 팩은 미표시(graceful). */
+function packIo(){ return (PACK&&PACK.io)||{}; }
+function ioInputs(){ const a=packIo().inputs; return Array.isArray(a)?a:[]; }
+function ioConnectors(){ const a=packIo().connectors; return Array.isArray(a)?a:[]; }
+function ioDone(k){ return !!(STATE.ioDone&&STATE.ioDone[k]); }
+/* 활성화(결정론) — 멱등(이미 활성이면 무시). 도메인 효과는 entry.setKey/setVal(데이터)로만. */
+function ioActivate(kind,key){
+  const list=kind==='input'?ioInputs():ioConnectors();
+  const e=list.find(x=>(kind==='input'?x.key:x.id)===key); if(!e)return;
+  STATE.ioDone=STATE.ioDone||{}; if(STATE.ioDone[key])return; STATE.ioDone[key]=true;
+  /* 도메인 상태 반영 — entry.setKey 에 setVal(없으면 true) 기록(케이스 격리: 팩 persistKeys 권장) */
+  if(e.setKey){ if(typeof e.setVal!=='undefined')STATE[e.setKey]=e.setVal;
+    else { STATE[e.setKey]=(typeof STATE[e.setKey]==='number'?STATE[e.setKey]:0)+(+e.delta||1); } }
+  STATE.trace.push({st:W(STATE.sel).label, t:(kind==='input'?'자료 반영 · ':'외부 소싱 · ')+(e.label||key)+(e.note?(' · '+e.note):''), L:e.L||'L5', k:kind==='input'?'Connector':'Connector'});
+  renderConsole(); afterStateChange();
+  if(e.toast)toast(e.toast);
+}
+/* 「내 업무」 탭 io 바 — 업로드(inputs) + 외부 채용사이트 소싱(connectors). 없으면 ''(graceful). */
+function wsIoBar(C){
+  const ins=ioInputs(), conns=ioConnectors();
+  if(!ins.length&&!conns.length)return '';
+  /* stage 게이팅: entry.stage 가 있으면 그 단계 도달 시에만 노출(없으면 항상) */
+  const reached=(stage)=>!stage||idxOf(STATE.sel)>=idxOf(stage);
+  const insV=ins.filter(e=>reached(e.stage)), connsV=conns.filter(e=>reached(e.stage));
+  if(!insV.length&&!connsV.length)return '';
+  const up=insV.map(e=>{const done=ioDone(e.key);
+    return `<button class="io-chip ${done?'done':''}" data-ioinput="${e.key}" data-tip="${done?'반영됨':'클릭하면 결정론적으로 반영됩니다'}">${_ICO(done?'check':'upload')}<span>${e.label}</span>${e.hint?`<em>${e.hint}</em>`:''}</button>`;}).join('');
+  const so=connsV.map(e=>{const done=ioDone(e.id);
+    return `<button class="io-chip conn ${done?'done':''}" data-ioconn="${e.id}" data-tip="${done?'소싱 완료':'외부 채용사이트에서 후보를 가져옵니다'}">${_ICO(done?'check':'plug')}<span>${e.label}</span>${e.hint?`<em>${e.hint}</em>`:''}</button>`;}).join('');
+  return `<div class="io-bar">
+    ${up?`<div class="io-grp"><span class="io-grp-k">${_ICO('upload')}자료 업로드</span><div class="io-chips">${up}</div></div>`:''}
+    ${so?`<div class="io-grp"><span class="io-grp-k">${_ICO('plug')}채용 사이트 연계</span><div class="io-chips">${so}</div></div>`:''}
+  </div>`;
 }
 /* 팩이 선언한 surface 인터랙션 배선(도메인 무관 메커니즘) — 후보 카드 클릭·정렬·결정 등.
    rerender(opts?) 콜백 = 콘솔/모달 재렌더 + 선택적 영속/토스트/trace. 채용 전용 분기 0줄. */
@@ -795,7 +1315,9 @@ function renderCModal(){
   if(kind==='preview'){const d=resolveDlv(STATE.previewK,C);
     html=`<button class="cmodal-back" data-back>${_ICO('chevron-left')}뒤로</button><div class="cmodal-h">${d.ic} ${d.title}</div><div class="cmodal-sub">${d.sub}</div>${d.body}`;
   } else html=surfCmodal(kind,C);
-  cm.innerHTML=`<div class="cmodal-card">${html}</div>`;cm.classList.add('show');
+  /* HITL 결정 모달은 넓게(컷·가중 편집·미리보기 수용) — 차분 톤 유지 */
+  const wide=(kind==='hitl')?' wide':'';
+  cm.innerHTML=`<div class="cmodal-card${wide}">${html}</div>`;cm.classList.add('show');
   cm.querySelectorAll('[data-dlv]').forEach(e=>e.onclick=()=>openPreview(e.dataset.dlv));
   wirePackHooks(cm);
   const bk=cm.querySelector('[data-back]');if(bk)bk.onclick=()=>{STATE.previewK=null;renderConsole();};
@@ -826,16 +1348,29 @@ const _TYKO={A:'Agent',M:'Module',S:'기존 솔루션',C:'Connector',P:'Policy'}
 /* 결정론 Action(Module·Connector·Policy·기존솔루션 = 규칙/온톨로지 편집) vs 비결정론 LLM(Agent = 추론).
    op.kind 로 팩이 명시 override 가능. KEY MESSAGE: LLM은 온톨로지 통해 통제된 reasoning, 결정론은 규칙. */
 function blockKind(o,tk){ if(o&&o.kind)return o.kind==='llm'?'llm':'det'; return tk==='A'?'llm':'det'; }
+/* AAP 작동 드로어 토글 상태(영속) — 기본 닫힘. 운영자 nav 와 분리된 '필요할 때만' 패널. */
+function aapDrawerOn(){ return !!APP.collapse.aapDrawer; }
+function setAapDrawer(on){ APP.collapse.aapDrawer=!!on; applyCollapse(); saveApp(); }
+function toggleAapDrawer(){ setAapDrawer(!aapDrawerOn()); }
+window.AAP_toggleAapDrawer=toggleAapDrawer;
+/* 호환 별칭 — 옛 'AAP 작동 보기' 진입점은 이제 「업무 진행」 탭으로 전환(드로어 흡수). */
+window.AAP_showAapWork=function(){ if(typeof setWsTab==='function')setWsTab('progress'); };
 function renderRight(){
   const w=W(STATE.sel),gs=groupsOf(w);let h='';
   const _lp=stLoop(w);
-  const lb=_lp?`<div class="loopbadge">추론 루프 · ${_lp}</div>`:'';
+  const lb=_lp?`<div class="dw-loop">추론 루프 · ${_lp}</div>`:'';
   const flow=document.getElementById('flow'),exp=document.getElementById('explain');
   if(!flow)return;
+  /* ── 드로어 = 다크 엔진룸: 업무 분해·구성요소 배정(5타입 색+범례) / 통제점(HITL amber) / 처리 로그 ── */
+  /* 5타입 범례 */
+  const LEG=[['A','Agent'],['M','Module'],['S','솔루션'],['C','Connector'],['P','Policy']];
+  const legend=`<div class="dw-leg">${LEG.map(([k,ko])=>`<span class="dw-lg ty${k}"><i></i>${ko}</span>`).join('')}</div>`;
+  /* (1) 업무 분해 · 구성요소 배정 — 현재 단계 ops 를 5타입 배지로 */
   if(stIsLive(w) && STATE.meetPhase==='await_start'){
-    flow.innerHTML=lb+`<div class="evid-row wait">회의 시작 신호 대기 — 사람이 실시간 Agent 가동 시점을 통제합니다 (HITL ②)</div>`;
+    flow.innerHTML=lb+legend+`<div class="dw-wait">실시간 세션 시작 대기 — 사람이 가동 시점을 통제합니다 (HITL)</div>`+drawerGates(w)+drawerLog();
     if(exp)exp.innerHTML=w.explain;return;
   }
+  let assign='';
   gs.forEach((g,gi)=>{
     const ops=w.ops.filter(o=>o.g===g);
     const stt=gi<RUN.reveal?'done':(gi===RUN.reveal&&RUN.phase==='working'?'doing':'wait');
@@ -843,33 +1378,49 @@ function renderRight(){
     ops.forEach((o,oi)=>{
       const tk=evidType(o);
       const key=`${w.id}-${gi}-${oi}`;const open=STATE.opOpen.has(key);
-      const badge=o.badge?`<span class="ev-badge">${o.badge}</span>`:'';
-      const parTag=(par&&oi===0)?`<span class="ev-par">∥ 병렬</span>`:'';
+      const badge=o.badge?`<span class="dt-badge">${o.badge}</span>`:'';
+      const parTag=(par&&oi===0)?`<span class="dt-par">∥ 병렬</span>`:'';
       /* 펼침 상세 = 관여 계층 + micro + detail(산출물 표) */
       const micro=o.micro?`<div class="ev-micro">${o.micro.map(m=>`<span class="mc">${m}</span>`).join('')}</div>`:'';
       const det=(o.detail||'');
       const canOpen=(stt==='done')&&(o.detail||o.micro);
       const more=canOpen?`<button class="ev-more" data-op="${key}">${_ICO(open?'chevron-down':'chevron-right')}${open?'근거 접기':'근거 펼침'}</button>${open?`<div class="ev-detail"><div class="ev-lay">관여 계층 · <b>${o.L} ${LK[o.L]}</b></div>${micro}${det}</div>`:''}`:'';
       const val=stt==='wait'?'<span class="ev-na">대기</span>':`<b>${o.out}</b>`;
-      h+=`<div class="evid-row ${stt}">
-        <span class="ev-dot ty${tk}"></span>
-        <div class="ev-body">
-          <div class="ev-h"><span class="ev-comp ty${tk} ev-link" data-asset="${dcText(o.comp,'op.comp')}" data-atk="${tk}" data-tip="자산 카탈로그에서 이 구성요소 보기">${dcText(o.comp,'op.comp')}</span><span class="ev-tag ty${tk}">${_TYKO[tk]}</span><span class="ev-kind ${blockKind(o,tk)}" data-tip="${blockKind(o,tk)==='llm'?'비결정론 — LLM 추론(온톨로지 통해 통제)':'결정론 — 규칙·온톨로지 편집(재현 가능)'}">${blockKind(o,tk)==='llm'?'LLM':'결정론'}</span>${badge}${parTag}</div>
-          <div class="ev-line">${o.feed} → ${val}</div>
-          ${more}
-        </div></div>`;
+      assign+=`<div class="dt ty${tk} ${stt}">
+        <div class="dt-h"><span class="dt-nm ev-link" data-asset="${dcText(o.comp,'op.comp')}" data-atk="${tk}" data-tip="자산 카탈로그에서 이 구성요소 보기">${dcText(o.comp,'op.comp')}</span>
+          <span class="dt-own"><span class="dw-ty ty${tk}">${_TYKO[tk]}</span><span class="dw-kind ${blockKind(o,tk)}" data-tip="${blockKind(o,tk)==='llm'?'비결정론 — LLM 추론(온톨로지 통해 통제)':'결정론 — 규칙·온톨로지 편집(재현 가능)'}">${blockKind(o,tk)==='llm'?'LLM':'결정론'}</span>${badge}${parTag}</span></div>
+        <div class="dt-d">${o.feed} → ${val}</div>
+        ${more}</div>`;
     });
   });
   let casm='';
   if(stShowsCompose(w)){const lit=RUN.phase==='done'||RUN.phase==='await'||RUN.reveal>2;
-    casm=`<div class="casm"><div class="casm-h">AAP가 조합한 구성요소</div>${COMPOSE.map(c=>`<span class="ct2 ${c.cls} ${lit?'on':''} ev-link" data-asset="${dcText(c.n,'compose.n')}" data-atk="${c._tk||dcTypeKey(c.cls,'compose.cls')}" data-tip="자산 카탈로그에서 보기">${c.t} ${c.n}</span>`).join('')}</div>`;}
-  flow.innerHTML=lb+h+casm;
+    casm=`<div class="dw-sec">AAP가 조합한 구성요소</div><div class="casm">${COMPOSE.map(c=>`<span class="ct2 ${c.cls} ${lit?'on':''} ev-link" data-asset="${dcText(c.n,'compose.n')}" data-atk="${c._tk||dcTypeKey(c.cls,'compose.cls')}" data-tip="자산 카탈로그에서 보기">${c.t} ${c.n}</span>`).join('')}</div>`;}
+  flow.innerHTML=lb+legend+`<div class="dw-sec">업무 분해 · 구성요소 배정</div>`+assign+casm+drawerGates(w)+drawerLog();
   if(exp)exp.innerHTML=w.explain;
   /* P5 케이스 튜닝 패널 갱신(케이스 맥락에서만 wfeditor 가 렌더 — 도메인 무관 위임) */
   if(window.AAP_WFEDITOR&&window.AAP_WFEDITOR.renderCaseTuner)window.AAP_WFEDITOR.renderCaseTuner(PACK,STATE.sel);
   flow.querySelectorAll('[data-op]').forEach(e=>e.onclick=()=>{const k=e.dataset.op;STATE.opOpen.has(k)?STATE.opOpen.delete(k):STATE.opOpen.add(k);renderRight();});
-  /* Run→자산 양방향: 근거 레일 구성요소·조합 칩 클릭 → 자산 뷰 해당 항목 강조 */
+  /* Run→자산 양방향: 드로어 구성요소·조합 칩 클릭 → 자산 뷰 해당 항목 강조 */
   flow.querySelectorAll('[data-asset]').forEach(e=>e.onclick=()=>gotoAsset(e.dataset.asset,e.dataset.atk));
+}
+/* 통제점(HITL) 섹션 — flow 의 게이트 단계를 amber 로 나열(미결정=대기 강조). 도메인 무관. */
+function drawerGates(){
+  const flow=WORK||[]; const ci=idxOf(STATE.sel);
+  const gates=flow.map((w,i)=>({w,i})).filter(({w})=>stIsGate(w));
+  if(!gates.length)return '';
+  const dec={decisions:STATE.decisions||{}, meetPhase:STATE.meetPhase};
+  return `<div class="dw-sec amber">사람이 결정할 통제점 (HITL)</div>`+gates.map(({w,i})=>{
+    const done=gateDecided(dec,w), cur=i===ci&&!done;
+    const sub=w.gate&&typeof w.gate==='object'&&w.gate.label?w.gate.label:(w.role||'');
+    return `<div class="dw-gate ${done?'done':(cur?'now':'')}"><span class="gd"></span><span class="gl">${dcText(w.label,'gate.label')}${sub&&sub!==w.label?` — ${dcText(sub,'gate.sub')}`:''}</span><span class="gx">${done?'결정됨':(cur?'대기 중':'예정')}</span></div>`;
+  }).join('');
+}
+/* 처리 로그 섹션 — Run Trace 누적(최근 6) 을 실행형으로. 도메인 무관. */
+function drawerLog(){
+  const tr=(STATE.trace||[]).slice(-6);
+  if(!tr.length)return `<div class="dw-sec">처리 로그</div><div class="dw-log empty">아직 기록이 없습니다 — 실행을 시작하면 단계별로 남습니다.</div>`;
+  return `<div class="dw-sec">처리 로그</div>`+tr.map(r=>`<div class="dw-log"><b>${r.L||''}</b><span>${r.t}</span></div>`).join('');
 }
 
 /* ===== Run Trace (코어 · 단계 완료 시 ops 누적 = 거버넌스 증거) ===== */
@@ -894,7 +1445,7 @@ function revealOps(){
 /* 케이스 영속 + 인박스 카운트 갱신 (런타임 상태가 바뀐 직후) */
 function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} renderRunAction(); }
 function runStep(){
-  clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();clearPackTransient();const w=W(STATE.sel);
+  clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();if(STATE.wsStepOpen)STATE.wsStepOpen.clear();clearPackTransient();const w=W(STATE.sel);
   if(stIsLive(w)){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
   else{STATE.meetPhase='idle';startWorking();}
 }
@@ -907,9 +1458,11 @@ function decide(v){
   /* 결정 라벨·토스트는 단계 gate.decisions 에서(코어 리터럴 id 참조 제거 — Pack Contract v2) */
   const dec=stDecision(w,v);
   STATE.trace.push({st:w.label,t:'담당자 결정 · '+(dec.label||v),L:'L7',k:'HITL'});
+  /* ★ 결정 후 AAP가 다시 자동으로 이어서 진행(스트림이 멈춤 없이 흐르게) — 마지막 단계면 멈춤. */
+  STATE.playing=true; setRunBtn(true);
   renderConsole();renderRight();afterStateChange();
   toast(dec.toast||dec.label||'');
-  if(STATE.playing)RUN.playTimer=setTimeout(playNext,1500);
+  RUN.playTimer=setTimeout(playNext,1500);
 }
 function setSel(id){STATE.sel=id;renderSeq();runStep();afterStateChange();renderRunAction();}
 /* ===== 요청 트리거 자동 운영 (Phase 1) — startPlay 의 자동 진행 로직 재사용, 단 '비파괴' =====
@@ -936,27 +1489,21 @@ function startPlay(){
 function stopPlay(){STATE.playing=false;clearTimeout(RUN.playTimer);setRunBtn(false);renderRunAction();}
 /* 실행 진입점(runtop) — 미진입=▶ 실행 / 진행중·정지=이어서 진행 / 자동진행중=처리 중(정지 가능) / 완료=완료.
    요청 트리거 자동 운영의 명확한 입구. 자동저작/안정 ID 무영향(런타임 전용 요소). */
+/* 자동 작동 표시(스테퍼 대체) — '처리 중' / '확인 필요' / '완료'. 작업 스트림이 진행을 보여주므로
+   수동 실행 버튼은 두지 않는다(자동 진행). await 면 게이트 모달이 떠 있음(클릭 = 그 게이트로 스크롤 유도). */
 function renderRunAction(){
   const el=document.getElementById('runAction'); if(!el)return;
   const c=activeCase();
   if(STATE.view!=='run'||!c){ el.innerHTML=''; el.hidden=true; return; }
   el.hidden=false;
-  if(STATE.playing && RUN.phase==='working'){
-    el.innerHTML=`<button class="run-act working" id="runActBtn"><span class="spin sm"></span>처리 중…</button>`;
-  } else if(c.done){
-    el.innerHTML=`<button class="run-act done" id="runActBtn" disabled>${_ICO('check')}처리 완료</button>`;
+  const ci=idxOf(STATE.sel), n=(WORK||[]).length, prog=`${Math.min(ci+1,n)}/${n} 단계`;
+  if(c.done){
+    el.innerHTML=`<span class="rt-running done"><span class="pls"></span>처리 완료 · ${n}/${n} 단계</span>`;
   } else if(RUN.phase==='await'){
-    el.innerHTML=`<button class="run-act await" id="runActBtn">${_ICO('user-check')}확인이 필요합니다</button>`;
+    el.innerHTML=`<span class="rt-running await"><span class="pls"></span>여기서 결정이 필요해요</span>`;
   } else {
-    const started=caseStarted(c);
-    el.innerHTML=`<button class="run-act go" id="runActBtn">${_ICO('play')}${started?'이어서 진행':'실행 / 처리 시작'}</button>`;
+    el.innerHTML=`<span class="rt-running"><span class="pls"></span>AAP 작업 중 · ${prog}</span>`;
   }
-  const b=el.querySelector('#runActBtn');
-  if(b&&!b.disabled)b.onclick=()=>{
-    if(STATE.playing && RUN.phase==='working'){ stopPlay(); return; }   /* 처리 중 클릭 = 정지(탐색 전환) */
-    if(RUN.phase==='await'){ STATE.playing=true; setRunBtn(true); renderRunAction(); return; } /* 게이트로 시선 유도 */
-    startRun();
-  };
 }
 function playNext(){const ci=idxOf(STATE.sel);if(ci<WORK.length-1)setSel(WORK[ci+1].id);else stopPlay();}
 
@@ -1462,6 +2009,7 @@ const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>promptNew
 /* 스튜디오 '＋ 신규 격상' → 격상 파이프라인(없으면 자동저작 오버레이) — 상단 '업무 격상' 버튼 흡수 */
 const _np=document.getElementById('newPromoteBtn');if(_np)_np.onclick=()=>{ if(window.AAP_PIPELINE)window.AAP_PIPELINE.open(); else if(window.AAP_AUTHORING_OPEN)window.AAP_AUTHORING_OPEN(); };
 const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
+/* (옛 'AAP 작동 보기' 토글 드로어는 「업무 진행」 탭으로 흡수 — aapTg/aapTgX 제거. 호환 함수만 유지) */
 
 /* =========================================================================
    [COLLAPSE] 레이아웃 패널 접기 (좌 nav · run 근거 레일 · workflow 팔레트/Run)
@@ -1471,6 +2019,9 @@ const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.pla
 const _COL_CLS={nav:'nav-collapsed', evid:'evid-collapsed', wfpal:'wfpal-collapsed', wfrun:'wfrun-collapsed'};
 function applyCollapse(){
   Object.keys(_COL_CLS).forEach(k=>document.body.classList.toggle(_COL_CLS[k], !!APP.collapse[k]));
+  /* AAP 작동 드로어는 run 뷰에서만 펼침(운영자 패널과 분리). 토글 상태는 영속하되 노출은 run 한정. */
+  document.body.classList.toggle('aap-drawer-on', !!APP.collapse.aapDrawer && APP.view==='run');
+  const tg=document.getElementById('aapTg'); if(tg)tg.classList.toggle('on', !!APP.collapse.aapDrawer);
 }
 function toggleCollapse(k){ if(!(k in APP.collapse))return; APP.collapse[k]=!APP.collapse[k]; applyCollapse(); saveApp(); }
 window.AAP_toggleCollapse=toggleCollapse;

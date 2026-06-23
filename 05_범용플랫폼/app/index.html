@@ -129,32 +129,26 @@
        AAP 작동 구조는 메인이 아니라 우측 얇은 '근거 레일'로 강등(단계별 1~2줄 + ▸펼침).
        HITL/결과/미리보기 = surface 위 오버레이(#cmodal). #flow/#explain ID는 데모/안정성 위해 유지. -->
   <section class="view" data-view="run">
+    <!-- run 상단 = 사람의 업무 워크스페이스 바(제품 nav 아님): 내 업무 복귀 · 배경 진행률 · AAP 작동 보기 토글 -->
     <div class="runtop">
-      <button class="rt-back" id="rtBack" data-tip="인박스로 돌아가기">‹ 인박스</button>
-      <span class="rt-lab" data-tip="요청을 올리면 AAP가 단계를 자동으로 진행합니다. 노드를 클릭하면 그 단계로 되짚어 볼 수 있습니다(탐색).">처리 진행 <em>· 자동 진행 · 클릭 = 되짚기</em></span>
+      <button class="rt-back" id="rtBack" data-tip="내 업무(인박스)로 돌아가기"><span class="ic-l" data-ic="chevron-left"></span>내 업무</button>
+      <span class="rt-lab" data-tip="이 업무가 어디까지 처리됐는지 보여주는 배경 진행률입니다. 노드를 클릭하면 그 단계로 되짚어 볼 수 있습니다(탐색).">진행</span>
       <div class="seq" id="seq"></div>
       <span class="rt-prog" id="seqProg"></span>
+      <div class="sp"></div>
       <span class="rt-action" id="runAction" hidden></span>
     </div>
     <div class="run-main">
-      <!-- 메인 = 업무가 돌아가는 도메인 화면 (PACK.surface / surfaceSpec) -->
+      <!-- 메인 = 업무 워크스페이스(PACK.surface / surfaceSpec). 상단 2탭(코어 소유):
+           「내 업무」(결정 큐) / 「업무 진행」(단계 프로세스·HITL·AAP 작동 — 옛 토글 드로어 흡수). -->
       <section class="run-surface">
-        <button class="panel-fold" id="evidFold" data-ic="panel-right-close" data-tip="근거 레일 접기"></button>
+        <!-- 워크스페이스 탭 바 — 코어 일반(도메인 무관). #wsTabs 가 채움. -->
+        <div class="ws-tabs" id="wsTabs"></div>
         <div class="con-head" id="surfHead"></div>
         <div class="con-body" id="surfBody"></div>
         <!-- HITL / 결과 / 미리보기 = 업무 화면 위 오버레이 -->
         <div class="cmodal" id="cmodal"></div>
       </section>
-      <!-- 근거 레일 접힘 시 재오픈 핸들(‹) -->
-      <button class="panel-handle evid-handle" id="evidHandle" data-tip="근거 레일 펼치기"><span class="ph-i" data-ic="panel-right-open"></span><span class="ph-lab">근거</span></button>
-      <!-- 우측 얇은 레일 = AAP 작동 '근거'(메인 아님). 단계별 구성요소가 무슨 근거로 무엇을 했나 -->
-      <aside class="run-evid" id="runEvid">
-        <div class="re-head">AAP 작동 근거 <span class="help" data-tip="이 단계를 AAP가 어떤 구성요소(Agent·Module·기존솔루션·Connector·Policy)로, 어떤 근거로 처리했는지 한 줄씩 보여줍니다. ▸로 펼치면 관여 계층·세부가 보입니다. 메인 업무 화면이 주인공이고, 이건 '왜 그렇게 돌아갔는지'의 근거입니다.">?</span></div>
-        <!-- P5 케이스 단위 튜닝 패널 — 이 케이스에만 적용되는 구성/게이트 델타(공유 팩 미오염). wfeditor.js 가 렌더. -->
-        <div class="case-tune" id="caseTune"></div>
-        <div class="explain" id="explain"></div>
-        <div class="flow" id="flow"></div>
-      </aside>
     </div>
   </section>
 

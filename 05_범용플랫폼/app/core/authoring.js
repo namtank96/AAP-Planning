@@ -227,6 +227,127 @@
     return '';
   }
 
+  /* =========================================================================
+     G1 · 분해·배정·조립 rich 시각화  /  G2 · 고객 콘솔 연결 미리보기
+     pack(work·compose·components·gates·products·surfaceSpec)에서 결정론 도출 — 코어 도메인 무관.
+     ========================================================================= */
+  const ic=(n,c)=>window.AAP_ICON?window.AAP_ICON.svg(n,c?{cls:c}:undefined):'';
+  /* 5타입 메타 — 색 클래스(.cmp tA..tP)·Lucide 아이콘·라벨. 가이드 §6.5.4 5타입 색 규칙. */
+  const TYPE={
+    A:{cls:'tA',ic:'bot',label:'Agent'}, M:{cls:'tM',ic:'boxes',label:'Module'},
+    S:{cls:'tS',ic:'database',label:'기존 솔루션'}, C:{cls:'tC',ic:'plug',label:'Connector'},
+    P:{cls:'tP',ic:'shield',label:'Policy'} };
+  /* compose 클래스(tA..tP) → 5타입 키. components[].ty(tyA..) 도 동일 매핑. */
+  const composeKey=c=>({tA:'A',tM:'M',tS:'S',tC:'C',tP:'P'}[c.cls]||'A');
+  /* op(comp·L 문자열)에서 5타입 추론 — 결정론. 우선순위: 정책 > 연동 > 솔루션 > 모듈 > Agent. */
+  function opType(op){
+    const s=((op.comp||'')+' '+(op.feed||'')+' '+(op.out||'')).toLowerCase();
+    if(/정책|통제|보안|권한|guard|policy|pii|차별/.test(s))return 'P';
+    if(/연결|연동|커넥터|수집|connector|api|게이트웨이|alert|알림|캘린더|메일/.test(s))return 'C';
+    if(/erp|mes|qms|ats|hris|기간계|솔루션|시스템 반영|스토리지|db|integrate/.test(s))return 'S';
+    if(/모듈|평가|antbot|spc|ocr|이상 탐지|보상밴드|관리도|self-improving|module/.test(s))return 'M';
+    return 'A';
+  }
+  /* 작업 카드 T1..Tn = AAP 실행 단계(actor=aap, request 제외)를 작업으로 표면화.
+     각 작업의 배정 구성요소 = 그 단계 ops 의 5타입 집합. why = 가장 비-Agent 타입 근거(전부 Agent ✕ 메시지). */
+  const WHY={
+    C:'수집·연동은 기존 시스템 Connector가 정확 — LLM ✕',
+    S:'조회·반영은 기존 솔루션(Buy·Integrate)에 위임',
+    M:'결정론 검증·평가는 재사용 Module이 적합',
+    P:'통제·정책은 정책 엔진 — 양보 불가',
+    A:'의미 해석·추론·생성은 Agent가 적합' };
+  function decompose(pack){
+    const work=pack.work||[];
+    const aap=work.filter(w=>w.actor==='aap');           /* 실행 단계만 작업화(human·hitl 제외) */
+    const tasks=aap.map((w,i)=>{
+      const types=[]; (w.ops||[]).forEach(op=>{const t=opType(op); if(!types.includes(t))types.push(t);});
+      if(!types.length)types.push('A');
+      /* goal = ops 결과(out) 1~2개 요약 */
+      const outs=(w.ops||[]).map(o=>o.out).filter(Boolean);
+      const goal=outs.slice(0,2).join(' → ')||w.role||'';
+      const nonA=types.find(t=>t!=='A')||'A';
+      return {id:'T'+(i+1), stepId:w.id, name:w.label, goal, types, why:WHY[nonA]};
+    });
+    /* 조립 그래프 = 작업을 HITL 게이트로 분절. gate 단계(actor=hitl) 사이의 aap 작업 그룹 = 병렬 묶음. */
+    const groups=[]; let cur=[];
+    work.forEach(w=>{
+      if(w.actor==='aap'){ const ti=aap.indexOf(w); if(ti>=0)cur.push(tasks[ti]); }
+      else if(w.actor==='hitl'&&w.gate){ if(cur.length){groups.push({tasks:cur});cur=[];}
+        groups.push({gate:(pack.gates&&pack.gates.find(g=>g.includes('①'))&&groups.filter(x=>x.gate).length===0?pack.gates[0]:null)||w.label, gateRole:w.role}); }
+    });
+    if(cur.length)groups.push({tasks:cur});
+    /* gate 라벨을 pack.gates(★HITL..) 순서대로 채움 */
+    let gi=0; groups.forEach(g=>{ if(g.gate!==undefined){ g.gate=(pack.gates&&pack.gates[gi])||g.gate||'사람 결정 지점'; gi++; } });
+    return {tasks, groups};
+  }
+  /* 작업 카드 1장 */
+  function taskCard(t){
+    return `<div class="au-tcard"><div class="au-tc-h"><span class="au-tid">${t.id}</span><span class="au-tc-nm">${t.name}</span></div>`+
+      `<div class="au-tc-goal">${t.goal}</div>`+
+      `<div class="au-tc-comps">${t.types.map(k=>{const m=TYPE[k];return `<span class="au-cmp ${m.cls}">${ic(m.ic)}${m.label}</span>`;}).join('')}</div>`+
+      `<div class="au-tc-why"><b>왜?</b> ${t.why}</div></div>`;
+  }
+  /* G1 — 분해+배정 작업 카드 그리드 + 조립 그래프(병렬·게이트) */
+  function renderG1(pack){
+    const {tasks,groups}=decompose(pack);
+    const cards=`<div class="au-tgrid">${tasks.map(taskCard).join('')}</div>`;
+    const asm=groups.map(g=>{
+      if(g.gate!==undefined){
+        return `<div class="au-gar">${ic('arrow-down')}<span class="au-gate2">${ic('flag')}${g.gate}</span></div>`;
+      }
+      const par=g.tasks.length>1;
+      const nodes=g.tasks.map(t=>{
+        const tl=t.types.map(k=>TYPE[k].label).join('·');
+        return `<div class="au-gnode"><span class="au-tid">${t.id}</span><span class="au-gn-nm">${t.name}</span><span class="au-gn-c">${tl}</span></div>`;
+      }).join('');
+      return (par?`<div class="au-asm-par">${ic('split')} 병렬 ${g.tasks.length} — 의존성 없는 작업 동시</div>`:'')+
+        `<div class="au-grow ${par?'':'solo'}">${nodes}</div>`;
+    }).join('');
+    return `<div class="au-g1">`+
+      `<div class="au-g-sec"><div class="au-g-h"><span class="au-g-b">1·2</span> 업무 분해 + 구성요소 배정 <span class="au-g-hint">전부 Agent ✕ — 작업마다 적합한 것</span></div>${cards}</div>`+
+      `<div class="au-g-sec"><div class="au-g-h"><span class="au-g-b">3</span> 실행 구조 조립 <span class="au-g-hint">의존성·병렬·사람 통제점(게이트)</span></div><div class="au-asm">${asm}</div></div>`+
+    `</div>`;
+  }
+  /* G2 — 고객 콘솔 연결 미리보기. 스트림 = work 단계(human 제외, gate 강조), 산출물 = products. */
+  function consolePreview(pack){
+    const work=pack.work||[]; const SS=pack.surfaceSpec||{};
+    /* 스트림: aap 실행 단계는 작업(T#)로, gate 단계는 '결정 필요'로. 첫 gate 직전까지 done, 첫 gate=대기. */
+    let firstGate=work.findIndex(w=>w.actor==='hitl'&&w.gate); if(firstGate<0)firstGate=work.length;
+    const aapIdx=[]; work.forEach((w,i)=>{ if(w.actor==='aap')aapIdx.push(i); });
+    const tNo=i=>'T'+(aapIdx.indexOf(i)+1);
+    const rows=work.filter(w=>w.actor!=='human').map(w=>{
+      const i=work.indexOf(w);
+      if(w.actor==='hitl'&&w.gate){ const st=i<=firstGate?'gate':'wait'; return {st,tx:w.label+' — 결정 필요',md:'= 게이트'}; }
+      const st=i<firstGate?'done':'wait';
+      return {st,tx:w.label,md:'= '+tNo(i)};
+    });
+    /* 게이트 이후 aap 작업은 1줄로 접어 표시(목업 패턴) — wait 행이 3개↑면 묶음 */
+    const stream=rows.map(r=>`<div class="au-ms ${r.st}"><span class="au-dot">${r.st==='done'?ic('check'):''}</span><div><div class="au-mtx">${r.tx}</div><div class="au-md">${r.md}</div></div></div>`).join('');
+    /* 산출물 = products. 게이트 전 단계 산출물 = ready, 이후 = wait. planProduces 로 ready 판정. */
+    const pp=pack.planProduces||{}; const readyDlv=new Set();
+    work.forEach((w,i)=>{ if(i<firstGate&&pp[w.id])pp[w.id].forEach(()=>{}); });
+    /* 결정론: products 의 처음 절반 ready, 나머지 wait */
+    const prods=Object.values(pack.products||{}); const half=Math.ceil(prods.length/2);
+    const arts=prods.map((p,i)=>`<div class="au-mf ${i<half?'':'wait'}"><span class="au-fd"></span>${p.title}</div>`).join('');
+    const title=(SS.title||pack.label||'업무');
+    return `<div class="au-mini">`+
+      `<div class="au-mini-top"><span class="au-bk">‹ 내 업무</span><span class="au-mt">${title}</span><span class="au-run">AAP 작업 중</span></div>`+
+      `<div class="au-mini-body">`+
+        `<div class="au-mini-stream"><div class="au-mini-sh">작업 흐름</div>${stream}</div>`+
+        `<div class="au-mini-arts"><div class="au-mini-sh">산출물</div>${arts}</div>`+
+      `</div></div>`;
+  }
+  function renderG2(pack){
+    return `<div class="au-g2">`+
+      `<div class="au-conn-lead">${ic('arrow-right')}이렇게 AAP화하면, 고객이 쓸 화면</div>`+
+      `<div class="au-conn-sub">위의 <b>분해·배정·조립</b>이 곧 고객 콘솔의 <b>작업 흐름·산출물</b>이 됩니다.</div>`+
+      consolePreview(pack)+
+      `<div class="au-conn-map"><b>분해·배정 → 작업 흐름</b> · <b>게이트 → 사람 결정 지점</b> · <b>단계 산출물 → 파일 뷰어</b>. 같은 구조가 그대로 고객 화면이 됩니다.</div>`+
+      `<button class="cp-btn primary lg au-cta" id="auLoad">${ic('play')}이 고객 콘솔 생성 · 실행</button>`+
+      `<div class="au-cta-note">생성 즉시 인박스에 편입 → 고객이 바로 사용</div>`+
+    `</div>`;
+  }
+
   /* ---- UI ---- */
   let chosen='quality', built=null, timers=[];
   const $=id=>document.getElementById(id);
@@ -258,12 +379,18 @@
       },i*720));
     });
   }
+  /* 파이프라인 완료 → G1(분해·배정·조립 rich) + G2(고객 콘솔 연결 미리보기). 즉시 run 점프 ✕. */
   function finish(pack){
     const go=$('auGo');go.style.display='none';
     const foot=document.createElement('div');foot.className='au-foot';
-    foot.innerHTML=`<div class="au-done">✓ AAP가 <b>'${pack.label}'</b> 업무를 분해·구성해 Domain Pack으로 기억했습니다. 같은 플랫폼에서 바로 작동합니다.</div>
-      <button class="cp-btn primary lg" id="auLoad">＋ 이 업무로 전환 · 실행</button>`;
+    foot.innerHTML=`<div class="au-done">✓ AAP가 <b>'${pack.label}'</b> 업무를 분해·구성해 Domain Pack으로 기억했습니다.</div>`+
+      `<div class="au-split">`+
+        `<section class="au-studio">${renderG1(pack)}</section>`+
+        `<aside class="au-conn">${renderG2(pack)}</aside>`+
+      `</div>`;
     $('authBody').appendChild(foot);
+    window.AAP_hydrateIcons&&window.AAP_hydrateIcons(foot);
+    /* CTA = 명시적 생성·실행(미리보기 후). register → load = Side A 스트림+산출물 콘솔 실행. */
     $('auLoad').onclick=()=>{window.AAP_CORE.register(pack);window.AAP_CORE.load(pack.id);close();};
   }
   /* ---- 외부 노출: 격상 파이프라인(pipeline.js)이 분해 골격·헬퍼를 재사용 ----

@@ -91,6 +91,8 @@
     if(d.view){ const b=document.querySelector('#gnav [data-view="'+d.view+'"]'); if(b)b.click(); }
     if(d.open){ const C=window.AAP_CORE; if(C&&C.load)C.load(T.sc.packId); }
     if(d.go){ const C=window.AAP_CORE; if(C&&C.go)C.go(d.go); }
+    /* 워크스페이스 탭 전환(코어 일반) — 업무 진행 탭의 #flow 등을 가리킬 때 */
+    if(d.wsTab&&window.AAP_setWsTab)window.AAP_setWsTab(d.wsTab);
   }
 
   /* target 요소가 나타날 때까지 폴링(rAF) — HITL 모달은 실행 애니(최대 ~2.2s) 후
