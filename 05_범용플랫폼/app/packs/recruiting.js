@@ -283,31 +283,83 @@
    {id:'design',label:'스크리닝 설계',role:'AAP 구성',actor:'aap',kind:'auto',loopPhase:'Reasoning',showCompose:1,
     explain:`핵심 단계입니다. AAP는 Agent를 많이 띄우는 게 아니라, 채용 업무를 작업으로 분해하고 <b>L2 설계·개발</b>·<b>L3 코어</b>에서 필요한 <b>Agent·모듈·기존 ATS·Connector·정책</b>을 골라 운영 가능한 스크리닝 실행 구조로 조합합니다.`,
     ops:[{g:0,feed:'작업 분해',out:'파싱·매칭·랭킹·일정·평가취합 그래프',L:'L2',comp:'설계·개발 환경',
+      reads:['JD·매칭 가중','채용 프로세스 표준'],
+      ev:{ rule:['채용 업무를 표준 작업 그래프로 분해'],
+        logic:['파싱→매칭→랭킹→일정→취합 5개 작업으로 분해 + 의존성 설정(T1→T2→T3, T4·T5)'] },
+      prod:{ doc:['작업 그래프(T1~T5)'] },
       detail:odTable('작업 그래프 (5)',[['T1 이력서 파싱',''],['T2 요건 매칭',''],['T3 랭킹·스코어',''],['T4 면접 일정',''],['T5 평가 취합·반영','']])},
-     {g:1,feed:'데이터·근거 식별',out:'ATS·지원자 DB·캘린더 연결 대상',L:'L5',comp:'연결·수집'},
+     {g:1,feed:'데이터·근거 식별',out:'ATS·지원자 DB·캘린더 연결 대상',L:'L5',comp:'연결·수집',
+      reads:['작업별 입력 요구','연결 가능 시스템 목록'],
+      ev:{ lookup:['각 작업이 필요로 하는 데이터원 식별'],
+        data:['ATS(지원자 DB)·캘린더·메일·HRIS(보상밴드)'],
+        logic:['작업→데이터원 매핑 → 커넥터 연결 대상 확정'] },
+      prod:{ doc:['연결 대상 목록'] }},
      {g:2,feed:'구성요소 배정·조합',out:'Agent 6 · Module 3 · ATS 2 · Connector 4 · Policy 3',L:'L3',comp:'코어·실행 엔진',micro:['Agent','Module','Solution','Connector','Policy'],
+      reads:['작업 그래프','구성요소 레지스트리(5타입)'],
+      ev:{ rule:['추론 작업=Agent / 결정론=Module / 외부 시스템=기존솔루션·Connector / 통제=Policy'],
+        logic:['작업 성격별로 적합 구성요소 선택·배정 → Agent6·Module3·ATS2·Connector4·Policy3 조합(Agent 남발 ✕)'] },
+      prod:{ sys:['운영 가능한 스크리닝 실행 구조'] },
       detail:odTable('조합한 구성요소',[['Agent','6'],['Module','3'],['기존 ATS/HRIS','2'],['Connector','4'],['Policy','3']])},
      {g:3,feed:'누락·편향 점검',out:'편향·요건 누락 리스크 표시',L:'L6',comp:'품질·근거 평가',asset:1,badge:'Antbot',
+      reads:['조합된 실행 구조','요건·차별금지 규칙'],
+      ev:{ rule:['편향 신호·요건 누락·스코어 일관성 점검(Antbot)'],
+        data:['편향 신호 평가제외 확인 · 요건 누락 없음 · 스코어 일관성 검증'] },
+      prod:{ doc:['설계 리스크 리포트'] },
       detail:odTable('리스크 (Antbot)',[['편향 신호','평가 제외 확인','g'],['요건 누락','없음','g'],['스코어 일관성','검증','g']])}]},
 
    {id:'shortlist_gate',label:'숏리스트 기준 승인',role:'사람 확인 ①',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
     gate:{label:'숏리스트 기준 승인',decisions:[{key:'yes',label:'이 기준으로 스크리닝',toast:'숏리스트 컷 확정 · 스크리닝을 시작합니다'},{key:'no',label:'컷 좁히기(≥90)',toast:'컷을 ≥90으로 좁혀 진행합니다'}]},
     explain:`<b>L3 런타임 게이트</b>가 스크리닝 실행 전 책임 지점을 멈춥니다. AAP가 스크리닝 계획과 숏리스트 컷 후보를 제시하고, <b>숏리스트 기준(컷)은 채용담당이 결정</b>합니다. (★ HITL ①)`,
-    ops:[{g:0,feed:'스크리닝 계획 제시',out:'파싱·매칭 방식 · 평가 항목 요약',L:'L1',comp:'채용 콘솔·챗 UI'},
+    ops:[{g:0,feed:'스크리닝 계획 제시',out:'파싱·매칭 방식 · 평가 항목 요약',L:'L1',comp:'채용 콘솔·챗 UI',
+      reads:['설계된 스크리닝 실행 구조'],
+      ev:{ logic:['파싱·매칭 방식·평가 항목(루브릭 5)을 담당자가 보도록 요약 제시'] },
+      prod:{ doc:['스크리닝 계획서'] }},
      {g:1,feed:'숏리스트 컷 후보 산출',out:`엄격 ${cutCount(90)} / 표준 ${cutCount(85)} / 넓게 ${cutCount(80)}`,L:'L3',comp:'코어·실행 엔진',micro:['컷 시뮬레이션'],
+      reads:['후보 매칭 점수 분포'],
+      ev:{ data:[`컷별 통과 — ≥90 ${cutCount(90)}명 / ≥85 ${cutCount(85)}명 / ≥80 ${cutCount(80)}명`],
+        rule:['컷(매칭 임계)은 사람이 결정 — 자동 확정 ✕'],
+        logic:['컷 임계별 통과 후보 수를 결정론적으로 시뮬레이션해 선택지로 제시'] },
+      prod:{ doc:['컷 시뮬레이션'] },
       detail:odTable('컷 후보 (통과수)',[['match ≥ 90',cutCount(90)+'명','g'],['match ≥ 85',cutCount(85)+'명'],['match ≥ 80',cutCount(80)+'명']])},
-     {g:2,feed:'검토 게이트 보류',out:'숏리스트 기준 선택 담당자 전달',L:'L3',comp:'HITL 런타임 게이트'}]},
+     {g:2,feed:'검토 게이트 보류',out:'숏리스트 기준 선택 담당자 전달',L:'L3',comp:'HITL 런타임 게이트',
+      reads:['컷 후보·스크리닝 계획'],
+      ev:{ rule:['스크리닝 실행 전 컷 기준은 담당자 확정 필수 (HITL 게이트)'],
+        logic:['기준 선택을 담당자에게 전달 → 승인 시에만 스크리닝 시작'] },
+      prod:{ sys:['HITL 결정 대기 등록'] }}]},
 
    {id:'screen',label:'이력서 수집·스크리닝',role:'AAP 실행',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Action',
     explain:`승인된 기준대로 AAP가 Agent들을 자율 가동합니다. <b>L5</b>가 이력서를 <b>병렬</b> 수집·OCR 파싱하고(<span class="v">AI:ON-U</span>), <b>L3 코어</b>가 스킬·경력·도메인 가중 매칭·스코어링·랭킹을 수행하며 후보를 통과/<b>보류</b>/<b>탈락</b>으로 분기합니다. <b>L6·L7</b>이 편향 점검·정규화합니다.`,
     ops:[{g:0,feed:'이력서 수집·OCR 파싱',out:`${JOB.applicants}건 파싱·정규화`,L:'L5',comp:'연결·수집',asset:1,badge:'AI:ON-U',micro:['ATS 커넥터','OCR'],
+      reads:['ATS 지원자 풀','첨부 이력서(PDF·이미지)'],
+      ev:{ data:[`지원 ${JOB.applicants}건 · 중복·스팸 4건 제거`],
+        lookup:['ATS 커넥터로 지원자·이력서 조회'],
+        logic:['OCR로 비정형 이력서 디지털화 → 경력·스킬·기간 구조화·정규화'] },
+      prod:{ doc:['정규화 이력서'] },
       detail:odTable('파싱 결과',[['이력서','38건'],['OCR 정규화','완료','g'],['경력·스킬 추출','완료','g'],['중복·스팸 제거','4건']])},
-     {g:0,feed:'JD 요건 매칭 (스킬·경력·도메인)',out:'3축 가중 매칭',L:'L3',comp:'코어·실행 엔진',micro:['요건 매칭']},
+     {g:0,feed:'JD 요건 매칭 (스킬·경력·도메인)',out:'3축 가중 매칭',L:'L3',comp:'코어·실행 엔진',micro:['요건 매칭'],
+      reads:['정규화 이력서','JD 필수·우대·가중'],
+      ev:{ rule:['스킬50·경력30·도메인20 가중'],
+        logic:['must/plus·연차·도메인을 3축 의미매칭 → 후보별 충족도(%) 산출'] },
+      prod:{ doc:['후보별 매칭 결과'] }},
      {g:1,feed:'스코어링·랭킹·분기',out:`상위 ${JOB.screened}명 랭킹 · 통과/보류/탈락`,L:'L3',comp:'코어·실행 엔진',micro:['가중합 50/30/20'],
+      reads:['매칭 결과','컷 기준','리스크 신호'],
+      ev:{ data:[`상위 ${JOB.screened}명 랭킹 — 정유진 96 · 이하늘 92 · 임재훈 88 …`],
+        rule:['통과 ≥85·리스크없음 / 보류 ≥80 / 탈락 <80 (evaluate 룰)'],
+        logic:['3축 가중합 → 랭킹 → evaluate 결정 룰로 통과/보류/탈락 분기(근거 동반)'] },
+      prod:{ doc:['후보 랭킹·판정'] },
       detail:odTable('랭킹 (매칭% / 종합)',CAND.slice().sort((a,b)=>b.match-a.match).slice(0,5).map((c,i)=>[c.name,`${c.match} / ${totalScore(c)}`,i<2?'g':'']))},
      {g:1,feed:'편향·PII 점검',out:'보호속성 평가 제외 · PII 마스킹',L:'L7',comp:'정책 관리·통제',
+      reads:['스코어 근거','PII 패턴·차별금지 규칙'],
+      ev:{ rule:['보호속성(성·연령·출신) 평가 미반영 · 이력서 PII 마스킹'],
+        data:['성·연령·출신 미반영 · 사진·신상 마스킹 · 스코어 근거=요건 기반만'],
+        logic:['스코어 근거가 보호속성에 의존하는지 검증 → 의존 시 차단·재산출'] },
+      prod:{ sys:['편향 점검 통과 라벨'] },
       detail:odTable('편향 점검',[['성별·연령·출신','평가 미반영','g'],['사진·신상','마스킹','g'],['스코어 근거','요건 기반만','g']])},
      {g:2,feed:'스코어카드·리포트 반영',out:'스코어카드 10 · 통과/보류/탈락 분류',L:'L8',comp:'스토리지·DB',micro:['ats.write()'],
+      reads:['후보 판정 결과'],
+      ev:{ data:['스코어카드 10명 생성 · 스크리닝 리포트 생성'],
+        logic:['판정 결과를 스코어카드·리포트로 정리 → ATS 단계를 "스크리닝 통과"로 갱신'] },
+      prod:{ sys:['ATS write · 스코어카드 10'] },
       detail:odTable('시스템 반영',[['스코어카드','10명 생성','g'],['스크리닝 리포트','생성','g'],['ATS 단계','스크리닝 통과','g']])}]},
 
    {id:'interview_gate',label:'면접 조율',role:'사람 확인 ②',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
@@ -337,28 +389,71 @@
    {id:'evaluate',label:'면접 평가 취합',role:'AAP 실행',actor:'aap',kind:'auto',loopPhase:'Action',
     explain:`면접이 끝나면 AAP가 면접관 스코어카드를 <b>병렬</b>로 모아 정합성을 점검하고, <b>L3 코어</b>가 합격 후보와 오퍼 패키지 초안을 정리합니다. <b>L7</b>이 보상밴드·차별금지를 사전 점검해 다음 게이트에 올립니다. (추론 루프 <b>Action</b>)`,
     ops:[{g:0,feed:'면접 스코어카드 취합',out:'면접관 평가 정합성 점검',L:'L3',comp:'코어·실행 엔진',micro:['평가 취합'],
+      reads:[`면접관 스코어카드 ${INTERVIEW.length}건`,'루브릭 5항 기준'],
+      ev:{ data:[`스코어카드 ${INTERVIEW.length}건 수집 · 최종 합격 후보 정유진`],
+        lookup:['면접관(오세훈·이서영)별 평가 수집'],
+        logic:['면접관 간 평가 편차·정합성 점검 → 이상치 확인'] },
+      prod:{ doc:['취합 평가표'] },
       detail:odTable('평가 취합',[['스코어카드 수집',INTERVIEW.length+'건','g'],['평가 정합성','검증','g'],['최종 합격 후보','정유진','g']])},
      {g:1,feed:'합격 판정·오퍼안 정리',out:'합격 후보 · 오퍼 패키지 초안',L:'L3',comp:'코어·실행 엔진',
+      reads:['취합 평가','직무 기준','보상밴드'],
+      ev:{ rule:['종합 평가 우수 + 헤드카운트(2) 내'],
+        logic:['합격 후보 확정 → 보상밴드 기준 오퍼 패키지 초안 정리'] },
+      prod:{ doc:['오퍼 패키지 초안'] },
       detail:odTable('합격·오퍼안',[['최종 합격','정유진','g'],['종합 평가','우수','g'],['헤드카운트','1 / 2 충원']])},
      {g:2,feed:'보상·정책 사전 점검',out:'보상밴드 내 · 차별금지 통과',L:'L7',comp:'정책 관리·통제',asset:1,badge:'Antbot',
+      reads:['오퍼안','직급 보상밴드','차별금지 규칙'],
+      ev:{ rule:['기본급 밴드 내 · 헤드카운트 승인 범위 · 차별금지 · 처우 형평'],
+        data:['기본급 밴드 상한 내 · 헤드카운트 승인 범위 · 차별금지 통과 · 형평 검증'],
+        logic:['오퍼안을 보상·정책 규칙으로 사전 점검해 다음 게이트에 적재'] },
+      prod:{ sys:['사전 점검 통과 라벨'] },
       detail:odTable('사전 점검 (Antbot)',[['기본급','밴드 상한 내','g'],['헤드카운트','승인 범위','g'],['차별금지','통과','g'],['처우 형평','검증','g']])}]},
 
    {id:'offer_gate',label:'합격·오퍼 승인',role:'사람 확인 ③',actor:'hitl',hitl:1,kind:'gate',loopPhase:'Decision',
     gate:{label:'합격·오퍼 승인',decisions:[{key:'yes',label:'승인·오퍼 발송',toast:'오퍼 승인 · 발송합니다'},{key:'no',label:'처우 하향(밴드 하한)',toast:'처우를 밴드 하한으로 조정합니다'}]},
     explain:`후보에게 오퍼가 나가는 마지막 행동 직전, <b>L7</b>이 보상밴드·헤드카운트·차별금지를 점검하고 <b>L3 런타임 게이트</b>가 오퍼 발송을 멈춰 담당자·현업 리드의 최종 승인을 받습니다. (★ HITL ③)`,
     ops:[{g:0,feed:'합격 후보·오퍼 패키지 제시',out:'오퍼 처우·조건 요약',L:'L1',comp:'채용 콘솔·챗 UI',
+      reads:['오퍼 패키지 초안','합격 후보 평가'],
+      ev:{ logic:[`합격 후보(${cById(OFFER.cid).name})·처우·조건을 담당자가 보도록 요약 제시`] },
+      prod:{ doc:['오퍼 요약'] },
       detail:odTable('오퍼안',[['최종 합격','정유진','g'],['기본급',OFFER.base,'g'],['입사',OFFER.start]])},
      {g:1,feed:'오퍼 점검 (보상·정책)',out:'보상밴드 내 · 차별금지 통과',L:'L7',comp:'정책 관리·통제',
+      reads:['오퍼 처우','보상밴드','헤드카운트·차별금지'],
+      ev:{ rule:['기본급 밴드 내 · 헤드카운트 승인 범위 · 차별금지 · 처우 형평'],
+        data:['기본급 밴드 상한 내 · 헤드카운트 승인 범위 · 차별금지 통과'],
+        logic:['발송 직전 보상·정책을 최종 점검'] },
+      prod:{ doc:['오퍼 점검 결과'] },
       detail:odTable('오퍼 점검',[['기본급','밴드 상한 내','g'],['헤드카운트','승인 범위','g'],['차별금지','통과','g'],['처우 형평','검증','g']])},
-     {g:2,feed:'발송 게이트 보류',out:'오퍼 발송·기록 승인 대기',L:'L3',comp:'HITL 런타임 게이트'}]},
+     {g:2,feed:'발송 게이트 보류',out:'오퍼 발송·기록 승인 대기',L:'L3',comp:'HITL 런타임 게이트',
+      reads:['오퍼·점검 결과'],
+      ev:{ rule:['후보에게 오퍼 발송 = 담당자·현업 리드 최종 승인 필수 (HITL 게이트)'],
+        logic:['오퍼 발송·기록을 승인 대기로 보류 → 승인 시에만 발송'] },
+      prod:{ sys:['HITL 결정 대기 등록'] }}]},
 
    {id:'record',label:'기록·학습',role:'AAP 마무리',actor:'aap',doneModal:1,kind:'auto',loopPhase:'Learning',
     explain:`승인 후 AAP가 결과를 <b>병렬</b> 전달·기록하고 ATS·온보딩에 반영하며, 이번 채용 패턴을 <b>L7 Self-Improving</b>으로 학습 자산화해 다음 포지션의 매칭 정확도를 높입니다. (추론 루프 <b>Learning</b>)`,
     ops:[{g:0,feed:'오퍼·결과 발송',out:'합격 안내 · 불합격 통지',L:'L3',comp:'코어·실행 엔진',micro:['mail.send()'],
+      reads:['승인된 오퍼·후보 상태','안내 템플릿·톤 가이드'],
+      ev:{ data:['오퍼 레터 정유진 발송 · 면접 안내 3명 · 불합격 정중 통지'],
+        rule:['외부 발송은 승인 후에만','불합격 통지는 정중 톤'],
+        logic:['후보 상태별 템플릿 적용 → 발송'] },
+      prod:{ msg:['오퍼 레터·안내·통지'] },
       detail:odTable('발송 결과',[['오퍼 레터','정유진 발송','g'],['면접 안내','3명 발송','g'],['불합격 통지','정중 안내','g']])},
-     {g:0,feed:'ATS 기록·단계 갱신',out:'채용 파이프라인 단계 반영',L:'L8',comp:'스토리지·DB',micro:['ats.update()']},
-     {g:1,feed:'온보딩 작업 등록',out:'입사 준비 · 리마인더',L:'L3',comp:'코어·실행 엔진'},
+     {g:0,feed:'ATS 기록·단계 갱신',out:'채용 파이프라인 단계 반영',L:'L8',comp:'스토리지·DB',micro:['ats.update()'],
+      reads:['최종 결정·후보 상태'],
+      ev:{ logic:['합격/불합격을 ATS 파이프라인 단계에 반영(ats.update)'] },
+      prod:{ sys:['ATS 단계 갱신'] }},
+     {g:1,feed:'온보딩 작업 등록',out:'입사 준비 · 리마인더',L:'L3',comp:'코어·실행 엔진',
+      reads:['합격자 정보','입사일·온보딩 워크플로'],
+      ev:{ data:[`입사 ${OFFER.start} · 온보딩 체크리스트`],
+        logic:['HRIS 온보딩 워크플로에 작업·리마인더 등록'] },
+      prod:{ sys:['온보딩 작업 등록'] }},
      {g:2,feed:'학습 자산화',out:'직무 매칭 패턴 저장 · 기준 개선',L:'L7',comp:'Self-Improving',asset:1,badge:'Self-Improving',
+      reads:['이번 채용 흐름·합격자 프로필·면접 결과·담당자 판단(컷·가중)'],
+      ev:{ data:['저장 — 백엔드 매칭 패턴 · 갱신 — 스코어 기준 · 준비 — 다음 포지션 적용'],
+        rule:['개인정보 제외, 패턴·기준만 자산화'],
+        logic:['합격자 특성·담당자 조정(컷·가중)을 정규화 → 다음 포지션 매칭·구성 기준 개선'] },
+      prod:{ sys:['지식베이스 갱신(매칭 기준)'] },
       detail:odTable('학습 자산',[['백엔드 매칭 패턴','저장','g'],['스코어 기준','갱신','g'],['다음 포지션 적용','준비','g']])}]},
   ];
 
@@ -1081,7 +1176,8 @@
       root.querySelectorAll('[data-filt]').forEach(e=>e.onclick=()=>{S.recrFilter=e.dataset.filt;rerender();});
       root.querySelectorAll('[data-cback]').forEach(e=>e.onclick=()=>{S.recrOpen=null;rerender();});
       /* 결정 큐 아이템 → 해당 HITL 게이트 단계로 이동(코어 일반 메커니즘 · HITL 모달 자동 노출) */
-      root.querySelectorAll('[data-gate]').forEach(e=>e.onclick=()=>{ if(window.AAP_CORE)window.AAP_CORE.go(e.dataset.gate); });
+      /* #5 절충: 그 게이트에 있으면 기준 조정 모달(openGate), 아니면 그 게이트로 이동(인라인 정착 후 '결정하기'로 모달) */
+      root.querySelectorAll('[data-gate]').forEach(e=>e.onclick=()=>{ const g=e.dataset.gate; if(!window.AAP_CORE)return; if(window.AAP_CORE.atGate(g))window.AAP_CORE.openGate(); else window.AAP_CORE.go(g); });
       /* 'AAP가 해둔 일 · 어떻게 했는지' → 「업무 진행」 탭으로 전환(코어 일반) */
       root.querySelectorAll('[data-aapsee]').forEach(e=>e.onclick=()=>{ if(window.AAP_setWsTab)window.AAP_setWsTab('progress'); });
       /* 파이프라인 전체 보기 토글 */
@@ -1124,11 +1220,17 @@
     /* ── 의도 steering 핸들러(코어 wireSteer 가 호출) — 결정론 recompute 는 STATE 갱신만.
        반환 {intent,mono,steps?,instant?,trace?,toast?} 로 코어가 라이브 재분석/FLIP 을 구동. ── */
     steerHook:(S,key,val)=>{
-      if(key==='weight'){ const p=WPRESET[val]; if(!p)return {}; S.recrWPreset=val; S.recrWeight={skill:p.skill,career:p.career,domain:p.domain};
+      if(key==='weight'){ const p=WPRESET[val]; if(!p)return {};
+        /* #6 결과 diff: 가중 적용 '전' 지표 먼저 캡처(S 변경 전) */
+        const Cb={S}; const thb=(typeof cutThreshold==='function')?cutThreshold(Cb):85;
+        const passB=(typeof passCount==='function')?passCount(Cb,thb):'—';
+        const topB=(typeof opRanked==='function')?(opRanked(Cb)[0]||{}).name:'';
+        S.recrWPreset=val; S.recrWeight={skill:p.skill,career:p.career,domain:p.domain};
         /* 재분석을 '가중 적용 → 재산출 → 재랭킹 → 컷' 4단계로 펼쳐 각 단계 수치·근거를 보여줌(지적 1·2) */
         const Cx={S}; const pool=(typeof intentPool==='function')?intentPool(Cx):CAND;
         const th=(typeof cutThreshold==='function')?cutThreshold(Cx):85;
         const pass=(typeof passCount==='function')?passCount(Cx,th):'—';
+        const topA=(typeof opRanked==='function')?(opRanked(Cx)[0]||{}).name:'';
         return {intent:p.lab+' 우선', mono:'가중 → '+p.skill+'/'+p.career+'/'+p.domain,
           steps:[
             {t:'가중 적용',tag:'읽기',d:'스킬·경력·도메인 '+p.skill+'/'+p.career+'/'+p.domain,basis:'normWeight ← preset '+val+' · 합 100 정규화'},
@@ -1136,6 +1238,8 @@
             {t:'재랭킹',tag:'판정',d:'매칭% 내림차순 정렬',basis:'opRanked() · 동점은 종합점수 차순'},
             {t:'컷 적용',tag:'판정',d:'컷 ≥'+th+'% → 통과 '+pass+'명',basis:'shortlistIds ← match ≥ '+th+'% · 면접 대상 확정'}
           ],
+          diff:[ {label:'면접 대상(컷 통과)', from:passB+'명', to:pass+'명'},
+                 {label:'1위 후보', from:topB||'—', to:topA||'—'} ],
           trace:{st:'매칭·랭킹',t:'우선순위 · '+p.lab+' (가중 '+p.skill+'/'+p.career+'/'+p.domain+')',L:'L4',k:''}}; }
       if(key==='filter'){ const f=Object.assign({remote:false,senior:false,commerce:false}, S.recrIntentFilt||{}); f[val]=!f[val]; S.recrIntentFilt=f;
         const lab={remote:'재택 가능자만',senior:'시니어만',commerce:'커머스 경험자만'}[val];
@@ -1265,6 +1369,17 @@
     id:'recruiting', label:'채용', ontology:ONTOLOGY,
     times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
+    /* 인박스 카드 brief(개입 이유·판단·근거·액션) — 단계(sel) 기반 도메인 문장(지시서 #11) */
+    inboxBrief:function(c){
+      if(c.done)return {reason:'auto', judgment:'채용 절차가 끝까지 완료됐습니다 — 오퍼 발송·ATS 기록까지.', basis:['최종 후보','오퍼 승인','ATS 기록'], actions:[{l:'상세 보기',k:'secondary'}]};
+      const G={
+        shortlist_gate:{j:`지원 ${JOB.applicants}명을 점수화했고, 면접 대상 숏리스트 기준 승인이 필요합니다.`, b:['JD 요건','후보 매칭 점수','채용 정책'], a:[{l:'검토하기',k:'primary'},{l:'기준 조정',k:'secondary'}]},
+        interview_gate:{j:'면접 일정 후보를 캘린더 교차로 잡았습니다 — 충돌 0건. 후보 안내 전 확인이 필요합니다.', b:['면접 슬롯','캘린더 가용성','면접 패널'], a:[{l:'검토하기',k:'primary'},{l:'기준 조정',k:'secondary'}]},
+        offer_gate:{j:'합격 후보의 오퍼 패키지를 만들었습니다(보상밴드 내·차별금지 통과). 외부 발송 전 최종 승인이 필요합니다.', b:['보상밴드','차별금지 통과','오퍼 조건'], a:[{l:'검토하기',k:'primary'},{l:'반려',k:'secondary'}]},
+      };
+      if(G[c.sel])return {reason:'decision', judgment:G[c.sel].j, basis:G[c.sel].b, actions:G[c.sel].a};
+      return {reason:'decision', judgment:'요청을 받아 JD·요건을 분해하고 스크리닝을 준비 중입니다. 곧 숏리스트 기준 승인이 필요합니다.', basis:['JD 요건','매칭 가중','채용 정책'], actions:[{l:'검토하기',k:'primary'},{l:'기준 조정',k:'secondary'}]};
+    },
     demoScenario:DEMO_SCENARIO,
     /* ── 결정층(수렴 ②) — scored-list shape. 결정은 코어 evaluate(SCREEN_ROUTE)가 소유.
        단일케이스 evalCase 는 shape 가드로 skip(항목별 판정). caseModel.slots 없음 → 코어 generic

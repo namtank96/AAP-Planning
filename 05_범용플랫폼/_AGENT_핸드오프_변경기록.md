@@ -69,6 +69,69 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### 지시서 반영 ① 인박스 = 운영 콘솔 재설계 (코어, 260624) 〔기획·UX〕
+> 외부 지시서 §1 반영. 인박스를 '티켓 목록'→**AAP가 개입 이유로 분류한 운영 큐**로. (지시서 10항 중 #1~#4·#11 일부)
+- **caseBrief 인프라**(core.js): `REASON`(사람결정/정책위반/근거부족/자료부족/SLA/시스템반영/자동처리/진행) + `caseBrief(c)` = 팩 `inboxBrief(c)` 훅 우선, 없으면 **단일케이스(knowledge.route)는 순수 `evaluate(c.caseData,knowledge)`로 판정 도출**(REJECT→정책위반·LEGAL_REVIEW→사람결정·AUTO→자동), 그 외 상태 기반. 근거=verdict.inputs 중 슬롯 라벨만(임계키 제외).
+- **renderInbox**: 상단 운영 요약 스탯(개입이유별 카운트·클릭필터) + **1차 필터=개입 이유**·2차=도메인 + `APP.reasonFilter`. index.html에 `#inboxStats`·`#inboxReasonFilter` 추가.
+- **카드 재설계**(`_inboxStatusGroups`): 행→판단형 카드 = 제목+부서+도메인배지 / **개입 이유 칩**(색) / **AAP 판단 한 줄** / **근거 chip** / **액션 버튼**(검토·자료요청·예외·반려…). **삭제는 ⋯ 메뉴(hover)로** — 카드 기본 CTA에서 제거(지시서 1-5). `more-horizontal` 아이콘 추가.
+- platform-fix.css `[INBOX-REDESIGN]` 블록(토큰만·신규 hex 0). 검증(헤드리스 1440): 스탯3·이유필터4·카드35·판단35·액션70·에러0. 단일케이스(경비/구매/계약)=evaluate로 실제 '반려/검토'+근거 자동. `node --check`·audit A=3 무회귀.
+- **#2 완료**: 채용·회의 팩에 `inboxBrief(c)` 추가 — 단계(c.sel)·완료로 도메인 문장. 채용=숏리스트/면접/오퍼 게이트별 판단·근거·액션 + 진행/완료, 회의=계획승인(approve)/공유(commit)/진행/완료. 경비=evaluate 자동. 검증(헤드리스): 회의 3건 = 사람결정/진행중/자동완료 각기 다른 판단·근거·액션. `node --check` 팩 OK.
+- **#3 완료**: 카드 클릭→Run 진입 시 **업무 브리핑 배너 먼저**(단계 직행 ✕, 지시서 #2·#6). index.html `#runBrief` + core `renderRunBrief()`(caseBrief 재사용: 개입이유 칩·제목·현재 단계·판단·근거·액션·접기). `.run-main` flex-row→column 전환(브리핑 위·surface 아래). openCase·afterStateChange 연결. 검증: 채용 진입 시 '사람 결정 필요 + 판단 + 근거 + 검토하기/기준조정' 전체폭 배너, surface 정상 하단. audit A=3 무회귀.
+- **#4 완료**: Run 정보 위계 — 스테퍼 비중↓(지시서 §3). `[STEP-DEEMPHASIS]` CSS: 9단계 strip을 슬림 보조 진행으로(배경 바·보더 제거, 현재 teal·완료 점만 또렷, 대기 흐림). 클릭 되짚기 유지. 위계=runtop→**브리핑(현재 결정)**→슬림 스테퍼→작업→근거. 검증: 채용 진입 화면 위계 정상.
+- **#5 완료 — HITL 절충(요약 인라인 + 조정 모달)**: 사용자 결정(가이드 §5.6 모달 ↔ 지시서 인라인 충돌 → 절충). `revealOps` 게이트 분기 `STATE.baseOnly=true` → **게이트 도착 시 덮는 모달 자동 표시 ✕**, 본문 인라인(브리핑+콘솔 판정/랭킹+'결정하기' 큐). "결정하기/기준 조정"=`openGate`(on-demand 모달). `AAP_CORE.openGate/atGate` 노출, recruiting 게이트 버튼=게이트면 모달·아니면 이동. decide()=토스트+트레이스+자동진행(결정 후 피드백). **가이드 §2-6·§5.6 정정(v0.9)**. 검증(헤드리스 전 도메인): 채용 4/9 인라인(modal:false)→결정하기→모달→확정→5/9 진행 · 경비(3/4)·회의(4/8) 자동덮기 차단+모달 도달, 제네릭 모달=verdict 확인(비어있지 않음). audit A=3·되짚기·삭제숨김 무회귀.
+- **#8 완료 — 새 업무 요청 ↔ Domain Pack 생성 분리**: 인박스 On-Ramp 패널(`promptNewCase`)이 케이스 생성(유형 인식→`createCase`)과 팩 생성(격상)을 섞던 것 분리. `ncGoPromote`가 `setView('domain')`(스튜디오)로 이동 후 파이프라인 오픈. 패널 카피="…유형을 인식해 새 케이스를 만듭니다", 격상 버튼="스튜디오에서 새 유형 만들기", 스튜디오 버튼 라벨 "신규 격상"→"새 업무 유형 만들기". 검증: 격상 클릭→domain 뷰 활성. `node --check` OK.
+- **#6 완료 — 동적 재계산 피드백 diff**: `runReanalysis` 오버레이에 **결과 diff(전→후)** 추가. `#rediff` 컨테이너 + finish()가 `opts.diff=[{label,from,to}]` 렌더("변경 결과", 변경값 teal 강조, diff 있으면 +1.5s 노출). `wireSteer`가 `meta.diff` 전달(누락 버그 수정). recruiting weight steerHook이 적용 전/후 `passCount`·`opRanked` 캡처 → diff. 검증: 우선순위 균형→도메인 시 "면접 대상 6명→7명 · 1위 정유진→정유진" + 4단계 판단로직(가중→재산출→재랭킹→컷 basis). audit A=3. (slotpref/panel 등 다른 steer 케이스도 동일 패턴으로 확장 가능 — 현재 weight 대표 구현.)
+- **#7 완료 — 새 업무 요청 3-step 플로우**: `#newCaseBtn`→`openNewCaseFlow`(기존 promptNewCase On-Ramp 대체). 오버레이 `#ncFlow`: ① 유형 선택(deployedPackIds 카드 + `ncfDesc` 도메인 설명 + '직접 설명할게요'=matchPackByText 인식) → ② 요청 입력(자연어 textarea + 첨부 목업) → ③ **AAP 접수 미리보기**(업무 유형·요청·예상 실행 단계 `PACK.work`·**사람 결정 지점** `stIsGate` amber⚑·필요 입력 `io.inputs`) → [이대로 시작]=`createCase`→Run(브리핑 #3). `[NEW-CASE-FLOW]` CSS(토큰만·반응형 560). 검증: 채용 선택→9단계·3게이트 미리보기→시작→run 진입. audit A=3.
+- **★ 지시서 8개 작업(#1~#8) 전부 완료.** 인박스 운영큐화·도메인 brief·진입 브리핑·Run 위계·HITL 절충·재계산 diff·새업무 3-step·팩생성 분리. 디자인 가이드 §2-6·§5.6(v0.9) 정합. 신규 hex 0·되짚기·삭제숨김·단일컬럼·결정론·A=3 전부 무회귀.
+
+### run 콘솔 = 세로 1열 위→아래 "작동 흐름"으로 구조 전환 (260624) 〔기획·UX + 표준·정의〕
+> 사용자: "비례·용어만 만져선 '전혀 다른 게 없다'. 너 판단으로 타당한 구조를 짜라." → 2열(좌 작업/우 얇은 근거)이 비례·반응형 문제의 **근본**이라 판단. **구조 결정**: run 콘솔을 **세로 1열·중앙 캡(960/1040px)** 으로, 위→아래 작동 흐름이 본문. AAP 주인공 = 작업 카드가 아니라 **'판단·근거가 입력 따라 살아 움직이는 것'** → steering(무엇으로 판단) 위 → 출력(랭킹/결과) 아래. v0_58 우측 패널 톤, 좌/우 분할 ✕.
+- **CSS만**(`platform-fix.css` [SINGLE-COLUMN] 블록): `.op-split`을 모든 너비에서 `flex-direction:column`·`--op-col` 중앙 캡. 우 `.op-aside`(근거 레일) → 본문 아래 **인라인 섹션**(좌보더·배경 제거, 위 구분선, 동일 좌우 패딩). 매칭 그래프 본문 폭 가득. 상단 스테퍼·steer 같은 중앙 폭 정렬. **함수·DOM id·data-*·JS 무수정**(직전 v0_58 패스의 2열 폭/레일 규칙은 의도적 후순위 override).
+- 검증(헤드리스 fullPage): 채용 스크리닝=조정칩(우선순위/필터/면접범위) 위 → 후보 랭킹 10명 아래 1열 흐름(`COL3_screen_1440·1024.png`), 분석 단계=작업카드→온톨로지 그래프 1열(`COL2`). 1024·1440 동일 구조(반응형 자연 해소). steer 재랭킹·되짚기·삭제숨김·용어 쉬운말 무회귀(JS 불변).
+- **남은(구조 2차)**: ① 게이트 **HITL을 덮는 모달 → 흐름 안 인라인**(#3 'HITL 전후 자연스럽게'의 핵심, core renderCModal/currentCM 손봐야 함) ② "왜 이 순서?" **쉬운말 근거 한 줄을 랭킹에 상시 인라인**(현재 막대+게이트 모달에 분산). 〔기획·UX → 코어〕
+
+### #6 용어 쉬운말 마무리 (코어, 260624) — aap-design 패스의 부분달성분 직접 마감 〔기획·UX〕
+> 직접 다중너비 검증 결과 #1~#5는 통과, **#6만 부분달성**(근거 4유형·L코드 dev토글은 됐으나 엔드유저 화면에 `caseModel·verdict·r_reject_prohibited·지식·시맨틱 L4` 잔존)을 확인 → 마저 닫음. 위임 아님·직접 수정·재검증.
+- **core.js dc* 인라인 기술토큰 → 쉬운말 기본 + `.dc-tech` 개발자 보기 뒤로**: "케이스 슬롯 caseModel"→**"이 건의 정보 · 값·출처·확인 방식"** · `verdict` 태그→**"AAP 판단"** · "룰 r_reject… · 결정론 재현"→**"같은 입력이면 늘 같은 결정 ✓"** · "결정 룰 판정 · ruleId"→**"AAP 판단"** · "참조 룩업 · 지식·시맨틱 L4"→**"참조 기준 · 제도·규정"**. 기술 원문은 `.dc-tech`(평소 숨김)로 보존 → `body.dev-on`에서 복원.
+- `platform-fix.css`에 `.dc-tech{display:none} body.dev-on .dc-tech{display:inline}`(기존 `.op-ior-l` L코드 토글과 동일 패턴 확장).
+- 검증(헤드리스 1440): 기본 노출 기술용어 **0** / 개발자 보기 ON → `caseModel·verdict·r_reject·L4` 복원. `node --check` OK · `audit_track` A=3 무회귀 · 콘솔 에러 0. (`T1_terms_default.png`·`T2_terms_devon.png`)
+- **남음**: reanalysis 스텝 basis의 `evaluate(case,knowledge)`·recruiting normWeight mono 등 '판단 로직' 상세는 의도적 기술 노출(근거 depth) — 엔드유저 주표면 아님.
+
+### run 콘솔 v0.58 정합 패스 — 비례·반응형·모달·근거·용어 6건 (260624, aap-design) 〔표준·정의 / UX〕
+> 사용자 지적: run(실행 뷰)이 레퍼런스 데모 `aap_meeting_runtime_builder_v0_58.html` 경험에 못 미침. **구조는 유지**(좌 작업 surface `.op-main` + 우 근거 레일 `.op-aside` + 상단 runtop `.op-strip-wrap`, **좌/우 50:50 분할 신설 ✕ · 단일 콘솔**) — 비례·반응형·모달·근거·용어만 정비. **★시각만**: `core/platform-fix.css`(캐논 fix 레이어) 1곳에 집약 — `platform.css`·`core.js`·`packs/*` 무수정, 신규 hex 0(가이드 토큰만), DOM id·data-*·결정론 엔진·demo.js 안정 ID 불변. 검증=헤드리스 1024/1440/1920 before/after + steer 재랭킹 + HITL 모달 + 무회귀(audit A=3·되짚기·삭제숨김·콘솔 에러 0).
+- **#1 반응형** — `@media(max-width:1280px)` 신설: `.op-split` 세로 스택 + 근거 레일이 작업 surface **아래로 graceful 스택**(가로 찌부러짐 ✕, 폭 캡 해제·풀폭, 그래프 height 200). 기존 platform.css의 1080 기준을 1280으로 상향(채용·경비 공통). `@media(min-width:1700px)`·`(min-width:2200px)`: `--op-maxw` 1240→1500→1760·레일 400→460→520 확대(우측 데드 여백 회수 = v0_58 zoom 확대 정신을 폭으로).
+- **#2 비례(좌넓·우좁·상단큼 교정)** — runtop 스테퍼 `.op-strip-wrap` 패딩 11→7·`.op-snode` 5/10·`.op-sn` 19px로 **압축**(높이↓). 좌 work는 `--op-maxw` 중앙 캡(과확산 제거, platform-fix 기존 캡 계승). 우 근거 레일 360→**400**(조연→주연급 확대, %·토큰 기반). v0_58처럼 작동/근거가 주연.
+- **#3 HITL 전후 매끄럽게** — `.cmodal` opacity 트랜지션 + `.cmodal.show .cmodal-card` `@keyframes cmcardin`(8px 솟아오름+scale .985, cubic-bezier 스프링) → 갑툭·점프 제거. `.run-surface.ws-on-op:has(.cmodal.show) .op-main{filter:saturate(.96)}` → 게이트 진입 시 work surface가 살짝 가라앉아 모달이 흐름의 다음 장면처럼(갇힘 ✕). prefers-reduced-motion 시 애니 off. (#cmodal은 con-body 형제 → run-surface 스코프 has())
+- **#4 동적 입력→출력 + 스피너 강화** — 재분석 오버레이 `#reov` top 10→14·카드폭 clamp(360,46%,460)·헤더 키움·테두리 teal·그림자 강화. 작동중 단계 `.rstep.doing{box-shadow:inset 3px 0 var(--aap)}`(좌측 진행 바)·스피너 22px. **근거(basis) mono 라인** `.rsb` 10.5px·slate(판단 로직·근거 단계가 핵심 지적 → 또렷). live-busy 메인 흐림 .55→.62. 헤드리스 검증: steer(균형→도메인) 클릭 → 오버레이가 "2/4 단계 · 매핑% 재산출" phase 칩 + green-check 스텝 + mono basis(`normalweight = preset dom · 합 100 정규화`) 노출, 750ms busy 확인, 재랭킹 정합(이하늘 92→88·박서준 87→90).
+- **#5 모달 비례** — `.cmodal-card` max-width 452→`clamp(360,64%,520)`·`.wide` 560→`clamp(440,78%,620)`·padding clamp·`#nodeModal .nm-card` clamp(420,56vw,560). 좁은 폭(≤1080)=clamp(320,84%,520)로 콘솔폭 거의 채워 내부 데이터 짓눌림 해소. 검증: HITL 모달 1440=614px(ratio .43)·1024=620px(ratio .61) — 너비 대비 과대/과소 해소, 내부 정렬 일관.
+- **#6 근거 안 보임·용어 어려움** — (a) 엔드유저 화면에서 카드 위 **레이어 코드 배지 숨김**(`.op-ior-l`·`.wp-op-l`·`.rn-lcode` display:none) → `body.dev-on`(개발자 보기)에서만 노출. 레이어 **이름**(`.rn-lay` 등 읽기쉬운 라벨)은 유지. 검증: 엔드유저=none·개발자보기=block(가역). (b) 우 근거 레일 `.op-sh` 헤더에 teal 색점(`::before`) + ink색 → '근거 보기' 데이터 zone임을 신호. 근거 4유형 색 키(`.ev-k`: 참조데이터=Solution cyan·조회대조=Connector blue·규칙정책=Policy amber·판단로직=Agent teal) 캐논 5타입 정합 재확인(타입색↔상태색 혼동 방지). 4유형 구조 자체는 드릴 모달(`evidDrill`)에 이미 노출 — 이를 레일에서 유도.
+- **검증 산출**: before/after 1024·1440·1920 × 채용·경비 = `C:/Users/namta/AppData/Local/Temp/aap_shot/{before,after}_{1024,1440,1920}_{recruit,expense}.png`. 효과(#3#4#5) = `FX_1440_reov_mid.png`(재분석 오버레이+basis)·`HITL_{1024,1440}_open.png`(모달 비례). dev(#6)=`DEV_1440_on.png`. 무회귀: `node --check core.js` OK·콘솔 에러 0·되짚기(요건접수→1/9 정착)·`.ibx-confirm[hidden]` display:none·`audit_track.js` A=3(procurement·expense·contract_a).
+- **남긴 후속**: ① **닫기 fade-out** — 현재 close는 `.show` 제거 시 `display:none` 즉시(card-in만 부드럽고 퇴장은 스냅). 부드러운 퇴장 원하면 close 타이밍 JS 훅 필요(이번 CSS-only 범위 외). ② **#reov ↔ HITL 모달 동시 표출 z-순서** — 게이트 모달 내 steer 변경 시 재분석 오버레이가 모달 위 중앙상단에 뜸(현재 의도대로 동작, 시각 정합 OK이나 추후 모달-내 인라인 표출 검토 가능). ③ 경비 레일의 "참조 룩업 · 지식·시맨틱 L4" 부제 L코드 — 카드 배지(`.op-ior-l`)가 아닌 aside 본문 텍스트라 이번 숨김 미적용(근거 depth라 허용, 더 엄격히 하려면 팩 텍스트 수정 필요). 〔aap-design 후속〕
+
+### 실사용 결함 3건 직접 재현·수정 (코어, 260624) — 삭제 노출·단계 되짚기·동적 정합 검증
+> 사용자 피드백: "삭제를 직접 명시(사용자 친화성 0)·직전 단계 이동 안 됨·동적 정합 없음·디자인 처참". 말로 다듬었다 ✕ → 헤드리스로 직접 진입·클릭해 재현·수정·재검증. 〔기획·UX〕
+- **#1 인박스 삭제 상시 노출 = 수정·검증** — `.ibx-confirm`이 `display:inline-flex`만 있고 `[hidden]` 오버라이드가 없어 **모든 행(35/35)에 "삭제할까요?" 상시 노출**. `platform.css`에 `.ibx-confirm[hidden]{display:none}` 추가 → 휴지통은 hover-only(opacity:0)+클릭 시에만 확인. 재검증: visible 35→0.
+- **#2 단계 되짚기 불가 = 근본 수정·검증** — (a) `autoAdvanceOnOpen`이 진입 시 자동전진(설계 의도, 유지) (b) **자동재생 중 `renderConsole`이 매 reveal 틱마다 strip/seq 재생성 → per-render onclick(구 line 618·1683) 유실 → 클릭 무반응 → 계속 앞 게이트로 전진**(="직전 단계 이동 안 됨"의 정체). 수정: per-element onclick 제거 → **안정 조상(`#seq`·`.run-surface`)에 클릭 위임 1회 바인딩(`initStageNav`/`navToStep`) + 클릭 시 `stopPlay`**. 재검증: 채용 자동정착(3/9)→요건접수 클릭→1/9 정착·5초 후도 유지(튕김 0), 제네릭 경비도 동일(3/4→1/4), 에러 0.
+- **#3 동적 정합 = 실제 동작(앞선 진단 정정)** — steering(우선순위/필터/범위·매칭 가중·컷) → `normWeight`/`mOf` 결정론 재계산 → 재랭킹·컷라인·헤더·그래프 반응. 검증: 균형→도메인중시 시 박서준 4→2위·이하늘 2→4위·점수 전부 재계산·헤더 "도메인 중시". **단, `runReanalysis` 애니가 ~3.7초라 첫 1.8초 probe로 "정합 깨짐" 오판 → 5초 재측정 후 ✅ 정정.** 교훈=비동기 재분석은 onDone(≈3.7s)까지 기다려 검증.
+- **남은 진단(미수정)**: ④ steering UI 이중화 — 게이트 **모달 자체가 steering**(임계·가중 슬라이더·통과 미리보기)인데 base에도 프리셋 버튼(우선순위)이 겹침 → 정리 필요. ⑤ 채용 게이트/리치 surface 시각 밀도("디자인 처참") 별도 패스. 〔기획·UX → aap-design〕
+
+### 트랙 A — 코어 일반 콘솔 `renderDataConsole` 시각 폴리시 (260624, aap-design) 〔표준·정의 / UX〕
+- **대상**: `app/core/core.js` dc 함수 + `app/core/platform.css`. A등급 데이터팩(expense·procurement·contract_a)이 코어 일반 콘솔로 표출될 때의 정돈도를 채용(수제 surface) 수준으로. **이게 신규 데이터팩 시각 기준선**(작업 0 상속). expense 전용 하드코딩 0 · 신규 hex 0 · platform-fix 룩 불변.
+- **① 경보 과잉 제거(핵심)**: `dcSlotPanel` 셀 색 = `s.risk && 값있음 → 무조건 .risk(분홍)` → **verdict 연동 톤**으로 교체(`dcSlotTone`, 도메인 무관). **red(.crit)=반려(REJECT) 판정이 실제 인용한 결격 슬롯만** · **amber(.attn)=주의(gap 또는 검토(LEGAL_REVIEW) 인용 위험슬롯)** · 그 외 전부 중립. 결과: 자동승인 케이스=경보 0(전 백색), 반려 케이스=증빙2칸만 red. ("적격증빙 충족 예"가 red로 뜨던 역설 해소.)
+- **② 임계 밴드 콩나물 해소**: `dcSteer` = flat 버튼 나열 → **임계별 카드 블록**(라벨 1줄 + 옵션 1줄, 테두리·여백). "조정 가능한 임계" 헤더(`sliders-horizontal` Lucide 인라인 신규 추가, file:// 안전). 경비 4임계가 2줄 빽빽 → 균질 4블록.
+- **③ 슬롯 그룹핑**: primary 8셀을 `slot.group`(기본/금액/기간/증빙/점검…)별 소제목(`.ct-grp`)으로 묶음 → 균질 격자 → 위계. group 메타 없으면 단일 그리드(graceful).
+- **④ 우레일 밀도**: `dcAside` = "AAP가 한 일·근거"를 룩업보다 앞(채용 순서 정합), `.op-flow`·`.op-sh`·`.ct-lks` 패딩·라인하이트·dashed 구분 → 잔글씨 떡칠 완화.
+- **검증**: 헤드리스 before/after(`C:/Users/namta/AppData/Local/Temp/aap_shot/`): before=`_before/E_expense_top.png`, after=`A1_expense_review.png`(검토/amber 1칸)·`A2_expense_reject.png`(반려/red 2칸)·`A3_expense_auto.png`(자동/경보 0)·`B_계약.png`(contract_a 동형). 채용(`A5_recruit_top.png`)·meeting/voc 무변. `node --check` OK · 콘솔 에러 0 · `audit_track.js` A=3 회귀 0.
+- **다음(트랙 B 백로그)**: recruiting(B) generic 대체 가능성 실측 · meeting/voc(C) 수렴.
+
+### 표준 적합도 대장 + 두 트랙 관리 방향 (플랫폼, 260624) — '기존 팩' 관리 = 상태 추적
+- **문제 재정의**: run 뷰 "엉망"의 정체 = 렌더 경로 2개 공존. 채용(recruiting)=수제 surface 1399줄(정돈됨), 경비·구매·계약=코어 일반 `renderDataConsole`(빽빽). **'엉망'과 '기존 팩 관리'는 동전의 양면.** 〔표준·정의 + UX〕
+- **적합도 대장 신설**(`aap_architecture_convergence_spec_v0_1.md` §8): 등급 **A 수렴**(전용surface× + caseModel+route)·**B 부분**(결정만 표준+surface 잔존)·**C 미수렴**(caseModel/route 없음). 현황: procurement/expense/contract_a=**A**, recruiting=**B**, meeting/voc=**C**. 〔표준·정의〕
+- **거버넌스 인프라**: `_decision_engine/audit_track.js`에 **검사 G(app 팩 적합도)** 추가 — `app/packs/*.js` 정규식 스캔 → 등급 산출 → 수렴 스펙 §8 `<!-- LEDGER:START/END -->` 자동 덮어씀(코드=SSOT). 신규=머지 게이트(A 아니면 minor 경고), 기존=등급 자동 기록. 〔표준·정의〕
+- **두 트랙(처방 반대)**: **트랙 A**(공유 렌더러 폴리시)=A등급 팩은 데이터가 맞으니 `renderDataConsole` 시각 품질만 채용 수준으로 → 3팩+미래 데이터팩 동시 개선, 이게 신규 시각 표준 기준선. **트랙 B**(수렴 마이그레이션)=B·C 점진·백로그. **순서=트랙 A 먼저.** 〔기획·UX + 표준·정의〕
+- **결정(사용자)**: ① recruiting(B)=**트랙 A 후 재판단**(generic이 리치 surface 대체 가능한지 실측 → §5.3 surface 예외 인정 vs 수렴 2차). ② 대장=audit_track 스캔 + 문서 자동 갱신 둘 다. 〔기획·UX〕
+- **다음**: 트랙 A 착수 — `renderDataConsole`(dcSteer 임계밴드 그룹핑·dcSlot risk색 치명만·dcAside 우레일 밀도) 폴리시 = **aap-design 소관**(색 토큰 정합·신규 hex 0·platform-fix 룩 유지). 검증=헤드리스 스크린샷(경비 케이스 → 채용 수준). 〔기획·UX → aap-design〕
+
 ### v0.58 (데모, 빌드 완료 · 260624) — 대한제조 맥락 명시 + HITL 거부 처리
 - **#1 고객사 = 대한제조 명시**: 요청부터 "다음 주 **대한제조 AAP 킥오프** 회의 잡아줘"로(기존 'AAP 고객사 킥오프'는 맥락 없이 대한제조가 뒤에 갑툭). "AAP 고객사 킥오프 회의" 12곳 전부 "대한제조 AAP 킥오프 회의"로, understand a1 '대한제조 AAP 킥오프로 파악했어요'. 〔표준·정의〕
 - **#2 HITL 거부('조금 더 볼게요')=보류 처리**: 기존엔 toast만 → `STATE.deferred[step]`. 거부 시 모달 닫히고 좌측에 `heldCard`('⏸ 아직 확정하지 않았어요 · 확정해야 다음 단계로 · 발송·진행 멈춤' + `[이어서 검토하기]`=data-resume로 모달 재오픈). currentCM에 `!STATE.deferred` 가드. decide()가 deferred 해제. **= AAP는 사람 확정 전까지 안 넘어간다(HITL 통제)를 화면으로.** 〔기획·UX〕

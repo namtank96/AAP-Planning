@@ -325,6 +325,16 @@
     id:'meeting', label:'회의',
     times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
+    /* 인박스 카드 brief(개입 이유·판단·근거·액션) — 단계(sel) 기반 도메인 문장(지시서 #11) */
+    inboxBrief:function(c){
+      if(c.done)return {reason:'auto', judgment:'회의록·후속 할 일까지 공유 완료됐습니다.', basis:['회의록','후속 할 일','KMS 기록'], actions:[{l:'상세 보기',k:'secondary'}]};
+      const G={
+        approve:{j:'참석자·자료·시각 후보 3안을 준비했습니다. 외부 초대 여부와 시각 확정이 필요합니다.', b:['참석자','공유 자료','일정 후보 3안'], a:[{l:'검토하기',k:'primary'},{l:'기준 조정',k:'secondary'}]},
+        commit:{j:'회의록 초안과 후속 할 일을 정리했습니다. 외부 공유 전 확인이 필요합니다.', b:['회의록','후속 할 일','받는 사람'], a:[{l:'검토하기',k:'primary'},{l:'수정 요청',k:'secondary'}]},
+      };
+      if(G[c.sel])return {reason:'decision', judgment:G[c.sel].j, basis:G[c.sel].b, actions:G[c.sel].a};
+      return {reason:'run', judgment:'요청을 받아 참석자·일정·자료를 모으는 중입니다.', basis:['회의 목적','참석자 일정'], actions:[{l:'상세 보기',k:'secondary'}]};
+    },
     io:{ inputs:[], editable:[], connectors:[] },   /* Pack Contract v2 · 2a 슬롯 예약(실동작 2c) */
     stepLoop:{request:'Data',understand:'Semantic',compose:'Reasoning',approve:'Decision',prepare:'Action',meeting:'Reasoning',commit:'Decision',share:'Learning'},
     extExcluded:(S)=>S.decisions['approve']==='no',

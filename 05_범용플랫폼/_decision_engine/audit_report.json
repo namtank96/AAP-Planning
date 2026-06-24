@@ -1,8 +1,8 @@
 {
-  "ts": null,
+  "ts": "260624",
   "blocking": 0,
-  "minor": 0,
-  "pass": 23,
+  "minor": 3,
+  "pass": 27,
   "findings": [
     {
       "check": "A.smoke",
@@ -118,6 +118,41 @@
       "check": "F.caveat-sme",
       "level": "pass",
       "msg": "SME/가정값 라벨 존재"
+    },
+    {
+      "check": "G.conformance",
+      "level": "pass",
+      "msg": "procurement: 적합도 A (242줄, 전용surface ×, caseModel+route ○) → 트랙 A"
+    },
+    {
+      "check": "G.conformance",
+      "level": "pass",
+      "msg": "expense: 적합도 A (226줄, 전용surface ×, caseModel+route ○) → 트랙 A"
+    },
+    {
+      "check": "G.conformance",
+      "level": "pass",
+      "msg": "contract_a: 적합도 A (473줄, 전용surface ×, caseModel+route ○) → 트랙 A"
+    },
+    {
+      "check": "G.conformance",
+      "level": "minor",
+      "msg": "recruiting: 적합도 B (1420줄, 전용surface ○, caseModel+route ○) → 트랙 B"
+    },
+    {
+      "check": "G.conformance",
+      "level": "minor",
+      "msg": "meeting: 적합도 C (344줄, 전용surface ×, caseModel+route ×) → 트랙 B"
+    },
+    {
+      "check": "G.conformance",
+      "level": "minor",
+      "msg": "voc: 적합도 C (263줄, 전용surface ×, caseModel+route ×) → 트랙 B"
+    },
+    {
+      "check": "G.ledger",
+      "level": "pass",
+      "msg": "수렴 스펙 §8 대장 자동 갱신 (6팩: procurement=A, expense=A, contract_a=A, recruiting=B, meeting=C, voc=C)"
     }
   ]
 }

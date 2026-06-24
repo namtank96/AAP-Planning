@@ -70,3 +70,30 @@
   - **의도적 보류(2차로)**: 채용 surface 손코딩 → **generic scored-list 렌더 교체**. 이유=채용 surface는 단일 결정 콘솔이 아니라 다단계 리치(스크리닝·면접·오퍼·파이프라인 board·매칭그래프)라, 통째 generic 교체는 showcase 회귀 위험이 큼. caseModel/knowledge는 이미 데이터로 준비됨 → 2차에서 generic scored-list 렌더를 **스크리닝/매칭 단계에 우선 적용**, 면접·오퍼는 점진. 결정 통합(②)이 "같은 표준"의 본질이고 이미 달성.
 - **채용 경험 레이어 수정 완료(260624)** — 사용자 실사용 피드백("첫 화면부터 이상·요건분석 안 보이고 게이트 직행·모달 닫기 없음·전체 문제 많음")을 재현·수정. **(코어, 도메인 무관)**: ① 게이트 HITL 모달이 `baseOnly` 존중(`currentCM` line 1730 `!STATE.baseOnly`) → 진입 즉시 모달 갇힘 해소·닫기 동작 ② 모든 게이트 모달 공통 닫기 ×(`renderCModal` 주입) ③ `renderRunAction` await = 클릭 가능 "결정하기"(`openGate`: baseOnly 해제→모달 재open). 모든 명시 경로(stream 게이트 카드 `gotoGate`→`setSel`→`runStep`, autoplay)는 baseOnly=false라 모달 정상. **(채용 팩)**: ④ showcase 시드 `atStep` 게이트→`intake`(접수→요건분석→실행구조 자동 재생 ~2.3초/단계 후 게이트) ⑤ **렌더 패러다임 통일(④ 부분 달성)** — intake·analyze·record가 stream 폴백이었던 것을 `opKind='info'`+`opInfoMain/opInfoAside`로 op-console 프레임에 편입(그 단계 ops를 구성요소·feed→out·detail 카드로), `opStages`=전체 9단계 strip → **단계마다 stream↔보드 점프 제거**(전 단계 동일 프레임, 메인만 모핑). SCHEMA_VER 6→7(시드 재적용). 검증(헤드리스): 진입 modal:false·닫기 X 동작·재open·intake/analyze op-console 렌더(strip 9)·proc/contract/meeting/voc 무회귀. **교훈: "검증 OK"라 했지만 사용자처럼 플로우를 끝까지 안 돌려봐 모달·진입·패러다임 문제를 놓침 — 결정/로드만 본 검증은 불완전. 실제 진입→진행→게이트→닫기→재open 전 구간을 헤드리스 프로브로 봐야 함.**
 - **2차 = 대기**(③ flow next↔verdict, ④ 잔여=좀비 제거 + generic scored-list 렌더(채용 surface는 통일됐으나 contract식 데이터 구동은 아직), ⑤ 자동저작 데이터 생성). 회의·VOC는 여전히 stream(graceful) — 표준 편입은 후속.
+
+---
+
+## 8. 팩 표준 적합도 대장 (audit_track 자동 산출)
+
+> **왜**: '기존' 팩을 일괄 재작성하지 않고 **상태로 관리**한다. 신규=머지 게이트에서 A 강제(팩 스펙 v0.2 §8.1 체크리스트), 기존=등급 기록 + 기회주의적 승급. 이 표는 `_decision_engine/audit_track.js`(검사 G)가 `app/packs/*.js`를 스캔해 **자동 갱신**한다 — 코드=SSOT, 이 표=사람이 읽는 뷰. 수기 편집 ✕(아래 마커 사이는 스크립트가 덮어씀).
+>
+> **등급**: **A 수렴**=전용 surface 없음 + caseModel + knowledge.route(코어 일반 콘솔로 표출) · **B 부분**=결정은 표준(caseModel+route)이나 전용 surface 잔존 · **C 미수렴**=caseModel/route 없음(구 stream/surfaceSpec).
+>
+> **두 트랙(처방이 반대)**: A등급은 데이터가 이미 맞으니 **공유 렌더러(`renderDataConsole`) 품질**만 올리면 동시 개선(트랙 A) · B·C등급은 **수렴 마이그레이션**(트랙 B, 백로그·점진).
+
+<!-- LEDGER:START (audit_track.js 검사 G 가 덮어씀 · 수기 편집 ✕) -->
+| 팩 | 줄수 | 전용 surface | caseModel+route | 적합도 | 트랙 |
+|---|---|---|---|---|---|
+| procurement | 242 | × | ○ | **A** 수렴 | A · 공유 렌더러 폴리시 |
+| expense | 226 | × | ○ | **A** 수렴 | A · 공유 렌더러 폴리시 |
+| contract_a | 473 | × | ○ | **A** 수렴 | A · 공유 렌더러 폴리시 |
+| recruiting | 1420 | ○ | ○ | **B** 부분 | B · 수렴 마이그레이션 |
+| meeting | 344 | × | × | **C** 미수렴 | B · 수렴 마이그레이션 |
+| voc | 263 | × | × | **C** 미수렴 | B · 수렴 마이그레이션 |
+
+_audit_track.js 검사 G 자동 산출 · 갱신 260624_
+<!-- LEDGER:END -->
+
+**관리 규칙**
+- **신규**: 머지 전 `audit_track` 검사 G 가 A 가 아니면 minor 경고(리치 팩은 §5.3 surface 허용 예외 — 사유를 팩 헤더 주석에 명시). 디자인 토큰은 `normalizePack()`/`DC` 가 load 시 강제(별도).
+- **기존**: 등급을 본 대장에 자동 기록. 승급은 건드릴 일 있을 때 한 등급씩(일괄 ✕). recruiting(B)은 **트랙 A 후 재판단**(generic scored-list 가 리치 surface 대체 가능한지 실측 → §5.3 예외 인정 vs 수렴 2차).

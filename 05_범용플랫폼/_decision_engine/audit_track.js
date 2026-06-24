@@ -82,6 +82,60 @@ const hasFinance = fs.existsSync(path.join(V2, 'pack_credit.v2.json'));
 const hasSmeLabel = /SME\s*(미검|미검증|확인\s*필요)|가정값/.test(scanAll);
 add('F.caveat-sme', !hasFinance || hasSmeLabel ? 'pass' : 'minor', hasSmeLabel ? 'SME/가정값 라벨 존재' : '여신·보조금 수치 SME 미검 라벨 미발견 → 시연 전 보강 권장');
 
+/* ── G. app 팩 표준 적합도 (수렴 스펙 §8 대장 자동 산출) ───────────────
+   라이브 app/packs/*.js 소스를 스캔(정규식 휴리스틱·결정론)해 등급 매김:
+     A 수렴 = 전용 surface 없음 + caseModel + knowledge.route (코어 일반 콘솔)
+     B 부분 = caseModel+route 있으나 전용 surface(또는 opstage) 잔존
+     C 미수렴 = caseModel/route 없음 (구 stream/surfaceSpec)
+   결과를 수렴 스펙의 <!-- LEDGER:START/END --> 사이에 덮어씀(코드=SSOT, 문서=뷰). */
+const PACKS_DIR = path.join(ROOT, 'app', 'packs');
+const PACK_ORDER = ['procurement', 'expense', 'contract_a', 'recruiting', 'meeting', 'voc'];
+const gradePack = (src) => {
+  const surfaceFn = /\bsurface\s*:\s*\{/.test(src) || /\bopstage\s*:/.test(src); // surfaceSpec: 는 미매치
+  const hasCase = /caseModel\s*[:=]/.test(src);
+  const hasRoute = /\broute\s*:/.test(src);
+  const decision = hasCase && hasRoute;
+  const grade = !decision ? 'C' : surfaceFn ? 'B' : 'A';
+  return { surfaceFn, decision, grade };
+};
+const GRADE_META = {
+  A: { track: 'A · 공유 렌더러 폴리시', lvl: 'pass' },
+  B: { track: 'B · 수렴 마이그레이션', lvl: 'minor' },
+  C: { track: 'B · 수렴 마이그레이션', lvl: 'minor' },
+};
+const ledgerRows = [];
+if (fs.existsSync(PACKS_DIR)) {
+  const files = fs.readdirSync(PACKS_DIR).filter(f => /\.js$/.test(f));
+  const present = files.map(f => f.replace(/\.js$/, ''));
+  const order = [...PACK_ORDER.filter(p => present.includes(p)), ...present.filter(p => !PACK_ORDER.includes(p))];
+  order.forEach(name => {
+    const src = fs.readFileSync(path.join(PACKS_DIR, name + '.js'), 'utf8');
+    const lines = src.split('\n').length;
+    const { surfaceFn, decision, grade } = gradePack(src);
+    const meta = GRADE_META[grade];
+    ledgerRows.push({ name, lines, surfaceFn, decision, grade, track: meta.track });
+    add('G.conformance', meta.lvl, `${name}: 적합도 ${grade} (${lines}줄, 전용surface ${surfaceFn ? '○' : '×'}, caseModel+route ${decision ? '○' : '×'}) → 트랙 ${meta.track[0]}`);
+  });
+  // 수렴 스펙 §8 대장 자동 갱신 (마커 사이)
+  const specPath = path.join(ROOT, 'aap_architecture_convergence_spec_v0_1.md');
+  if (fs.existsSync(specPath)) {
+    const spec = fs.readFileSync(specPath, 'utf8');
+    const head = '| 팩 | 줄수 | 전용 surface | caseModel+route | 적합도 | 트랙 |\n|---|---|---|---|---|---|';
+    const body = ledgerRows.map(r => `| ${r.name} | ${r.lines} | ${r.surfaceFn ? '○' : '×'} | ${r.decision ? '○' : '×'} | **${r.grade}** ${r.grade === 'A' ? '수렴' : r.grade === 'B' ? '부분' : '미수렴'} | ${r.track} |`).join('\n');
+    const stamp = process.env.AUDIT_TS ? ` · 갱신 ${process.env.AUDIT_TS}` : '';
+    const block = `<!-- LEDGER:START (audit_track.js 검사 G 가 덮어씀 · 수기 편집 ✕) -->\n${head}\n${body}\n\n_audit_track.js 검사 G 자동 산출${stamp}_\n<!-- LEDGER:END -->`;
+    const re = /<!-- LEDGER:START[\s\S]*?<!-- LEDGER:END -->/;
+    if (re.test(spec)) {
+      fs.writeFileSync(specPath, spec.replace(re, block), 'utf8');
+      add('G.ledger', 'pass', `수렴 스펙 §8 대장 자동 갱신 (${ledgerRows.length}팩: ${ledgerRows.map(r => r.name + '=' + r.grade).join(', ')})`);
+    } else {
+      add('G.ledger', 'minor', '수렴 스펙에 <!-- LEDGER:START/END --> 마커 없음 → §8 대장 갱신 skip');
+    }
+  }
+} else {
+  add('G.conformance', 'minor', `app/packs 디렉터리 없음(${PACKS_DIR}) → 적합도 스캔 skip`);
+}
+
 /* ── 리포트 ───────────────────────────────────────────────────────── */
 const blocking = findings.filter(f => f.level === 'blocking');
 const minor = findings.filter(f => f.level === 'minor');

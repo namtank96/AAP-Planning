@@ -180,3 +180,319 @@
 @keyframes vdpulse{ 0%{ box-shadow:0 0 0 0 var(--aap-soft); } 30%{ box-shadow:0 0 0 4px var(--aap-soft); } 100%{ box-shadow:var(--shadow); } }
 .ct-slot.changed{ animation:slotpulse 1s ease both; }
 @keyframes slotpulse{ 0%{ background:var(--aap-soft); } 100%{ background:#fff; } }
+
+/* =========================================================================
+   v0.58 정합 패스 — run 콘솔 비례·반응형·모달·근거·용어 (〔aap-design〕)
+   레퍼런스: aap_meeting_runtime_builder_v0_58.html
+   대상: 채용(수제 surface)·경비 등 제네릭 op-console 공통. 시각만(함수·DOM id·data-* 불변).
+   신규 hex 0(가이드 토큰만). 좌/우 50:50 분할 신설 ✕(단일 콘솔, 좌 work + 우 근거 레일 유지).
+   구조 보존: .op-split(좌 op-main + 우 op-aside) + .op-strip-wrap(runtop 스테퍼) 그대로.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── #2 비례: 상단 runtop(스테퍼) 압축 + 좌 work 폭 캡 + 우 근거 레일 확대 ──
+   v0_58: 작동/근거 패널이 주연(40:60톤). 좌는 텍스트폭에 맞춰 과확산 방지, 우 레일은
+   조연→주연급으로. 폭은 토큰(--op-maxw·rail)으로 제어 → 고정 px 비례 제거. */
+.run-surface.ws-on-op .op-strip-wrap{ padding-top:7px; padding-bottom:7px; }   /* 스테퍼 높이↓(압축) */
+.run-surface.ws-on-op .op-snode{ padding:5px 10px; }                            /* strip 노드 컴팩트 */
+.run-surface.ws-on-op .op-sn{ width:19px; height:19px; }
+/* 우 근거 레일을 조연→충분한 주연급으로 확대(기본 360 → 400). 좌 main 은 그대로 흐름. */
+.run-surface.ws-on-op .op-aside{ flex:0 0 400px; }
+
+/* ── #1 반응형: 좁으면 graceful 스택(가로 찌부러짐 ✕) / 넓으면 확대(데드 여백 ✕) ── */
+/* (a) ≤1280: 근거 레일이 작업 surface 아래로 스택. platform.css 의 1080 기준을 1280 로 상향 +
+   strip/steer/split 폭 캡 해제(풀폭 사용) → 좁은 폭에서 양옆이 죄이지 않게. */
+@media(max-width:1280px){
+  .run-surface.ws-on-op .op-split{ flex-direction:column; max-width:none; }
+  .run-surface.ws-on-op .op-aside{ flex:1 1 auto; width:100%; border-left:none; border-top:1px solid var(--border); }
+  .run-surface.ws-on-op .op-strip,
+  .run-surface.ws-on-op .op-steer,
+  .run-surface.ws-on-op .op-split{ max-width:none; padding-left:18px; padding-right:18px; }
+  .run-surface.ws-on-op .op-main{ padding-left:18px; padding-right:18px; }
+  /* 스택 시 그래프는 본문 폭 가득 — 좁은 레일에 갇혀 찌부러지지 않게 */
+  .op-graph svg{ height:200px; }
+}
+/* (b) ≥1700: 콘텐츠 폭·레일 확대(우측 데드 여백 회수 — v0_58 의 zoom 확대 정신을 폭으로). */
+@media(min-width:1700px){
+  :root{ --op-maxw:1500px; --op-padx:34px; }
+  .run-surface.ws-on-op .op-aside{ flex:0 0 460px; }
+  .run-surface.ws-on-op .op-main{ font-size:calc(var(--fs-body) + .5px); }
+}
+@media(min-width:2200px){
+  :root{ --op-maxw:1760px; }
+}
+
+/* =========================================================================
+   [SINGLE-COLUMN] run 콘솔 = 세로 1열 위→아래 "작동 흐름" (260624, 구조 결정)
+   ───────────────────────────────────────────────────────────────────────
+   왜: 좌(작업)/우(얇은 근거) 비례 싸움·반응형 깨짐의 근본은 '2열'이다. AAP의 주인공은
+   작업 카드가 아니라 '판단과 근거가 입력 따라 살아 움직이는 것' → 그걸 옆 조연/덮는 모달이
+   아니라 본문에 세로로. 모든 너비에서 1열(중앙 캡) → 비례·반응형 동시 해소. v0_58 우측
+   'AAP 작동 흐름'의 위→아래 톤을, 좌/우 분할 없이.
+   ※ 위 #1·#2 의 2열 폭/레일 규칙을 의도적으로 덮음(소스 후순위). 함수·DOM·data-* 불변.
+   ========================================================================= */
+:root{ --op-col:960px; }
+.run-surface.ws-on-op .op-split{ flex-direction:column !important; max-width:var(--op-col) !important; margin:0 auto !important; }
+.run-surface.ws-on-op .op-main{ flex:0 0 auto !important; width:100%; padding:14px 26px 16px !important; overflow:visible; }
+/* 우 근거 레일 → 본문 아래 인라인 섹션(레일 아님): 좌측 보더·배경 제거, 위 구분선, 같은 좌우 패딩 */
+.run-surface.ws-on-op .op-aside{ flex:0 0 auto !important; width:100% !important; max-width:none !important;
+  border-left:none !important; border-top:1px solid var(--border); background:transparent !important;
+  padding:8px 26px 30px !important; overflow:visible; }
+/* 스택된 본문은 surface 가 스크롤(이중 스크롤 제거) */
+.run-surface.ws-on-op .con-body.op-body{ overflow:auto; }
+/* 매칭 그래프는 인라인에서 본문 폭 가득(좁은 레일 가정 해제) */
+.run-surface.ws-on-op .op-aside .op-graph svg{ height:220px; width:100%; }
+/* 상단 스테퍼·steer 도 같은 중앙 폭에 정렬(좌우 안 흔들리게) */
+.run-surface.ws-on-op .op-strip, .run-surface.ws-on-op .op-steer{ max-width:var(--op-col); margin-left:auto; margin-right:auto; }
+@media(min-width:1700px){ :root{ --op-col:1040px; } }
+
+/* ── #5 모달 비례: 뷰포트 비례(clamp) — 너비 대비 과대/과소 해소, 내부 정렬 일관 ──
+   HITL/근거/노드 모달이 동일 비례 규율을 공유(콘솔 안 오버레이는 vw, 풀스크린 모달은 vw). */
+/* 콘솔 안 오버레이(#cmodal — .run-surface 내부 absolute): 콘솔 폭에 비례. */
+.cmodal-card{ max-width:clamp(360px, 64%, 520px); }
+.cmodal-card.wide{ max-width:clamp(440px, 78%, 620px); }
+.cmodal{ padding:clamp(14px, 4%, 28px); }
+/* 풀스크린 노드 모달(#nodeModal, 있으면) — 뷰포트 비례 */
+#nodeModal .nm-card{ max-width:clamp(420px, 56vw, 560px); }
+/* 좁은 폭에선 모달이 콘솔 폭을 거의 채워 내부 데이터가 짓눌리지 않게 */
+@media(max-width:1080px){ .cmodal-card{ max-width:clamp(320px, 84%, 520px); } }
+
+/* ── #3 HITL 전후 매끄럽게: 모달 진입/이탈 트랜지션(갑툭·점프 제거) ──
+   v0_58 톤 = 흐름 안에서 부드럽게 떠오름. show 시 배경 fade + 카드 살짝 솟아오름. */
+.cmodal{ transition:opacity .22s ease, visibility .22s ease; }
+.cmodal:not(.show){ opacity:0; }                      /* display:none 직전 fade 베이스(즉시 .show 토글 시 무해) */
+.cmodal.show{ opacity:1; }
+.cmodal.show .cmodal-card{ animation:cmcardin .26s cubic-bezier(.34,1.2,.64,1) both; }
+@keyframes cmcardin{ from{ opacity:0; transform:translateY(8px) scale(.985); } to{ opacity:1; transform:none; } }
+/* 게이트 진입 직전 work surface 가 살짝 가라앉아 모달이 흐름의 다음 장면처럼 보이게(갇힘 ✕).
+   #cmodal 은 .run-surface 의 형제 con-body 위 오버레이 → run-surface 스코프로 has() 적용. */
+.run-surface.ws-on-op:has(.cmodal.show) .op-main{ filter:saturate(.96); transition:filter .25s; }
+@media (prefers-reduced-motion: reduce){ .cmodal.show .cmodal-card{ animation:none; } }
+
+/* ── #4 동적 입력→출력 + 스피너 강화: 재분석 오버레이를 또렷·비례 맞게 ──
+   엔진은 정상(재랭킹 검증) → 피드백 가시성 강화. v0_58: 스피너 + 판단 로직 + 근거 단계가
+   눈에 띄게. 현재 top:10px 비침투 카드가 약하고 위치 어긋남 → 살짝 키우고 중앙 상단 고정·강조. */
+.reov{ top:14px; }
+.reov .recard{ width:clamp(360px, 46%, 460px); max-width:92%;
+  box-shadow:0 18px 44px rgba(15,23,42,.20); border-color:var(--aap); }
+.reov .reh{ font-size:var(--fs-h); }
+.reov .reh .ic{ width:18px; height:18px; }
+/* 작동중 단계 = 스피너 + 좌측 진행 바(또렷). 완료 = 체크. */
+.reov .rstep{ padding:8px 10px; }
+.reov .rstep.doing{ box-shadow:inset 3px 0 0 var(--aap); }
+.reov .rsi{ width:22px; height:22px; }
+.reov .rst{ font-size:var(--fs-body); }
+/* 근거(basis) mono 라인을 더 잘 보이게(판단 로직·근거 단계가 핵심 지적) */
+.reov .rsb{ font-size:10.5px; color:var(--slate); }
+.reov .rsb.on{ max-height:60px; }
+/* 라이브 재분석 중 메인 흐림을 약하게(작동 보이되 갇힌 느낌 ✕) */
+.con-body.op-body.live-busy .op-main{ opacity:.62; }
+
+/* ── #6 근거 4유형 가시화 + 쉬운 말: 엔드유저 화면에서 레이어 코드 노출 최소화 ──
+   (a) 카드 위 L1/L4/L7 등 레이어 코드 배지는 기본 숨김 → '개발자 보기'(body.dev-on)에서만.
+       엔드유저는 '무엇을 했는지'만, 레이어 문법은 개발자 토글 뒤로(v0_58 쉬운말 톤). */
+.op-ior-l,
+.wp-op-l,
+.rn-lcode{ display:none; }
+body.dev-on .op-ior-l,
+body.dev-on .wp-op-l,
+body.dev-on .rn-lcode{ display:inline-block; }
+/* (a-2) 인라인 기술 토큰(caseModel·verdict·ruleId·L4 등)도 쉬운말 기본 + 개발자 보기 뒤로.
+   엔드유저 = "이 건의 정보 / AAP 판단 / 같은 입력이면 늘 같은 결정 / 참조 기준 · 제도·규정". */
+.dc-tech{ display:none; }
+body.dev-on .dc-tech{ display:inline; }
+/* (b) 우 근거 레일 'AAP가 한 일·근거' 헤더를 또렷하게(근거가 데이터 있는 곳임을 강조) +
+   근거 4유형 색 키(참조 데이터/조회·대조/규칙·정책/판단 로직)는 드릴 모달에서 이미 노출(ev-k 4색).
+   레일 헤더에 '근거' 신호를 살짝 강조해 '근거 보기'로 유도. */
+.run-surface.ws-on-op .op-sh{ color:var(--ink); }
+.run-surface.ws-on-op .op-sh::before{ content:""; display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:var(--aap); margin-right:7px; vertical-align:2px; }
+/* 근거 4유형 색 키 일관(드릴 모달 ev-k) — 가이드 5타입 정합 재확인(혼동 방지):
+   참조 데이터=Solution cyan / 조회·대조=Connector blue / 규칙·정책=Policy amber / 판단 로직=Agent teal. */
+.ev-k.tyS{ color:var(--type-solution,#0891b2); }   /* 참조 데이터 */
+.ev-k.tyC{ color:var(--type-connector,#2563eb); }   /* 조회·대조 */
+.ev-k.tyP{ color:var(--type-policy,#d97706); }       /* 규칙·정책 */
+.ev-k.tyA{ color:var(--type-agent,#0d9488); }        /* 판단 로직 */
+
+/* =========================================================================
+   [INBOX-REDESIGN] 운영 콘솔 인박스 = 업무 큐 + 개입 이유 분류 (지시서 §1, 260624)
+   요약 스탯 · 1차 개입이유 필터 · 판단형 카드(AAP 판단·근거·액션) · 삭제 ⋯ 뒤로.
+   토큰만 사용(신규 hex 0). 구조: index.html #inboxStats / #inboxReasonFilter 추가.
+   ========================================================================= */
+/* 개입 이유 색 공통(amber/red/green/slate) — 칩·스탯·배지 공유 */
+.r-amber{ --rc:var(--amber); --rci:var(--amber-ink); --rcs:var(--amber-soft); --rcb:var(--amber-border); }
+.r-red{   --rc:var(--red);   --rci:var(--red);       --rcs:var(--red-soft);   --rcb:var(--red-border); }
+.r-green{ --rc:var(--green); --rci:var(--green);     --rcs:var(--green-soft); --rcb:var(--green-soft); }
+.r-slate{ --rc:var(--slate); --rci:var(--slate);     --rcs:var(--surf);       --rcb:var(--border); }
+
+/* ── 상단 운영 요약 스탯(개입 이유별 카운트) ── */
+.inbox-stats{ display:flex; flex-wrap:wrap; gap:8px; margin:2px 0 12px; }
+.istat{ display:flex; align-items:center; gap:8px; padding:8px 13px; border-radius:var(--r-card);
+  border:1px solid var(--rcb,var(--border)); background:var(--rcs,var(--surf)); cursor:pointer;
+  font-family:inherit; transition:.12s; }
+.istat:hover{ filter:brightness(.985); }
+.istat.on{ box-shadow:0 0 0 2px var(--rc,var(--aap)) inset; }
+.istat .is-n{ font-size:18px; font-weight:800; color:var(--rci,var(--ink)); line-height:1; }
+.istat .is-l{ font-size:12px; font-weight:600; color:var(--muted); }
+.istat-empty{ color:var(--faint); font-size:12.5px; padding:6px 2px; }
+
+/* ── 1차 필터: 개입 이유 ── */
+.reason-filter{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px; }
+.rs-chip{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px;
+  border:1px solid var(--border); background:var(--surface); cursor:pointer; font-family:inherit;
+  font-size:12px; font-weight:600; color:var(--muted); transition:.12s; }
+.rs-chip .rc-dot{ width:7px; height:7px; border-radius:50%; background:var(--rc,var(--faint)); }
+.rs-chip .rc-n{ font-weight:800; color:var(--ink); }
+.rs-chip:hover{ border-color:var(--rc,var(--slate)); }
+.rs-chip.on{ background:var(--rcs,var(--ink)); border-color:var(--rc,var(--ink)); color:var(--rci,var(--surface)); }
+.rs-chip.on .rc-n{ color:var(--rci,var(--surface)); }
+
+/* ── 판단형 카드 ── */
+.ibx-rows{ display:flex; flex-direction:column; gap:9px; }
+.ibx-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card);
+  padding:13px 15px 11px; cursor:pointer; transition:.13s; position:relative; }
+.ibx-card:hover{ border-color:var(--aap); box-shadow:var(--shadow); }
+.ibx-chead{ display:flex; align-items:flex-start; gap:10px; }
+.ibx-card .ibx-ic{ font-size:18px; line-height:1.2; flex:0 0 auto; opacity:0; width:0; }/* 이모지 아이콘 숨김(이모지 금칙) — 자리만 */
+.ibx-ht{ flex:1 1 auto; min-width:0; }
+.ibx-card .ibx-t{ font-size:14px; font-weight:700; color:var(--ink); }
+.ibx-card .ibx-meta{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+.ibx-reason{ flex:0 0 auto; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px;
+  color:var(--rci,var(--ink)); background:var(--rcs,var(--surf)); border:1px solid var(--rcb,var(--border)); white-space:nowrap; }
+.ibx-menu{ flex:0 0 auto; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;
+  border:0; background:transparent; color:var(--faint); border-radius:7px; cursor:pointer; opacity:0; transition:.12s; }
+.ibx-card:hover .ibx-menu{ opacity:1; }
+.ibx-menu:hover{ background:var(--surf); color:var(--slate); }
+.ibx-menu .ic{ width:16px; height:16px; }
+.ibx-menupop{ position:absolute; top:38px; right:12px; z-index:5; background:var(--surface);
+  border:1px solid var(--border); border-radius:var(--r-card); box-shadow:0 6px 20px rgba(15,23,42,.12); padding:4px; }
+.ibx-mdel{ display:flex; align-items:center; gap:7px; width:100%; padding:7px 12px 7px 9px; border:0; background:transparent;
+  color:var(--red); font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; border-radius:6px; white-space:nowrap; }
+.ibx-mdel:hover{ background:var(--red-soft); }
+.ibx-mdel .ic{ width:14px; height:14px; }
+.ibx-judge{ font-size:12.5px; color:var(--slate); line-height:1.55; margin:8px 0 0; }
+.ibx-basis{ display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.ibx-basis .ibx-bk{ font-size:10.5px; font-weight:700; color:var(--faint); margin-right:1px; }
+.ibx-bchip{ font-size:11px; color:var(--muted); background:var(--surf); border:1px solid var(--border);
+  padding:2px 8px; border-radius:var(--r-chip); }
+.ibx-acts{ display:flex; align-items:center; gap:7px; margin-top:11px; }
+.ibx-act{ font-family:inherit; font-size:12px; font-weight:700; padding:6px 13px; border-radius:var(--r-node); cursor:pointer; border:1px solid transparent; }
+.ibx-act.primary{ background:var(--aap); color:var(--surface); }
+.ibx-act.primary:hover{ filter:brightness(1.06); }
+.ibx-act.secondary{ background:var(--surface); color:var(--slate); border-color:var(--border); }
+.ibx-act.secondary:hover{ border-color:var(--slate); }
+.ibx-acts .ibx-spacer{ flex:1 1 auto; }
+.ibx-acts .ibx-st{ font-size:11px; font-weight:600; color:var(--muted); }
+
+/* =========================================================================
+   [RUN-BRIEF] 업무 브리핑 — Run 진입 첫 화면(단계 직행 ✕) (지시서 #2·#6, 260624)
+   '지금 무엇을/왜'를 먼저. caseBrief 재사용. 접기 가능. 토큰만(신규 hex 0).
+   ========================================================================= */
+.run-brief{ padding:0; }
+.rb-card{ margin:12px auto 0; max-width:var(--op-col,960px); background:var(--surface);
+  border:1px solid var(--border); border-left:4px solid var(--rc,var(--aap)); border-radius:12px;
+  padding:13px 18px 14px; }
+.rb-top{ display:flex; align-items:flex-start; gap:11px; }
+.rb-reason{ flex:0 0 auto; font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; margin-top:1px;
+  color:var(--rci,var(--ink)); background:var(--rcs,var(--surf)); border:1px solid var(--rcb,var(--border)); white-space:nowrap; }
+.rb-tt{ flex:1 1 auto; min-width:0; }
+.rb-tt b{ font-size:15px; font-weight:800; color:var(--ink); }
+.rb-step{ display:block; font-size:11.5px; color:var(--muted); margin-top:2px; }
+.rb-fold{ flex:0 0 auto; width:28px; height:28px; border:1px solid var(--border); background:var(--surface);
+  border-radius:8px; color:var(--muted); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.rb-fold:hover{ border-color:var(--slate); }
+.rb-fold .ic{ width:16px; height:16px; }
+.rb-body{ margin-top:9px; }
+.rb-card.collapsed .rb-body{ display:none; }
+.rb-judge{ font-size:13.5px; color:var(--slate); line-height:1.6; }
+.rb-basis{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:9px; }
+.rb-basis .rb-bk{ font-size:11px; font-weight:700; color:var(--faint); }
+.rb-bchip{ font-size:11.5px; color:var(--muted); background:var(--surf); border:1px solid var(--border); padding:3px 9px; border-radius:var(--r-chip); }
+.rb-acts{ display:flex; gap:8px; margin-top:12px; }
+.rb-act{ font-family:inherit; font-size:12.5px; font-weight:700; padding:7px 15px; border-radius:var(--r-node); cursor:pointer; border:1px solid transparent; }
+.rb-act.primary{ background:var(--aap); color:var(--surface); }
+.rb-act.primary:hover{ filter:brightness(1.06); }
+.rb-act.secondary{ background:var(--surface); color:var(--slate); border-color:var(--border); }
+.rb-act.secondary:hover{ border-color:var(--slate); }
+/* run-main = 세로(브리핑 위 + 작업 surface 아래). 기존 flex-row → column 으로(브리핑 추가). */
+.run-surface{ }
+.view[data-view="run"] .run-main{ flex-direction:column !important; }
+.view[data-view="run"] .run-main > .run-surface{ flex:1 1 auto; min-height:0; }
+.view[data-view="run"] .run-brief{ flex:0 0 auto; }
+
+/* =========================================================================
+   [STEP-DEEMPHASIS] #4 Run 정보 위계 — 스테퍼 비중↓ (지시서 §3, 260624)
+   브리핑(#runBrief)이 '현재 결정'을 본문 맨 위로 올렸으니, 9단계 strip 은
+   '어디까지 왔나'만 보여주는 슬림 보조 진행으로. 현재/완료만 또렷·나머지 흐리게.
+   클릭 되짚기(initStageNav 위임)는 유지 — 시각만 낮춤.
+   ========================================================================= */
+.run-surface.ws-on-op .op-strip-wrap{ background:transparent; border-bottom:0; padding:7px 0 3px; }
+.run-surface.ws-on-op .op-strip{ gap:1px; }
+.run-surface.ws-on-op .op-snode{ font-size:11px; padding:4px 8px; color:var(--faint); gap:5px; font-weight:600; }
+.run-surface.ws-on-op .op-sn{ width:16px; height:16px; font-size:9.5px; }
+.run-surface.ws-on-op .op-snode.wait{ opacity:.5; }
+.run-surface.ws-on-op .op-snode.done{ color:var(--muted); font-weight:600; }
+.run-surface.ws-on-op .op-snode.done .op-sn{ background:var(--aap); border-color:var(--aap); color:var(--surface); }
+.run-surface.ws-on-op .op-snode.on{ color:var(--aap-ink); font-weight:800; background:var(--aap-soft); }
+.run-surface.ws-on-op .op-snode.gate.on{ color:var(--amber-ink); background:var(--amber-soft); }
+.run-surface.ws-on-op .sarrow .ic, .run-surface.ws-on-op .op-sarr .ic{ width:11px; height:11px; opacity:.5; }
+
+/* [REANALYSIS-DIFF] #6 재계산 결과 전→후 비교 (지시서 §5, 260624) · 토큰만 */
+#rediff{ margin-top:10px; padding-top:9px; border-top:1px dashed var(--border); }
+.rediff-h{ display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:800; color:var(--green); margin-bottom:6px; }
+.rediff-h .ic{ width:13px; height:13px; }
+.rediff-r{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:3px 0; font-size:12px; }
+.rediff-r .rd-k{ color:var(--muted); }
+.rediff-r .rd-v{ display:inline-flex; align-items:center; gap:6px; }
+.rediff-r .rd-from{ color:var(--faint); font-weight:700; }
+.rediff-r .rd-v .ic{ width:12px; height:12px; color:var(--faint); }
+.rediff-r .rd-to{ color:var(--slate); font-weight:800; }
+.rediff-r .rd-to.chg{ color:var(--aap-ink); }
+
+/* =========================================================================
+   [NEW-CASE-FLOW] #7 새 업무 요청 3-step (유형→입력→AAP 접수 미리보기) · 토큰만
+   ========================================================================= */
+.ncflow{ position:fixed; inset:0; z-index:60; display:flex; align-items:flex-start; justify-content:center;
+  padding:clamp(28px,7vh,80px) 18px; background:rgba(15,23,42,.42); overflow:auto; }
+.ncf-box{ position:relative; width:100%; max-width:clamp(420px,62vw,640px); background:var(--surface);
+  border:1px solid var(--border); border-radius:var(--r-panel); box-shadow:0 24px 60px rgba(15,23,42,.22); padding:20px 22px 22px; }
+.ncf-x{ position:absolute; right:14px; top:14px; width:30px; height:30px; border:1px solid var(--border); background:var(--surface);
+  border-radius:var(--r-node); color:var(--muted); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.ncf-x:hover{ border-color:var(--slate); } .ncf-x .ic{ width:16px; height:16px; }
+.ncf-steps{ display:flex; align-items:center; gap:7px; margin-bottom:16px; }
+.ncf-st{ font-size:12px; font-weight:700; color:var(--faint); }
+.ncf-st.on{ color:var(--aap-ink); } .ncf-st.done{ color:var(--muted); }
+.ncf-sar{ color:var(--faint); display:inline-flex; } .ncf-sar .ic{ width:13px; height:13px; }
+.ncf-h{ font-size:var(--fs-h); font-weight:800; color:var(--ink); }
+.ncf-sub{ font-size:12.5px; color:var(--muted); margin-top:4px; }
+.ncf-grid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:14px; }
+.ncf-card{ text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card);
+  padding:12px 13px; cursor:pointer; transition:.12s; display:flex; flex-direction:column; gap:6px; font-family:inherit; }
+.ncf-card:hover{ border-color:var(--aap); box-shadow:var(--shadow); }
+.ncf-card.alt{ border-style:dashed; }
+.ncf-card .ncf-cd{ font-size:11.5px; color:var(--muted); line-height:1.5; }
+.ncf-card b{ font-size:13px; color:var(--ink); }
+.ncf-back{ display:inline-flex; align-items:center; gap:2px; font-size:12px; font-weight:700; color:var(--aap);
+  background:none; border:0; cursor:pointer; font-family:inherit; padding:0; margin-bottom:9px; }
+.ncf-back .ic{ width:14px; height:14px; }
+.ncf-ta{ width:100%; margin-top:11px; padding:11px 13px; border:1px solid var(--border); border-radius:var(--r-card);
+  font-family:inherit; font-size:13px; line-height:1.55; color:var(--ink); resize:vertical; box-sizing:border-box; }
+.ncf-ta:focus{ outline:none; border-color:var(--aap); }
+.ncf-attach{ display:flex; align-items:center; gap:8px; margin-top:10px; padding:10px 12px; border:1px dashed var(--border); border-radius:var(--r-node); }
+.ncf-atl{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:var(--slate); }
+.ncf-atl .ic{ width:14px; height:14px; } .ncf-atnote{ font-size:11px; color:var(--faint); }
+.ncf-acts{ display:flex; gap:8px; margin-top:16px; }
+.ncf-prev{ margin-top:13px; border:1px solid var(--border); border-radius:var(--r-card); overflow:hidden; }
+.ncf-pr{ display:flex; gap:12px; padding:11px 14px; border-bottom:1px solid var(--line); }
+.ncf-pr:last-child{ border-bottom:0; } .ncf-pr.col{ flex-direction:column; gap:7px; }
+.ncf-pk{ flex:0 0 116px; font-size:11.5px; font-weight:700; color:var(--muted); }
+.ncf-pk em{ font-style:normal; color:var(--aap-ink); font-weight:800; }
+.ncf-pv{ font-size:12.5px; color:var(--slate); line-height:1.5; }
+.ncf-stages{ margin:0; padding-left:2px; list-style:none; display:flex; flex-wrap:wrap; gap:5px; }
+.ncf-stages li{ font-size:11.5px; color:var(--slate); background:var(--surf); border:1px solid var(--border); border-radius:var(--r-chip); padding:3px 9px; }
+.ncf-stages li.gate{ background:var(--amber-soft); border-color:var(--amber-border); color:var(--amber-ink); font-weight:700; }
+.ncf-gtag{ display:inline-flex; align-items:center; gap:2px; } .ncf-gtag .ic{ width:11px; height:11px; }
+.ncf-gates{ display:flex; flex-wrap:wrap; gap:6px; }
+.ncf-gate{ display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; color:var(--amber-ink);
+  background:var(--amber-soft); border:1px solid var(--amber-border); border-radius:var(--r-pill,999px); padding:3px 10px; }
+.ncf-gate .ic{ width:12px; height:12px; } .ncf-none{ font-size:12px; color:var(--faint); }
+@media(max-width:560px){ .ncf-grid{ grid-template-columns:1fr; } .ncf-pr{ flex-direction:column; gap:5px; } .ncf-pk{ flex-basis:auto; } }
