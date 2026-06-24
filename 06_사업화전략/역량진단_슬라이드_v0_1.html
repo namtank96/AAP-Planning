@@ -1,0 +1,822 @@
+<!doctype html>
+<!--
+  ════════════════════════════════════════════════════════════════
+  AAP 사업화 전략 — 역량 진단과 확보 전략 슬라이드본 v0.1 (260625)
+  출처(SSOT) : 06_사업화전략/역량진단_확보전략.md (문장 그대로 인용)
+  보조       : 06_사업화전략/예상질문_QnA.md, 전략포인트_리서치.md
+  스타일 기준 : 01_선제안서/aap_proactive_offering_v0.7_260616.html 컴포넌트 → 화이트 톤 적용
+               (흰 배경, teal #00a39b 포인트, 다크는 강조 텍스트·라인 정도만)
+  편집 기능 : 텍스트 직접 편집(contenteditable + localStorage) · chip 클릭 소싱색 순환 ·
+              툴바(편집 토글 / 저장 상태 / Export·Import JSON / Reset) · 슬라이드 내비게이션
+  localStorage 키 = aap_strategy_v1
+  단일 HTML · 외부 라이브러리 0 · file:// 동작.
+  ════════════════════════════════════════════════════════════════
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AAP 사업화 전략 — 역량 진단과 확보 전략 v0.1</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2; --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+  --amber:#b7791f; --amber-bg:#fdf6ea; --amber-line:#ecd8ab;
+  --page:#eef1f4;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+/* ===== WHITE TONE: 라이트 페이지 배경 ===== */
+body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55;overflow:hidden}
+
+/* ===== Deck frame ===== */
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:54px 30px 64px}
+.slide{display:none;width:100%;max-width:1280px;height:100%;max-height:760px;background:#fff;border-radius:16px;box-shadow:0 14px 44px rgba(23,25,28,.12);border:1px solid var(--gray-150);overflow:hidden;flex-direction:column}
+.slide.active{display:flex}
+.slide-inner{flex:1;min-height:0;overflow:auto;padding:38px 48px 30px}
+.slide-inner::-webkit-scrollbar{width:8px}
+.slide-inner::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:8px}
+
+/* ===== Slide head ===== */
+.shead{display:grid;grid-template-columns:60px 1fr;gap:16px;align-items:start;margin-bottom:16px}
+.snum{height:42px;width:50px;border-radius:11px;background:var(--teal-strong);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;letter-spacing:.03em}
+.shead h2{margin:0;font-size:25px;letter-spacing:-.03em;line-height:1.2}
+.shead .lead{font-size:14px;color:var(--sub);margin:7px 0 0;line-height:1.65;max-width:1000px}
+.shead .lead strong{color:var(--ink)}
+.kicker{font-size:10px;font-weight:900;letter-spacing:.14em;color:var(--teal-strong);text-transform:uppercase;margin:0 0 4px}
+
+.sub-h3{margin:18px 0 8px;font-size:14.5px;letter-spacing:-.01em;color:var(--ink);font-weight:900}
+.sub-h3:first-child{margin-top:0}
+.sub-note{font-size:12.5px;color:var(--sub);margin:0 0 8px;line-height:1.65}
+.sub-note strong{color:var(--ink)}
+
+/* ===== Cards / grids ===== */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:stretch}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;align-items:stretch}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:stretch}
+.card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:15px;box-shadow:0 3px 10px rgba(23,25,28,.03);display:flex;flex-direction:column}
+.card.accent{border-color:var(--teal);background:var(--teal2)}
+.card.warn{border-color:var(--red);background:var(--red2)}
+.card h3{margin:0 0 7px;font-size:14px;letter-spacing:-.01em;color:var(--ink);line-height:1.3;font-weight:900}
+.card.accent h3{color:var(--teal-strong)}
+.card.warn h3{color:var(--red)}
+.card p{margin:0;color:var(--gray-600);font-size:12.5px;line-height:1.6}
+.card p strong{color:var(--ink);font-weight:800}
+.card p + p{margin-top:7px}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:900;letter-spacing:.02em;margin-bottom:8px;background:var(--gray-75);color:var(--gray-600);align-self:flex-start}
+.card.accent .badge{background:#fff;color:var(--teal-strong)}
+.card.warn .badge{background:#fff;color:var(--red)}
+
+/* ===== 확인 필요 배지 (amber) ===== */
+.chk{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:1px 7px;font-size:9.5px;font-weight:900;letter-spacing:.02em;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line);vertical-align:1px;white-space:nowrap}
+.chk::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block}
+
+/* ===== Note ===== */
+.note{border-left:4px solid var(--teal-strong);background:var(--gray-50);padding:12px 16px;border-radius:10px;color:var(--gray-600);font-size:12.5px;margin-top:14px;line-height:1.65}
+.note strong{color:var(--ink);font-weight:800}
+.note .nlab{display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--teal-strong);margin-right:8px;vertical-align:1px}
+.note.amber{border-left-color:var(--amber);background:var(--amber-bg)}
+.note.amber .nlab{color:var(--amber)}
+
+/* ===== Table ===== */
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;font-size:12.5px;margin-top:12px}
+th{background:var(--teal-strong);color:#fff;text-align:left;padding:9px 13px;font-weight:800;font-size:12px;letter-spacing:.02em}
+td{padding:9px 13px;border-top:1px solid var(--line);vertical-align:top;color:var(--gray-600);line-height:1.55}
+td strong{color:var(--ink);font-weight:800}
+td.lead-col{font-weight:800;color:var(--ink);background:var(--gray-50)}
+tr:nth-child(even) td{background:var(--gray-50)}
+tr:nth-child(even) td.lead-col{background:var(--gray-100)}
+table.tight th,table.tight td{padding:7px 10px;font-size:11.5px;line-height:1.5}
+td.acc{color:var(--teal-strong);font-weight:800}
+td.risk{color:var(--red);font-weight:700}
+
+/* ===== Cover (WHITE) ===== */
+.cover{height:100%;background:#fff;color:var(--ink);display:flex;flex-direction:column;justify-content:center;padding:60px 64px;position:relative;overflow:hidden}
+.cover::before{content:"";position:absolute;top:-120px;right:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(0,163,155,.10),rgba(0,163,155,0) 70%)}
+.cover .cv-kick{font-size:11px;font-weight:900;letter-spacing:.2em;color:var(--teal-strong);text-transform:uppercase;margin-bottom:18px;position:relative}
+.cover h1{margin:0;font-size:44px;line-height:1.18;letter-spacing:-.035em;font-weight:900;position:relative}
+.cover h1 .hl{color:var(--teal-strong)}
+.cover .cv-def{font-size:16px;color:var(--sub);line-height:1.7;margin:22px 0 0;max-width:900px;position:relative}
+.cover .cv-def strong{color:var(--ink);font-weight:800}
+.cover .cv-strengths{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:34px;max-width:940px;position:relative}
+.cv-st{border:1px solid var(--gray-150);border-radius:11px;background:var(--gray-25);padding:14px 16px}
+.cv-st b{display:block;font-size:12.5px;font-weight:900;color:var(--teal-strong);margin-bottom:5px;letter-spacing:.02em}
+.cv-st span{font-size:12px;color:var(--sub);line-height:1.55}
+.cover .cv-foot{position:absolute;bottom:34px;left:64px;font-size:11.5px;color:var(--muted);line-height:1.6;max-width:900px}
+
+/* ===== Chips (slide 3 sourcing detail) ===== */
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:2px 0 10px;font-size:11px;font-weight:700;color:var(--muted)}
+.legend .lg{display:inline-flex;align-items:center;gap:6px}
+.legend .swatch{width:13px;height:13px;border-radius:4px;display:inline-block}
+.sw-own{background:var(--teal-strong)}
+.sw-buy{background:var(--gray-200);border:1px solid var(--gray-300)}
+.sw-partner{background:#fff;border:1px dashed var(--teal)}
+.sw-tbd{background:#fff;border:1px solid var(--gray-300)}
+.legend .hint{margin-left:auto;font-size:10.5px;color:var(--muted);font-weight:600}
+
+.cap-stack{display:flex;flex-direction:column;gap:6px}
+.cap-row{display:grid;grid-template-columns:160px 1fr;gap:11px;align-items:start;border:1px solid var(--line);border-radius:10px;background:#fff;padding:8px 11px}
+.cap-row .cap-ln{display:flex;align-items:center;gap:8px}
+.cap-row .cap-ln .n{width:21px;height:21px;border-radius:6px;background:var(--gray-700);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.cap-row.mid{border-left:3px solid var(--teal)}
+.cap-row.hero{border:1.5px solid var(--teal);background:var(--teal2)}
+.cap-row.hero .cap-ln .n{background:var(--teal-strong)}
+.cap-row.weak{border-left:3px solid var(--red)}
+.cap-row.weak .cap-ln .n{background:var(--red)}
+.cap-row .cap-ln .lt{font-size:11.5px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.2}
+.cap-row.hero .cap-ln .lt{color:var(--teal-strong)}
+.cap-row .cap-ln .lt small{display:block;font-size:8px;font-weight:700;color:var(--muted);letter-spacing:0;margin-top:1px}
+.cap-row .mark{font-size:8px;font-weight:900;color:var(--red);background:#fff1f2;border:1px solid #f6c6c9;border-radius:5px;padding:1px 6px;margin-top:4px;display:inline-block}
+.chiprow{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.chip{font-size:9.5px;font-weight:700;border-radius:6px;padding:3px 9px;line-height:1.3;display:inline-flex;align-items:center;white-space:nowrap;cursor:default;user-select:none}
+.chip.src-buy{color:#5f6670;background:var(--gray-100);border:1px solid var(--gray-200)}
+.chip.src-own{color:#fff;background:var(--teal-strong);border:1px solid var(--teal-strong);font-weight:800}
+.chip.src-partner{color:var(--teal-strong);background:#fff;border:1px dashed var(--teal);font-weight:700}
+.chip.src-tbd{color:var(--muted);background:#fff;border:1px solid var(--gray-300)}
+.chip-clickable{cursor:pointer}
+.chip-clickable:hover{box-shadow:0 0 0 2px var(--teal2)}
+
+/* ===== details (chip 상세 접기) ===== */
+details.det{margin-top:14px;border:1px solid var(--line);border-radius:11px;background:#fff;overflow:hidden}
+details.det>summary{cursor:pointer;padding:11px 16px;font-size:12.5px;font-weight:800;color:var(--ink);list-style:none;background:var(--gray-50);display:flex;align-items:center;gap:8px}
+details.det>summary::-webkit-details-marker{display:none}
+details.det>summary::before{content:"+";display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;border-radius:5px;background:var(--teal-strong);color:#fff;font-weight:900;font-size:13px}
+details.det[open]>summary::before{content:"–"}
+details.det .det-body{padding:6px 16px 14px}
+
+/* ===== Steps (phase / plan) ===== */
+.steps{display:grid;gap:9px}
+.steps.s2{grid-template-columns:repeat(2,1fr)}
+.steps.s3{grid-template-columns:repeat(3,1fr)}
+.steps.s4{grid-template-columns:repeat(4,1fr)}
+.step{position:relative;border:1px solid var(--line);border-radius:11px;background:#fbfbfc;padding:18px 13px 13px;display:flex;flex-direction:column;gap:5px}
+.step .sn{position:absolute;top:-9px;left:13px;background:var(--gray-700);color:#fff;font-size:9.5px;font-weight:900;letter-spacing:.04em;padding:2px 9px;border-radius:999px}
+.step.accent{border-color:var(--teal);background:var(--teal2)}
+.step.accent .sn{background:var(--teal-strong)}
+.step b{font-size:12.5px;color:var(--ink);font-weight:900;line-height:1.3}
+.step.accent b{color:var(--teal-strong)}
+.step span{font-size:11px;color:var(--gray-600);line-height:1.5}
+
+/* ===== Banner ===== */
+.banner{border-radius:11px;padding:13px 18px;font-size:13px;line-height:1.7;margin:8px 0 12px;font-weight:600}
+.banner.teal{background:var(--teal2);border:1px solid var(--teal);color:var(--gray-700)}
+.banner.teal b{color:var(--teal-strong);font-weight:900}
+.banner.amber{background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--gray-700)}
+.banner.amber b{color:var(--amber);font-weight:900}
+.banner .blab{display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-right:9px;vertical-align:1px}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.fnote{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:10px;border-top:1px dashed var(--line);padding-top:9px}
+.fnote b{color:var(--gray-700);font-weight:800}
+
+/* teal 강조 한 줄 (다크 라인 대신 화이트 톤 teal 라인) */
+.teal-line{padding:14px 18px;border-radius:11px;background:var(--teal2);border:1px solid var(--teal);color:var(--gray-700);font-size:13.5px;line-height:1.65;font-weight:600;margin-top:12px}
+.teal-line span{display:block;font-size:9px;font-weight:900;letter-spacing:.16em;color:var(--teal-strong);margin-bottom:6px;text-transform:uppercase}
+.teal-line strong{font-weight:900;color:var(--teal-strong)}
+
+/* 설문 리스트 */
+.qlist{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.qgrp{font-size:11px;font-weight:900;letter-spacing:.04em;color:var(--teal-strong);margin:10px 0 2px}
+.qitem{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 12px}
+.qitem .qn{width:22px;height:22px;border-radius:6px;background:var(--gray-100);color:var(--gray-700);font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.qitem p{margin:0;font-size:12px;color:var(--gray-600);line-height:1.55}
+.qitem p strong{color:var(--ink)}
+
+/* ===== Nav bar (라이트) ===== */
+#navbar{position:fixed;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;justify-content:center;gap:14px;background:#fff;border-top:1px solid var(--gray-200);color:var(--ink);z-index:40;font-size:12.5px;box-shadow:0 -2px 12px rgba(23,25,28,.05)}
+#navbar button{appearance:none;border:1px solid var(--gray-200);background:#fff;color:var(--ink);border-radius:8px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
+#navbar button:hover{background:var(--gray-50);border-color:var(--teal)}
+#navbar button:disabled{opacity:.35;cursor:not-allowed}
+#pageInd{font-variant-numeric:tabular-nums;font-weight:800;min-width:64px;text-align:center;letter-spacing:.03em;color:var(--gray-700)}
+#dots{display:flex;gap:5px;margin-left:8px}
+#dots i{width:7px;height:7px;border-radius:50%;background:var(--gray-300);cursor:pointer}
+#dots i.on{background:var(--teal-strong)}
+
+/* ===== Toolbar (라이트) ===== */
+#toolbar{position:fixed;top:0;left:0;right:0;height:44px;display:flex;align-items:center;gap:8px;padding:0 18px;background:#fff;border-bottom:1px solid var(--gray-200);color:var(--ink);z-index:40;font-size:12px;box-shadow:0 2px 12px rgba(23,25,28,.05)}
+#toolbar .tb-title{font-weight:900;letter-spacing:-.01em;font-size:13px}
+#toolbar .tb-title small{font-weight:600;color:var(--muted);margin-left:8px;font-size:11px}
+#toolbar .sp{flex:1}
+#toolbar button{appearance:none;border:1px solid var(--gray-200);background:#fff;color:var(--ink);border-radius:7px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer}
+#toolbar button:hover{background:var(--gray-50);border-color:var(--teal)}
+#toolbar button.on{background:var(--teal-strong);border-color:var(--teal-strong);color:#fff}
+#saveState{font-size:10.5px;color:var(--muted);font-weight:600;min-width:120px}
+#saveState.saved{color:var(--teal-strong)}
+
+/* editable highlight */
+body.editing [data-edit]{outline:1px dashed var(--teal);outline-offset:2px;border-radius:3px;cursor:text;background:rgba(0,163,155,.04)}
+body.editing [data-edit]:focus{outline:2px solid var(--teal);background:#fff}
+body.editing .chip-clickable{cursor:pointer}
+.edit-only{display:none}
+body.editing .edit-only{display:inline}
+
+/* overlay (export/import/flash) */
+#ov{position:fixed;inset:0;background:rgba(23,25,28,.42);z-index:60;display:none;align-items:center;justify-content:center;padding:30px}
+#ov.show{display:flex}
+.ov-card{background:#fff;border-radius:14px;max-width:620px;width:100%;padding:22px 24px;box-shadow:0 24px 70px rgba(0,0,0,.3)}
+.ov-card h4{margin:0 0 6px;font-size:16px;font-weight:900;color:var(--ink)}
+.ov-card p{margin:0 0 12px;font-size:12.5px;color:var(--sub);line-height:1.6}
+.ov-card textarea{width:100%;height:230px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;border:1px solid var(--line);border-radius:9px;padding:11px;resize:vertical;color:var(--gray-700)}
+.ov-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:13px}
+.ov-actions button{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer}
+.ov-actions button.primary{background:var(--teal-strong);border-color:var(--teal-strong);color:#fff}
+#flash{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:var(--gray-900);color:#fff;font-size:12.5px;font-weight:700;padding:9px 18px;border-radius:999px;z-index:70;opacity:0;transition:opacity .25s;pointer-events:none}
+#flash.show{opacity:1}
+
+@media print{
+  body{overflow:visible;background:#fff}#toolbar,#navbar,#ov,#flash{display:none!important}
+  #deck{position:static;display:block;padding:0}
+  .slide{display:flex!important;page-break-after:always;max-height:none;height:auto;box-shadow:none;border-radius:0;border:0}
+}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <span class="tb-title">AAP 사업화 전략 <small>역량 진단과 확보 전략 · 슬라이드 v0.1</small></span>
+  <span class="sp"></span>
+  <span id="saveState">편집 꺼짐</span>
+  <button id="btnEdit">편집 켜기</button>
+  <button id="btnExport">Export</button>
+  <button id="btnImport">Import</button>
+  <button id="btnReset">초기화</button>
+</div>
+
+<div id="deck">
+
+<!-- ════════ 1. 표지 (화이트) ════════ -->
+<section class="slide active" data-slide="1">
+  <div class="cover">
+    <div class="cv-kick" data-edit="s1.kick">Agentic AI Platform · 사업화 전략 v0.1</div>
+    <h1 data-edit="s1.title">AAP 사업화 전략<br><span class="hl">역량 진단과 확보 전략</span></h1>
+    <p class="cv-def" data-edit="s1.def">AAP의 8계층 기술 구현 범위를 사업 관점으로 옮긴 것입니다. 각 역량에 대해 <strong>우리가 실제로 할 수 있는지, 경쟁사는 어떻게 하는지, 고객이 값을 매기는지, 우리는 어떻게 확보할지</strong>를 함께 봅니다.</p>
+    <div class="cv-strengths">
+      <div class="cv-st"><b data-edit="s1.st1h">자체 개발 핵심은 L3</b><span data-edit="s1.st1b">에이전트 코어는 자체 개발로 확보하고 BEAST를 활용합니다.</span></div>
+      <div class="cv-st"><b data-edit="s1.st2h">확보 과제 두 개</b><span data-edit="s1.st2b">L4 지식 시맨틱(온톨로지)과 ISO 42001 인증입니다.</span></div>
+      <div class="cv-st"><b data-edit="s1.st3h">진입은 관계 자산</b><span data-edit="s1.st3b">KT그룹과 진흥기관, 협회 관계를 거점으로 삼습니다.</span></div>
+    </div>
+    <div class="cv-foot" data-edit="s1.foot">기술 실무진과 임원이 같은 문서로 판단할 수 있게 구성했습니다. 표시 확인 필요는 자사 내부 정보가 필요해 답을 받아야 하는 부분이며, 답을 받으면 채우고 표시를 지웁니다.</div>
+  </div>
+</section>
+
+<!-- ════════ 2. 요약 ════════ -->
+<section class="slide" data-slide="2">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">02</div>
+      <div>
+        <p class="kicker" data-edit="s2.kick">요약</p>
+        <h2 data-edit="s2.title">전략 한눈에</h2>
+        <p class="lead" data-edit="s2.lead">시장은 검증을 넘어 운영으로 이동합니다. 관계가 있는 거점에서 운영 레퍼런스를 먼저 만들고, <strong>L4와 인증은 제휴와 로드맵으로 확보</strong>합니다.</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card"><span class="badge">기회</span><p data-edit="s2.c1">Gartner는 2026년까지 엔터프라이즈 앱의 40%가 에이전트를 탑재하지만 2027년까지 기업의 40%가 거버넌스 공백으로 폐기한다고 봅니다. <strong>통제와 운영을 갖춘 플랫폼이 시장 요구</strong>입니다.</p></div>
+      <div class="card accent"><span class="badge">우리 위치</span><p data-edit="s2.c2">자체 개발이 확실한 곳은 <strong>에이전트 코어(L3)</strong>입니다. 지식 시맨틱(L4)은 제휴로 채우고, 거버넌스(L7)는 설계는 강하나 인증과 구현이 과제입니다.</p></div>
+      <div class="card warn"><span class="badge">핵심 갭</span><p data-edit="s2.c3"><strong>L4 온톨로지 확보와 ISO 42001 인증</strong> 둘입니다. 둘 다 미보유이며 경쟁사가 앞서 있습니다. 리드 고객이 공통으로 온톨로지를 원하는데 그것이 우리 약점입니다.</p></div>
+      <div class="card"><span class="badge">도메인 초점</span><p data-edit="s2.c4"><strong>변수 기반 의사결정 지원</strong>입니다. 변수에 따라 선택지와 효과가 어떻게 달라지는지를 미리, 투명하게 보는 업무입니다. 은행 여신, 손해사정, 회의는 거점에서 내립니다.</p></div>
+      <div class="card"><span class="badge">차별화</span><p data-edit="s2.c5">온톨로지 깊이로 Palantir와 싸우지 않습니다. <strong>비싸서 못 가는 중견, 준정부, 규제 산업에 염가로 작게 진입</strong>하고, 결정론의 투명과 재현, 한국 규제 적합으로 이깁니다.</p></div>
+      <div class="card"><span class="badge">피치와 실증</span><p data-edit="s2.c6">온톨로지라는 기술이 아니라 <strong>고객 업무를 Agentic Operation 수준으로 격상</strong>시키는 것을 팝니다. 메타 AAP로 그 자리에서 시연합니다. 온톨로지는 제휴로 채웁니다.</p></div>
+    </div>
+    <div class="teal-line"><span data-edit="s2.kmh">한 수</span><span style="display:inline" data-edit="s2.km">관계가 있는 <strong>KT그룹과 기존 고객에서 운영 레퍼런스를 먼저 만들고</strong>, L4와 인증은 제휴와 로드맵으로 확보합니다.</span></div>
+  </div>
+</section>
+
+<!-- ════════ 3. 역량 현실 진단 (매트릭스 + chip 상세) ════════ -->
+<section class="slide" data-slide="3">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">03</div>
+      <div>
+        <p class="kicker" data-edit="s3.kick">역량 현실 진단</p>
+        <h2 data-edit="s3.title">8계층 역량 매트릭스</h2>
+        <p class="lead" data-edit="s3.lead">행은 8계층, 열은 여섯 판단 기준입니다. 고객 가치는 차별화, 필수, 무관으로 구분하고, 시급성은 지금 없으면 진입이 막히는지로 봅니다. <strong>차별화의 두 축(L4, L7)이 모두 확보 과제</strong>라는 점이 이 진단의 핵심입니다.</p>
+      </div>
+    </div>
+    <table class="tight">
+      <thead><tr>
+        <th style="width:120px">계층</th><th>현재 수준</th><th>경쟁사</th><th style="width:64px">고객 가치</th><th>확보 방식 시점</th><th style="width:48px">시급성</th><th style="width:120px">리스크 대안</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="lead-col" data-edit="s3.l1n">L1 경험 접근</td>
+          <td data-edit="s3.l1a">화면 콘솔 자체 구축, 데모 수준 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l1b">모두 보유</td><td data-edit="s3.l1c">필수</td><td data-edit="s3.l1d">Build, 점진</td><td data-edit="s3.l1e">나중</td><td data-edit="s3.l1f">낮음</td>
+        </tr>
+        <tr>
+          <td class="lead-col" data-edit="s3.l2n">L2 설계 개발</td>
+          <td data-edit="s3.l2a">부분 자체, 미성숙 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l2b">노코드 빌더 필수</td><td data-edit="s3.l2c">초기 무관, 장기 필수</td><td data-edit="s3.l2d">Build, 점진</td><td data-edit="s3.l2e">나중</td><td data-edit="s3.l2f">낮음</td>
+        </tr>
+        <tr>
+          <td class="lead-col" data-edit="s3.l3n">L3 에이전트 코어</td>
+          <td data-edit="s3.l3a">자체 가능, 데모로 증명 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l3b">모두 보유</td><td class="acc" data-edit="s3.l3c">필수, 부분 차별화</td><td data-edit="s3.l3d">Build, BEAST 활용</td><td data-edit="s3.l3e">지금</td><td data-edit="s3.l3f">낮음</td>
+        </tr>
+        <tr>
+          <td class="lead-col" data-edit="s3.l4n">L4 지식 시맨틱</td>
+          <td class="risk" data-edit="s3.l4a">자체 불가, 심사기준 구조화는 일부 가능</td>
+          <td data-edit="s3.l4b">Palantir 압도, 컨설팅펌 진입</td><td class="acc" data-edit="s3.l4c">차별화이나 자체 불가</td><td data-edit="s3.l4d">제휴(솔트룩스, E8, 서버키트)</td><td data-edit="s3.l4e">지금</td><td class="risk" data-edit="s3.l4f">높음, 제휴 의존</td>
+        </tr>
+        <tr>
+          <td class="lead-col" data-edit="s3.l5n">L5 데이터 연동</td>
+          <td data-edit="s3.l5a">도입 제휴로 커버, Antbot 보유 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l5b">모두 보유</td><td data-edit="s3.l5c">필수</td><td data-edit="s3.l5d">Buy Integrate, Antbot</td><td data-edit="s3.l5e">지금</td><td data-edit="s3.l5f">중, 파트너 의존</td>
+        </tr>
+        <tr>
+          <td class="lead-col" data-edit="s3.l6n">L6 AI 품질 평가</td>
+          <td data-edit="s3.l6a">결정론 평가 일부 자체 + 도입 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l6b">Agent Ops 등 보유</td><td data-edit="s3.l6c">필수</td><td data-edit="s3.l6d">Build(경량) + Buy</td><td data-edit="s3.l6e">나중</td><td data-edit="s3.l6f">낮음</td>
+        </tr>
+        <tr>
+          <td class="lead-col" data-edit="s3.l7n">L7 컨트롤 거버넌스</td>
+          <td data-edit="s3.l7a">설계 강점(HITL, 결정론, 감사), 구현 부분, 인증 미보유 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l7b">메가존 ISO 42001 보유</td><td class="acc" data-edit="s3.l7c">차별화 + 필수</td><td data-edit="s3.l7d">Build + 인증 로드맵</td><td data-edit="s3.l7e">지금</td><td data-edit="s3.l7f">중, 인증 지연 시 불리</td>
+        </tr>
+        <tr>
+          <td class="lead-col" data-edit="s3.l8n">L8 인프라</td>
+          <td data-edit="s3.l8a">제휴(KT그룹), AI:ON-U 보유</td>
+          <td data-edit="s3.l8b">모두 클라우드 보유</td><td data-edit="s3.l8c">필수, 폐쇄망 차별화</td><td data-edit="s3.l8d">Integrate(KT Cloud, 소버린)</td><td data-edit="s3.l8e">지금</td><td data-edit="s3.l8f">낮음, 그룹 자산</td>
+        </tr>
+      </tbody>
+    </table>
+    <details class="det">
+      <summary data-edit="s3.dsum">계층별 chip 단위 상세 — 각 칩을 눌러 소싱(자체 → 도입 → 제휴 → 미정)을 지정합니다</summary>
+      <div class="det-body">
+        <div class="legend">
+          <span class="lg"><i class="swatch sw-own"></i>자체</span>
+          <span class="lg"><i class="swatch sw-buy"></i>도입</span>
+          <span class="lg"><i class="swatch sw-partner"></i>제휴</span>
+          <span class="lg"><i class="swatch sw-tbd"></i>미정</span>
+          <span class="hint">칩 보유 구현 수준은 자사 자산 명세 확인이 필요합니다.</span>
+        </div>
+        <div class="cap-stack" id="capStack"><!-- renderChips() --></div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ════════ 4. 거점 ════════ -->
+<section class="slide" data-slide="4">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">04</div>
+      <div>
+        <p class="kicker" data-edit="s4.kick">거점</p>
+        <h2 data-edit="s4.title">변수 기반 의사결정 지원으로 진입</h2>
+        <p class="lead" data-edit="s4.lead">단순한 합격 불합격 심사가 아니라, <strong>내부와 외부 변수에 따라 선택지와 예상 효과가 어떻게 달라지는지를 미리 보는 업무</strong>입니다. 무역 시나리오, 기업 간 비교, 기준이 명문화된 심사(과제, 보조금, 인증)를 포함합니다. 경쟁사가 비어 있는 자리입니다.</p>
+      </div>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3 class="sub-h3" data-edit="s4.h_entry">진입 경로는 관계 자산</h3>
+        <table class="tight">
+          <thead><tr><th style="width:160px">대상</th><th>접점과 의지</th></tr></thead>
+          <tbody>
+            <tr><td class="lead-col" data-edit="s4.e1k">한국기계산업진흥회</td><td data-edit="s4.e1v">1차 사업(챗봇 구축) 이력, 2027년 본사업 의지. 온톨로지 기반 의지가 분명하고 무역 시나리오가 대표 use case</td></tr>
+            <tr><td class="lead-col" data-edit="s4.e2k">진흥기관 협회 평가기관</td><td data-edit="s4.e2v">과제, 보조금, 인증 심사의 발주처. 관계 자산이 결정적 진입로</td></tr>
+            <tr><td class="lead-col" data-edit="s4.e3k">제일일렉트릭</td><td data-edit="s4.e3v">신규 리드, 제조</td></tr>
+            <tr><td class="lead-col" data-edit="s4.e4k">애큐온저축은행</td><td data-edit="s4.e4v">차세대 구축 추정, 금융 <span class="chk">확인 필요</span></td></tr>
+          </tbody>
+        </table>
+        <p class="fnote" data-edit="s4.efoot"><b>거점은 관계로 정합니다.</b> 기준은 관계 레버리지, 통증 적합, 레퍼런스 가치 순입니다. 공통적으로 온톨로지에 대한 관심이 높습니다.</p>
+      </div>
+      <div>
+        <h3 class="sub-h3" data-edit="s4.h_out">거점에서 내리는 것</h3>
+        <div class="card warn"><h3 data-edit="s4.o1h">은행 여신 심사</h3><p data-edit="s4.o1b">신한, 하나, 기업, 우리은행과 메가존이 이미 진입한 레드오션이고 은행은 자체 개발로 갑니다. 검증용 레퍼런스로만 봅니다.</p></div>
+        <div class="card warn" style="margin-top:11px"><h3 data-edit="s4.o2h">손해사정과 회의</h3><p data-edit="s4.o2b">손해사정은 식상하고 회의는 일반적입니다. 다만 손해사정 데모의 분리 판정과 근거 재현 패턴은 심사 업무로 그대로 이식합니다.</p></div>
+        <div class="banner amber" style="margin-top:11px"><span class="blab" style="color:var(--amber)">주의</span><b data-edit="s4.o3h">내부통제</b> — <span data-edit="s4.o3b">우리금융지주 사업을 수주했으나 바로 AAP를 적용하기는 어렵습니다. PWC 같은 컨설팅펌이 온톨로지와 내부통제를 함께 타깃하고 있어 경쟁이 있습니다.</span></div>
+      </div>
+    </div>
+    <p class="fnote" data-edit="s4.foot"><b>정책 뒷받침</b> — 금융 통합 AI 가이드라인의 보조수단성, 공공 망분리 완화, 2026년 정부 AI 예산 9.9조 원이 거점과 맞물립니다. 하니스가 출발점이며, 여신 심사와 보조금 심사를 이미 결정론으로 만들어 두어 바로 쓸 자산이 있습니다.</p>
+  </div>
+</section>
+
+<!-- ════════ 5. 차별화 (Palantir 비교) ════════ -->
+<section class="slide" data-slide="5">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">05</div>
+      <div>
+        <p class="kicker" data-edit="s5.kick">차별화</p>
+        <h2 data-edit="s5.title">Palantir와 경쟁하지 않을 곳, 이길 곳</h2>
+        <p class="lead" data-edit="s5.lead"><strong>경쟁하지 않습니다</strong> — 온톨로지 깊이, 데이터 통합과 스케일, 예측 추론, 글로벌 레퍼런스. 여기서 정면승부하면 집니다. 대신 네 축으로 이깁니다.</p>
+      </div>
+    </div>
+    <div class="grid-4">
+      <div class="card accent"><span class="badge">이깁니다 1</span><h3 data-edit="s5.w1h">가격과 접근성</h3><p data-edit="s5.w1b">Palantir는 큰 기업이 비싸게 사는 무거운 플랫폼입니다. 그것이 과하거나 비싼 <strong>중견, 준정부, 규제 산업</strong>이 우리 자리입니다. 작게, 염가로 시작할 수 있는 것이 차별점입니다.</p></div>
+      <div class="card accent"><span class="badge">이깁니다 2</span><h3 data-edit="s5.w2h">투명성과 재현성</h3><p data-edit="s5.w2b">Palantir의 추론은 무겁습니다. 우리는 <strong>결정론으로 왜 이 결과인지를 재현하고 방어</strong>할 수 있습니다. 공공과 규제 고객에게는 이것이 핵심입니다.</p></div>
+      <div class="card accent"><span class="badge">이깁니다 3</span><h3 data-edit="s5.w3h">한국 규제와 폐쇄망</h3><p data-edit="s5.w3b"><strong>KT 보안, 소버린, 온프레미스, 조달, SI 손길</strong>이 한국 시장에 맞습니다.</p></div>
+      <div class="card accent"><span class="badge">이깁니다 4</span><h3 data-edit="s5.w4h">가벼운 진입</h3><p data-edit="s5.w4b">온톨로지를 다 만들지 않아도 <strong>도메인 팩 단위로 작게 시작</strong>합니다. 온톨로지는 제휴로 채우고 결정론으로 운영합니다.</p></div>
+    </div>
+    <div class="teal-line"><span data-edit="s5.kmh">한 문장</span><span style="display:inline" data-edit="s5.km">Palantir가 큰 기업이 비싸게 사는 무거운 온톨로지 플랫폼이라면, <strong>AAP는 그것이 과하거나 비싼 곳이 작게 시작해 결정을 투명하게 운영하는 한국형 도구</strong>입니다.</span></div>
+    <p class="fnote" data-edit="s5.foot"><b>경쟁 포지션 주의</b> — KT 본사가 Palantir 파트너라, 온톨로지와 의사결정을 전면에 세우면 그룹 안에서 겹칩니다. AAP는 결정을 투명하게 운영하는 런타임으로 세웁니다. 컨설팅펌은 방법론은 앞서나 실행 런타임이 약해, 우리는 런타임과 HITL로 차별화합니다.</p>
+  </div>
+</section>
+
+<!-- ════════ 6. 피치와 실증 ════════ -->
+<section class="slide" data-slide="6">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">06</div>
+      <div>
+        <p class="kicker" data-edit="s6.kick">피치와 실증</p>
+        <h2 data-edit="s6.title">온톨로지가 아니라 격상된 업무를 판다</h2>
+        <p class="lead" data-edit="s6.lead">고객은 온톨로지라는 기술 자체보다 그것이 자기 업무를 어떻게 돕는지, RAG나 기존 LLM과 무엇이 다른지를 궁금해합니다. 그래서 <strong>온톨로지를 전면에 세우지 않습니다.</strong></p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card"><span class="badge">피치</span><h3 data-edit="s6.c1h">격상된 업무</h3><p data-edit="s6.c1b">고객 업무를 프로세스 단위로 분해하고, 그것을 <strong>Agentic Operation 수준으로 격상</strong>시켜 자동화하는 모습(사람 검토 포함)을 보여 줍니다. 온톨로지는 그 아래에서 의미를 잡는 기반입니다.</p></div>
+      <div class="card accent"><span class="badge">실증</span><h3 data-edit="s6.c2h">메타 AAP 시연</h3><p data-edit="s6.c2b">고객 업무 설명을 받아 그 자리에서 프로세스로 분해하고, AAP가 어떻게 처리하는지 시각적으로 보여 줍니다. <strong>6개 도메인 하니스가 엔진</strong>입니다. <span class="chk">확인 필요</span> 즉석 시연 수준의 시각화는 추가 개발이 필요합니다.</p></div>
+      <div class="card"><span class="badge">온톨로지 제휴</span><h3 data-edit="s6.c3h">솔트룩스, E8, 서버키트</h3><p data-edit="s6.c3b">온톨로지는 직접 만들지 못해 <strong>제휴로 채웁니다.</strong> 가장 강한 영업은 설명이 아니라 시연이며, Palantir AIP가 시각적 경험으로 설득하듯 우리도 보이는 결과로 설득합니다.</p></div>
+    </div>
+    <h3 class="sub-h3" data-edit="s6.h_step">수행 단계와 과금</h3>
+    <div class="steps s4">
+      <div class="step accent"><span class="sn">1</span><b data-edit="s6.p1h">적용 진단</b><span data-edit="s6.p1b">Assessment</span></div>
+      <div class="step"><span class="sn">2</span><b data-edit="s6.p2h">통제된 파일럿</b><span data-edit="s6.p2b">Controlled Pilot</span></div>
+      <div class="step"><span class="sn">3</span><b data-edit="s6.p3h">구축</b><span data-edit="s6.p3b">Build</span></div>
+      <div class="step"><span class="sn">4</span><b data-edit="s6.p4h">운영과 개선</b><span data-edit="s6.p4b">Operate &amp; Improve</span></div>
+    </div>
+    <p class="fnote" data-edit="s6.foot"><b>과금 방향</b> — 검증 과제는 정액 구축 패키지로, 운영은 좌석과 구독 중심으로 둡니다. 성과 기반은 자동 처리율을 측정하는 도메인에만 선택 제시합니다. PoC는 Palantir 부트캠프를 참고해 구축형으로 설계합니다. <span class="chk">확인 필요</span> 표준 PoC의 기간과 가격은 자사 단가 기준이 필요합니다.</p>
+  </div>
+</section>
+
+<!-- ════════ 7. 오퍼링과 과금 ════════ -->
+<section class="slide" data-slide="7">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">07</div>
+      <div>
+        <p class="kicker" data-edit="s7.kick">오퍼링과 과금</p>
+        <h2 data-edit="s7.title">4묶음 패키지와 좌석 구독</h2>
+        <p class="lead" data-edit="s7.lead">수행은 <strong>적용 진단, 통제된 파일럿, 구축, 운영과 개선</strong>의 네 묶음으로 패키지화합니다. 검증 과제는 정액 구축으로, 운영은 좌석과 구독 중심으로 둡니다.</p>
+      </div>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3 class="sub-h3" data-edit="s7.h_pkg">4묶음 패키지</h3>
+        <table class="tight">
+          <thead><tr><th style="width:130px">묶음</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td class="lead-col" data-edit="s7.k1k">적용 진단</td><td data-edit="s7.k1v">업무, 시스템, 보안 조건으로 적용 후보와 우선순위 선별</td></tr>
+            <tr><td class="lead-col" data-edit="s7.k2k">통제된 파일럿</td><td data-edit="s7.k2v">통제 범위 안에서 운영 가능한 팩으로 검증, 처리 시간과 자동화율 측정</td></tr>
+            <tr><td class="lead-col" data-edit="s7.k3k">구축</td><td data-edit="s7.k3v">검증된 자산 조합, 화면과 통제와 보안 결합, 고객 시스템 연결</td></tr>
+            <tr><td class="lead-col" data-edit="s7.k4k">운영과 개선</td><td data-edit="s7.k4v">운영 기준과 개선 흐름 설계, 재사용 자산 축적</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3 class="sub-h3" data-edit="s7.h_price">좌석과 구독</h3>
+        <div class="card accent"><h3 data-edit="s7.pr1h">좌석과 구독 중심</h3><p data-edit="s7.pr1b">운영은 좌석과 구독으로 둡니다. <strong>글로벌 리더도 예측 가능성 때문에 좌석제로 회귀</strong>했습니다. 일회성 구축이 구독으로 전환되는 비중이 사업 건전성 지표입니다.</p></div>
+        <div class="card" style="margin-top:11px"><h3 data-edit="s7.pr2h">정액 구축과 성과 기반</h3><p data-edit="s7.pr2b">검증 과제는 <strong>정액 구축 패키지</strong>로 둡니다. 성과 기반은 자동 처리율을 측정하는 도메인에만 선택 제시합니다.</p></div>
+        <div class="banner amber" style="margin-top:11px"><span class="blab" style="color:var(--amber)">확인 필요</span><span data-edit="s7.prfoot">표준 PoC의 기간과 가격, 도메인 팩별 단가는 자사 단가 기준이 필요합니다.</span></div>
+      </div>
+    </div>
+    <p class="fnote" data-edit="s7.foot"><b>PoC 형태</b> — Palantir 부트캠프(며칠 내 첫 유스케이스 배포, 전환율 약 75%)를 참고해 구축형으로 설계합니다.</p>
+  </div>
+</section>
+
+<!-- ════════ 8. 규제와 인증 ════════ -->
+<section class="slide" data-slide="8">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">08</div>
+      <div>
+        <p class="kicker" data-edit="s8.kick">규제와 인증</p>
+        <h2 data-edit="s8.title">ISO 42001, 금융, 공공</h2>
+        <p class="lead" data-edit="s8.lead">규제 적합은 거점 진입의 게이트입니다. <strong>ISO 42001은 미보유 과제</strong>이며, 금융과 공공은 우리 설계를 가이드라인에 매핑해 정합성을 제시합니다.</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card warn"><span class="badge">미보유 과제</span><h3 data-edit="s8.c1h">ISO 42001</h3><p data-edit="s8.c1b">구매자 72%가 제안 요청 전에 확인하고 메가존은 이미 보유합니다. 미보유 시 입찰에서 불리합니다.</p><p style="margin-top:7px"><span class="chk">확인 필요</span> <span data-edit="s8.c1c">우리 인증 추진 의향과 일정이 필요합니다.</span></p></div>
+      <div class="card"><span class="badge">금융</span><h3 data-edit="s8.c2h">통합 AI 가이드라인</h3><p data-edit="s8.c2b">통합 AI 가이드라인 <strong>7대 원칙에 AAP 설계를 매핑</strong>해 정합성을 제시합니다.</p></div>
+      <div class="card"><span class="badge">공공</span><h3 data-edit="s8.c3h">망분리 완화(N2SF)</h3><p data-edit="s8.c3b">망분리 완화 <strong>등급 체계에 데이터 거버넌스를 매핑</strong>합니다.</p></div>
+    </div>
+    <div class="teal-line"><span data-edit="s8.kmh">핵심</span><span style="display:inline" data-edit="s8.km">L7 거버넌스는 차별화이자 조달 통과 요건입니다. <strong>인증 로드맵을 조기에 착수</strong>해 입찰 게이트를 통과합니다.</span></div>
+  </div>
+</section>
+
+<!-- ════════ 9. Action Plan ════════ -->
+<section class="slide" data-slide="9">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">09</div>
+      <div>
+        <p class="kicker" data-edit="s9.kick">Action Plan</p>
+        <h2 data-edit="s9.title">3개월과 6개월 초안</h2>
+        <p class="lead" data-edit="s9.lead">스폰서와 예산, 일정을 받아 구체화합니다. <span class="chk">확인 필요</span> 초안은 다음과 같습니다.</p>
+      </div>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3 class="sub-h3" data-edit="s9.h_3m">3개월</h3>
+        <div class="steps s2" style="grid-template-columns:1fr;gap:8px">
+          <div class="step accent"><span class="sn">1</span><span data-edit="s9.m1">기존 계정 목록 점수화, 1차 타겟 3~5개 확정</span></div>
+          <div class="step"><span class="sn">2</span><span data-edit="s9.m2">표준 PoC 제안 1장 작성</span></div>
+          <div class="step"><span class="sn">3</span><span data-edit="s9.m3">온톨로지 제휴 후보(솔트룩스, E8, 서버키트) 접촉</span></div>
+          <div class="step"><span class="sn">4</span><span data-edit="s9.m4">메타 AAP 즉석 시연 데모 기획</span></div>
+        </div>
+      </div>
+      <div>
+        <h3 class="sub-h3" data-edit="s9.h_6m">6개월</h3>
+        <div class="steps s2" style="grid-template-columns:1fr;gap:8px">
+          <div class="step accent"><span class="sn">1</span><span data-edit="s9.s1">거점 PoC 1~2건 착수(행정 심사)</span></div>
+          <div class="step"><span class="sn">2</span><span data-edit="s9.s2">ISO 42001 추진 결정</span></div>
+          <div class="step"><span class="sn">3</span><span data-edit="s9.s3">레퍼런스 Pack화 준비</span></div>
+        </div>
+        <div class="banner teal" style="margin-top:14px"><span class="blab" style="color:var(--teal-strong)">실행 주체</span><span data-edit="s9.rr">사업개발, 영업, 수행총괄, 기술조직(L3 Build), 보안 컴플라이언스(ISO 42001 추진), 파트너(L4 제휴, Connector)로 R&amp;R을 나눕니다. <span class="chk">확인 필요</span> 실제 조직과 인력을 받아 확정합니다.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 10. 리스크 ════════ -->
+<section class="slide" data-slide="10">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">10</div>
+      <div>
+        <p class="kicker" data-edit="s10.kick">리스크</p>
+        <h2 data-edit="s10.title">핵심 리스크와 완화</h2>
+        <p class="lead" data-edit="s10.lead">차별화 두 축이 확보 과제이고 운영 레퍼런스가 아직 없다는 점이 가장 큰 리스크입니다. <strong>제휴와 인증 로드맵, KT그룹 실증</strong>으로 완화합니다.</p>
+      </div>
+    </div>
+    <table class="tight">
+      <thead><tr><th style="width:140px">리스크</th><th>내용</th><th style="width:360px">완화</th></tr></thead>
+      <tbody>
+        <tr><td class="lead-col risk" data-edit="s10.r1k">L4 자체 불가</td><td data-edit="s10.r1n">온톨로지를 직접 못 만듦, 차별화 핵심</td><td class="acc" data-edit="s10.r1m">제휴(솔트룩스, E8, 서버키트), 진입은 우위 영역에서</td></tr>
+        <tr><td class="lead-col risk" data-edit="s10.r2k">인증 미보유</td><td data-edit="s10.r2n">ISO 42001 없으면 입찰 불리</td><td class="acc" data-edit="s10.r2m">인증 로드맵 조기 착수</td></tr>
+        <tr><td class="lead-col" data-edit="s10.r3k">운영 레퍼런스 0</td><td data-edit="s10.r3n">데모만 있고 운영 사례 없음</td><td class="acc" data-edit="s10.r3m">KT그룹에서 먼저 실증</td></tr>
+        <tr><td class="lead-col" data-edit="s10.r4k">파트너 종속</td><td data-edit="s10.r4n">L4와 Connector를 외부에 의존</td><td class="acc" data-edit="s10.r4m">계약 스펙은 자체 보유</td></tr>
+        <tr><td class="lead-col" data-edit="s10.r5k">인력 조직 미정</td><td data-edit="s10.r5n">실행 주체 불명확 <span class="chk">확인 필요</span></td><td class="acc" data-edit="s10.r5m">조직 설계 선행</td></tr>
+      </tbody>
+    </table>
+    <p class="fnote" data-edit="s10.foot"><b>지속 우위</b> — 복제되는 것은 L3 코어 로직과 빌더 화면입니다. 복제되지 않는 것은 KT그룹 관계와 레퍼런스, 한국 규제 폐쇄망 운영 경험, 축적된 도메인 자산입니다. 사업의 진짜 우위는 여기에 있습니다.</p>
+  </div>
+</section>
+
+<!-- ════════ 11. 확인 질문(설문) ════════ -->
+<section class="slide" data-slide="11">
+  <div class="slide-inner">
+    <div class="shead">
+      <div class="snum">11</div>
+      <div>
+        <p class="kicker" data-edit="s11.kick">확인 질문 설문</p>
+        <h2 data-edit="s11.title">빈 곳을 채울 10문항</h2>
+        <p class="lead" data-edit="s11.lead">아래에 답해 주시면 앞의 <span class="chk">확인 필요</span> 부분을 채우고 문서를 다듬습니다. 아는 만큼만, 단답으로도 좋습니다.</p>
+      </div>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="qgrp" data-edit="s11.gA">A. 역량 현실</div>
+        <div class="qlist">
+          <div class="qitem"><span class="qn">1</span><p data-edit="s11.q1">L1 화면, L2 스튜디오, L6 평가의 실제 자체 개발 수준은 어디입니까. <strong>(제품 / PoC / 없음)</strong></p></div>
+          <div class="qitem"><span class="qn">2</span><p data-edit="s11.q2">자사 자산 <strong>BEAST, Antbot, AI:ON-U</strong>가 실제로 커버하는 범위는 어디까지입니까.</p></div>
+          <div class="qitem"><span class="qn">3</span><p data-edit="s11.q3">지식 시맨틱(L4)을 다룰 전담 인력이나 역량이 있습니까. 없다면 제휴 후보가 있습니까.</p></div>
+          <div class="qitem"><span class="qn">4</span><p data-edit="s11.q4">거버넌스(L7)를 어디까지 구현했습니까. <strong>ISO 42001 인증을 추진할 의향과 일정</strong>이 있습니까.</p></div>
+        </div>
+        <div class="qgrp" data-edit="s11.gB">B. 증명과 실적</div>
+        <div class="qlist">
+          <div class="qitem"><span class="qn">5</span><p data-edit="s11.q5">데모 외에 실제로 구축하거나 운영한 AAP 유사 사례가 있습니까. <strong>(파일럿 / 운영)</strong></p></div>
+        </div>
+      </div>
+      <div>
+        <div class="qgrp" data-edit="s11.gC">C. 관계와 시장</div>
+        <div class="qlist">
+          <div class="qitem"><span class="qn">6</span><p data-edit="s11.q6">KT그룹 어느 계열사에 실제 접점이나 검토가 있습니까.</p></div>
+          <div class="qitem"><span class="qn">7</span><p data-edit="s11.q7">kt ds 기존 SI 구축 고객 중 AAP 인접 업무가 있는 곳은 어디입니까. <strong>(산업, 업무)</strong></p></div>
+        </div>
+        <div class="qgrp" data-edit="s11.gD">D. 경제와 실행</div>
+        <div class="qlist">
+          <div class="qitem"><span class="qn">8</span><p data-edit="s11.q8">구축 단가나 인력 단가의 감이 있습니까. <strong>목표 매출이나 투자 규모</strong>가 정해져 있습니까.</p></div>
+          <div class="qitem"><span class="qn">9</span><p data-edit="s11.q9">AAP 전담 인력과 기술 조직의 규모, 파트너 관계는 어떻습니까.</p></div>
+          <div class="qitem"><span class="qn">10</span><p data-edit="s11.q10">이 사업의 <strong>스폰서, 예산, 의사결정 일정</strong>은 어떻게 됩니까.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="banner amber" style="margin-top:14px"><span class="blab" style="color:var(--amber)">다음</span><span data-edit="s11.foot">이 슬라이드는 내일 답을 받아 채웁니다. 편집 켜기로 답을 직접 입력하면 자동 저장되며, Export로 백업합니다.</span></div>
+  </div>
+</section>
+
+</div><!-- /deck -->
+
+<div id="navbar">
+  <button id="prevBtn">‹ 이전</button>
+  <span id="pageInd">1 / 11</span>
+  <button id="nextBtn">다음 ›</button>
+  <span id="dots"></span>
+</div>
+
+<div id="ov"><div class="ov-card" id="ovCard"></div></div>
+<div id="flash"></div>
+
+<script>
+(function(){
+  "use strict";
+  var LS_KEY = "aap_strategy_v1";
+  var TOTAL = 11;
+
+  /* ===== chip sourcing data (slide 3 details) — md 2장 chip 단위 상세 기준 잠정 ===== */
+  var SRC_ORDER = ["own","buy","partner","tbd"];
+  var DEFAULT_CAPS = [
+    { no:"1", ko:"경험 접근", en:"Experience / Access",
+      chips:[["Agent Portal","buy"],["Copilot / Chat UI","buy"],["HITL Console","own"],["Approval Queue","own"],["Audit View","own"]] },
+    { no:"2", ko:"설계 개발", en:"Design / Development",
+      chips:[["Agent Studio","own"],["Process Designer","own"],["Tool Registry","own"],["Agent Registry","own"],["Policy Designer","own"]] },
+    { no:"3", ko:"에이전트 코어", en:"Agent Runtime", hero:true,
+      chips:[["Supervisor","own"],["Task Routing","own"],["Agent Coordination (A2A)","own"],["Model Gateway","partner"],["Tool Calling","own"],["Memory / Context","own"],["HITL Runtime Gate","own"],["Runtime Guardrail","own"]] },
+    { no:"4", ko:"지식 시맨틱", en:"Knowledge / Semantic", weak:true, mark:"확보 과제",
+      chips:[["Domain Ontology","tbd"],["Policy / Rule Model","tbd"],["Knowledge Graph","tbd"],["Context Assembly","tbd"],["Evidence / Citation","tbd"],["RAG","buy"]] },
+    { no:"5", ko:"데이터 연동", en:"Data / Integration",
+      chips:[["DB · API · SaaS Connector","buy"],["OCR","buy"],["Parser","buy"],["Vector Index","buy"],["Writeback","partner"]] },
+    { no:"6", ko:"AI 품질 평가", en:"AI Quality / Evaluation",
+      chips:[["Decision Log","own"],["Execution Trace","own"],["Quality Evaluation","buy"],["RAI / Safety","buy"],["User Feedback","buy"]] },
+    { no:"7", ko:"컨트롤 거버넌스", en:"Control / Governance", mid:true,
+      chips:[["Policy Management","own"],["RBAC / ABAC","buy"],["HITL Approval Criteria","own"],["Approval Matrix","own"],["Self-Improving","own"],["Release Gate","buy"]] },
+    { no:"8", ko:"인프라", en:"Infrastructure",
+      chips:[["Compute / GPU","partner"],["Object · Vector Storage","partner"],["Network · Firewall","partner"],["Secret Manager","partner"],["Private Cloud","partner"],["Closed Network","partner"]] }
+  ];
+
+  /* ===== state ===== */
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  var STATE = load();
+  function load(){
+    var base = { text:{}, caps:clone(DEFAULT_CAPS) };
+    try{
+      var raw = localStorage.getItem(LS_KEY);
+      if(raw){ var d=JSON.parse(raw); if(d && typeof d==="object"){
+        base.text = d.text || {};
+        if(Array.isArray(d.caps) && d.caps.length) base.caps = d.caps;
+      }}
+    }catch(e){}
+    return base;
+  }
+  function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); markSaved(); }catch(e){} }
+
+  /* ===== text restore / edit ===== */
+  function applyText(){
+    var nodes = document.querySelectorAll("[data-edit]");
+    nodes.forEach(function(n){
+      var id=n.getAttribute("data-edit");
+      if(STATE.text[id]!=null) n.innerHTML = STATE.text[id];
+    });
+  }
+  function captureText(n){
+    var id=n.getAttribute("data-edit");
+    STATE.text[id]=n.innerHTML;
+    persist();
+  }
+
+  /* ===== chip render (slide 3 details) ===== */
+  function srcClass(s){ return "src-"+(s||"tbd"); }
+  function rowCls(L){ return "cap-row" + (L.hero?" hero":(L.weak?" weak":(L.mid?" mid":""))); }
+  function renderChips(){
+    var host=document.getElementById("capStack");
+    if(!host) return;
+    host.innerHTML = STATE.caps.map(function(L,li){
+      var chips = (L.chips||[]).map(function(c,ci){
+        return '<span class="chip '+srcClass(c[1])+' chip-clickable" data-li="'+li+'" data-ci="'+ci+'">'+esc(c[0])+'</span>';
+      }).join('');
+      var mark = L.mark ? '<span class="mark">'+esc(L.mark)+'</span>' : '';
+      return '<div class="'+rowCls(L)+'">'
+        + '<div class="cap-ln"><span class="n">'+esc(L.no)+'</span><span class="lt">'+esc(L.ko)+'<small>'+esc(L.en)+'</small>'+mark+'</span></div>'
+        + '<div class="chiprow">'+chips+'</div></div>';
+    }).join('');
+  }
+  function cycleChip(li,ci){
+    var c = STATE.caps[li].chips[ci];
+    var i = SRC_ORDER.indexOf(c[1]); if(i<0) i=SRC_ORDER.length-1;
+    c[1] = SRC_ORDER[(i+1)%SRC_ORDER.length];
+    persist(); renderChips();
+  }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  /* ===== navigation ===== */
+  var cur=1;
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  function show(n){
+    cur = Math.max(1, Math.min(TOTAL, n));
+    slides.forEach(function(s){ s.classList.toggle("active", +s.getAttribute("data-slide")===cur); });
+    document.getElementById("pageInd").textContent = cur+" / "+TOTAL;
+    document.getElementById("prevBtn").disabled = (cur===1);
+    document.getElementById("nextBtn").disabled = (cur===TOTAL);
+    Array.prototype.slice.call(document.querySelectorAll("#dots i")).forEach(function(d,i){ d.classList.toggle("on", i+1===cur); });
+    var inner = slides[cur-1].querySelector(".slide-inner"); if(inner) inner.scrollTop=0;
+  }
+  function buildDots(){
+    var box=document.getElementById("dots"); var h="";
+    for(var i=1;i<=TOTAL;i++) h+='<i data-go="'+i+'"></i>';
+    box.innerHTML=h;
+  }
+
+  /* ===== editing ===== */
+  var editing=false;
+  function setEdit(on){
+    editing=on;
+    document.body.classList.toggle("editing", on);
+    var b=document.getElementById("btnEdit");
+    b.textContent = on?"편집 끄기":"편집 켜기"; b.classList.toggle("on",on);
+    document.querySelectorAll("[data-edit]").forEach(function(n){ n.setAttribute("contenteditable", on?"true":"false"); });
+    var ss=document.getElementById("saveState");
+    ss.textContent = on?"편집 켜짐 · 자동 저장":"편집 꺼짐";
+    ss.classList.remove("saved");
+  }
+  function markSaved(){
+    var ss=document.getElementById("saveState");
+    ss.textContent="저장됨 "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    ss.classList.add("saved");
+  }
+
+  /* ===== overlay (export/import) ===== */
+  function openOverlay(html){
+    var c=document.getElementById("ovCard"); c.innerHTML=html;
+    document.getElementById("ov").classList.add("show");
+  }
+  function closeOverlay(){ document.getElementById("ov").classList.remove("show"); }
+  function flash(msg){
+    var f=document.getElementById("flash"); f.textContent=msg; f.classList.add("show");
+    clearTimeout(flash._t); flash._t=setTimeout(function(){ f.classList.remove("show"); },1600);
+  }
+  function doExport(){
+    var json=JSON.stringify(STATE,null,2);
+    openOverlay('<h4>Export JSON</h4><p>현재 편집 내용과 칩 소싱 상태입니다. 복사해 백업하세요.</p>'
+      +'<textarea id="ovTa" readonly>'+esc(json)+'</textarea>'
+      +'<div class="ov-actions"><button id="ovClose">닫기</button><button class="primary" id="ovCopy">복사</button></div>');
+    document.getElementById("ovTa").select();
+    document.getElementById("ovClose").onclick=closeOverlay;
+    document.getElementById("ovCopy").onclick=function(){
+      var ta=document.getElementById("ovTa"); ta.select();
+      try{ document.execCommand("copy"); flash("복사됨"); }catch(e){ flash("복사 실패 — 직접 선택하세요"); }
+    };
+  }
+  function doImport(){
+    openOverlay('<h4>Import JSON</h4><p>Export한 JSON을 붙여넣고 적용하세요. 검증 후 반영되며, 오류 시 현재 내용은 유지됩니다.</p>'
+      +'<textarea id="ovTa" placeholder=\'{ "text": { ... }, "caps": [ ... ] }\'></textarea>'
+      +'<div class="ov-actions"><button id="ovClose">취소</button><button class="primary" id="ovApply">적용</button></div>');
+    document.getElementById("ovClose").onclick=closeOverlay;
+    document.getElementById("ovApply").onclick=function(){
+      var v=document.getElementById("ovTa").value.trim();
+      try{
+        var d=JSON.parse(v);
+        if(!d || typeof d!=="object") throw 0;
+        STATE.text = (d.text && typeof d.text==="object") ? d.text : {};
+        STATE.caps = (Array.isArray(d.caps) && d.caps.length) ? d.caps : clone(DEFAULT_CAPS);
+        persist(); applyText(); renderChips(); closeOverlay(); flash("Import 적용됨");
+      }catch(e){ flash("JSON 형식 오류 — 적용 안 됨"); }
+    };
+  }
+  function doReset(){
+    if(!confirm("기본값으로 되돌릴까요? 편집한 텍스트와 칩 소싱이 모두 삭제됩니다.")) return;
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    STATE={ text:{}, caps:clone(DEFAULT_CAPS) };
+    location.reload();
+  }
+
+  /* ===== wire ===== */
+  function init(){
+    buildDots();
+    applyText();
+    renderChips();
+    show(1);
+
+    document.getElementById("prevBtn").onclick=function(){ show(cur-1); };
+    document.getElementById("nextBtn").onclick=function(){ show(cur+1); };
+    document.getElementById("btnEdit").onclick=function(){ setEdit(!editing); };
+    document.getElementById("btnExport").onclick=doExport;
+    document.getElementById("btnImport").onclick=doImport;
+    document.getElementById("btnReset").onclick=doReset;
+    document.getElementById("ov").addEventListener("click",function(e){ if(e.target.id==="ov") closeOverlay(); });
+
+    document.getElementById("dots").addEventListener("click",function(e){
+      var g=e.target.getAttribute("data-go"); if(g) show(+g);
+    });
+
+    // chip cycle (slide 3 details) — works always (click is the intended interaction)
+    document.getElementById("capStack").addEventListener("click",function(e){
+      var t=e.target.closest(".chip-clickable"); if(!t) return;
+      cycleChip(+t.getAttribute("data-li"), +t.getAttribute("data-ci"));
+    });
+
+    document.querySelectorAll("[data-edit]").forEach(function(n){
+      n.addEventListener("blur",function(){ if(editing) captureText(n); });
+    });
+
+    document.addEventListener("keydown",function(e){
+      if(e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+      if(document.getElementById("ov").classList.contains("show")){ if(e.key==="Escape") closeOverlay(); return; }
+      if(e.key==="ArrowLeft"){ show(cur-1); }
+      else if(e.key==="ArrowRight"||e.key===" "){ show(cur+1); e.preventDefault(); }
+      else if(e.key==="Home"){ show(1); }
+      else if(e.key==="End"){ show(TOTAL); }
+    });
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+
+  window.AAP_STRATEGY = { state:STATE, KEY:LS_KEY, DEFAULT:DEFAULT_CAPS };
+})();
+</script>
+</body>
+</html>
