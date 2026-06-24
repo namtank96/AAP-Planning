@@ -160,10 +160,32 @@
   /* =======================================================================
      산출물(DLV) — 스크리닝 리포트(통과/보류/탈락 사유)·후보 비교표·면접 일정·오퍼(조건)
      ======================================================================= */
-  /* 스크리닝 판정(결정론): 통과(≥85·리스크 없음)/보류(80~84 또는 리스크)/탈락(<80) */
+  /* ── 스크리닝 결정 룰(SCREEN_ROUTE) — 수렴 ②: 결정 메커니즘 1개(코어 evaluate)로 통합.
+     점수(match)·리스크(has_risk)는 도메인 연산, 통과/보류/탈락 분기는 이 선언형 DSL 이 소유.
+     outcome 3분기(도메인 무관) → 채용 의미 매핑: AUTO_APPROVE=통과 · LEGAL_REVIEW=보류 · REJECT=탈락.
+     위→아래 첫 매칭(evaluate). 기존 screenVerdict 부등식과 동치(경계값 90/84/82/80/75/65 검증). ── */
+  const SCREEN_ROUTE={ rules:[
+    {id:'rc_pass',      outcome:'AUTO_APPROVE', label:'통과', basis:'must·plus 충족 · 리스크 없음',
+      when:{ all:[ {'>=':['$match',85]}, {'==':['$has_risk',false]} ] }},
+    {id:'rc_hold_risk', outcome:'LEGAL_REVIEW', label:'보류', basis:'요건 충족하나 검토 신호 있음',
+      when:{ all:[ {'>=':['$match',80]}, {'==':['$has_risk',true]} ] }},
+    {id:'rc_hold',      outcome:'LEGAL_REVIEW', label:'보류', basis:'우대 요건 일부 미충족',
+      when:{ '>=':['$match',80] }},
+    {id:'rc_drop_req',  outcome:'REJECT',       label:'탈락', basis:'필수/경력 요건 미달',
+      when:{ '<':['$match',70] }},
+  ], default:{ id:'rc_drop_cut', outcome:'REJECT', label:'탈락', basis:'요건 충족도 컷 미달' } };
+  const SV_MAP={ AUTO_APPROVE:{k:'pass',ko:'통과',t:'ok'}, LEGAL_REVIEW:{k:'hold',ko:'보류',t:'warn'}, REJECT:{k:'drop',ko:'탈락',t:'risk'} };
+  /* 스크리닝 판정 — 결정은 코어 evaluate(case,knowledge)가 소유. 점수·리스크만 도메인이 산출. */
   function screenVerdict(c){
+    const ev=window.AAP_EVALUATE;
+    if(ev&&ev.evaluate){
+      const v=ev.evaluate({match:c.match, has_risk:hasRisk(c)}, {route:SCREEN_ROUTE});
+      const m=SV_MAP[v.outcome]||SV_MAP.REJECT;
+      return {k:m.k, ko:m.ko, t:m.t, why:v.basis};
+    }
+    /* 폴백(evaluate 미적재) — 동일 로직 */
     if(c.match>=85 && !hasRisk(c)) return {k:'pass',ko:'통과',t:'ok',why:'must·plus 충족 · 리스크 없음'};
-    if(c.match>=80 || (c.match>=82 && hasRisk(c))) return {k:'hold',ko:'보류',t:'warn',why:hasRisk(c)?'요건 충족하나 검토 신호 있음':'우대 요건 일부 미충족'};
+    if(c.match>=80) return {k:'hold',ko:'보류',t:'warn',why:hasRisk(c)?'요건 충족하나 검토 신호 있음':'우대 요건 일부 미충족'};
     return {k:'drop',ko:'탈락',t:'risk',why:c.match<70?'필수/경력 요건 미달':'요건 충족도 컷 미달'};
   }
   const PRODUCTS={
@@ -214,19 +236,48 @@
   const FLOW=[
    {id:'intake',label:'요건 접수',role:'채용 요청',actor:'human',kind:'input',loopPhase:'Data',
     explain:`요건 접수는 추론 루프의 시작입니다. <b>L1 경험·접근</b>(채용 요청 폼)이 현업의 채용 요청을 접수하고, <b>L4 지식·시맨틱</b>이 직무·인원·필수역량 신호를 추출합니다.`,
-    ops:[{g:0,feed:'채용 요청 수신',out:'"백엔드 개발자 2명, 4~8년차로 충원해줘"',L:'L1',comp:'채용 요청 폼·챗 UI'},
+    ops:[{g:0,feed:'채용 요청 수신',out:'"백엔드 개발자 2명, 4~8년차로 충원해줘"',L:'L1',comp:'채용 요청 폼·챗 UI',
+      reads:['현업(플랫폼개발팀)의 한 줄 요청'],
+      ev:{ data:['"백엔드 개발자 2명, 4~8년차로 충원해줘"'], logic:['채용 업무 요청으로 판단 → 추론 루프 시작'] },
+      prod:{ sys:['채용 Work Event 생성'] }},
      {g:1,feed:'핵심 신호 추출',out:'직무·인원·연차·필수 스택',L:'L4',comp:'온톨로지·시맨틱',
+      reads:['요청 문장','직무 온톨로지(스킬·직군 사전)'],
+      ev:{ data:['추출 — 직무: 백엔드 개발자 / 인원: 2명 / 연차: 4~8년 / 필수: Java·Kotlin·Spring·MSA'],
+        lookup:['요청 어휘를 직무 온톨로지에 대조'],
+        logic:['명시된 신호와 표준 직무 속성을 매핑해 구조화'] },
+      prod:{ doc:['구조화된 요건 신호'] },
       detail:odTable('추출된 신호',[['직무','백엔드 개발자'],['인원','2명'],['연차','경력 4~8년'],['필수 스택','Java/Kotlin·Spring·MSA']])},
      {g:2,feed:'정해진 것/빈 것 구분',out:'우대요건·스크리닝 기준 미정',L:'L4',comp:'컨텍스트 조합·근거',
+      reads:['추출된 요건 신호','채용 프로세스 표준(필요 항목)'],
+      ev:{ data:['정해짐 — 직무·인원·연차·필수 스택 / 미정 — 우대요건·스크리닝 컷·면접 패널·보상밴드'],
+        rule:['스크리닝 시작 전 컷·평가기준·승인선이 정해져야 함'],
+        logic:['표준 대비 빠진 항목을 식별 → 이후 단계·HITL에서 채움'] },
+      prod:{ doc:['미정 항목 체크리스트'] },
       detail:odTable('미정 항목',[['우대요건','초안 필요','a'],['스크리닝 컷','미정','a'],['면접 패널','미정','a'],['보상밴드','승인 필요','a']])}]},
 
    {id:'analyze',label:'요건 분석',role:'AAP 분석',actor:'aap',kind:'auto',loopPhase:'Semantic',
     explain:`요건 분석은 추론 루프 <b>Semantic</b> 단계입니다. <b>L4</b>가 요청을 표준 직무 모델로 해석해 JD 초안을 만들고 매칭 가중(스킬·경력·도메인)을 정의하며, <b>L7</b>이 채용 시 적용할 차별금지·개인정보 정책을 답니다.`,
     ops:[{g:0,feed:'직무 유형 매핑',out:'백엔드(서버) · 시니어',L:'L4',comp:'온톨로지·시맨틱',
+      reads:['구조화된 요건 신호','표준 직무 모델(직군 온톨로지)'],
+      ev:{ data:['매핑 신뢰도 — 백엔드 개발(서버) 0.93 · 플랫폼 엔지니어 0.05 · 풀스택 0.02'],
+        lookup:['필수 스택(Java·Kotlin·MSA)을 직군별 대표 역량과 대조'],
+        rule:['최고 신뢰도 직군으로 1차 매핑, 0.1 미만 후보는 배제'],
+        logic:['요청 역량 분포가 백엔드(서버) 대표 역량과 0.93 일치 → 시니어(연차 4~8) 확정'] },
+      prod:{ doc:['직무 매핑 결과'] },
       detail:odTable('직무 매핑 (신뢰도)',[['백엔드 개발(서버)','0.93','g'],['플랫폼 엔지니어','0.05'],['풀스택','0.02']])},
      {g:1,feed:'JD·요건·가중 정의',out:`필수 4 · 우대 3 · 가중 50/30/20`,L:'L4',comp:'컨텍스트 조합·근거',
+      reads:['직무 매핑 결과','직군 표준 JD 템플릿','과거 채용 가중 이력'],
+      ev:{ data:['필수 4(Java/Kotlin·Spring·MSA·RDB) · 우대 3(Kafka·AWS·대용량) · 가중 스킬50/경력30/도메인20'],
+        rule:['백엔드 직군 기본 가중 = 스킬 우선(50)','대용량 도메인 가산'],
+        logic:['표준 JD에 매핑 직군·연차를 반영해 필수/우대 분류 → 매칭 가중·루브릭 5항 정의'] },
+      prod:{ doc:['JD 초안','매칭 가중·루브릭'] },
       detail:odTable('매칭 가중 정의',[['스킬 적합','50','g'],['경력 적합','30'],['도메인 적합','20'],['평가 항목','5개 (루브릭)']])},
      {g:2,feed:'채용 정책 확인',out:'차별금지·PII → 보호속성 평가 제외',L:'L7',comp:'정책 관리·통제',
+      reads:['채용 차별금지 규정 v2','개인정보(PII) 보호 정책'],
+      ev:{ lookup:['적용 대상 정책 조회 — 채용 차별금지 v2'],
+        rule:['성·연령·출신 등 보호속성은 스코어링 평가에서 제외','이력서 PII는 마스킹 후 처리'],
+        logic:['스코어링 입력에서 보호속성 필드를 차단하도록 매칭 단계에 가드 부착'] },
+      prod:{ sys:['평가 가드레일 설정(보호속성 차단)'] },
       detail:odTable('정책 점검',[['보호속성(성·연령·출신)','평가 제외','a'],['개인정보','마스킹 처리','a'],['적용 정책','채용 차별금지 v2']])}]},
 
    {id:'design',label:'스크리닝 설계',role:'AAP 구성',actor:'aap',kind:'auto',loopPhase:'Reasoning',showCompose:1,
@@ -263,10 +314,25 @@
     gate:{label:'면접 일정·패널 확인',decisions:[{key:'yes',label:'일정 확정·안내 발송',toast:'면접 일정 확정 · 후보 안내를 발송합니다'},{key:'no',label:'일정 조정 요청',toast:'일정 조정을 요청합니다'}]},
     explain:`숏리스트 후보의 면접을 잡습니다. <b>L5</b>가 후보·면접관 캘린더를 교차해 충돌 없는 슬롯을 산출하고, <b>L3 코어</b>가 초대를 구성합니다. 외부(후보)로 안내가 나가므로 <b>담당자가 일정·패널을 확인</b>합니다. (★ HITL ②)`,
     ops:[{g:0,feed:'면접관·후보 가용 조회',out:'양측 캘린더 교차',L:'L5',comp:'연결·수집',micro:['캘린더 Connector'],
+      reads:['숏리스트 후보 3인 캘린더','면접관(오세훈·이서영·CTO) 캘린더','면접 패널 구성 규칙'],
+      ev:{ data:['후보 가용 — 정유진·박서준·이하늘 3인 응답','면접관 가용 — 오세훈(화 14–17시)·이서영(화 종일)·CTO(수 오전)'],
+        lookup:['후보×면접관 캘린더 교차 조회 (Calendar API)','회의실(A동 301·B동) 가용 대조'],
+        rule:['1차 기술면접 = 면접관 2인(현업 리드 오세훈 + 1인)','임원(CTO) 배석은 시니어 후보 한정'],
+        logic:['양측 빈 시간 교집합 → 충돌 0 시간대 3개 추출'] },
+      prod:{ doc:['후보별 가용 매트릭스'] },
       detail:odTable('가용 교차',[['후보 가용','3명 응답','g'],['면접관','오세훈·이서영·CTO','g'],['충돌','0','g']])},
      {g:1,feed:'면접 슬롯·패널 구성',out:`${INTERVIEW.length}슬롯 · 충돌 0`,L:'L3',comp:'코어·실행 엔진',micro:['슬롯 매칭'],
+      reads:['교차 가용 시간대','후보 매칭 순위','면접관 패널 가용'],
+      ev:{ data:['확정 슬롯 — 정유진 6/24 14:00 · 박서준 6/24 16:00 · 이하늘 6/25 10:00'],
+        rule:['상위 매칭 후보 우선 배정','동일 면접관 연속 2슬롯 이하'],
+        logic:['충돌 0 시간대에 후보 3인 배정 → 면접관·회의실 매칭 → 초대 초안 작성(발송 보류)'] },
+      prod:{ doc:['면접 일정표 3건','후보 초대 메일 초안'], sys:['ATS 면접 단계 예약'] },
       detail:odTable('면접 슬롯',[['정유진','6/24 14:00','g'],['박서준','6/24 16:00','g'],['이하늘','6/25 10:00','g']])},
-     {g:2,feed:'안내 게이트 보류',out:'일정·패널 확인 담당자 전달',L:'L3',comp:'HITL 런타임 게이트'}]},
+     {g:2,feed:'안내 게이트 보류',out:'일정·패널 확인 담당자 전달',L:'L3',comp:'HITL 런타임 게이트',
+      reads:['생성된 일정·패널·초대안'],
+      ev:{ rule:['외부(후보)로 나가는 안내 발송 = 담당자 확인 필수 (HITL 게이트)'],
+        logic:['일정·패널 확정안을 담당자에게 전달 → 승인 시에만 초대 발송'] },
+      prod:{ sys:['HITL 결정 대기 등록'] }}]},
 
    {id:'evaluate',label:'면접 평가 취합',role:'AAP 실행',actor:'aap',kind:'auto',loopPhase:'Action',
     explain:`면접이 끝나면 AAP가 면접관 스코어카드를 <b>병렬</b>로 모아 정합성을 점검하고, <b>L3 코어</b>가 합격 후보와 오퍼 패키지 초안을 정리합니다. <b>L7</b>이 보상밴드·차별금지를 사전 점검해 다음 게이트에 올립니다. (추론 루프 <b>Action</b>)`,
@@ -492,13 +558,17 @@
   /* 어떤 조작형 surface 인가(현재 단계 기준). 없으면 null → 코어가 스트림 폴백. */
   function opKind(C){
     const id=C.W(C.S.sel).id;
-    if(id==='design'||id==='shortlist_gate'||id==='screen')return 'matching';
+    if(id==='design')return 'compose';   /* 스크리닝 설계 = 업무 분해 → 구성요소 조합 도식 */
+    if(id==='shortlist_gate'||id==='screen')return 'matching';
     if(id==='interview_gate')return 'interview';
     if(id==='evaluate'||id==='offer_gate')return 'evaloffer';
+    if(id==='analyze')return 'analyze';   /* 요건 분석 = info 카드 + 온톨로지 그래프(의미 이해 증명) */
+    /* 정보성 단계(접수·기록) = 같은 op-console 프레임에서 그 단계 작업을 표시 → stream 폴백 제거(수렴 ④). */
+    if(id==='intake'||id==='record')return 'info';
     return null;
   }
-  /* strip 핵심 단계(코어 strip 이 렌더) */
-  function opStages(){ return ['analyze','shortlist_gate','screen','interview_gate','evaluate','offer_gate','record']; }
+  /* strip 단계(코어 strip 이 렌더) — 전체 9단계 진행을 일관 표시(부분 노드 ✕, 화면 점프 방지) */
+  function opStages(){ return FLOW.map(w=>w.id); }
 
   /* ── 조작형 랭킹 surface (matching) — 후보 행(FLIP) + 근거 분해 막대 + 컷라인 ── */
   function matchRows(C){
@@ -561,15 +631,55 @@
     const sids=shortlistIds(C);
     return `<div class="op-sh">매칭 그래프 <span>요건 ← 후보 · 굵기=매칭</span></div>
       <div class="op-graph">${opMatchGraph(C)}</div>
-      <div class="op-sh">AAP가 한 일 · 근거 <span>보조</span></div>
-      <div class="op-flow">
-        ${opFstep('check','이력서 수집·파싱',`${applicantsOf(C)}건 · ATS·채용사이트`)}
-        ${opFstep('check','편향·PII 점검','차별금지 P-03 · 통과')}
-        ${opFstep('check','매칭·랭킹 (현재 기준)',`가중 ${w.skill}/${w.career}/${w.domain} · ${pool.length}명 재산출`)}
-        ${opFstep('arrow-right','의도 반영',`${WPRESET[wPresetOf(C)].lab} · 통과 ${sids.length}명`,'v')}
-      </div>`;
+      ${recrDidFlow(C)}`;
   }
   function opFstep(ic,t,d,cls){ return `<div class="op-fstep ${cls||''}"><span class="op-fd">${I(ic)}</span><div class="op-ftx"><b>${t}</b><div class="op-fmono">${d}</div></div></div>`; }
+
+  /* ── 근거(basis) 4유형 — v0_57 정합. AAP가 '무슨 데이터로·무슨 규칙으로·어떻게' 판단했는지 공개(더미 ✕). ── */
+  const EV_T=[['data','참조 데이터','tyS'],['lookup','조회·대조','tyC'],['rule','규칙·정책','tyP'],['logic','판단 로직','tyA']];
+  function opHasEv(op){ return !!(op&&(op.reads||op.ev||op.prod)); }
+  /* AAP가 한 일 · 근거 = 그 단계 ops 를 데이터로 구동(손코딩 요약 ✕). 각 op = feed→out + [근거 보기]. */
+  function recrDidFlow(C){
+    const w=C.W(C.S.sel), ops=(w.ops||[]);
+    const rows=ops.map((o,i)=>{
+      const last=i===ops.length-1;
+      const ev=opHasEv(o)?`<button class="op-evbtn" data-evid="${w.id}:${i}">${I('search')}근거 보기</button>`:'';
+      return `<div class="op-fstep${last?' v':''}"><span class="op-fd">${I(last?'arrow-right':'check')}</span>
+        <div class="op-ftx"><b>${o.feed||o.comp||''}</b><div class="op-fmono">${o.out||''}</div>${ev}</div></div>`;
+    }).join('');
+    return `<div class="op-sh">AAP가 한 일 · 근거 <span>${w.role||''}</span></div><div class="op-flow">${rows}</div>`;
+  }
+  /* 근거 드릴 모달 — 읽은 데이터(reads) + 판단 근거(ev 4유형 색구분) + 산출물(prod). S.recrEvid="stageId:idx". */
+  function evidDrill(C){
+    const parts=String(C.S.recrEvid||'').split(':'), w=C.W(parts[0]); if(!w)return '';
+    const op=(w.ops||[])[+parts[1]]; if(!op)return '';
+    const reads=(op.reads||[]).map(r=>`<span class="ev-chip">${r}</span>`).join('');
+    const evRows=EV_T.filter(t=>op.ev&&op.ev[t[0]]&&op.ev[t[0]].length).map(t=>
+      `<div class="ev-row"><span class="ev-k ${t[2]}">${t[1]}</span><div class="ev-v">${op.ev[t[0]].map(x=>`<div>${x}</div>`).join('')}</div></div>`).join('');
+    let prod=''; if(op.prod){ Object.keys(op.prod).forEach(k=>{ (op.prod[k]||[]).forEach(x=>{ prod+=`<span class="ev-chip out">${x}</span>`; }); }); }
+    return `<button class="cmodal-x" data-evback aria-label="닫기">${I('x')}</button>
+      <div class="cmodal-h">근거 · ${op.nm||op.feed||op.comp}</div>
+      <div class="cmodal-sub">${op.comp||''}${op.L?' · '+op.L:''} — AAP가 무슨 데이터로·무슨 규칙으로·어떻게 판단했는지</div>
+      ${reads?`<div class="ev-sec"><div class="ev-sec-k">${I('database')}읽은 데이터</div><div class="ev-chips">${reads}</div></div>`:''}
+      <div class="ev-sec"><div class="ev-sec-k">${I('git-branch')}판단 근거</div>${evRows||'<div class="ev-na">근거 데이터 준비 중</div>'}</div>
+      ${prod?`<div class="ev-sec"><div class="ev-sec-k">${I('file-text')}산출물</div><div class="ev-chips">${prod}</div></div>`:''}`;
+  }
+
+  /* ── 정보성 단계(접수·요건분석·기록) op-console 메인 — 그 단계 작업(ops)을 구성요소·feed→out·detail 로.
+     같은 op-console 프레임(상단 strip + 메인 + 보조)을 써서 stream 폴백 제거(화면 점프 방지·수렴 ④). ── */
+  function opInfoMain(C){
+    const w=C.W(C.S.sel), ops=w.ops||[];
+    let intro='';
+    if(w.id==='intake')intro=`<div class="op-genframe">${I('git-branch')}<div>이 <b>9단계 워크플로우</b>는 AAP가 <b>“백엔드 개발자 2명, 4~8년차로 충원해줘”</b> 한 줄에서 업무를 <b>분해·구성</b>한 결과입니다. 위 ↺처음·이전·다음으로 한 단계씩 따라가 보세요.</div></div>`;
+    else if(w.id==='record')intro=`<div class="op-genframe">${I('repeat')}<div>이번 채용의 흐름·판단을 <b>학습 자산</b>으로 축적해 다음 포지션의 매칭·구성 정확도를 높입니다 — 끝내고 잊지 않습니다.</div></div>`;
+    const cards=ops.map((o,i)=>`<div class="op-iorow">
+      <div class="op-ior-h"><span class="op-ior-comp">${o.comp||''}</span>${o.L?`<span class="op-ior-l">${o.L}</span>`:''}${o.badge?`<span class="op-ior-bd">${o.badge}</span>`:''}${opHasEv(o)?`<button class="op-evbtn sm" data-evid="${w.id}:${i}">${I('search')}근거</button>`:''}</div>
+      <div class="op-ior-fo"><span class="op-ior-feed">${o.feed||''}</span>${I('arrow-right')}<b class="op-ior-out">${o.out||''}</b></div>
+      ${o.detail||''}</div>`).join('');
+    return `<div class="op-wh"><span class="op-t">${w.label}</span><span class="op-c">${w.role} · AAP가 처리한 작업</span></div>
+      ${intro}<div class="op-iolist">${cards}</div>`;
+  }
+  function opInfoAside(C){ return recrDidFlow(C); }
 
   /* ── 조작형 면접 조율 surface (interview) — 슬롯 카드 + 슬롯/패널/분기 steering ── */
   function ivSlotPref(C){ return (C&&C.S&&C.S.recrSlotPref)||'무관'; }
@@ -604,8 +714,7 @@
         <div class="op-brow"><span class="bk">면접관</span><span class="bv">오세훈·이서영${pn==='임원 포함'?' · CTO':''}</span></div>
         <div class="op-brow"><span class="bk">충돌</span><span class="bv g">0</span></div>
         <div class="op-brow"><span class="bk">선호 반영</span><span class="bv">${pref}</span></div></div>
-      <div class="op-sh">AAP가 한 일 <span>보조</span></div>
-      <div class="op-flow">${opFstep('check','후보·면접관 가용 조회','3명 · 오세훈·이서영')}${opFstep('check','교집합 → 충돌 0 슬롯','3건')}${opFstep('arrow-right','의도 반영',`${pref} · ${pn}`,'v')}</div>`;
+      ${recrDidFlow(C)}`;
   }
 
   /* ── 조작형 평가·오퍼 surface (evaloffer) — 스코어카드 + 오퍼 + 평가가중/오퍼수준 steering ── */
@@ -647,8 +756,7 @@
         <div class="op-brow"><span class="bk">현재 가중</span><span class="bv">${EVALW_LAB[wk]}</span></div>
         <div class="op-brow"><span class="bk">보상밴드</span><span class="bv g">${OFFER.band}</span></div>
         <div class="op-brow"><span class="bk">차별금지</span><span class="bv g">통과</span></div></div>
-      <div class="op-sh">AAP가 한 일 <span>보조</span></div>
-      <div class="op-flow">${opFstep('check','면접 평가 취합','스코어카드 3건')}${opFstep('check','보상밴드·차별금지 점검','통과')}${opFstep('arrow-right','의도 반영',`가중 ${EVALW_LAB[wk]}`,'v')}</div>`;
+      ${recrDidFlow(C)}`;
   }
 
   /* opstage = 코어 조작형 콘솔이 호출. {steer, main, aside}. null 이면 코어가 스트림 폴백. */
@@ -657,7 +765,57 @@
     if(k==='matching')return {steer:opMatchSteer(C), main:opMatchMain(C), aside:opMatchAside(C)};
     if(k==='interview')return {steer:opIvSteer(C), main:opIvMain(C), aside:opIvAside(C)};
     if(k==='evaloffer')return {steer:opEvalSteer(C), main:opEvalMain(C), aside:opEvalAside(C)};
+    if(k==='analyze')return {steer:'', main:opInfoMain(C), aside:opOntologyAside(C)};
+    if(k==='compose')return {steer:'', main:opComposeMain(C), aside:opComposeAside(C)};
+    if(k==='info')return {steer:'', main:opInfoMain(C), aside:opInfoAside(C)};
     return null;
+  }
+  /* ── 구성요소 조합 도식(스크리닝 설계) — 업무 분해(T1~T5) + 5타입 조합. 회의 데모 composeNode 차용.
+     "Agent 많이 띄우기 ✕ → 분해 + 구성요소 골라 조합" 핵심 명제 시각화. ── */
+  const TY_CLASS={'Agent':'tyA','Module':'tyM','기존 솔루션':'tyS','Connector':'tyC','Policy':'tyP'};
+  function opComposeMain(C){
+    const tasks=[
+      {tid:'T1',nm:'이력서 파싱',cs:['tyA','tyM']},
+      {tid:'T2',nm:'요건 매칭 (RAG)',cs:['tyA','tyP']},
+      {tid:'T3',nm:'랭킹·스코어',cs:['tyA','tyM']},
+      {tid:'T4',nm:'면접 일정 조율',cs:['tyA','tyC']},
+      {tid:'T5',nm:'평가 취합·반영',cs:['tyA','tyS']},
+    ];
+    const taskCards=tasks.map(t=>`<div class="op-task"><span class="op-task-id">${t.tid}</span><span class="op-task-nm">${t.nm}</span><span class="op-task-dots">${t.cs.map(c=>`<i class="op-tdot ${c}"></i>`).join('')}</span></div>`).join('');
+    const grps=COMPOSE.map(g=>{ const cl=TY_CLASS[g.t]||'tyA';
+      return `<div class="op-cmp-grp ${cl}"><div class="op-cmp-h"><span class="op-cmp-ty ${cl}">${g.t}</span><span class="op-cmp-sub">${g.sub}</span><span class="op-cmp-n">${g.n}</span></div>
+        <div class="op-cmp-items">${g.items.map(it=>`<span class="op-cmp-chip">${it}</span>`).join('')}</div></div>`; }).join('');
+    return `<div class="op-wh"><span class="op-t">스크리닝 설계</span><span class="op-c">업무 분해 → 구성요소 조합</span></div>
+      <div class="op-compose-msg">${I('info')}AAP는 Agent를 많이 띄우는 게 아니라, 업무를 <b>분해</b>하고 적합한 <b>구성요소를 골라 조합</b>해 운영 가능한 실행 구조를 만듭니다.</div>
+      <div class="op-sub-h">① 업무 분해 <span>작업 그래프</span></div>
+      <div class="op-tasks">${taskCards}</div>
+      <div class="op-sub-h">② 구성요소 조합 <span>Agent·Module·기존솔루션·Connector·Policy</span></div>
+      <div class="op-cmp-grid">${grps}</div>`;
+  }
+  function opComposeAside(C){
+    return `${recrDidFlow(C)}
+      <div class="op-cmp-note">${I('info')}같은 플랫폼이라도 <b>요청이 다르면</b> 작업·구성요소·게이트가 다르게 재구성됩니다.</div>`;
+  }
+  /* ── 온톨로지 그래프(요건 분석) — 요청 → 표준 직무 모델 매핑(신뢰도=엣지 굵기). 인라인 SVG(외부 0).
+     "키워드 매칭이 아니라 의미(온톨로지)로 이해" 증명 — opMatchGraph 패턴 차용. ── */
+  function opOntologyGraph(C){
+    const maps=[{k:'백엔드 개발 (서버)',v:0.93,top:1},{k:'플랫폼 엔지니어',v:0.05},{k:'풀스택',v:0.02}];
+    const cx=48, cy=82; let edges='', nodes='';
+    maps.forEach((m,i)=>{
+      const y=30+i*52, x=150, sw=(1.2+m.v*5).toFixed(2), opv=(0.22+m.v*0.7).toFixed(2);
+      edges+=`<line x1="${cx+26}" y1="${cy}" x2="${x}" y2="${y}" stroke="${m.top?'#0d9488':'#cbd5e1'}" stroke-width="${sw}" stroke-opacity="${opv}"/>`;
+      nodes+=`<g><rect x="${x}" y="${y-13}" width="186" height="26" rx="7" fill="${m.top?'#0d9488':'#fff'}" stroke="${m.top?'#0d9488':'#cbd5e1'}" stroke-width="1.3"/>`+
+        `<text x="${x+11}" y="${y+4}" font-size="11" font-weight="${m.top?800:600}" fill="${m.top?'#fff':'#475569'}">${m.k}</text>`+
+        `<text x="${x+175}" y="${y+4}" text-anchor="end" font-size="10" font-weight="800" fill="${m.top?'#ccfbf1':'#94a3b8'}">${m.v.toFixed(2)}</text></g>`;
+    });
+    return `<svg class="op-greact" viewBox="0 0 350 168" preserveAspectRatio="xMidYMid meet">${edges}`+
+      `<circle cx="${cx}" cy="${cy}" r="27" fill="#0f766e"/><text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff">요청</text><text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="7.5" fill="#99f6e4">백엔드 2명</text>`+
+      `${nodes}</svg>`;
+  }
+  function opOntologyAside(C){
+    return `<div class="op-sh">의미 이해 · 온톨로지 <span>요청 → 표준 직무 모델 (신뢰도)</span></div>
+      <div class="op-graph">${opOntologyGraph(C)}</div>
+      ${recrDidFlow(C)}`;
   }
 
   /* 파이프라인 보드(ATS) */
@@ -850,6 +1008,7 @@
   /* kind: hitl | done | preview(코어 처리) | cand(후보 상세, 팩 커스텀). */
   function cmodal(kind,C){
     const S=C.S,sel=S.sel,ex=C.ex;
+    if(kind==='evid'){ return evidDrill(C); }
     if(kind==='cand'){ const c=cById(S.recrOpen); return c?candDetail(c,C):''; }
     if(kind==='hitl'){
       if(sel==='shortlist_gate'){
@@ -911,10 +1070,12 @@
      - wire: surface 내 후보 카드 클릭·정렬/필터·후보 결정 버튼 배선
      - decideHook: HITL decide 결과를 채용 보드 상태로 번역(컷·진행) */
   const SURF_HOOKS={
-    /* 후보 상세 모달 우선 (HITL/done 보다 위) */
-    currentCM:(S)=> S.recrOpen?'cand':null,
+    /* 근거 드릴 > 후보 상세 > HITL/done 순 우선 */
+    currentCM:(S)=> S.recrEvid?'evid':(S.recrOpen?'cand':null),
     /* surface 루트(#surfHead/#surfBody)·모달(#cmodal) 공통 배선 */
     wire:(root,S,rerender)=>{
+      root.querySelectorAll('[data-evid]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();S.recrEvid=e.dataset.evid;rerender();});
+      root.querySelectorAll('[data-evback]').forEach(e=>e.onclick=()=>{S.recrEvid=null;rerender();});
       root.querySelectorAll('[data-cand]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();S.recrOpen=e.dataset.cand;rerender();});
       root.querySelectorAll('[data-sort]').forEach(e=>e.onclick=()=>{S.recrSort=e.dataset.sort;rerender();});
       root.querySelectorAll('[data-filt]').forEach(e=>e.onclick=()=>{S.recrFilter=e.dataset.filt;rerender();});
@@ -1027,7 +1188,7 @@
 
   /* 데모용 시드 케이스(인스턴스) — 서로 다른 진행 상태 */
   const SEEDS=[
-    {title:'백엔드 개발자 2명 채용', customer:'플랫폼개발팀 · JD-2041', icon:'💼', request:WORKLOAD.request, atStep:'shortlist_gate', pickedTime:'표준 · match ≥ 85'},
+    {title:'백엔드 개발자 2명 채용', customer:'플랫폼개발팀 · JD-2041', icon:'💼', request:WORKLOAD.request, atStep:'intake', pickedTime:'표준 · match ≥ 85'},
     {title:'프로덕트 디자이너 채용', customer:'디자인팀 · JD-2052', icon:'💼', request:'"프로덕트 디자이너 1명 채용해줘. 포트폴리오 1차 스크리닝부터."', atStep:'intake'},
     {title:'데이터 분석가 채용 마감', customer:'데이터팀 · JD-2030', icon:'💼', request:'"데이터 분석가 1명, 오퍼까지 진행해줘."', status:'done'},
   ];
@@ -1105,6 +1266,14 @@
     times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
     demoScenario:DEMO_SCENARIO,
+    /* ── 결정층(수렴 ②) — scored-list shape. 결정은 코어 evaluate(SCREEN_ROUTE)가 소유.
+       단일케이스 evalCase 는 shape 가드로 skip(항목별 판정). caseModel.slots 없음 → 코어 generic
+       single-case 콘솔 미발동(surface.opstage 가 채용 리치 ATS 콘솔을 그림). 표준 정합·향후 generic
+       scored-list 렌더(2차)의 데이터 근거. axes = match 산출 3축(가중=weightKey → io.editable weight steering). ── */
+    caseModel:{ shape:'scored-list', items:CAND, scoreKey:'match', riskKey:'has_risk', riskFlags:['stability','icmiss'],
+      axes:[ {key:'sk', label:'스킬 적합', weightKey:'skill'}, {key:'ca', label:'경력 적합', weightKey:'career'}, {key:'dm', label:'도메인 적합', weightKey:'domain'} ] },
+    knowledge:{ route:SCREEN_ROUTE, weights:JOB.weight,
+      thresholds:[ {key:'cut', label:'숏리스트 컷(매칭 임계)', def:85, opts:[[90,'엄격 90'],[85,'표준 85'],[80,'넓게 80']]} ] },
     /* ── io 슬롯(Pack Contract v2 §3.2) — 실동작(결정론 mock). 코어 일반 핸들러가 구동 ──
        inputs = 자료 업로드(이력서/JD/평가기준). setKey 로 STATE 갱신 → surface 가 카운트 반영.
        editable = 숏리스트 컷·가중(모달 editorBlock 이 STATE.recrCut/recrWeight 로 결정론 재계산).

@@ -1,0 +1,123 @@
+{
+  "ts": null,
+  "blocking": 0,
+  "minor": 0,
+  "pass": 23,
+  "findings": [
+    {
+      "check": "A.smoke",
+      "level": "pass",
+      "msg": "pack_contract_A.v2.json: evaluate 10/10"
+    },
+    {
+      "check": "A.smoke",
+      "level": "pass",
+      "msg": "pack_contract_B.v2.json: evaluate 9/9"
+    },
+    {
+      "check": "A.smoke",
+      "level": "pass",
+      "msg": "pack_credit.v2.json: evaluate 10/10"
+    },
+    {
+      "check": "A.smoke",
+      "level": "pass",
+      "msg": "pack_expense.v2.json: evaluate 11/11"
+    },
+    {
+      "check": "A.smoke",
+      "level": "pass",
+      "msg": "pack_procurement.v2.json: evaluate 11/11"
+    },
+    {
+      "check": "A.smoke",
+      "level": "pass",
+      "msg": "pack_subsidy.v2.json: evaluate 10/10"
+    },
+    {
+      "check": "B.dropin-smoke",
+      "level": "pass",
+      "msg": "pack_contract_A.decision.json: evaluate 10/10"
+    },
+    {
+      "check": "B.dropin-smoke",
+      "level": "pass",
+      "msg": "pack_credit.decision.json: evaluate 10/10"
+    },
+    {
+      "check": "B.dropin-smoke",
+      "level": "pass",
+      "msg": "pack_expense.decision.json: evaluate 11/11"
+    },
+    {
+      "check": "B.dropin-smoke",
+      "level": "pass",
+      "msg": "pack_procurement.decision.json: evaluate 11/11"
+    },
+    {
+      "check": "B.dropin-smoke",
+      "level": "pass",
+      "msg": "pack_subsidy.decision.json: evaluate 10/10"
+    },
+    {
+      "check": "C.app-load",
+      "level": "pass",
+      "msg": "pack_contract_A.decision.json 드롭인 로드 모사 OK → {outcome:AUTO_APPROVE, basis, inputs} (INTEGRATION.md 계약 shape 일치)"
+    },
+    {
+      "check": "D.drift",
+      "level": "pass",
+      "msg": "pack_contract_A.v2.json: drift 0"
+    },
+    {
+      "check": "D.drift",
+      "level": "pass",
+      "msg": "pack_contract_B.v2.json: drift 0"
+    },
+    {
+      "check": "D.drift",
+      "level": "pass",
+      "msg": "pack_credit.v2.json: drift 0"
+    },
+    {
+      "check": "D.drift",
+      "level": "pass",
+      "msg": "pack_expense.v2.json: drift 0"
+    },
+    {
+      "check": "D.drift",
+      "level": "pass",
+      "msg": "pack_procurement.v2.json: drift 0"
+    },
+    {
+      "check": "D.drift",
+      "level": "pass",
+      "msg": "pack_subsidy.v2.json: drift 0"
+    },
+    {
+      "check": "E.count",
+      "level": "pass",
+      "msg": "packs_baked_v2 도메인 6개 (인덱스 '6도메인' 언급 4회)"
+    },
+    {
+      "check": "E.ref",
+      "level": "pass",
+      "msg": "엔진 evaluate.js 존재"
+    },
+    {
+      "check": "E.dropin-ref",
+      "level": "pass",
+      "msg": "INTEGRATION.md 언급 결정팩 누락 0"
+    },
+    {
+      "check": "F.caveat-circ",
+      "level": "pass",
+      "msg": "순환성 캐비엇 존재"
+    },
+    {
+      "check": "F.caveat-sme",
+      "level": "pass",
+      "msg": "SME/가정값 라벨 존재"
+    }
+  ]
+}

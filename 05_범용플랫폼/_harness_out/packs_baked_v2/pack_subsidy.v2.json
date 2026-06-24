@@ -1,0 +1,1901 @@
+{
+  "id": "subsidy",
+  "label": "보조금·지원금 심사",
+  "flow": [
+    {
+      "id": "sp1",
+      "label": "신청 접수·서류 완전성 점검",
+      "kind": "input",
+      "loopPhase": "Data",
+      "explain": "e나라도움에서 신청 건 수신(공모당 3,000건 배치+상시). 신청서·증빙PDF 수집, 필수서류 목록 대비 누락·서식·유효기간(사업자등록증·납세증명·재무제표 등) 자동 체크. 누락 시 보완 요청 분기, 완전 시 자격심사로 이관. 구조화 데이터(자격요건·예산현황·수급이력) 매핑."
+    },
+    {
+      "id": "sp2",
+      "label": "자격요건 자동 검증",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "행정정보공동이용 사업자/자격DB·e나라도움 조회로 업종(표준산업분류 매칭)·기업규모(매출·상시근로자)·소재지(지역 요건)·사업이력(업력·기존 지원 이력)을 공모 자격기준과 결정론적으로 대조. 각 요건 PASS/FAIL/판단필요 산출. read-only DB라 사실 대조는 자동, 코드 경계 케이스는 플래그."
+    },
+    {
+      "id": "sp3",
+      "label": "중복수급·부정수급 이력 점검",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "수급이력 DB·e나라도움 교차조회로 동일 사업·동일 목적 중복신청, 타 부처·지자체 동일 보조금 중복수급, 과거 환수·제재·부정수급 이력, 부도·체납 상태를 점검. 엄격 리스크 성향 반영해 중복·부정 신호는 적극 차단(반려 또는 SIU성 정밀검토 이관). '중복수급 금지' 제약 강제."
+    },
+    {
+      "id": "sp4",
+      "label": "예산 잔액 점검·교부 가능성 판정",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "e나라도움 예산현황 조회로 해당 사업 예산 잔액 대비 신청(요청)액 점검. '예산 초과 교부 금지' 제약 강제 — 잔액 부족 시 교부 보류·순위 대기·감액 검토. 신청액과 단가·한도 기준 대조해 교부 가능액 산정."
+    },
+    {
+      "id": "sp5",
+      "label": "심사 분기 라우팅(자동승인/HITL/반려)",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "sp2~sp4 종합으로 분기: 모든 정량요건 충족+무위험+예산내 → 자동승인 후보 / 정성평가(사업계획 적정성, 데이터 gap) 또는 경계·재량 건 → 심사위원 검토(HITL) / 명백한 자격미달·중복·부정·서류미비 → 반려. 정성평가가 데이터 gap이라 적정성은 반드시 사람 판단으로 이관.",
+      "gate": {
+        "label": "심사 분기 라우팅(자동승인/HITL/반려)",
+        "decisions": [
+          {
+            "key": "LEGAL_REVIEW",
+            "label": "LEGAL_REVIEW",
+            "toast": "LEGAL_REVIEW"
+          },
+          {
+            "key": "REJECT",
+            "label": "REJECT",
+            "toast": "REJECT"
+          },
+          {
+            "key": "AUTO_APPROVE",
+            "label": "AUTO_APPROVE",
+            "toast": "AUTO_APPROVE"
+          }
+        ]
+      },
+      "next": {
+        "LEGAL_REVIEW": "review",
+        "REJECT": "reject",
+        "AUTO_APPROVE": "commit"
+      },
+      "nextBy": "evaluate(caseData, knowledge).outcome"
+    },
+    {
+      "id": "sp6",
+      "label": "전결권 기반 승인·교부 결정",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "승인 금액에 따라 전결 라우팅: 담당 500만원 이하·팀장 5천만원 이하·초과는 심사위원회 의결. 승인자가 자격·예산·위험 점검 결과를 검토하고 교부 결정(승인/조건부승인/감액/반려) 확정. 권한 경계 강제(권한 초과 자동 승인 금지)."
+    },
+    {
+      "id": "sp7",
+      "label": "교부 결정 반영·예산 차감·기록",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "확정된 교부 결정을 e나라도움에 writeback(교부 결정 등록·예산 차감·신청 상태 갱신), 신청인 통지(승인·반려·보완 사유), 결정 근거·점검 이력·심사 의견을 감사 추적 로그로 기록. 예산 차감으로 후속 신청의 예산 잔액에 실시간 반영. 부정·환수 사유 발생 시 사후관리 트리거."
+    }
+  ],
+  "io": {
+    "inputs": [
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "requiredDocsStatus",
+        "label": "필수서류 제출/누락 목록"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "qualitativePlanReady",
+        "label": "사업계획 적정성 정성평가 결과"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "grantDecisionType",
+        "label": "교부 형태(승인/조건부/감액/반려)"
+      }
+    ],
+    "connectors": [
+      {
+        "id": "c_e나라도움_커넥터",
+        "label": "e나라도움 커넥터",
+        "system": "보조금시스템(e나라도움) API read-write — 신청·예산·교부 writeback",
+        "stub": true
+      },
+      {
+        "id": "c_행정정보공동이용_커넥터",
+        "label": "행정정보공동이용 커넥터",
+        "system": "사업자/자격DB API read — 업종·규모·지역·체납 조회",
+        "stub": true
+      },
+      {
+        "id": "c_문서_증빙_추출(OCR/파서)",
+        "label": "문서 증빙 추출(OCR/파서)",
+        "system": "신청서·증빙PDF 필수서류·유효기간 추출(documents)",
+        "stub": true
+      }
+    ],
+    "editable": [
+      {
+        "key": "th_doc_validity_tax",
+        "label": "증빙 유효",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_fraud_block",
+        "label": "자동 반려·차단(엄격)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_fraud_review",
+        "label": "정밀검토 HITL 이관",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_budget_block",
+        "label": "예산 초과 교부 금지·보류/감액",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_amount_limit",
+        "label": "한도 초과·감액 검토",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_delegation_staff",
+        "label": "담당자 전결",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_delegation_lead",
+        "label": "팀장 전결",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_delegation_committee",
+        "label": "심사위원회 의결",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_qualitative_hitl",
+        "label": "정성평가 필수 HITL",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      }
+    ]
+  },
+  "caseModel": {
+    "slots": [
+      {
+        "key": "applicantId",
+        "label": "신청인 식별자(사업자번호/개인)",
+        "type": "string",
+        "source": "e나라도움 신청 건(API read-write)",
+        "extract": "connector"
+      },
+      {
+        "key": "applicationId",
+        "label": "신청 건 번호",
+        "type": "string",
+        "source": "e나라도움 신청 건(API read-write)",
+        "extract": "connector"
+      },
+      {
+        "key": "programId",
+        "label": "공모 사업 코드",
+        "type": "string",
+        "source": "e나라도움 공모 마스터(API)",
+        "extract": "connector"
+      },
+      {
+        "key": "requestedAmount",
+        "label": "신청(요청) 금액(원)",
+        "type": "number",
+        "source": "e나라도움 신청서(API read-write)",
+        "extract": "connector"
+      },
+      {
+        "key": "requiredDocsStatus",
+        "label": "필수서류 제출/누락 목록",
+        "type": "object",
+        "source": "신청서·증빙PDF(documents)",
+        "extract": "doc"
+      },
+      {
+        "key": "docValidityOk",
+        "label": "증빙 유효기간·서식 적합 여부",
+        "type": "boolean",
+        "source": "신청서·증빙PDF(사업자등록증·납세증명·재무제표 유효기간)",
+        "extract": "rule"
+      },
+      {
+        "key": "industryCode",
+        "label": "업종(표준산업분류) 코드",
+        "type": "string",
+        "source": "행정정보공동이용 사업자/자격DB(API read)",
+        "extract": "connector"
+      },
+      {
+        "key": "companySizeMetrics",
+        "label": "기업규모(매출·상시근로자 수)",
+        "type": "object",
+        "source": "행정정보공동이용 사업자/자격DB(API read)",
+        "extract": "connector"
+      },
+      {
+        "key": "regionCode",
+        "label": "소재지 지역코드",
+        "type": "string",
+        "source": "행정정보공동이용 사업자/자격DB(API read)",
+        "extract": "connector"
+      },
+      {
+        "key": "businessAgeYears",
+        "label": "업력(년)",
+        "type": "number",
+        "source": "행정정보공동이용 사업자/자격DB(API read)",
+        "extract": "connector"
+      },
+      {
+        "key": "eligibilityCriteria",
+        "label": "공모 자격기준(업종·규모·지역·업력)",
+        "type": "object",
+        "source": "e나라도움 공모지침/자격요건(structured)",
+        "extract": "rule"
+      },
+      {
+        "key": "duplicateBenefitFlag",
+        "label": "동일목적 보조금 중복수급 여부",
+        "type": "boolean",
+        "source": "수급이력 DB·e나라도움 교차조회(API)",
+        "extract": "rule"
+      },
+      {
+        "key": "fraudHistoryFlag",
+        "label": "과거 부정수급·환수·제재 이력",
+        "type": "boolean",
+        "source": "수급이력 DB(structured 수급이력)",
+        "extract": "connector"
+      },
+      {
+        "key": "arrearsBankruptcyFlag",
+        "label": "체납·부도 상태",
+        "type": "boolean",
+        "source": "행정정보공동이용 자격DB(API read)",
+        "extract": "connector"
+      },
+      {
+        "key": "fraudSignalScore",
+        "label": "부정수급 의심 신호 강도(0~100)",
+        "type": "number",
+        "source": "수급이력·체납·신호 조합(연산)",
+        "extract": "rule"
+      },
+      {
+        "key": "budgetRemaining",
+        "label": "해당 사업 예산 잔액(원)",
+        "type": "number",
+        "source": "e나라도움 예산현황(structured, API read-write)",
+        "extract": "connector"
+      },
+      {
+        "key": "unitPriceLimit",
+        "label": "단가·지원 한도(원)",
+        "type": "number",
+        "source": "e나라도움 공모지침 한도표(structured)",
+        "extract": "rule"
+      },
+      {
+        "key": "grantableAmount",
+        "label": "교부 가능액(원)",
+        "type": "number",
+        "source": "신청액·한도·예산 잔액 대조(연산)",
+        "extract": "rule"
+      },
+      {
+        "key": "qualitativePlanReady",
+        "label": "사업계획 적정성 정성평가 결과",
+        "type": "string",
+        "source": "사업계획서 PDF(gap: 정성평가 데이터 부재)",
+        "extract": "manual"
+      },
+      {
+        "key": "routeDecision",
+        "label": "심사 분기(자동승인/HITL/반려)",
+        "type": "string",
+        "source": "sp2~sp4 종합 판정(연산)",
+        "extract": "rule"
+      },
+      {
+        "key": "approverRole",
+        "label": "전결권자(담당/팀장/위원회)",
+        "type": "string",
+        "source": "승인위임 정책 금액별 전결(policy)",
+        "extract": "rule"
+      },
+      {
+        "key": "grantDecisionType",
+        "label": "교부 형태(승인/조건부/감액/반려)",
+        "type": "string",
+        "source": "전결권자 재량 판단",
+        "extract": "manual"
+      },
+      {
+        "key": "writebackStatus",
+        "label": "교부 결정·예산 차감 writeback 결과",
+        "type": "string",
+        "source": "e나라도움(API read-write)",
+        "extract": "connector"
+      },
+      {
+        "key": "requiredDocsDetail"
+      },
+      {
+        "key": "eligibilityCriteriaDetail"
+      }
+    ]
+  },
+  "knowledge": {
+    "route": {
+      "rules": [
+        {
+          "id": "R0_HITL_DELEGATION",
+          "outcome": "LEGAL_REVIEW",
+          "label": "HITL 검토 — 전결권 초과 심사위원회 의결",
+          "basis": "교부가능액이 전결 한도(5천만원)를 초과(grantableAmount>50000000)하면 정량요건 충족 여부와 무관하게 자동승인 금지 → 심사위원회 의결 회부(th_delegation_committee). 자동승인(R1)보다 먼저 평가",
+          "when": {
+            "all": [
+              {
+                ">": [
+                  "$grantableAmount",
+                  50000000
+                ]
+              },
+              {
+                "!=": [
+                  "$eligibilityCriteria",
+                  "FAIL"
+                ]
+              },
+              {
+                "==": [
+                  "$duplicateBenefitFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$fraudHistoryFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$arrearsBankruptcyFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$requiredDocsStatus",
+                  "COMPLETE"
+                ]
+              },
+              {
+                "==": [
+                  "$docValidityOk",
+                  true
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R4_REJECT",
+          "outcome": "REJECT",
+          "label": "반려",
+          "basis": "자격미달(eligibilityCriteria=FAIL) OR 중복수혜 OR 부정수급 이력 OR 연체·파산 OR 서류미비/무효가 명백 → 반려. 단 R6(연체·파산 회색대 HITL)가 먼저 걸리는 케이스는 제외하기 위해 부정수급은 fraudHistoryFlag로만 차단",
+          "when": {
+            "any": [
+              {
+                "==": [
+                  "$eligibilityCriteria",
+                  "FAIL"
+                ]
+              },
+              {
+                "==": [
+                  "$duplicateBenefitFlag",
+                  true
+                ]
+              },
+              {
+                "==": [
+                  "$fraudHistoryFlag",
+                  true
+                ]
+              },
+              {
+                "not": {
+                  "==": [
+                    "$requiredDocsStatus",
+                    "COMPLETE"
+                  ]
+                }
+              },
+              {
+                "==": [
+                  "$docValidityOk",
+                  false
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R6_HITL_ARREARS",
+          "outcome": "LEGAL_REVIEW",
+          "label": "HITL 검토 — 연체·파산 + 부정신호 중간대",
+          "basis": "부정수급 이력 확정은 아니나 연체·파산 상태(arrearsBankruptcyFlag=true)이고 부정신호 점수가 중간대(40<=fraudSignalScore<70)면 SIU성 정밀검토 필요(th_fraud_review) → 심사위원 검토",
+          "when": {
+            "all": [
+              {
+                "==": [
+                  "$fraudHistoryFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$arrearsBankruptcyFlag",
+                  true
+                ]
+              },
+              {
+                ">=": [
+                  "$fraudSignalScore",
+                  40
+                ]
+              },
+              {
+                "<": [
+                  "$fraudSignalScore",
+                  70
+                ]
+              },
+              {
+                "==": [
+                  "$duplicateBenefitFlag",
+                  false
+                ]
+              },
+              {
+                "!=": [
+                  "$eligibilityCriteria",
+                  "FAIL"
+                ]
+              },
+              {
+                "==": [
+                  "$requiredDocsStatus",
+                  "COMPLETE"
+                ]
+              },
+              {
+                "==": [
+                  "$docValidityOk",
+                  true
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R3_HITL_GRAYZONE",
+          "outcome": "LEGAL_REVIEW",
+          "label": "HITL 검토 — 경계·재량 회색지대",
+          "basis": "정량 충족(서류·유효·중복/부정/연체 없음)하나 형평·정책목적상 경계·재량 회색지대(eligibilityCriteria=GRAYZONE) → 심사위원 검토",
+          "when": {
+            "all": [
+              {
+                "==": [
+                  "$requiredDocsStatus",
+                  "COMPLETE"
+                ]
+              },
+              {
+                "==": [
+                  "$docValidityOk",
+                  true
+                ]
+              },
+              {
+                "==": [
+                  "$duplicateBenefitFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$fraudHistoryFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$arrearsBankruptcyFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$eligibilityCriteria",
+                  "GRAYZONE"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R5_HITL_BUDGET",
+          "outcome": "LEGAL_REVIEW",
+          "label": "HITL 검토 — 예산 잔액 부족",
+          "basis": "정량 충족(서류·유효·자격 PASS·중복/부정/연체 없음)하나 예산 잔액이 지급가능액 미만(budgetRemaining<grantableAmount) → 예산 초과 교부 금지, 감액/보류 재량 심사위원 검토(th_budget_block)",
+          "when": {
+            "all": [
+              {
+                "==": [
+                  "$requiredDocsStatus",
+                  "COMPLETE"
+                ]
+              },
+              {
+                "==": [
+                  "$docValidityOk",
+                  true
+                ]
+              },
+              {
+                "==": [
+                  "$eligibilityCriteria",
+                  "PASS"
+                ]
+              },
+              {
+                "==": [
+                  "$duplicateBenefitFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$fraudHistoryFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$arrearsBankruptcyFlag",
+                  false
+                ]
+              },
+              {
+                "<": [
+                  "$budgetRemaining",
+                  "$grantableAmount"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R2_HITL_QUALITATIVE",
+          "outcome": "LEGAL_REVIEW",
+          "label": "HITL 검토 — 정성평가 필요",
+          "basis": "정량요건은 충족(서류 완비·유효·자격 PASS·중복/부정/연체 없음·예산 내)이나 정성평가 준비 미완(qualitativePlanReady=false)라 심사위원 정성평가 필수",
+          "when": {
+            "all": [
+              {
+                "==": [
+                  "$requiredDocsStatus",
+                  "COMPLETE"
+                ]
+              },
+              {
+                "==": [
+                  "$docValidityOk",
+                  true
+                ]
+              },
+              {
+                "==": [
+                  "$eligibilityCriteria",
+                  "PASS"
+                ]
+              },
+              {
+                "==": [
+                  "$duplicateBenefitFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$fraudHistoryFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$arrearsBankruptcyFlag",
+                  false
+                ]
+              },
+              {
+                ">=": [
+                  "$budgetRemaining",
+                  "$grantableAmount"
+                ]
+              },
+              {
+                "==": [
+                  "$qualitativePlanReady",
+                  false
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "R1_AUTO_APPROVE",
+          "outcome": "AUTO_APPROVE",
+          "label": "자동승인 후보",
+          "basis": "전 정량요건 PASS(서류 완비·서류 유효·정량 자격요건 충족) AND 중복·부정·연체/파산 없음 AND 예산 내(예산 잔액≥지급가능액) AND 정성평가 불요(qualitativePlanReady=true) AND 교부가능액 전결 한도 내(grantableAmount<=50000000)",
+          "when": {
+            "all": [
+              {
+                "==": [
+                  "$requiredDocsStatus",
+                  "COMPLETE"
+                ]
+              },
+              {
+                "==": [
+                  "$docValidityOk",
+                  true
+                ]
+              },
+              {
+                "==": [
+                  "$eligibilityCriteria",
+                  "PASS"
+                ]
+              },
+              {
+                "==": [
+                  "$duplicateBenefitFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$fraudHistoryFlag",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$arrearsBankruptcyFlag",
+                  false
+                ]
+              },
+              {
+                ">=": [
+                  "$budgetRemaining",
+                  "$grantableAmount"
+                ]
+              },
+              {
+                "==": [
+                  "$qualitativePlanReady",
+                  true
+                ]
+              },
+              {
+                "<=": [
+                  "$grantableAmount",
+                  50000000
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "default": {
+        "id": "FB_HITL",
+        "outcome": "LEGAL_REVIEW",
+        "label": "HITL 검토 — 미분류 케이스",
+        "basis": "명시 룰에 해당하지 않는 잔여 케이스는 자동 처리하지 않고 심사위원 검토로 회부(안전한 기본값)"
+      }
+    },
+    "lookupTables": [
+      {
+        "id": "lt_approval_delegation",
+        "description": "승인 금액 구간별 전결권자 매핑(승인위임 정책: 담당500만·팀장5천만·위원회 초과)",
+        "entries": [
+          {
+            "match": "grantableAmount <= 5000000",
+            "result": "보조사업 담당자(전결)"
+          },
+          {
+            "match": "5000000 < grantableAmount <= 50000000",
+            "result": "심사 팀장(전결)"
+          },
+          {
+            "match": "grantableAmount > 50000000",
+            "result": "심사위원회(의결)"
+          }
+        ]
+      },
+      {
+        "id": "lt_required_docs",
+        "description": "공모 필수서류 목록·유효기간 기준(완전성/유효성 점검 기준)",
+        "entries": [
+          {
+            "match": "사업자등록증",
+            "result": "필수·발급 3개월 이내"
+          },
+          {
+            "match": "국세/지방세 납세증명서",
+            "result": "필수·발급 1개월 이내·미납 없음"
+          },
+          {
+            "match": "재무제표(직전연도)",
+            "result": "필수·직전 회계연도 기준"
+          },
+          {
+            "match": "사업계획서",
+            "result": "필수·서식 적합·정성평가 대상"
+          },
+          {
+            "match": "신청서(공모 서식)",
+            "result": "필수·기간 내 제출"
+          }
+        ]
+      },
+      {
+        "id": "lt_eligibility_dimensions",
+        "description": "자격요건 검증 차원과 판정 소스(자동 대조 / 경계 플래그)",
+        "entries": [
+          {
+            "match": "업종 코드 ∈ 자격 업종 목록",
+            "result": "PASS / 미해당 FAIL / 경계코드 판단필요"
+          },
+          {
+            "match": "매출·상시근로자 ≤ 규모 상한",
+            "result": "충족 PASS / 초과 FAIL"
+          },
+          {
+            "match": "소재지 코드 ∈ 지역요건",
+            "result": "충족 PASS / 미해당 FAIL"
+          },
+          {
+            "match": "업력 ≥ 최소 업력",
+            "result": "충족 PASS / 미달 FAIL"
+          }
+        ]
+      },
+      {
+        "id": "lt_route_targets",
+        "description": "분기 결과별 후속 처리 대상",
+        "entries": [
+          {
+            "match": "자동승인",
+            "result": "전결권자 승인 큐 + 예산 차감 준비"
+          },
+          {
+            "match": "HITL 검토",
+            "result": "심사위원회/팀장 검토 큐(정성·재량)"
+          },
+          {
+            "match": "반려",
+            "result": "신청인 통지 + 보완/반려 사유 기록"
+          }
+        ]
+      }
+    ],
+    "thresholds": [
+      {
+        "id": "th_doc_validity_tax",
+        "expr": "납세증명서 발급경과일 <= 30일 AND 미납액 = 0",
+        "flag": "증빙 유효"
+      },
+      {
+        "id": "th_fraud_block",
+        "expr": "fraudSignalScore >= 70 OR duplicateBenefitFlag = true",
+        "flag": "자동 반려·차단(엄격)"
+      },
+      {
+        "id": "th_fraud_review",
+        "expr": "40 <= fraudSignalScore < 70 OR arrearsBankruptcyFlag = true",
+        "flag": "정밀검토 HITL 이관"
+      },
+      {
+        "id": "th_budget_block",
+        "expr": "budgetRemaining < grantableAmount",
+        "flag": "예산 초과 교부 금지·보류/감액"
+      },
+      {
+        "id": "th_amount_limit",
+        "expr": "requestedAmount > unitPriceLimit",
+        "flag": "한도 초과·감액 검토"
+      },
+      {
+        "id": "th_delegation_staff",
+        "expr": "grantableAmount <= 5000000",
+        "flag": "담당자 전결"
+      },
+      {
+        "id": "th_delegation_lead",
+        "expr": "5000000 < grantableAmount <= 50000000",
+        "flag": "팀장 전결"
+      },
+      {
+        "id": "th_delegation_committee",
+        "expr": "grantableAmount > 50000000",
+        "flag": "심사위원회 의결"
+      },
+      {
+        "id": "th_qualitative_hitl",
+        "expr": "qualitativePlanReady = '미평가'(데이터 gap)",
+        "flag": "정성평가 필수 HITL"
+      }
+    ]
+  },
+  "seeds": [
+    {
+      "label": "자동승인 후보 — 전 정량요건 PASS·중복/부정 없음·예산 내·정성평가 불요",
+      "expectedRoute": "자동승인",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "123-45-67890"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000101"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":1800000000,\"상시근로자\":22}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "5"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PASS"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "12"
+        },
+        {
+          "slot": "budgetRemaining",
+          "value": "300000000"
+        },
+        {
+          "slot": "unitPriceLimit",
+          "value": "5000000"
+        },
+        {
+          "slot": "grantableAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "qualitativePlanReady",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "자동승인"
+        },
+        {
+          "slot": "approverRole",
+          "value": "보조사업 담당자(전결)"
+        }
+      ],
+      "expectedOutcome": "AUTO_APPROVE"
+    },
+    {
+      "label": "반려 — 필수서류 누락(서류 미비 명백, d1)",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "222-33-44455"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000102"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "3000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "INCOMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"누락\",\"재무제표\":\"제출\",\"사업계획서\":\"누락\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "false"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PENDING"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "반려 — 자격요건 미달(업력 미달, d2)",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "333-44-55566"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000103"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4500000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":900000000,\"상시근로자\":11}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "1"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "FAIL"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3,\"판정사유\":\"업력1년<최소3년\"}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "반려 — 동일목적 보조금 중복수급(d3 차단·constraint)",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "444-55-66677"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000104"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":1500000000,\"상시근로자\":18}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "6"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PASS"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "true"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "30"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "반려 — 부정수급 이력 확정 AND fraudSignalScore>=70(th_fraud_block)",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "555-66-77788"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000105"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":1500000000,\"상시근로자\":18}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "7"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PASS"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "true"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "82"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "반려"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "HITL — 부정수급 의심 중간대(40<=score<70, d3·th_fraud_review SIU성 정밀검토)",
+      "expectedRoute": "HITL 검토",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "666-77-88899"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000106"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":1500000000,\"상시근로자\":18}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "6"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PASS"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "true"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "55"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "HITL 검토"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "HITL — 자격 경계코드(판단필요 플래그, d2 경계 재량)",
+      "expectedRoute": "HITL 검토",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "777-88-99900"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000107"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26-경계"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":1500000000,\"상시근로자\":18}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "5"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "GRAYZONE"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3,\"경계플래그\":true}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "20"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "HITL 검토"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "HITL — 사업계획 적정성 정성평가 필요(데이터 gap, dt_route·th_qualitative_hitl)",
+      "expectedRoute": "HITL 검토",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "888-99-00011"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000108"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":1500000000,\"상시근로자\":18}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "5"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PASS"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "15"
+        },
+        {
+          "slot": "budgetRemaining",
+          "value": "300000000"
+        },
+        {
+          "slot": "unitPriceLimit",
+          "value": "5000000"
+        },
+        {
+          "slot": "grantableAmount",
+          "value": "4000000"
+        },
+        {
+          "slot": "qualitativePlanReady",
+          "value": "false"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "HITL 검토"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "HITL — 정량 충족하나 예산 잔액 부족(예산 초과 교부 금지, d4·th_budget_block 감액/보류 재량)",
+      "expectedRoute": "HITL 검토",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "999-00-11122"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000109"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-A01"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "4500000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":1500000000,\"상시근로자\":18}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "6"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PASS"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "18"
+        },
+        {
+          "slot": "budgetRemaining",
+          "value": "2000000"
+        },
+        {
+          "slot": "unitPriceLimit",
+          "value": "5000000"
+        },
+        {
+          "slot": "grantableAmount",
+          "value": "4500000"
+        },
+        {
+          "slot": "qualitativePlanReady",
+          "value": "true"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "HITL 검토"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "HITL — 교부가능액>5천만원 심사위원회 의결(전결권 초과 자동승인 금지, dt_approval_routing·th_delegation_committee)",
+      "expectedRoute": "HITL 검토",
+      "input": [
+        {
+          "slot": "applicantId",
+          "value": "101-12-23344"
+        },
+        {
+          "slot": "applicationId",
+          "value": "APP-2026-000110"
+        },
+        {
+          "slot": "programId",
+          "value": "PGM-SME-B02"
+        },
+        {
+          "slot": "requestedAmount",
+          "value": "80000000"
+        },
+        {
+          "slot": "requiredDocsStatus",
+          "value": "COMPLETE"
+        },
+        {
+          "slot": "requiredDocsDetail",
+          "value": "{\"사업자등록증\":\"제출\",\"납세증명서\":\"제출\",\"재무제표\":\"제출\",\"사업계획서\":\"제출\",\"신청서\":\"제출\"}"
+        },
+        {
+          "slot": "docValidityOk",
+          "value": "true"
+        },
+        {
+          "slot": "industryCode",
+          "value": "C26"
+        },
+        {
+          "slot": "companySizeMetrics",
+          "value": "{\"매출\":5000000000,\"상시근로자\":120}"
+        },
+        {
+          "slot": "regionCode",
+          "value": "41"
+        },
+        {
+          "slot": "businessAgeYears",
+          "value": "8"
+        },
+        {
+          "slot": "eligibilityCriteria",
+          "value": "PASS"
+        },
+        {
+          "slot": "eligibilityCriteriaDetail",
+          "value": "{\"업종\":[\"C26\"],\"규모상한_매출\":12000000000,\"규모상한_근로자\":300,\"지역\":[\"41\"],\"최소업력\":3}"
+        },
+        {
+          "slot": "duplicateBenefitFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudHistoryFlag",
+          "value": "false"
+        },
+        {
+          "slot": "arrearsBankruptcyFlag",
+          "value": "false"
+        },
+        {
+          "slot": "fraudSignalScore",
+          "value": "16"
+        },
+        {
+          "slot": "budgetRemaining",
+          "value": "500000000"
+        },
+        {
+          "slot": "unitPriceLimit",
+          "value": "100000000"
+        },
+        {
+          "slot": "grantableAmount",
+          "value": "80000000"
+        },
+        {
+          "slot": "qualitativePlanReady",
+          "value": "true"
+        },
+        {
+          "slot": "approverRole",
+          "value": "심사위원회(의결)"
+        },
+        {
+          "slot": "routeDecision",
+          "value": "HITL 검토"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    }
+  ],
+  "components": [
+    {
+      "type": "Agent",
+      "name": "서류 완전성 점검 에이전트",
+      "L": "L3",
+      "connectsTo": "필수서류 누락·유효기간·서식 자동 체크(d1)"
+    },
+    {
+      "type": "Agent",
+      "name": "자격요건 검증 에이전트",
+      "L": "L3",
+      "connectsTo": "업종·규모·지역·업력 결정론 대조(d2)"
+    },
+    {
+      "type": "Agent",
+      "name": "중복·부정수급 점검 에이전트",
+      "L": "L3",
+      "connectsTo": "수급이력 교차조회·중복/부정 신호 산출(d3·d6)"
+    },
+    {
+      "type": "Agent",
+      "name": "예산·교부가능 산정 에이전트",
+      "L": "L3",
+      "connectsTo": "예산 잔액 대비 교부가능액 산정(d4)"
+    },
+    {
+      "type": "Agent",
+      "name": "심사 라우팅 오케스트레이터",
+      "L": "L3",
+      "connectsTo": "자동승인/HITL/반려 분기·전결 라우팅(d5·d8)"
+    },
+    {
+      "type": "Module",
+      "name": "결정론 룰 엔진(자격·중복·예산)",
+      "L": "L4",
+      "connectsTo": "lookupTables·decisionTables·thresholds 실행"
+    },
+    {
+      "type": "Module",
+      "name": "전결권 라우팅 모듈",
+      "L": "L4",
+      "connectsTo": "lt_approval_delegation 금액→전결권자 매핑(d5)"
+    },
+    {
+      "type": "Module",
+      "name": "예산 차감·머니가드 모듈",
+      "L": "L4",
+      "connectsTo": "예산 초과 교부 금지 제약 강제(th_budget_block)"
+    },
+    {
+      "type": "Connector",
+      "name": "e나라도움 커넥터",
+      "L": "L5",
+      "connectsTo": "보조금시스템(e나라도움) API read-write — 신청·예산·교부 writeback"
+    },
+    {
+      "type": "Connector",
+      "name": "행정정보공동이용 커넥터",
+      "L": "L5",
+      "connectsTo": "사업자/자격DB API read — 업종·규모·지역·체납 조회"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "문서 증빙 추출(OCR/파서)",
+      "L": "L5",
+      "connectsTo": "신청서·증빙PDF 필수서류·유효기간 추출(documents)"
+    },
+    {
+      "type": "Policy",
+      "name": "중복수급 금지 가드레일",
+      "L": "L7",
+      "connectsTo": "constraint: 동일목적 중복수급 자동 차단(d3)"
+    },
+    {
+      "type": "Policy",
+      "name": "예산 초과 교부 금지 가드레일",
+      "L": "L7",
+      "connectsTo": "constraint: 잔액<교부액 시 교부 보류(d4)"
+    },
+    {
+      "type": "Policy",
+      "name": "전결권 한도 가드레일",
+      "L": "L7",
+      "connectsTo": "권한 초과 자동 승인 금지(승인위임 정책)"
+    },
+    {
+      "type": "Policy",
+      "name": "정성평가 HITL 게이트",
+      "L": "L7",
+      "connectsTo": "사업계획 적정성(gap)·재량 건 심사위원 이관(d7·d9)"
+    }
+  ],
+  "compose": [
+    {
+      "t": "Agent",
+      "sub": "전문 작업",
+      "cls": "tA",
+      "n": 5,
+      "items": [
+        "서류 완전성 점검 에이전트",
+        "자격요건 검증 에이전트",
+        "중복·부정수급 점검 에이전트",
+        "예산·교부가능 산정 에이전트",
+        "심사 라우팅 오케스트레이터"
+      ]
+    },
+    {
+      "t": "Module",
+      "sub": "재사용 기능",
+      "cls": "tM",
+      "n": 3,
+      "items": [
+        "결정론 룰 엔진(자격·중복·예산)",
+        "전결권 라우팅 모듈",
+        "예산 차감·머니가드 모듈"
+      ]
+    },
+    {
+      "t": "기존 솔루션",
+      "sub": "Buy·Integrate",
+      "cls": "tS",
+      "n": 1,
+      "items": [
+        "문서 증빙 추출(OCR/파서)"
+      ]
+    },
+    {
+      "t": "Connector",
+      "sub": "시스템 연동",
+      "cls": "tC",
+      "n": 2,
+      "items": [
+        "e나라도움 커넥터",
+        "행정정보공동이용 커넥터"
+      ]
+    },
+    {
+      "t": "Policy",
+      "sub": "통제·권한",
+      "cls": "tP",
+      "n": 4,
+      "items": [
+        "중복수급 금지 가드레일",
+        "예산 초과 교부 금지 가드레일",
+        "전결권 한도 가드레일",
+        "정성평가 HITL 게이트"
+      ]
+    }
+  ],
+  "stepLoop": {
+    "sp1": "Data",
+    "sp2": "Data",
+    "sp3": "Data",
+    "sp4": "Data",
+    "sp5": "Decision",
+    "sp6": "Decision",
+    "sp7": "Decision"
+  },
+  "govern": [
+    {
+      "k": "Policy",
+      "v": "책임 지점 자동 차단 후 승인(HITL)."
+    },
+    {
+      "k": "Run Trace",
+      "v": "요청→판정→분기→반영 전 구간 기록."
+    },
+    {
+      "k": "Evaluation",
+      "v": "evaluate(case,knowledge) 결정론·basis 추적."
+    },
+    {
+      "k": "Skill Library",
+      "v": "유형·룰 재사용 자산화."
+    }
+  ],
+  "surfaceSpec": {
+    "icon": "🗂️",
+    "title": "보조금·지원금 심사",
+    "tabs": [
+      "개요",
+      "판정",
+      "처리",
+      "기록"
+    ],
+    "_stub": true
+  },
+  "provenance": {
+    "generatedBy": "harness+evaluate-in-the-loop+annotate",
+    "gatePass": true,
+    "route": "evaluate.js DSL",
+    "reviewedBy": null
+  },
+  "_adapterNotes": [
+    "knowledge.route=게이트 통과 실행가능 DSL(when 파싱됨). seeds=expectedOutcome 포함.",
+    "flow gate.next=verdict.outcome 바인딩(nextBy). lookup/threshold는 prose 참조(DSL화는 후속).",
+    "flow·loopPhase=휴리스틱 v0.2, app/ 세션 정통화."
+  ]
+}

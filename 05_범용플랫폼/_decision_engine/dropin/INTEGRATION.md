@@ -7,7 +7,7 @@
 | 파일 | → 위치 |
 |---|---|
 | `evaluate.js` | `app/core/evaluate.js`(신규) — 순수·결정론·안전 DSL. `window.AAP_EVALUATE` 노출 |
-| `pack_contract_A.decision.json` · `pack_procurement.decision.json` · `pack_expense.decision.json` | 각 팩에 `caseModel`+`knowledge` 필드로 병합. **3팩 모두 하니스 자동생성 + evaluate 게이트 통과 + 독립 재검증(10/10·11/11·11/11)** |
+| `pack_contract_A.decision.json` · `pack_procurement.decision.json` · `pack_expense.decision.json` · `pack_credit.decision.json`(여신·한도) · `pack_subsidy.decision.json`(보조금) | 각 팩에 `caseModel`+`knowledge` 필드로 병합. **5팩 모두 하니스 자동생성 + evaluate 게이트 통과 + 독립 재검증(계약A 10/10·구매 11/11·경비 11/11·여신 10/10·보조금 10/10)**. 금융·공공 포함 = 골격 무수정 재사용 입증 |
 
 ## 통합 4스텝 (≈3줄 + 1 헬퍼)
 

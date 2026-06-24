@@ -1,0 +1,948 @@
+{
+  "id": "credit",
+  "label": "여신·한도 심사",
+  "caseModel": {
+    "slots": [
+      {
+        "key": "applicationId",
+        "label": "신청번호",
+        "type": "string",
+        "source": "여신코어(자체구축, API, read-write) — 접수 시 채번",
+        "extract": "rule"
+      },
+      {
+        "key": "applicantName",
+        "label": "신청인명",
+        "type": "string",
+        "source": "신청서 입력 + 여신코어 고객마스터(read-write)",
+        "extract": "manual"
+      },
+      {
+        "key": "applicantId",
+        "label": "실명확인번호(주민/사업자)",
+        "type": "string",
+        "source": "KYC/AML 실명DB(API, read)",
+        "extract": "connector"
+      },
+      {
+        "key": "requestAmount",
+        "label": "신청금액(원)",
+        "type": "number",
+        "source": "신청서 입력",
+        "extract": "manual"
+      },
+      {
+        "key": "loanPurpose",
+        "label": "자금용도",
+        "type": "string",
+        "source": "신청서 입력",
+        "extract": "manual"
+      },
+      {
+        "key": "loanTermMonths",
+        "label": "대출기간(개월)",
+        "type": "number",
+        "source": "신청서 입력",
+        "extract": "manual"
+      },
+      {
+        "key": "collateralType",
+        "label": "담보유형(부동산/무담보 등)",
+        "type": "string",
+        "source": "신청서 입력 + 여신코어 담보원장",
+        "extract": "manual"
+      },
+      {
+        "key": "collateralValue",
+        "label": "담보평가액(원)",
+        "type": "number",
+        "source": "structured: 담보평가 (여신코어 read-write 담보원장)",
+        "extract": "rule"
+      },
+      {
+        "key": "existingLoanBalance",
+        "label": "기존 여신 잔액(원)",
+        "type": "number",
+        "source": "여신코어(API, read-write) 여신원장 조회",
+        "extract": "connector"
+      },
+      {
+        "key": "creditGrade",
+        "label": "신용등급(1~10등급)",
+        "type": "number",
+        "source": "structured: 신용등급 — CB사 신용평가 API(KCB/NICE, read)",
+        "extract": "connector"
+      },
+      {
+        "key": "creditScore",
+        "label": "신용점수",
+        "type": "number",
+        "source": "CB사 신용평가 API(KCB/NICE, read)",
+        "extract": "connector"
+      },
+      {
+        "key": "totalDebt",
+        "label": "총부채(원)",
+        "type": "number",
+        "source": "structured: 부채현황 — CB사 API(read) + 여신코어",
+        "extract": "connector"
+      },
+      {
+        "key": "annualDebtRepayment",
+        "label": "연간 원리금상환액(원)",
+        "type": "number",
+        "source": "structured: 부채현황 기반 산식 계산(기존부채 + 신청건 원리금)",
+        "extract": "rule"
+      },
+      {
+        "key": "delinquencyHistory",
+        "label": "연체이력(있음/없음·최근연체개월)",
+        "type": "string",
+        "source": "structured: 연체이력 — CB사 API(read) + 여신코어",
+        "extract": "connector"
+      },
+      {
+        "key": "defaultFlag",
+        "label": "부실(부도/대위변제) 보유여부",
+        "type": "boolean",
+        "source": "structured: 연체이력 — CB사 API(read)",
+        "extract": "connector"
+      },
+      {
+        "key": "annualIncome",
+        "label": "연소득(원)",
+        "type": "number",
+        "source": "documents: 소득증빙PDF — 문서 정규화 추출",
+        "extract": "doc"
+      },
+      {
+        "key": "incomeType",
+        "label": "소득유형(근로/사업/프리랜서)",
+        "type": "string",
+        "source": "documents: 소득증빙PDF + 신청서",
+        "extract": "doc"
+      },
+      {
+        "key": "incomeProofComplete",
+        "label": "소득증빙 충족여부",
+        "type": "boolean",
+        "source": "documents: 소득증빙PDF 검증(정형) / gap: 프리랜서 비정형은 수기 추정",
+        "extract": "doc"
+      },
+      {
+        "key": "freelancerEstimatedIncome",
+        "label": "비정형(프리랜서) 추정소득(원)",
+        "type": "number",
+        "source": "gap: 비정형 소득(프리랜서) 추정 일부 수기 — 심사역 보완",
+        "extract": "manual"
+      },
+      {
+        "key": "sanctionHit",
+        "label": "제재리스트 적중여부",
+        "type": "boolean",
+        "source": "KYC/AML 제재리스트(API, read) 스크리닝",
+        "extract": "connector"
+      },
+      {
+        "key": "amlRiskLevel",
+        "label": "자금세탁 위험도(저/중/고)",
+        "type": "string",
+        "source": "KYC/AML 시스템(API, read) — 의심거래는 준법 HITL",
+        "extract": "llm"
+      },
+      {
+        "key": "dsrRatio",
+        "label": "DSR(총부채원리금상환비율, %)",
+        "type": "number",
+        "source": "산식 계산: 연간원리금상환액 / 연소득",
+        "extract": "rule"
+      },
+      {
+        "key": "ltvRatio",
+        "label": "LTV(담보인정비율, %)",
+        "type": "number",
+        "source": "산식 계산: (기존여신+신청금액) / 담보평가액",
+        "extract": "rule"
+      },
+      {
+        "key": "approvedLimit",
+        "label": "산정 승인한도(원)",
+        "type": "number",
+        "source": "DSR/LTV 한도·규제 산정 결과(결정론)",
+        "extract": "rule"
+      },
+      {
+        "key": "routeDecision",
+        "label": "분기 판정(자동승인/심사역검토/반려)",
+        "type": "string",
+        "source": "route 결정테이블(전 점검 PASS/FAIL 종합)",
+        "extract": "rule"
+      },
+      {
+        "key": "approverLevel",
+        "label": "위임전결 결재선(심사역/팀장/부장/여신위)",
+        "type": "string",
+        "source": "policy: 위임전결(금액·등급별) 룩업",
+        "extract": "rule"
+      },
+      {
+        "key": "finalDecision",
+        "label": "최종 처리결과(승인/조건부/부결)",
+        "type": "string",
+        "source": "위임전결 승인자 결정(HITL) → 여신코어 등록",
+        "extract": "manual"
+      }
+    ]
+  },
+  "knowledge": {
+    "route": {
+      "rules": [
+        {
+          "id": "r1_sanction_block",
+          "outcome": "REJECT",
+          "label": "제재 대상 거래 차단",
+          "basis": "sanctionHit = true → 반려 (제재 대상 거래 금지 — 제약 위반, 즉시 차단)",
+          "when": {
+            "==": [
+              "$sanctionHit",
+              true
+            ]
+          }
+        },
+        {
+          "id": "r2_aml_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "AML·실명 불일치 준법 이관",
+          "basis": "amlRiskLevel = 고 OR 실명 불일치 → 심사역검토(HITL) — 준법·AML 담당 이관",
+          "when": {
+            "any": [
+              {
+                "==": [
+                  "$amlRiskLevel",
+                  "고"
+                ]
+              },
+              {
+                "==": [
+                  "$incomeProofComplete",
+                  false
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "r3_default_reject",
+          "outcome": "REJECT",
+          "label": "부실 보유 반려",
+          "basis": "defaultFlag = true (부실 보유) → 반려 (부도·대위변제 이력)",
+          "when": {
+            "==": [
+              "$defaultFlag",
+              true
+            ]
+          }
+        },
+        {
+          "id": "r4_credit_cut_reject",
+          "outcome": "REJECT",
+          "label": "신용등급 컷 미달 반려",
+          "basis": "creditGrade >= 7 (컷 미달) → 반려 (신용등급 컷 미달)",
+          "when": {
+            ">=": [
+              "$creditGrade",
+              7
+            ]
+          }
+        },
+        {
+          "id": "r5_dsr_over_reject",
+          "outcome": "REJECT",
+          "label": "DSR 규제 한도 초과 반려",
+          "basis": "dsrRatio > 40 (규제 상한 초과) → 반려 (DSR 규제 한도 초과)",
+          "when": {
+            ">": [
+              "$dsrRatio",
+              40
+            ]
+          }
+        },
+        {
+          "id": "r6_over_limit_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "한도 초과 심사역 검토",
+          "basis": "requestAmount > approvedLimit (한도 초과) → 심사역검토(HITL) — 한도 내 조정 또는 부결 판단",
+          "when": {
+            ">": [
+              "$requestAmount",
+              "$approvedLimit"
+            ]
+          }
+        },
+        {
+          "id": "r7_soundness_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "연체·소명·추정소득 검토",
+          "basis": "delinquencyHistory = 있음(최근 연체) OR incomeProofComplete = false OR incomeType = 프리랜서 → 심사역검토(HITL) — 소명·추정 검토",
+          "when": {
+            "any": [
+              {
+                "==": [
+                  "$delinquencyHistory",
+                  "있음"
+                ]
+              },
+              {
+                "==": [
+                  "$incomeProofComplete",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$incomeType",
+                  "프리랜서"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "r8_boundary_review",
+          "outcome": "LEGAL_REVIEW",
+          "label": "경계값 보수 검토",
+          "basis": "creditGrade in 5~6 (경계) OR dsrRatio in 33~35 OR ltvRatio in 55~60 (경계 근접) → 심사역검토(HITL) — 경계값 보수 검토",
+          "when": {
+            "any": [
+              {
+                "in": [
+                  "$creditGrade",
+                  [
+                    5,
+                    6
+                  ]
+                ]
+              },
+              {
+                "all": [
+                  {
+                    ">=": [
+                      "$dsrRatio",
+                      33
+                    ]
+                  },
+                  {
+                    "<=": [
+                      "$dsrRatio",
+                      35
+                    ]
+                  }
+                ]
+              },
+              {
+                "all": [
+                  {
+                    ">=": [
+                      "$ltvRatio",
+                      55
+                    ]
+                  },
+                  {
+                    "<=": [
+                      "$ltvRatio",
+                      60
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "r9_auto_approve",
+          "outcome": "AUTO_APPROVE",
+          "label": "전 컷 PASS 자동승인",
+          "basis": "sanctionHit=false AND amlRiskLevel=저 AND defaultFlag=false AND creditGrade<=4 AND delinquencyHistory=없음 AND incomeProofComplete=true AND dsrRatio<=33 AND ltvRatio<=55 AND requestAmount<=approvedLimit → 자동승인 (전 컷 PASS·명확건) → 위임전결 결재선 라우팅",
+          "when": {
+            "all": [
+              {
+                "==": [
+                  "$sanctionHit",
+                  false
+                ]
+              },
+              {
+                "==": [
+                  "$amlRiskLevel",
+                  "저"
+                ]
+              },
+              {
+                "==": [
+                  "$defaultFlag",
+                  false
+                ]
+              },
+              {
+                "<=": [
+                  "$creditGrade",
+                  4
+                ]
+              },
+              {
+                "==": [
+                  "$delinquencyHistory",
+                  "없음"
+                ]
+              },
+              {
+                "==": [
+                  "$incomeProofComplete",
+                  true
+                ]
+              },
+              {
+                "<=": [
+                  "$dsrRatio",
+                  33
+                ]
+              },
+              {
+                "<=": [
+                  "$ltvRatio",
+                  55
+                ]
+              },
+              {
+                "<=": [
+                  "$requestAmount",
+                  "$approvedLimit"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "default": {
+        "id": "fallback_review",
+        "outcome": "LEGAL_REVIEW",
+        "label": "미분류건 심사역 검토",
+        "basis": "위 룰에 해당하지 않는 모든 케이스(전 컷 PASS도 아니고 명시적 차단·반려·검토 사유도 아닌 미분류건)는 보수적으로 심사역검토(HITL)로 라우팅"
+      }
+    }
+  },
+  "seeds": [
+    {
+      "label": "제재리스트 적중 — 즉시 반려",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0001"
+        },
+        {
+          "slot": "applicantName",
+          "value": "김제재"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "80000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "true"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "고"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "3"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "AML 고위험 — 준법 HITL 이관",
+      "expectedRoute": "심사역검토(HITL)",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0002"
+        },
+        {
+          "slot": "applicantName",
+          "value": "이의심"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "100000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "고"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "3"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "delinquencyHistory",
+          "value": "없음"
+        },
+        {
+          "slot": "incomeProofComplete",
+          "value": "true"
+        },
+        {
+          "slot": "incomeType",
+          "value": "근로"
+        },
+        {
+          "slot": "dsrRatio",
+          "value": "28"
+        },
+        {
+          "slot": "ltvRatio",
+          "value": "50"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "부실(부도/대위변제) 보유 — 반려",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0003"
+        },
+        {
+          "slot": "applicantName",
+          "value": "박부실"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "50000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "true"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "6"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "신용등급 컷 미달(7등급) — 반려",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0004"
+        },
+        {
+          "slot": "applicantName",
+          "value": "최저신용"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "40000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "8"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "DSR 규제 상한(40%) 초과 — 반려",
+      "expectedRoute": "반려",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0005"
+        },
+        {
+          "slot": "applicantName",
+          "value": "한과다부채"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "150000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "3"
+        },
+        {
+          "slot": "annualIncome",
+          "value": "60000000"
+        },
+        {
+          "slot": "dsrRatio",
+          "value": "45"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "신청금액 > 산정 승인한도 — 한도 조정 HITL",
+      "expectedRoute": "심사역검토(HITL)",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0006"
+        },
+        {
+          "slot": "applicantName",
+          "value": "정한도초과"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "500000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "2"
+        },
+        {
+          "slot": "delinquencyHistory",
+          "value": "없음"
+        },
+        {
+          "slot": "incomeProofComplete",
+          "value": "true"
+        },
+        {
+          "slot": "incomeType",
+          "value": "근로"
+        },
+        {
+          "slot": "dsrRatio",
+          "value": "30"
+        },
+        {
+          "slot": "ltvRatio",
+          "value": "50"
+        },
+        {
+          "slot": "approvedLimit",
+          "value": "350000000"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "프리랜서 비정형 소득 — 소명·추정 HITL",
+      "expectedRoute": "심사역검토(HITL)",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0007"
+        },
+        {
+          "slot": "applicantName",
+          "value": "윤프리"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "60000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "3"
+        },
+        {
+          "slot": "delinquencyHistory",
+          "value": "없음"
+        },
+        {
+          "slot": "incomeType",
+          "value": "프리랜서"
+        },
+        {
+          "slot": "incomeProofComplete",
+          "value": "false"
+        },
+        {
+          "slot": "freelancerEstimatedIncome",
+          "value": "48000000"
+        },
+        {
+          "slot": "dsrRatio",
+          "value": "30"
+        },
+        {
+          "slot": "ltvRatio",
+          "value": "50"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "경계 신용등급(5~6) — 보수 검토 HITL",
+      "expectedRoute": "심사역검토(HITL)",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0008"
+        },
+        {
+          "slot": "applicantName",
+          "value": "강경계"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "45000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "6"
+        },
+        {
+          "slot": "delinquencyHistory",
+          "value": "없음"
+        },
+        {
+          "slot": "incomeProofComplete",
+          "value": "true"
+        },
+        {
+          "slot": "incomeType",
+          "value": "근로"
+        },
+        {
+          "slot": "dsrRatio",
+          "value": "30"
+        },
+        {
+          "slot": "ltvRatio",
+          "value": "52"
+        },
+        {
+          "slot": "approvedLimit",
+          "value": "60000000"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "경계 DSR/LTV 근접 — 보수 검토 HITL",
+      "expectedRoute": "심사역검토(HITL)",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0009"
+        },
+        {
+          "slot": "applicantName",
+          "value": "서경계담보"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "180000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "3"
+        },
+        {
+          "slot": "delinquencyHistory",
+          "value": "없음"
+        },
+        {
+          "slot": "incomeProofComplete",
+          "value": "true"
+        },
+        {
+          "slot": "incomeType",
+          "value": "사업"
+        },
+        {
+          "slot": "collateralType",
+          "value": "부동산(아파트)"
+        },
+        {
+          "slot": "dsrRatio",
+          "value": "34"
+        },
+        {
+          "slot": "ltvRatio",
+          "value": "58"
+        },
+        {
+          "slot": "approvedLimit",
+          "value": "200000000"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "전 컷 PASS 명확건 — 자동승인",
+      "expectedRoute": "자동승인",
+      "input": [
+        {
+          "slot": "applicationId",
+          "value": "LN-2026-0010"
+        },
+        {
+          "slot": "applicantName",
+          "value": "우량고객"
+        },
+        {
+          "slot": "requestAmount",
+          "value": "40000000"
+        },
+        {
+          "slot": "sanctionHit",
+          "value": "false"
+        },
+        {
+          "slot": "amlRiskLevel",
+          "value": "저"
+        },
+        {
+          "slot": "defaultFlag",
+          "value": "false"
+        },
+        {
+          "slot": "creditGrade",
+          "value": "2"
+        },
+        {
+          "slot": "delinquencyHistory",
+          "value": "없음"
+        },
+        {
+          "slot": "incomeProofComplete",
+          "value": "true"
+        },
+        {
+          "slot": "incomeType",
+          "value": "근로"
+        },
+        {
+          "slot": "annualIncome",
+          "value": "70000000"
+        },
+        {
+          "slot": "dsrRatio",
+          "value": "28"
+        },
+        {
+          "slot": "ltvRatio",
+          "value": "50"
+        },
+        {
+          "slot": "approvedLimit",
+          "value": "50000000"
+        }
+      ],
+      "expectedOutcome": "AUTO_APPROVE"
+    }
+  ],
+  "provenance": {
+    "generatedBy": "harness+evaluate-in-the-loop+annotate",
+    "gatePass": true,
+    "route": "evaluate.js DSL",
+    "reviewedBy": null
+  }
+}

@@ -1,6 +1,6 @@
 {
   "id": "expense",
-  "label": "11룰 expense — 하니스 자동생성+evaluate게이트 통과본",
+  "label": "11룰 expense — 자동생성+게이트+expectedOutcome",
   "caseModel": {
     "slots": [
       {
@@ -146,6 +146,9 @@
       },
       {
         "key": "auditSampleFlag"
+      },
+      {
+        "key": "th_amount_tolerance"
       }
     ]
   },
@@ -258,7 +261,7 @@
           "id": "R07_ocr_amount_review",
           "outcome": "LEGAL_REVIEW",
           "label": "검토(HITL: 수기 확인)",
-          "basis": "OCR 신뢰도 미달 또는 금액 불일치 허용오차(1000원) 초과",
+          "basis": "OCR 신뢰도 미달 또는 금액 불일치 허용오차 초과",
           "when": {
             "any": [
               {
@@ -270,7 +273,7 @@
               {
                 ">": [
                   "$amountMismatch",
-                  1000
+                  "$th_amount_tolerance"
                 ]
               }
             ]
@@ -448,6 +451,10 @@
           "value": "false"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "반려"
         },
@@ -455,7 +462,8 @@
           "slot": "routeReasons",
           "value": "[\"EVIDENCE_MISSING\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "REJECT"
     },
     {
       "label": "정책 위반 반려 — 주류/유흥 가맹점",
@@ -518,6 +526,10 @@
           "value": "true"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "반려"
         },
@@ -525,7 +537,8 @@
           "slot": "routeReasons",
           "value": "[\"PROHIBITED_ALCOHOL\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "REJECT"
     },
     {
       "label": "청구 기간 도과 반려 — 경과 120일",
@@ -592,6 +605,10 @@
           "value": "true"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "반려"
         },
@@ -599,7 +616,8 @@
           "slot": "routeReasons",
           "value": "[\"PERIOD_DEADLINE_EXCEEDED\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "REJECT"
     },
     {
       "label": "명백 중복 청구 반려 — 키 완전일치",
@@ -674,6 +692,10 @@
           "value": "true"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "반려"
         },
@@ -681,7 +703,8 @@
           "slot": "routeReasons",
           "value": "[\"DUPLICATE_EXACT\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "REJECT"
     },
     {
       "label": "한도 초과 검토 — 임원 숙박 한도 초과",
@@ -748,6 +771,10 @@
           "value": "true"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "검토"
         },
@@ -755,7 +782,8 @@
           "slot": "routeReasons",
           "value": "[\"LIMIT_EXCESS\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "계정·세무 검토 — 접대비 오분류 의심",
@@ -826,6 +854,10 @@
           "value": "true"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "검토"
         },
@@ -833,7 +865,8 @@
           "slot": "routeReasons",
           "value": "[\"ACCOUNT_MISMATCH\",\"TAX_ADVISORY\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "OCR 저신뢰/금액 불일치 검토 — 간이영수증",
@@ -900,6 +933,10 @@
           "value": "현금"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "검토"
         },
@@ -907,7 +944,8 @@
           "slot": "routeReasons",
           "value": "[\"OCR_LOW_CONFIDENCE\",\"AMOUNT_MISMATCH\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "중복/분할/대사 소명 검토 — 분할+카드 명세없음",
@@ -974,6 +1012,10 @@
           "value": "true"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "검토"
         },
@@ -981,7 +1023,8 @@
           "slot": "routeReasons",
           "value": "[\"SPLIT_SUSPECT\",\"CARD_RECON_MISMATCH\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "고액·고위험 검토 — 위험점수/고액",
@@ -1048,6 +1091,10 @@
           "value": "true"
         },
         {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
+        },
+        {
           "slot": "routeDecision",
           "value": "검토"
         },
@@ -1055,7 +1102,8 @@
           "slot": "routeReasons",
           "value": "[\"HIGH_AMOUNT\",\"RISK_SCORE_OVER\"]"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "소액 자동승인 — 정상 식대",
@@ -1126,8 +1174,16 @@
           "value": "0.96"
         },
         {
+          "slot": "amountMismatch",
+          "value": "0"
+        },
+        {
           "slot": "riskScore",
           "value": "8"
+        },
+        {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
         },
         {
           "slot": "routeDecision",
@@ -1137,7 +1193,8 @@
           "slot": "routeReasons",
           "value": "[]"
         }
-      ]
+      ],
+      "expectedOutcome": "AUTO_APPROVE"
     },
     {
       "label": "중액·정상 자동승인 — 50만 출장 숙박",
@@ -1216,8 +1273,16 @@
           "value": "0.93"
         },
         {
+          "slot": "amountMismatch",
+          "value": "0"
+        },
+        {
           "slot": "riskScore",
           "value": "22"
+        },
+        {
+          "slot": "th_amount_tolerance",
+          "value": "1000"
         },
         {
           "slot": "routeDecision",
@@ -1227,11 +1292,12 @@
           "slot": "routeReasons",
           "value": "[]"
         }
-      ]
+      ],
+      "expectedOutcome": "AUTO_APPROVE"
     }
   ],
   "provenance": {
-    "generatedBy": "harness+evaluate-in-the-loop",
+    "generatedBy": "harness+evaluate-in-the-loop+annotate",
     "gatePass": true,
     "reviewedBy": null
   }

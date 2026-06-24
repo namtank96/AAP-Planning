@@ -1,106 +1,479 @@
 {
   "id": "procurement",
-  "label": "11룰 procurement — 자동생성+게이트+expectedOutcome",
+  "label": "구매·조달",
+  "flow": [
+    {
+      "id": "intake",
+      "label": "구매품의 접수·정규화",
+      "kind": "input",
+      "loopPhase": "Data",
+      "explain": "전자조달(자체구축, DB 연동)에 현업이 올린 구매품의를 수신한다. 헤더(요청자·부서·예산코드·납기·구매유형)와 라인아이템(품목·사양·수량·단가·금액)을 파싱하고, 첨부 견적서PDF·사양서를 케이스에 바인딩한다. 월 200건(일 약 9~10건) 유입을 큐로 받아 케이스 슬롯(품목·금액·예산코드·벤더·구매유형)을 채운다. 견적서PDF는 LLM 추출(extract seam)로 금액·벤더·유효기간을 슬롯화하되 신뢰도 낮으면 HITL 플래그."
+    },
+    {
+      "id": "evidence_check",
+      "label": "필수 증빙·사양 충족 점검",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "구매유형·금액별로 요구되는 증빙 셋을 규정표로 판정한다: 견적서 유무·유효기간, 사양서 첨부, 5백만원 이상 3견적 의무, 단가계약품은 계약서 참조. 첨부 문서와 라인아이템(품목·사양·수량·금액)의 일치를 대조한다. 미충족이면 반려 후보, 형식 충족이나 사양 해석 모호 시 검토 후보로 마킹."
+    },
+    {
+      "id": "price_budget",
+      "label": "단가계약 편차·예산 잔액 점검",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "단가계약 마스터(structured)와 품의 단가를 대조해 편차율을 계산한다(허용 편차 초과 시 플래그). 예산마스터에서 해당 예산코드의 잔액을 read하고 발주 예정액을 차감 시뮬레이션해 '예산 초과 발주 금지' 제약을 검사한다(잔액 부족 = 하드 차단). 보수 risk appetite에 따라 잔액 임박(예: 90% 소진)·편차 초과는 검토로 올린다. SAP FI 예산 약정 전 단계의 결정론 계산."
+    },
+    {
+      "id": "split_detect",
+      "label": "분할발주(쪼개기) 의심 탐지",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "구매발주이력(structured)을 조회해 동일 요청자·동일/유사 벤더·동일 예산코드·근접 기간(예: N일 내)에 결재선·3견적 임계 직전 금액으로 분할된 패턴을 결정론으로 스코어링한다. 보수 risk appetite상 적극 탐지: 임계 직하 금액 반복, 같은 품목군 연속 발주 등을 신호로 묶어 쪼개기 의심 점수를 산출한다. 임계 초과 시 검토(HITL)로 강제 승급."
+    },
+    {
+      "id": "vendor_eligibility",
+      "label": "벤더 적격성 점검",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "벤더마스터(SAP MM, read-only)에서 사업자번호 유효·신용등급·제재(블랙리스트)·거래정지 상태를 조회한다. 기존 등록 벤더는 결정론 판정(제재/거래정지 = 하드 차단). 단, 신규 벤더 실사 보고서가 미디지털화(data gap)라 적격성 일부는 수기 → 신규 벤더 건은 검토(HITL)로 라우팅해 구매 담당자가 실사 결과를 확인한다."
+    },
+    {
+      "id": "approval_routing",
+      "label": "결재선 산정·분기 판정",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "앞 단계 점검 결과(증빙·편차·예산·쪼개기·벤더)를 종합해 위임전결 규정으로 결재선을 산정한다(팀장5M·구매팀장50M·본부장300M·CPO 초과). 전 점검 통과 & 저위험 & 소액이면 '자동승인', 플래그(편차 초과·쪼개기 의심·신규 벤더·예산 임박·증빙 모호)가 있으면 해당 결재선의 '구매검토(HITL)'로, 하드 위반(예산 초과·제재 벤더·증빙 미충족)이면 '반려'로 분기한다. 보수~중도 appetite상 경계 케이스는 검토로 기운다.",
+      "gate": {
+        "label": "결재선 산정·분기 판정",
+        "decisions": [
+          {
+            "key": "REJECT",
+            "label": "REJECT",
+            "toast": "REJECT"
+          },
+          {
+            "key": "LEGAL_REVIEW",
+            "label": "LEGAL_REVIEW",
+            "toast": "LEGAL_REVIEW"
+          },
+          {
+            "key": "AUTO_APPROVE",
+            "label": "AUTO_APPROVE",
+            "toast": "AUTO_APPROVE"
+          }
+        ]
+      },
+      "next": {
+        "REJECT": "reject",
+        "LEGAL_REVIEW": "review",
+        "AUTO_APPROVE": "commit"
+      },
+      "nextBy": "evaluate(caseData, knowledge).outcome"
+    },
+    {
+      "id": "po_writeback",
+      "label": "PO 생성·ERP 반영·기록",
+      "kind": "auto",
+      "loopPhase": "Decision",
+      "explain": "승인(자동 또는 결재 완료) 건에 대해 SAP MM에 PO를 생성(API, read-write)하고 FI 예산을 약정(commitment) 처리해 예산 잔액을 갱신한다. 전자조달에 발주 상태를 반영하고, 심사 근거(점검 결과·결재 이력·분기 사유)를 감사 로그로 적재한다. 반려 건은 보완 사유와 함께 현업에 회신한다. 온프레미스 전용 제약상 모든 처리·연동은 사내 시스템 경계 내에서 수행. 처리 결과·예외 패턴은 학습 자산(단가 편차 추세·쪼개기 룰 튜닝)으로 누적."
+    }
+  ],
+  "io": {
+    "inputs": [
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "vendor_due_diligence",
+        "label": "신규 벤더 실사 결과"
+      },
+      {
+        "stage": "intake",
+        "type": "file",
+        "key": "quote_amount",
+        "label": "견적 금액"
+      },
+      {
+        "stage": "intake",
+        "type": "file",
+        "key": "quote_vendor",
+        "label": "견적 벤더"
+      },
+      {
+        "stage": "intake",
+        "type": "file",
+        "key": "quote_valid_until",
+        "label": "견적 유효기간"
+      },
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "spec_match",
+        "label": "사양서↔품의 사양 일치 적정성"
+      },
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "deviation_justified",
+        "label": "편차 사유 정당성(시장가 변동 등)"
+      },
+      {
+        "stage": "intake",
+        "type": "field",
+        "key": "split_intent_judged",
+        "label": "쪼개기 의도 최종 판정"
+      }
+    ],
+    "connectors": [
+      {
+        "id": "c_전자조달_커넥터_(구매품의_접",
+        "label": "전자조달 커넥터 (구매품의 접수·발주상태 반영)",
+        "system": "전자조달(자체구축, DB, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_MM_커넥터_(PO_생",
+        "label": "SAP MM 커넥터 (PO 생성·구매발주이력 조회)",
+        "system": "ERP(SAP MM, API, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_FI_커넥터_(예산마스",
+        "label": "SAP FI 커넥터 (예산마스터 잔액 read·commitment 약정)",
+        "system": "ERP(SAP FI, API, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_벤더마스터_커넥터_(사업자·신",
+        "label": "벤더마스터 커넥터 (사업자·신용·제재·거래정지 조회)",
+        "system": "벤더마스터(SAP MM, API, read-only)",
+        "stub": true
+      },
+      {
+        "id": "c_SAP_MM/FI_ERP_(P",
+        "label": "SAP MM/FI ERP (PO·예산·발주 시스템 오브 레코드)",
+        "system": "ERP(SAP, API, read-write)",
+        "stub": true
+      },
+      {
+        "id": "c_전자조달_시스템_(자체구축,_",
+        "label": "전자조달 시스템 (자체구축, 품의·견적 이력 소스)",
+        "system": "전자조달(자체구축, DB, read-write)",
+        "stub": true
+      }
+    ],
+    "editable": [
+      {
+        "key": "auto_approve_amount_cap",
+        "label": "자동승인 금액 상한(팀장 위임전결 구간·저위험 소액). 초과는 점검 PASS여도 결재선 검토.",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t1",
+        "label": "결재선=팀장",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t2",
+        "label": "결재선=구매팀장",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t3",
+        "label": "결재선=본부장",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "approval_line_t4",
+        "label": "결재선=CPO",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "three_quote_threshold",
+        "label": "3견적 의무 적용",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "budget_block",
+        "label": "예산 초과 — 하드 반려(절대 규칙)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "budget_usage_review_threshold",
+        "label": "예산 임박 — 검토 승급(보수 risk appetite, 90% 소진)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "unit_price_deviation_threshold",
+        "label": "단가계약 편차 초과 — 검토(허용 편차 10% 가정)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "split_score_review_threshold",
+        "label": "쪼개기 의심 — 검토 강제 승급(보수 risk appetite, 0~100 스코어)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "split_proximity_window",
+        "label": "쪼개기 근접 기간 신호(14일 내)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "split_near_threshold_band",
+        "label": "임계 직하 금액 반복 신호(임계의 90~100%)",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "quote_confidence_threshold",
+        "label": "견적 추출 신뢰도 미달 — 사람 확인 플래그",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      }
+    ]
+  },
   "caseModel": {
     "slots": [
       {
-        "key": "case_id"
+        "key": "case_id",
+        "label": "케이스 ID",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 구매품의 접수 시 채번",
+        "extract": "connector"
       },
       {
-        "key": "requester"
+        "key": "requester",
+        "label": "구매 요청자(현업)",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 헤더 요청자",
+        "extract": "connector"
       },
       {
-        "key": "department"
+        "key": "department",
+        "label": "요청 부서",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 헤더 부서",
+        "extract": "connector"
       },
       {
-        "key": "purchase_type"
+        "key": "purchase_type",
+        "label": "구매유형(일반/단가계약/긴급/MRO)",
+        "type": "enum",
+        "source": "전자조달(자체구축, DB): 품의 헤더 구매유형 코드",
+        "extract": "rule"
       },
       {
-        "key": "budget_code"
+        "key": "budget_code",
+        "label": "예산코드",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 헤더 예산코드",
+        "extract": "connector"
       },
       {
-        "key": "delivery_due"
+        "key": "delivery_due",
+        "label": "납기일",
+        "type": "date",
+        "source": "전자조달(자체구축, DB): 품의 헤더 납기",
+        "extract": "connector"
       },
       {
-        "key": "line_items"
+        "key": "line_items",
+        "label": "라인아이템(품목·사양·수량·단가·금액)",
+        "type": "array",
+        "source": "전자조달(자체구축, DB): 품의 라인아이템",
+        "extract": "connector"
       },
       {
-        "key": "order_amount"
+        "key": "order_amount",
+        "label": "발주 예정 총액(원)",
+        "type": "number",
+        "source": "전자조달(자체구축, DB): 라인아이템 금액 합계",
+        "extract": "rule"
       },
       {
-        "key": "vendor_id"
+        "key": "vendor_id",
+        "label": "벤더 사업자번호/코드",
+        "type": "string",
+        "source": "전자조달(자체구축, DB): 품의 지정 벤더",
+        "extract": "connector"
       },
       {
-        "key": "is_new_vendor"
+        "key": "is_new_vendor",
+        "label": "신규 벤더 여부",
+        "type": "boolean",
+        "source": "벤더마스터(SAP MM, read-only): 등록 여부 조회",
+        "extract": "rule"
       },
       {
-        "key": "vendor_status"
+        "key": "vendor_status",
+        "label": "벤더 상태(정상/제재/거래정지)",
+        "type": "enum",
+        "source": "벤더마스터(SAP MM, read-only): 제재·거래정지 플래그",
+        "extract": "connector"
       },
       {
-        "key": "vendor_credit_grade"
+        "key": "vendor_credit_grade",
+        "label": "벤더 신용등급",
+        "type": "string",
+        "source": "벤더마스터(SAP MM, read-only): 신용등급",
+        "extract": "connector"
       },
       {
-        "key": "vendor_biz_no_valid"
+        "key": "vendor_biz_no_valid",
+        "label": "사업자번호 유효 여부",
+        "type": "boolean",
+        "source": "벤더마스터(SAP MM, read-only): 사업자 유효성",
+        "extract": "connector"
       },
       {
-        "key": "vendor_due_diligence"
+        "key": "vendor_due_diligence",
+        "label": "신규 벤더 실사 결과",
+        "type": "enum",
+        "source": "gap: 신규 벤더 실사 보고서 미디지털화 → 구매 담당자 수기 확인",
+        "extract": "manual"
       },
       {
-        "key": "quote_count"
+        "key": "quote_count",
+        "label": "첨부 견적 수",
+        "type": "number",
+        "source": "전자조달(자체구축, DB): 첨부 견적서PDF 수 / 견적 이력",
+        "extract": "rule"
       },
       {
-        "key": "quote_amount"
+        "key": "quote_amount",
+        "label": "견적 금액",
+        "type": "number",
+        "source": "견적서PDF: LLM 추출(금액)",
+        "extract": "doc"
       },
       {
-        "key": "quote_vendor"
+        "key": "quote_vendor",
+        "label": "견적 벤더",
+        "type": "string",
+        "source": "견적서PDF: LLM 추출(벤더)",
+        "extract": "doc"
       },
       {
-        "key": "quote_valid_until"
+        "key": "quote_valid_until",
+        "label": "견적 유효기간",
+        "type": "date",
+        "source": "견적서PDF: LLM 추출(유효기간)",
+        "extract": "doc"
       },
       {
-        "key": "quote_extract_confidence"
+        "key": "quote_extract_confidence",
+        "label": "견적 추출 신뢰도",
+        "type": "number",
+        "source": "견적서PDF: LLM 추출 신뢰도 스코어",
+        "extract": "llm"
       },
       {
-        "key": "spec_attached"
+        "key": "spec_attached",
+        "label": "사양서 첨부 여부",
+        "type": "boolean",
+        "source": "전자조달(자체구축, DB): 첨부 사양서 유무",
+        "extract": "rule"
       },
       {
-        "key": "spec_match"
+        "key": "spec_match",
+        "label": "사양서↔품의 사양 일치 적정성",
+        "type": "enum",
+        "source": "gap: 기술 사양 동등성 해석 → 구매 담당자 판단(LLM 보조)",
+        "extract": "manual"
       },
       {
-        "key": "contract_unit_price"
+        "key": "contract_unit_price",
+        "label": "단가계약 단가",
+        "type": "number",
+        "source": "단가계약 마스터(전자조달 DB / SAP MM 단가계약): 계약 단가",
+        "extract": "connector"
       },
       {
-        "key": "unit_price_deviation_pct"
+        "key": "unit_price_deviation_pct",
+        "label": "단가계약 대비 편차율(%)",
+        "type": "number",
+        "source": "전자조달(자체구축, DB)+단가계약 마스터: (품의단가-계약단가)/계약단가 계산",
+        "extract": "rule"
       },
       {
-        "key": "deviation_justified"
+        "key": "deviation_justified",
+        "label": "편차 사유 정당성(시장가 변동 등)",
+        "type": "enum",
+        "source": "gap: 시장 맥락 해석 → 결재권자 판단",
+        "extract": "manual"
       },
       {
-        "key": "budget_remaining"
+        "key": "budget_remaining",
+        "label": "예산코드 잔액(원)",
+        "type": "number",
+        "source": "예산마스터(SAP FI, API read): 해당 예산코드 잔액",
+        "extract": "connector"
       },
       {
-        "key": "budget_after_order"
+        "key": "budget_after_order",
+        "label": "발주 후 예상 잔액(원)",
+        "type": "number",
+        "source": "예산마스터(SAP FI)+order_amount: 잔액-발주액 시뮬레이션",
+        "extract": "rule"
       },
       {
-        "key": "budget_usage_pct"
+        "key": "budget_usage_pct",
+        "label": "예산 소진율(%)",
+        "type": "number",
+        "source": "예산마스터(SAP FI): (소진액/배정액) 계산",
+        "extract": "rule"
       },
       {
-        "key": "split_score"
+        "key": "split_score",
+        "label": "쪼개기 의심 점수",
+        "type": "number",
+        "source": "구매발주이력(SAP MM, API read): 동일 요청자·예산코드·근접기간·임계직하 패턴 스코어링",
+        "extract": "rule"
       },
       {
-        "key": "split_intent_judged"
+        "key": "split_intent_judged",
+        "label": "쪼개기 의도 최종 판정",
+        "type": "enum",
+        "source": "gap: 분할 의도·정당성 → 구매팀장 판단",
+        "extract": "manual"
       },
       {
-        "key": "approval_line"
+        "key": "approval_line",
+        "label": "산정 결재선",
+        "type": "enum",
+        "source": "위임전결 규정(Policy)+order_amount: 금액 구간 룩업",
+        "extract": "rule"
       },
       {
-        "key": "route"
+        "key": "route",
+        "label": "분기 판정(자동승인/구매검토/반려)",
+        "type": "enum",
+        "source": "심사 엔진: 결정론 점검 종합 분기",
+        "extract": "rule"
       },
       {
-        "key": "po_number"
+        "key": "po_number",
+        "label": "생성 PO 번호",
+        "type": "string",
+        "source": "SAP MM(API, read-write): PO 생성 결과 채번",
+        "extract": "connector"
       },
       {
-        "key": "commitment_status"
+        "key": "commitment_status",
+        "label": "FI 예산 약정 상태",
+        "type": "enum",
+        "source": "SAP FI(API, read-write): commitment 처리 결과",
+        "extract": "connector"
       },
       {
         "key": "today"
@@ -563,7 +936,160 @@
         "label": "구매검토(HITL) — 미분류, 결재선 판단 필요",
         "basis": "위 어떤 룰에도 매칭되지 않은 케이스는 안전하게 사람 검토로 회부 (catch-all)"
       }
-    }
+    },
+    "lookupTables": [
+      {
+        "id": "lut_approval_line",
+        "description": "위임전결 결재선 룩업 (policy.approvalDelegation: 팀장5M·구매팀장50M·본부장300M·CPO 초과). 금액 단위 원, M=백만원.",
+        "entries": [
+          {
+            "match": "order_amount <= 5000000",
+            "result": "팀장 (1차 결재)"
+          },
+          {
+            "match": "5000000 < order_amount <= 50000000",
+            "result": "구매팀장"
+          },
+          {
+            "match": "50000000 < order_amount <= 300000000",
+            "result": "본부장"
+          },
+          {
+            "match": "order_amount > 300000000",
+            "result": "CPO(최고구매책임자)"
+          }
+        ]
+      },
+      {
+        "id": "lut_three_quote",
+        "description": "3견적 의무표 (policy.threeQuoteRule: 5백만원 이상 3견적 의무, 단가계약품 제외).",
+        "entries": [
+          {
+            "match": "order_amount >= 5000000 AND purchase_type != '단가계약'",
+            "result": "필수 견적 수 = 3"
+          },
+          {
+            "match": "order_amount < 5000000",
+            "result": "필수 견적 수 = 1 (견적서 유무만)"
+          },
+          {
+            "match": "purchase_type == '단가계약'",
+            "result": "견적 면제 (계약서 참조)"
+          }
+        ]
+      },
+      {
+        "id": "lut_evidence_set",
+        "description": "구매유형별 필수 증빙 셋 (evidence_check 규정표).",
+        "entries": [
+          {
+            "match": "purchase_type == '일반구매'",
+            "result": "견적서(유효기간 내)+사양서 필수, ≥5M 시 3견적"
+          },
+          {
+            "match": "purchase_type == '단가계약'",
+            "result": "단가계약서 참조 필수, 견적 면제, 사양서 필수"
+          },
+          {
+            "match": "purchase_type == '긴급'",
+            "result": "견적서+긴급사유서 필수, 사후 3견적 보완 허용"
+          },
+          {
+            "match": "purchase_type == 'MRO'",
+            "result": "견적서 또는 단가계약 참조, 사양서 간소"
+          }
+        ]
+      },
+      {
+        "id": "lut_vendor_status",
+        "description": "벤더 상태별 처리 (벤더마스터 SAP MM 조회 결과 → 액션).",
+        "entries": [
+          {
+            "match": "vendor_status == '제재' OR vendor_status == '거래정지'",
+            "result": "하드 반려(컴플라이언스 차단)"
+          },
+          {
+            "match": "vendor_biz_no_valid == false",
+            "result": "하드 반려(사업자 무효)"
+          },
+          {
+            "match": "is_new_vendor == true",
+            "result": "구매검토(HITL) 강제 — 실사 수기 확인"
+          },
+          {
+            "match": "vendor_status == '정상' AND is_new_vendor == false",
+            "result": "통과"
+          }
+        ]
+      }
+    ],
+    "thresholds": [
+      {
+        "id": "auto_approve_amount_cap",
+        "expr": "order_amount <= 5000000",
+        "flag": "자동승인 금액 상한(팀장 위임전결 구간·저위험 소액). 초과는 점검 PASS여도 결재선 검토."
+      },
+      {
+        "id": "approval_line_t1",
+        "expr": "order_amount <= 5000000",
+        "flag": "결재선=팀장"
+      },
+      {
+        "id": "approval_line_t2",
+        "expr": "order_amount <= 50000000",
+        "flag": "결재선=구매팀장"
+      },
+      {
+        "id": "approval_line_t3",
+        "expr": "order_amount <= 300000000",
+        "flag": "결재선=본부장"
+      },
+      {
+        "id": "approval_line_t4",
+        "expr": "order_amount > 300000000",
+        "flag": "결재선=CPO"
+      },
+      {
+        "id": "three_quote_threshold",
+        "expr": "order_amount >= 5000000 AND purchase_type != '단가계약'",
+        "flag": "3견적 의무 적용"
+      },
+      {
+        "id": "budget_block",
+        "expr": "budget_after_order < 0",
+        "flag": "예산 초과 — 하드 반려(절대 규칙)"
+      },
+      {
+        "id": "budget_usage_review_threshold",
+        "expr": "budget_usage_pct >= 90",
+        "flag": "예산 임박 — 검토 승급(보수 risk appetite, 90% 소진)"
+      },
+      {
+        "id": "unit_price_deviation_threshold",
+        "expr": "unit_price_deviation_pct > 10",
+        "flag": "단가계약 편차 초과 — 검토(허용 편차 10% 가정)"
+      },
+      {
+        "id": "split_score_review_threshold",
+        "expr": "split_score >= 70",
+        "flag": "쪼개기 의심 — 검토 강제 승급(보수 risk appetite, 0~100 스코어)"
+      },
+      {
+        "id": "split_proximity_window",
+        "expr": "동일 요청자·예산코드 발주 간격 <= 14일",
+        "flag": "쪼개기 근접 기간 신호(14일 내)"
+      },
+      {
+        "id": "split_near_threshold_band",
+        "expr": "order_amount >= 임계*0.9 AND order_amount < 임계 (5M/50M/300M 직하)",
+        "flag": "임계 직하 금액 반복 신호(임계의 90~100%)"
+      },
+      {
+        "id": "quote_confidence_threshold",
+        "expr": "quote_extract_confidence < 0.8",
+        "flag": "견적 추출 신뢰도 미달 — 사람 확인 플래그"
+      }
+    ]
   },
   "seeds": [
     {
@@ -1848,9 +2374,253 @@
       "expectedOutcome": "LEGAL_REVIEW"
     }
   ],
+  "components": [
+    {
+      "type": "Connector",
+      "name": "전자조달 커넥터 (구매품의 접수·발주상태 반영)",
+      "L": "L5",
+      "connectsTo": "전자조달(자체구축, DB, read-write)"
+    },
+    {
+      "type": "Connector",
+      "name": "SAP MM 커넥터 (PO 생성·구매발주이력 조회)",
+      "L": "L5",
+      "connectsTo": "ERP(SAP MM, API, read-write)"
+    },
+    {
+      "type": "Connector",
+      "name": "SAP FI 커넥터 (예산마스터 잔액 read·commitment 약정)",
+      "L": "L5",
+      "connectsTo": "ERP(SAP FI, API, read-write)"
+    },
+    {
+      "type": "Connector",
+      "name": "벤더마스터 커넥터 (사업자·신용·제재·거래정지 조회)",
+      "L": "L5",
+      "connectsTo": "벤더마스터(SAP MM, API, read-only)"
+    },
+    {
+      "type": "Module",
+      "name": "구매품의 정규화·슬롯 채움 모듈 (헤더·라인아이템 파싱)",
+      "L": "L3",
+      "connectsTo": "전자조달 커넥터"
+    },
+    {
+      "type": "Agent",
+      "name": "견적서 추출 에이전트 (견적서PDF→금액·벤더·유효기간, 신뢰도 스코어)",
+      "L": "L3",
+      "connectsTo": "전자조달 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "증빙·사양 충족 점검 모듈 (lut_evidence_set·lut_three_quote 결정론)",
+      "L": "L3",
+      "connectsTo": "구매품의 정규화 모듈"
+    },
+    {
+      "type": "Module",
+      "name": "단가계약 편차·예산 잔액 계산 모듈 (편차율·잔액 시뮬레이션 결정론)",
+      "L": "L3",
+      "connectsTo": "SAP FI 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "쪼개기 패턴 스코어링 모듈 (구매발주이력 룰 스코어)",
+      "L": "L3",
+      "connectsTo": "SAP MM 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "벤더 적격성 판정 모듈 (제재·거래정지·신규 분기)",
+      "L": "L3",
+      "connectsTo": "벤더마스터 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "결재선 산정·분기 라우팅 엔진 (lut_approval_line·dt_route)",
+      "L": "L3",
+      "connectsTo": "증빙·예산·쪼개기·벤더 점검 모듈"
+    },
+    {
+      "type": "Agent",
+      "name": "반려·보완요청 회신 초안 에이전트 (발송 전 사람 검토)",
+      "L": "L3",
+      "connectsTo": "전자조달 커넥터"
+    },
+    {
+      "type": "Module",
+      "name": "PO 생성·예산 약정 Writeback 모듈 (dt_writeback·롤백/재시도)",
+      "L": "L3",
+      "connectsTo": "SAP MM 커넥터"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "SAP MM/FI ERP (PO·예산·발주 시스템 오브 레코드)",
+      "L": "L5",
+      "connectsTo": "ERP(SAP, API, read-write)"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "전자조달 시스템 (자체구축, 품의·견적 이력 소스)",
+      "L": "L5",
+      "connectsTo": "전자조달(자체구축, DB, read-write)"
+    },
+    {
+      "type": "Policy",
+      "name": "위임전결 규정 가드 (팀장5M·구매팀장50M·본부장300M·CPO 초과)",
+      "L": "L7",
+      "connectsTo": "결재선 산정·분기 라우팅 엔진"
+    },
+    {
+      "type": "Policy",
+      "name": "예산 초과 발주 금지 하드 가드레일 (budget_block 절대 차단)",
+      "L": "L7",
+      "connectsTo": "단가계약 편차·예산 잔액 계산 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "벤더 컴플라이언스 가드 (제재·거래정지 하드 차단)",
+      "L": "L7",
+      "connectsTo": "벤더 적격성 판정 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "3견적 의무 가드 (≥5M·단가계약 외)",
+      "L": "L7",
+      "connectsTo": "증빙·사양 충족 점검 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "온프레미스 전용 경계 가드 (사내 시스템 외 연동 금지)",
+      "L": "L7",
+      "connectsTo": "PO 생성·예산 약정 Writeback 모듈"
+    },
+    {
+      "type": "Policy",
+      "name": "보수 risk appetite 승급 가드 (쪼개기·예산임박·편차 검토 라우팅)",
+      "L": "L7",
+      "connectsTo": "결재선 산정·분기 라우팅 엔진"
+    },
+    {
+      "type": "Module",
+      "name": "HITL 검토 큐 (구매검토 건 결재권자·담당자 라우팅)",
+      "L": "L7",
+      "connectsTo": "결재선 산정·분기 라우팅 엔진"
+    },
+    {
+      "type": "Module",
+      "name": "감사 로그·학습 자산 적재 모듈 (점검·결재·분기 사유·편차/쪼개기 추세)",
+      "L": "L8",
+      "connectsTo": "PO 생성·예산 약정 Writeback 모듈"
+    }
+  ],
+  "compose": [
+    {
+      "t": "Agent",
+      "sub": "전문 작업",
+      "cls": "tA",
+      "n": 2,
+      "items": [
+        "견적서 추출 에이전트 (견적서PDF→금액·벤더·유효기간, 신뢰도 스코어)",
+        "반려·보완요청 회신 초안 에이전트 (발송 전 사람 검토)"
+      ]
+    },
+    {
+      "t": "Module",
+      "sub": "재사용 기능",
+      "cls": "tM",
+      "n": 9,
+      "items": [
+        "구매품의 정규화·슬롯 채움 모듈 (헤더·라인아이템 파싱)",
+        "증빙·사양 충족 점검 모듈 (lut_evidence_set·lut_three_quote 결정론)",
+        "단가계약 편차·예산 잔액 계산 모듈 (편차율·잔액 시뮬레이션 결정론)",
+        "쪼개기 패턴 스코어링 모듈 (구매발주이력 룰 스코어)",
+        "벤더 적격성 판정 모듈 (제재·거래정지·신규 분기)"
+      ]
+    },
+    {
+      "t": "기존 솔루션",
+      "sub": "Buy·Integrate",
+      "cls": "tS",
+      "n": 2,
+      "items": [
+        "SAP MM/FI ERP (PO·예산·발주 시스템 오브 레코드)",
+        "전자조달 시스템 (자체구축, 품의·견적 이력 소스)"
+      ]
+    },
+    {
+      "t": "Connector",
+      "sub": "시스템 연동",
+      "cls": "tC",
+      "n": 4,
+      "items": [
+        "전자조달 커넥터 (구매품의 접수·발주상태 반영)",
+        "SAP MM 커넥터 (PO 생성·구매발주이력 조회)",
+        "SAP FI 커넥터 (예산마스터 잔액 read·commitment 약정)",
+        "벤더마스터 커넥터 (사업자·신용·제재·거래정지 조회)"
+      ]
+    },
+    {
+      "t": "Policy",
+      "sub": "통제·권한",
+      "cls": "tP",
+      "n": 6,
+      "items": [
+        "위임전결 규정 가드 (팀장5M·구매팀장50M·본부장300M·CPO 초과)",
+        "예산 초과 발주 금지 하드 가드레일 (budget_block 절대 차단)",
+        "벤더 컴플라이언스 가드 (제재·거래정지 하드 차단)",
+        "3견적 의무 가드 (≥5M·단가계약 외)",
+        "온프레미스 전용 경계 가드 (사내 시스템 외 연동 금지)"
+      ]
+    }
+  ],
+  "stepLoop": {
+    "intake": "Data",
+    "evidence_check": "Decision",
+    "price_budget": "Decision",
+    "split_detect": "Data",
+    "vendor_eligibility": "Data",
+    "approval_routing": "Decision",
+    "po_writeback": "Decision"
+  },
+  "govern": [
+    {
+      "k": "Policy",
+      "v": "책임 지점 자동 차단 후 승인(HITL)."
+    },
+    {
+      "k": "Run Trace",
+      "v": "요청→판정→분기→반영 전 구간 기록."
+    },
+    {
+      "k": "Evaluation",
+      "v": "evaluate(case,knowledge) 결정론·basis 추적."
+    },
+    {
+      "k": "Skill Library",
+      "v": "유형·룰 재사용 자산화."
+    }
+  ],
+  "surfaceSpec": {
+    "icon": "🗂️",
+    "title": "구매·조달",
+    "tabs": [
+      "개요",
+      "판정",
+      "처리",
+      "기록"
+    ],
+    "_stub": true
+  },
   "provenance": {
     "generatedBy": "harness+evaluate-in-the-loop+annotate",
     "gatePass": true,
+    "route": "evaluate.js DSL",
     "reviewedBy": null
-  }
+  },
+  "_adapterNotes": [
+    "knowledge.route=게이트 통과 실행가능 DSL(when 파싱됨). seeds=expectedOutcome 포함.",
+    "flow gate.next=verdict.outcome 바인딩(nextBy). lookup/threshold는 prose 참조(DSL화는 후속).",
+    "flow·loopPhase=휴리스틱 v0.2, app/ 세션 정통화."
+  ]
 }

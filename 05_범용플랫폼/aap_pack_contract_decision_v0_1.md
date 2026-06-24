@@ -1,5 +1,7 @@
 # AAP Domain Pack — 계약 관리 (B) 결정 설계 (P1) v0.1
 
+> **⚠ 정합 보정(260624)**: 본 문서는 판정 함수를 `decide()`로 기술하나, **canonical 표준 = 코어 도메인 무관 `evaluate(caseData, knowledge)`**(`aap_harness_app_bridge_n3` §D·`aap_scenario_harness_spec_v0_2` 확정, app/ 구현 `evaluate.js`에 랜딩됨). 본 문서의 `decide()`는 **개념명**이며, 실제 구현은 **팩이 `knowledge` 데이터만 제공하고 코어 `evaluate()`가 평가**(팩 함수 `decide()`는 복잡 도메인 escape hatch). 이하 `decide()`는 `evaluate()`로 읽을 것.
+
 > **무엇**: (B) 결정 런타임의 **첫 증명 도메인 = 계약 관리**. `aap_decision_runtime_spec_v0_1.md`(범용 (B) 설계)를 계약 도메인에 인스턴스화 — `caseModel`·`knowledge`·`decide()`·verdict·HITL을 **명시지로 인코딩**.
 > **유저 확정(260622)**: 후보 비교 후 **계약 관리** 커밋(AskUserQuestion). 기준 = formal·포맷화·AI 실수요·재사용 골격("규정 기반 심사·승인" 아키타입).
 > **원칙**: 판정은 **결정론·추적 가능**(LLM 0·mock 데이터), 암묵지(독소조항 해석)는 **HITL**. §9 검증(데이터 구동·추적성·재현성) 통과가 P1 완료 기준.

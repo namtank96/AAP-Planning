@@ -57,7 +57,7 @@
 
 > **갭**: 하니스 PoC는 *연구형 평면 shape*(analysis/caseModel/knowledge/...)을 낸다. **앱에 바로 load 불가** — 위 매핑대로 **Pack v2 emit**이 필요(하니스 측 작업, app/ 무관).
 >
-> **✅ 구현됨(260623)**: `_harness_out/adapter_harness_to_pack_v0_1.js` — `finalPack` → Pack v2 결정론 변환. 4개 bake 완료(`_harness_out/packs_baked/pack_{contract_A,contract_B,procurement,expense}.json`). **결정층(caseModel·knowledge·seeds·components) 1:1 정밀 통과**, flow·loopPhase·gate.decisions는 휴리스틱 v0.1(app/ 세션이 v2 2b서 정통화). io.editable의 recompute = `evaluate(case,knowledge)`. → 다리 1 **타깃 형태 증명·핸드오프 자료 확보**. 상세=`packs_baked/README.md`.
+> **✅ 구현됨(260623)**: `adapter_harness_to_pack_v0_1.js`(prose knowledge) → **v0.2로 진화**(`adapter_harness_to_pack_v0_2.js`): **게이트 통과 실행가능 DSL을 소비**해 완전한 Pack v2 emit — `knowledge.route`=evaluate.js 실행 DSL(when 파싱), `seeds`=expectedOutcome 포함, flow gate `next`=verdict.outcome 바인딩. 4팩 `_harness_out/packs_baked_v2/pack_*.v2.json` + **evaluate 스모크 전수 통과**(10/10·9/9·11/11·11/11). 다리 1+2 결합 = **app 로드 가능한 실행 결정층** 확보.
 
 ---
 

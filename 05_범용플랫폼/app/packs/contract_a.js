@@ -461,11 +461,11 @@
     /* ── 결정층(N3 §D) — 코어 evalCase 가 caseModel+knowledge 로 evaluate 실행 ── */
     caseModel:{ slots:SLOTS },
     knowledge:{ route:ROUTE, lookupTables:LOOKUPS, thresholds:EDITABLE },
-    io:{ editable:EDITABLE.map(e=>({key:e.key,label:e.label,type:'threshold',recompute:'evaluate(case,knowledge)'})) },
+    /* io.editable = 전체 임계 메타(slot·def·opts) → 코어 일반 steering 바가 직접 렌더(dcSteer) */
+    io:{ editable:EDITABLE },
     stepLoop:{ intake:'Data', check:'Semantic', route_gate:'Decision', commit:'Decision' },
-    /* 조작형 결정 콘솔(채용과 같은 척추 · 단일 케이스형) */
-    surface:{ head:()=> '', base:()=> '', cmodal, opstage, opStages },
-    surfaceHooks:SURF_HOOKS,
+    /* ── 수렴 §4-1a: surface/surfaceHooks 제거 → 코어 일반 renderDataConsole 이 동일 콘솔을 그림.
+       (이 파일의 opstage/cmodal/SURF_HOOKS 는 코어 추출 후 미사용 — 데이터만 남김) ── */
     surfaceSpec,
     provenance:{ generatedBy:'harness', adapter:'harness_to_pack_v0.1', domain:'contract' },
   };

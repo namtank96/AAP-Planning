@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8"><title>PENDING</title>
+<iframe id="f" src="index.html" style="width:1400px;height:900px;border:0"></iframe>
+<pre id="out" style="font:12px monospace;white-space:pre-wrap"></pre>
+<script>
+var RESULTS=[];
+function probe(win, packId){
+  var R={pack:packId};
+  var C=win.AAP_CORE; C.load(packId); C.go('route_gate');
+  var doc=win.document, sb=doc.getElementById('surfBody'), sh=doc.getElementById('surfHead');
+  R.opBody=!!(sb&&sb.classList.contains('op-body'));
+  R.slots=sb?sb.querySelectorAll('.ct-slot').length:0;
+  R.verdict=(sb&&sb.querySelector('.ct-vd-h'))?sb.querySelector('.ct-vd-h').textContent.trim():null;
+  R.basis=(sb&&sb.querySelector('.ct-vd-basis'))?sb.querySelector('.ct-vd-basis').textContent.trim().slice(0,40):null;
+  R.lookups=sb?sb.querySelectorAll('.ct-lk').length:0;
+  R.steerBtns=sh?sh.querySelectorAll('.op-opt').length:0;
+  R.hitlBar=!!(sb&&sb.querySelector('.op-hitlbar'));
+  var pk=win.AAP_PACKS&&win.AAP_PACKS[packId];
+  R.surfaceFns=!!(pk&&pk.surface);
+  R.opstageFn=!!(pk&&pk.surface&&pk.surface.opstage);
+  return R;
+}
+function steerTest(win){
+  win.AAP_CORE.load('procurement');
+  // open the budget-imminent seed (R8 = procurement:7) which routes to 검토(HITL) via budget rule
+  var app=win.AAP_APP||null;
+  // find case by seedKey via AAP_CORE.open path — use global APP through a known accessor
+  var openedBy='?';
+  try{
+    var cs=win.__APP_CASES__||null;
+  }catch(e){}
+  // fallback: navigate via DOM inbox is complex; use a direct helper if present
+  if(win.AAP_CORE.openSeed){ win.AAP_CORE.openSeed('procurement:7'); openedBy='openSeed'; }
+  win.AAP_CORE.go('route_gate');
+  var doc=win.document;
+  var before=(doc.querySelector('#surfBody .ct-vd-h')||{}).textContent.trim();
+  // click '예산 임박 임계' 완화 95 → 93 < 95 so budget rule no longer fires → falls through to 자동승인
+  var btns=[].slice.call(doc.querySelectorAll('#surfHead .op-opt'));
+  var target=btns.filter(function(b){ return b.getAttribute('data-steer')==='th_budget_usage' && b.getAttribute('data-steerval')==='95'; })[0];
+  var clicked=false;
+  var vBefore=win.AAP_CORE.verdict();
+  if(target){ target.click(); clicked=true; }
+  // dcSteerHook calls evalCase() synchronously → STATE.verdict updated before animation
+  var vAfter=win.AAP_CORE.verdict();
+  return {openedBy:openedBy, steerBefore:before, steerClicked:clicked, vBefore:vBefore, vAfter:vAfter, steerBtns:btns.length};
+}
+function tryRun(){
+  var win=document.getElementById('f').contentWindow;
+  if(!win||!win.AAP_CORE){ return false; }
+  ['procurement','expense','contract_a'].forEach(function(pid){
+    try{ RESULTS.push(probe(win,pid)); }catch(e){ RESULTS.push({pack:pid,err:e.message}); }
+  });
+  try{ RESULTS.push({steer:steerTest(win)}); }catch(e){ RESULTS.push({steer_err:e.message}); }
+  // no-regression: meeting/voc/recruiting must load + render without throwing
+  ['meeting','voc','recruiting'].forEach(function(pid){
+    try{
+      win.AAP_CORE.load(pid);
+      var doc=win.document, sb=doc.getElementById('surfBody');
+      var pk=win.AAP_PACKS[pid];
+      RESULTS.push({pack:pid, loaded:true, bodyHasContent:!!(sb&&sb.innerHTML.length>50), streamBody:!!(sb&&sb.classList.contains('stream-body')), opBody:!!(sb&&sb.classList.contains('op-body')), hasSurface:!!(pk&&pk.surface)});
+    }catch(e){ RESULTS.push({pack:pid, loaded:false, err:e.message}); }
+  });
+  document.getElementById('out').textContent=JSON.stringify(RESULTS,null,1);
+  document.title='RESULT:'+encodeURIComponent(JSON.stringify(RESULTS));
+  return true;
+}
+var tries=0;
+var iv=setInterval(function(){ tries++; if(tryRun()||tries>40){ clearInterval(iv); if(tries>40&&!RESULTS.length)document.title='TIMEOUT'; } },250);
+</script>

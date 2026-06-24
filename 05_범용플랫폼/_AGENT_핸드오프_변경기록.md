@@ -69,6 +69,119 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### v0.58 (데모, 빌드 완료 · 260624) — 대한제조 맥락 명시 + HITL 거부 처리
+- **#1 고객사 = 대한제조 명시**: 요청부터 "다음 주 **대한제조 AAP 킥오프** 회의 잡아줘"로(기존 'AAP 고객사 킥오프'는 맥락 없이 대한제조가 뒤에 갑툭). "AAP 고객사 킥오프 회의" 12곳 전부 "대한제조 AAP 킥오프 회의"로, understand a1 '대한제조 AAP 킥오프로 파악했어요'. 〔표준·정의〕
+- **#2 HITL 거부('조금 더 볼게요')=보류 처리**: 기존엔 toast만 → `STATE.deferred[step]`. 거부 시 모달 닫히고 좌측에 `heldCard`('⏸ 아직 확정하지 않았어요 · 확정해야 다음 단계로 · 발송·진행 멈춤' + `[이어서 검토하기]`=data-resume로 모달 재오픈). currentCM에 `!STATE.deferred` 가드. decide()가 deferred 해제. **= AAP는 사람 확정 전까지 안 넘어간다(HITL 통제)를 화면으로.** 〔기획·UX〕
+- **#3 본부장 가독성 점검**: 좌=쉬운 말+근거 보기 / 우=AAP 작동(기술) 분리는 의도적, 각 단계 cs-status 'AAP가 ~했어요'+HITL 게이트로 'AAP가 한 일/사람이 결정' 구분 OK. 잠재 개선=첫 진입 1줄 오리엔테이션(과설명 금지와 균형). 〔기획·UX〕
+
+
+### v0.57 (데모, 빌드 완료 · 260624) — 회의 진행 방식 선택(앞단) + 채널 라벨 정리
+- **계획 승인(approve)에 '회의 진행 방식' 선택 추가**(뒤단 발송 채널에 이어 앞단도) — `PLATFORM_OPTS`(Microsoft Teams 추천·기본 / Zoom / Webex / 대면(회의실)), `C.platform='teams'`, `data-plat` 단일선택. 기본 고정값+사용자 변경. **회의 단계가 선택 반영**: teamsView가 `PLATFORM_META`로 바·로고·이름 전환(Zoom=Z 파랑, Webex=W, 대면=🏢), mtrig 배지도. 〔기획·UX〕
+- 발송 채널 라벨 또렷이(Confluence 발행 / 메일 발송(Outlook) / Teams 메시지 / Works 게시판). 〔기획·UX〕
+- 원칙: 솔루션·채널 선택은 거버넌스(#6 app/) ✕ → 엔드유저의 업무 결정. **앞단(진행 방식)·뒤단(발송 채널) 양쪽에 옵션 전부 노출+기본값+변경 가능.**
+
+
+### v0.56 (데모, 빌드 완료 · 260624) — 근거 모달 좌측 내부화 + 회의록 결과 카드 + 발송 채널 선택
+- **#1 근거 패널을 좌측 화면(`.cscreen`) 안 오버레이로**(HITL 모달과 동일) — `#drillModal`을 body→`.cscreen` 내부로 이동, CSS fixed→absolute(inset:0, z-index 9, max-width 340·padding 축소). 전체화면 정중앙 ✕. 〔기획·UX〕
+- **#2 회의 종료 후 좌측에 회의록 결과 카드**(`minutesCard`: 결정 3·후속 3 요약 + `[전문 보기]`=openPreview('minutes') 모달 + `ⓘ 근거`=meet_rec). teamsView의 '회의록 어떻게' 링크는 녹취 중(live/mend)만, 종료 후엔 카드가 근거 보유. 〔기획·UX〕
+- **#3 최종 승인에 회의록 발송·공유 채널 선택(옵션 전부 노출)** — `C.channels{confluence,mail,teams,works}`(기본 confluence+mail 추천 선택), `CHAN_OPTS` 4개 멀티선택(실제론 1~2개만 쓰지만 고객이 다른 채널 고를 수 있게 메뉴엔 전부). `data-ch` 토글. **공유 단계 실제 반영**: confluenceView가 선택 채널만 cf-ch로 점등(Confluence 등록/메일 Outlook/Teams 메시지/Works 게시판 + 학습), Confluence 미선택 시 헤더 'Confluence 발행'→'회의록 공유'. share_teams·share_works 근거 추가. 〔기획·UX〕
+
+
+### v0.55 (데모, 빌드 완료 · 260624) — 근거 보기 드릴다운 전 단계 확장
+- **prepare 그리드 셀·meeting(Teams)·share(Confluence) 목업 요소에 '근거 보기' 드릴다운 추가**(v0.51 syncLines 카드에 이어 목업 단계까지). 좌측 모든 결과 요소 = 결과만 보이고, 클릭 시 사용자 언어 패널(이렇게 했어요·근거·연결 시스템). `DRILL_EXTRA`에 `prep_자료/참석자/장소/안건/초대장`·`meet_rec`·`share_0/1/2` 추가. cell()에 `prep_${k}` 근거, teamsView에 '이 회의록은 어떻게 만들어졌나요?'(meet_rec), confluenceView ch()에 채널별 `share_${stage}` 근거. `.mtg-why` CSS. 〔기획·UX〕
+
+
+### 범용 공장 폭 확장(여신·보조금=6도메인) + Connector 계약 스펙 (260624, aap-lead) 〔표준·정의 / ★백엔드·app/ 세션 핸드오프〕
+> 결정 런타임 하니스를 **금융(여신·한도)·공공(보조금)** 으로 확장 + 서비스화 선행작업 Connector 스펙화. app/ 코드 0.
+- **6도메인 게이트 통과**: 여신·보조금을 전체 게이트 파이프라인(severity critic→dslify→evalGate→annotate)으로 생성, **둘 다 PASS**(여신 10/10·0R·보조금 10/10·1R, 캐논 evaluate.js 독립 재검증). N4 골격(계약·구매·경비) **무수정 재사용** → 범용 공장 폭 = **백오피스 4종 + 금융·공공 = 6도메인**. 산출=`packs_baked_v2/pack_credit·subsidy.v2.json`(어댑터 v0.2 bake) + 드롭인 `_decision_engine/dropin/pack_credit·subsidy.decision.json`(결정팩 5종으로 확장).
+- **Connector 계약 스펙**(`aap_connector_계약_스펙_v0_1.md`, 인덱스 ⑩): L5 어댑터 인터페이스를 **백엔드 구현용 계약**으로 못박음. `slot.extract`(connector/doc/llm)→어댑터 종류 / read `SlotFill{value,confidence,source,status}` 시그니처 / **신뢰도<임계→슬롯 pending→HITL 승격**(엔진은 안 막고 슬롯만 미확정 — 데모 'AAP 확인 vs 담당자 판단'의 인프라 계약) / write 멱등키+RBAC 권한 경계. 구현=백엔드, app/=충전 호출부·HITL UI 소비.
+- **★Agent 결정 사다리(아래 항목)와 정합**: Connector 스펙은 사다리 3단(Connector/조회)·4단(Policy/Rule=evaluate)의 **인터페이스 실체** — "Agent 띄우기 전 결정론·조회로 끝내라"를 L5 계약으로 뒷받침.
+
+### Agent 결정 사다리 (Agent Decision Ladder) — 오케스트레이션 차별화 원칙 (260624) 〔기획·UX / ★선제안서 차별화 섹션 후보〕
+> 외부 도구 **ponytail**(github.com/DietrichGebert/ponytail, "가장 좋은 코드는 안 짠 코드" — 코드 생성 전 결정 사다리로 과잉설계 차단)의 구조를 AAP 오케스트레이션 원칙으로 차용. **개념은 이미 우리 것**(메모리 "AAP는 Agent 많이 띄우는 시스템 ✕ → 적합한 것 조합")인데, ponytail은 그걸 **명시적 게이트로 제품화**한 선례 → 우리도 명문화한다.
+- **원칙**: AAP는 새 Agent를 띄우기 **전에** 결정 사다리를 거친다. = "Agent 많이 띄우는 플랫폼"(경쟁사) 대비 **"미니멀 오케스트레이션 플랫폼"** 차별화 축.
+- **결정 사다리(Agent를 새로 붙이기 전 순서대로 묻는다)**:
+  1. 이 일이 정말 필요한가? (불필요한 단계 제거)
+  2. **기존 솔루션/Module**로 되나? (kt ds 자산·상용 솔루션 재사용)
+  3. **Connector/조회**로 되나? (고객 시스템에서 가져오면 끝)
+  4. **Policy/Rule(결정론)**로 되나? (LLM 없이 규칙으로 — Decision Engine)
+  5. **한 Agent로** 되나? (멀티에이전트 남발 ✕)
+  6. 그때만 최소한의 Agent를 붙인다.
+- **§3 금칙과 정합**: "HITL 남발 ✕"과 같은 결의 "**Agent 남발 ✕**" 원칙으로 추가. 6타입 구성요소(Agent·Module·상용·고객시스템·Connector·Policy) **조합 = 결정 사다리의 산물**임을 우측 작동 영역(§2 ★)에서 이미 시각화 중 — 사다리는 그 "왜 이 조합인가"의 근거 서사.
+- **데모 메시지 연결**: 손해사정 "AAP가 책임 있게 멈춘 증거"(안 하는 것을 증명)와 동형 — **안 띄우는 것이 차별화**.
+- **선제안서 차용 후보**: 4-2/별첨에 "Agent 결정 사다리" 한 단락(경쟁사 = Agent 多 / AAP = 사다리 거친 최소 조합). 단 **선제안 단계는 역량 폭도 보여야 하므로**(메모리 offering-map detail 규칙) "할 수 있는 것 vs 굳이 안 하는 것" 균형 의식.
+- **작업 보조 도구로도 도입**: Claude Code에 ponytail 플러그인 설치(`/plugin install ponytail@ponytail`) — `app/` 코드·단일 HTML 데모 비대화 방지(`/ponytail ultra`·`/ponytail-review`·`/ponytail-audit`). 메모리 교훈 "파일 커지면 잘못 구현"·"삭제가 핵심"의 자동 집행기.
+
+### 서비스화 로드맵 (PoC→실서비스) (`aap_서비스화_로드맵_v0_1.md`) (260624, aap-lead) 〔기획·UX / ★app/ 세션·백엔드 핸드오프〕
+> 정합성 검토 §2가 식별한 서비스 갭을 **Tier·의존성·아키 결정·소유**로 구체화. `aap_platform_to_runtime_roadmap`·객체모델 P1~P5를 **서비스 수준 렌즈로 재배열**(중복 ✕).
+- **8계층 렌즈**: 데모는 L3/L4/L6(지능) 강함 ↔ 서비스화는 **L5(연동·mock)·L7(통제·정적표시)·L8(인프라·file://)를 실체화**. "지능은 됐고 신뢰·운영을 붙이는 단계."
+- **Tier**: T0(검증PoC)→**T1 단일고객 파일럿(MVS)**→T2 멀티도메인→T3 멀티테넌트SaaS. **MVS(데모↔서비스 경계)=P-persist+P-connector1+P-rbac-basic**.
+- **의존성**: **루트=P-persist**(관측·RBAC·프로젝트·테넌트 다 의존). P-connector1·P-studio-decision(C1/C2)은 독립=병렬 착수 가능(빠른 가치).
+- **소유 분담**: 이 트랙=결정 팩 공급·Connector 계약 스펙·variant 매트릭스·저작 파이프라인(app/ 무관) / **app/ 세션=영속·RBAC enforce·스튜디오 결정층 노출(C1)·flow next(C2)** / **백엔드·인프라(신규)=Connector 구현·멀티테넌트·스케일**.
+- **이 트랙 다음 한 수(app-무관)**: Connector 계약 스펙(read/write·auth·신뢰도·HITL 폴백 인터페이스) 먼저 써두면 백엔드 착수 시 바로 물림.
+
+### 전체 정합성·서비스수준·목적부합성 검토 + 실행가능 Pack v2 (`aap_정합성_서비스수준_검토_v0_1.md`·`packs_baked_v2/`) (260624, aap-lead) 〔표준·정의 / ★app/ 세션 핸드오프〕
+> 유저 요청 검토(병렬 read-only 2건, app/ 미수정). **핸드오프 작동 확인**: 다른 세션이 결정층을 app에 랜딩(evaluate.js·contract_a.js caseModel/knowledge.route/io.editable·evalCase() 런타임 호출). 정합성=문서 4/5·app 6.5/10.
+- **★최대 정합 갭(app/ 세션 핸드오프)**: **C1 스튜디오가 결정층 블라인드**(renderDesign/renderAssets가 caseModel·knowledge·threshold 0개 표시·wfeditor가 gate next·임계 편집✕) → 거버넌스 사각 / **C2 flow `next` 부재**(verdict.outcome이 분기로 안 이어짐, HITL 하드코딩) / **C3 팩 스키마 파편화**(contract만 결정층, meeting·recruiting 0) / **C4 app contract 팩 구버전**(seeds expectedOutcome 없음·게이트통과 R6B 미반영 가능) / **C6 프로젝트 L2 inert**.
+- **이 트랙 조치(완료)**: A1 계약 P1 설계 `decide()`→`evaluate()` 정합 보정(canonical 명시) / A2 **`packs_baked_v2/pack_*.v2.json`**(게이트통과·expectedOutcome·R6B·evaluate 스모크 전수) = app contract 팩 **교체본** 공급(어댑터 v0.2). flow gate `next` 바인딩 데이터 포함.
+- **서비스 수준 갭(§2)**: 🔴 영속저장·실Connector(OCR/STT/ERP)·멀티테넌트·RBAC enforcement / 🟡 프로젝트관리·전역자산카탈로그·관측KPI·variant선택. 문서가 P1~P5·"후속"으로 정직히 명시 — "데모 기준" 충분, "범용 플랫폼 운영"엔 🔴 4종 블로커.
+- **목적 부합**: (B) loop engineering 95%(4도메인 게이트통과) / (A) 범용 플랫폼 70%(구조 증명·운영 미완: 회의만 live). **다음 레버=결정층 스튜디오 노출(C1)+게이트통과본 배포(C4)+멀티도메인 인박스.**
+- 본 건=검토·설계·데이터 공급(app/ 코드 0). 〔표준·정의 / app/ 세션 핸드오프 후속〕
+
+### v0.54 (데모, 빌드 완료 · 260624) — #6 구성 토글 철회(복원)
+- **v0.53의 실행↔구성 토글·구성 뷰 전부 제거(v0.52 상태로 복원)** — 잘못된 전제: 구성 뷰는 사실상 `app/index.html`(진짜 플랫폼 콘솔=자산 5타입 레지스트리·거버넌스·워크플로우·로그)을 데모 안에 중복 생성한 것. 데모는 *고객이 보는 서비스 화면 + AAP 작동 흐름*에 집중, **거버닝(솔루션 연결·레지스트리·정책 관리)은 별도 운영자 역할·콘솔(=app/)** 소관. 〔기획·UX / ★역할·서피스 분리 원칙〕
+- **원칙 확정**: 고객 서비스 화면(데모 좌측, 엔드유저 홍길동) = 업무 사용·승인(거버닝 ✕). 플랫폼 콘솔(app/) = 운영자 거버닝. 한 화면에 두 역할 섞지 않음. KMS=Confluence·드릴다운 패널 등은 유지.
+
+### v0.53 (데모, 빌드 · 260624) — #6 구성 뷰(정적 저파이) 〔철회됨 → v0.54〕
+- **상단 모드 토글 `[실행][구성]`(기본 실행) + 구성 뷰 신설** — '좌/우와 또 다른 모습이냐'에 화면으로 답: 구성 뷰는 런타임 좌/우 분할이 아니라 **레지스트리 화면**(같은 topbar·디자인·타입 색). `body.cfg-mode`로 `.main` 숨기고 `.config-view` 표시. 〔기획·UX / ★범용 플랫폼 3뷰의 '구성'〕
+- 3블록: **연결된 솔루션 6**(Teams·Confluence(지식관리)·Works AI·캘린더·조직도·메일+설정/연결·+추가) / **컴포넌트 레지스트리**(Agent·모듈·Policy 칩) / **등록된 업무**(회의 준비 업무→`실행으로 보기`=setMode('run')). `CONNECTORS`·`REGISTRY`·`renderConfig`·`setMode`. **정적 저파이(연결 플로우·관리 뷰는 합의 후)**.
+
+### v0.52 (데모, 빌드 완료 · 260624) — KMS=Confluence 중복 제거
+- **고객사가 KMS 용도로 Confluence를 씀 → 데모의 'KMS'를 전부 'Confluence'로 통일**(별도 KMS 시스템 phantom 제거, 중복 0). understand/compose 근거·systems('Confluence'·'Confluence(지식관리)'·'Confluence(문서·지식)'), share guide·op('Confluence 기록'·'Confluence(지식관리)에 등록')·confluenceView 채널('지식 등록·태깅 → Confluence 지식관리')·workingTasks·결과 모달. KMS 잔존 0. 〔표준·정의〕
+- #6 구성 뷰: 유저가 '좌/우와 또 다른 모습이냐' 질문 → 그렇다(런타임 좌/우 분할 ✕, 레지스트리 화면). 같은 topbar·디자인 시스템·컴포넌트 타입 색. 커넥터 = Teams·Confluence(지식관리)·Works AI·캘린더·조직도·메일(6개, KMS 제외). 합의·시각화 진행 중.
+
+### v0.51 (데모, 빌드 완료 · 260624) — #2+#3 온디맨드 근거 패널
+- **항상-노출 박스(aap-why) 전부 폐기 → 라인 '근거 보기' 클릭 시 사용자 언어 드릴다운 패널**(우측 노드 패널의 사용자판). 좌측 카드는 기본=결과·결정만, 근거·판단은 온디맨드(v0.41 정합, 클러터·잘림 해소). 〔기획·UX / 표준·정의〕
+- 패널 구조(호르무즈식): **이렇게 했어요**(번호 진행 단계) · **사용한 근거**(칩) · **연결한 시스템**(칩). 핵심어 `<b>` 볼드. `#drillModal`·`openDrill/renderDrill/closeDrill`·`STATE.drill`·`DRILL_EXTRA`(prepfoot 등 비-SUB용).
+- SUB에 `detail{how,basis,systems}` 추가: REQUEST_SUB(2)·UNDERSTAND_SUB(3)·COMPOSE_SUB(4). `spot`은 텍스트→`1`(링만), 설명은 패널로. 카피 구체화·볼드(예 '대한제조(외부 고객)'·'보안 정책 P-03'·'결정론 시스템 vs Agent'). C 준비 footer 카피 명확화('외부 DX팀장에게 갈 초대장·회의 자료는 담당자가 승인해야 보내요')+근거 보기, E sensBlock 중복 박스 제거(sens-why·감사로그 유지).
+- 미적용(후속): prepare 그리드 셀·meeting/share 목업 요소 드릴다운. **#6=구성 뷰는 합의 후 별도.**
+
+### v0.50 (데모, 빌드 완료 · 260624) — 폴리시 묶음(6대 피드백 중 #1·4·5)
+- **#4 우측 하늘색 레이저(flow-spark) 제거** — `.flow-spark`·`@keyframes flowspark`·`.stages.working` 토글 전부 삭제(장식 노이즈, reveal 점등+스피너로 충분). 〔기획·UX〕
+- **#5 모달 내부 정돈** — 모달 골격 유지·내부만 압축(cmodal-card 412→404·padding↓, ch-op 6/10→5/9·11.5→11px, ch-sec/ch-k/seg-b/cm-row/sens-b/sens-why/rs-card 여백·폰트 한 단계↓). 스캔 가능한 결정 패널로. 〔기획·UX〕
+- **#1 요청 전송 애니** — 입력창 문구가 위로 올라가 전송되는 느낌: request working 진입 시 req-echo.sent에 `just-sent`(reveal===0에서만 1회 `@keyframes sendup` translateY 26→0, 재렌더 깜빡임 방지) + renderInput phase 인식(idle=문구+활성 전송 / 보낸 뒤=입력창 '요청을 보냈어요'로 비움). 〔기획·UX〕
+- 남은 피드백: **#2+#3 = 온디맨드 근거 패널**(좌측 카드 클릭→호르무즈식 사용자 언어 드릴다운, 항상-박스 aap-why 폐기·카피 구조화/볼드·'') → 다음. **#6 = 구성 뷰**(상단 모드 토글 실행↔구성, Connector/Module/Policy 레지스트리·솔루션 연결, 9번째 스텝 ✕) → 화면 합의 후 별도.
+
+### v0.49 (데모, 빌드 완료 · 260623)
+- **업무 순서 클릭 = 그 단계 흐름 재생(좌측 장면→우측 설명)** — 기존엔 요청 접수(정적 포털)·회의 진행(회의 시작 버튼 대기) 두 단계가 클릭해도 안 움직였음. `runStep`을 고쳐 클릭 시 모든 단계가 재생: 요청=포털(그림) 잠깐+커서→1.2s 뒤 startWorking(requestCard 보냄+우측 reveal), 회의=회의 시작 게이트(그림) 잠깐+커서→1.8s 뒤 startWorking(STT→정리→종료 게이트), 나머지=즉시 startWorking. 단계 클릭은 다음 단계로 자동 이동 ✕(단일 단계 재생). **첫 로딩은 포털 정적 유지**(init에서 request면 idle 렌더, 클릭 시에만 재생). 〔기획·UX〕
+
+### v0.48 (데모, 빌드 완료 · 260623)
+- **AAP-only 순간(A·C·E)을 스포트라이트 + 부연설명으로 시각 강조** — 재생 중 해당 요소가 나타나면 더 드러나게: `.aap-spot`(앰버 포커스 링+떠오름, 재렌더 깜빡임 방지 위해 일회성 애니 ✕ 지속 강조) + `.aap-why`(💡 파란 콜아웃, 인라인 결과보다 깊은 '왜 중요한가'). A=UNDERSTAND_SUB a3 `spot` 필드(syncLines가 spot 있으면 링+콜아웃 렌더)='요청엔 승인 얘기가 없었어요…외부 고객만 보고 AAP가 승인을 더했어요'. C=af-foots에 aap-spot+콜아웃='되돌릴 수 있는 일은 AAP가 처리, 외부 발송만 사람 승인 대기'. E=sensBlock에 aap-spot+콜아웃='보낼 수 있었지만 멈췄어요…누가·왜 정했는지 기록·추적'. 부연설명도 대비 금지·작동 의미만. 〔기획·UX〕
+
+### v0.47 (데모, 빌드 완료 · 260623)
+- **AAP-only 능력을 단계 내부 분기로 — '챗봇/오케/RPA' 공격을 세 단계에 분산해 닫음** (새 스텝/구조/phase ✕, 카피만 구체·자연체, 대비 자막 금칙). 〔기획·UX/표준·정의〕
+  - **A. 이해(함의 추론)**: UNDERSTAND_SUB a3 = '대한제조가 외부 고객이라 승인이 필요해요 / 자료 공유·외부 초대는 담당자가 확인한 뒤에 나가요'. 요청에 없던 승인을 외부 감지로 챙김(메타 설명 ✕).
+  - **C. 준비(가역성 분기)**: meetingCard af-foot 2줄 = '✓ 캘린더 등록(CAL-3391)·회의 폴더 생성까지 마쳤어요' / '⏸ 외부로 나가는 초대·발송만 담당자 승인 뒤에 보내요'. (되돌릴 수 있음/비가역 라벨 ✕ → 한 것·멈춘 것만)
+  - **E. 최종 승인(발견·차단·결정·기록)**: `C.recip.D`(외부 발송) 조건 분기. ON이면 `sensBlock()`='이대로면 대한제조에 단가가 나가요'+선제안 자료 내부 단가표 발견+[단가만 가리고/자료 빼고/원본(팀장 승인)] 결정(`C.sensitive`)+감사 2줄(LOG-2291). 제외면 발견 없음(가지 않은 길 라이브). 우측 발송안 점검 op도 '단가표 발견·보류'로. CSS: ch-must.sens·sens-opts/b·sens-log, af-foots/af-foot.hold.
+
+
+### app/ run 조작형 콘솔 — 깜빡임·속도 근본 수정(부분 갱신 구조) (260623, aap-platform) 〔기획·UX / 표준·정의〕
+> 기준 문서 = `aap_run_console_experience_spec_v0_1.md` **§2-D(깜빡임 0의 정의)·§2-A(자동 흐름 속도·근거)** 통과가 완료 조건. 곁가지 반창고 ✕ → **렌더 구조 자체를 부분 갱신으로 전환.** 대상 = `core/core.js` 만(코어, 도메인 무관). **1차 디자인(`platform-fix.css`) 룩·토큰 불변·신규 hex 0.**
+- **★ §2-D 충족 — 통째 innerHTML 교체 제거(번쩍임 0)**: `renderOpConsole()` 이 매 갱신마다 `surfHead.innerHTML`·`surfBody.innerHTML` 를 통째 교체하던 것을 **뼈대 1회 마운트 + 섹션 메모 모핑**으로 재구성.
+  - **`ensureOpSkeleton(sh,sb)`** — strip 래퍼(`#opStripSlot`)·steer 슬롯(`#opSteerSlot`)·`op-split`·`#opMainSlot`·`#opAsideSlot`·`op-hidden-mount`(#explain/#caseTune/#flow=영구 형제)·그래프 컨테이너를 **케이스/구조 진입 시 1회만** 생성(`!sh.querySelector('#opStripSlot')` 가드). 이후 갱신은 뼈대 미접촉.
+  - **`opSection(slot,html,owner,sigKey,{animate})`** — 섹션 단위 제자리 갱신. 새 HTML 서명(`_opSig` djb2)이 직전과 **같으면 DOM 미접촉(skip)**, 다르면 FLIP 활강+수치 트윈으로 모핑. → 변경 없는 섹션은 재생성 0.
+  - **부분 업데이트 분리**: strip(클래스/번호만)·steer(active 토글, 변경 시에만 `wireSteer`)·main(FLIP+트윈)·aside(FLIP+트윈+그래프 트랜지션). 그래프는 aside 변경 시에만 재배선(불변이면 SVG 컨테이너·엣지 유지).
+  - `wireSteer` instant/onDone 의 중복 외부 FLIP 캡처/재생 제거 → 섹션 모핑이 단일 소스(이중 transform 충돌 제거).
+- **§2-A 충족 — auto-run 속도·근거**: 자동 진행 타이밍 상수 `OP_T{reveal:680,settleFloor:1250,hold:1100}` 도입. `revealOps` 의 단계 정착 시점 = `max(그룹 등장 완료, settleFloor 1.25s)` → **단계당 최소 ~1.25s 머무름(휙 ✕)** + 그 단계 본문(슬롯·판정·랭킹 막대=근거)이 보인 뒤 다음으로. 완료분 즉시 채움·현재 지점 정지(`autoAdvanceOnOpen` 기존 동작 유지·전 단계 재생 ✕). 게이트에서만 모달 정지.
+- **검증(헤드리스 Edge `--headless=new --allow-file-access-from-files`, app/ ASCII 임시 드라이버→삭제)**: 채용 `screen`·계약 `check` op-콘솔에서 steering 발생 시 — `SKELETON strip/steer/split/main/aside=true`, `AFTER_STEER strip/split/flow=true`(뼈대 노드 태그 생존=재생성 0), `SLOT_IDENTITY ...=true`(슬롯 DOM identity 유지·innerHTML 만 모핑), `STEER_CHANGED` 로 main 변경·active 전환 확인. **코드 확인**: 갱신 경로에 `surfHead/surfBody` 통째 innerHTML 교체 없음(ensureOpSkeleton 1회·가드만). 회의·VOC 스트림 모델 무회귀(별도 경로·미수정, 콘솔+HITL 모달 정상 렌더 확인). `node --check` 전 파일 OK.
+- **보존**: 결정론 엔진·evaluate·case.overrides(P5)·HITL decide/cmodal·자동저작·자동 스트림(회의·VOC)·demo 안정 ID(#surfHead/#surfBody/#flow/#explain)·file://·Lucide 인라인. 〔후속: 다음 도메인 op-surface 추가 시 뼈대/섹션 분리 그대로 재사용〕
+
+### 하니스 — seed expectedOutcome 명시(게이트 정밀화) (260623, aap-lead) 〔표준·정의 / app/ 세션 핸드오프〕
+> evaluate-in-the-loop 게이트의 기대-outcome 도출이 seed 라벨 정규식(`_outcomeOf`) 의존이라 "자동승인 **차단**" 부분문자열 오매칭 → **`annotate` 단계 추가**(dslify 뒤): seed 의도(expectedRoute)를 보고 `expectedOutcome` enum 명시. 게이트가 그 필드 직접 사용. 두 워크플로 resume(annotate만 라이브).
+- **결과(독립 evaluate.js 재검증, expectedOutcome 기준)**: 계약A 10/10·계약B 9/9·구매 11/11·경비 11/11, drift 0. ★**구매 3R→1R**(헛 라운드 제거), 계약 B "담당→대표 정상결재"가 부정확 LEGAL→정확 AUTO로 정렬(정규식보다 의미 정확).
+- **드롭인 3팩 갱신**: `pack_{contract_A,procurement,expense}.decision.json` seed에 `expectedOutcome` 전수 명시 → app/ 통합 시 게이트/검증이 라벨 파싱 없이 명시 필드 사용.
+- 게이트 로직: `s.expectedOutcome || _outcomeOf(s.expectedRoute)`(하위호환). 〔표준·정의 후속〕
+
 ### app/ run 조작형 콘솔 — 2차 작동 가시화 보강(기능/모션) (260623, aap-platform) 〔기획·UX / 표준·정의〕
 > 대상 = `05_범용플랫폼/app/` run 뷰 조작형 콘솔(opstage). **1차 디자인 마감(`core/platform-fix.css`) 불변** — 이번은 **기능/모션 JS** 위주(필요 트랜지션 CSS는 가이드 토큰·기존 클래스, 신규 hex 0). 사용자 지적 4건(①재분석 휙 지나감 ②중간 작동 근거 안 보임 ③깜빡임 ④동적 시각화 부족) 해소.
 - **(1) 라이브 재분석 속도·근거 (지적 1·2)** — `core.js runReanalysis` 재작성: 단계 타이밍을 코어 상수 `RE_T{reveal,work:860,gap,done}`로 통제(휙 ✕, 각 단계 충분히 머무름) + 단계 상태 전이 **작동중(파랑 펄스 spinner)→완료(✓)** + **step 스키마 확장 `{t,d,basis,tag}`**: `basis`=무엇을 읽고/계산/판정했는지 mono 라인(타이핑되듯 뒤따라 등장), `tag`=작동 유형(읽기/대조/평가/판정 색칩). 헤더에 진행 phase(`N/총·단계명`) 칩. → "결과로 점프" ✕ → **중간 작동을 근거와 함께** 노출.
@@ -271,7 +384,7 @@
 ### 하니스 N4 — 도메인 확장(구매·경비) · 범용 시나리오 공장 입증 (`aap_harness_poc_result_v0_1.md` §10) (260623, aap-lead) 〔표준·정의〕
 > 같은 하니스(severity-aware critic 기본)로 **구매·조달 / 경비·지출** 신규 도메인 시나리오 생성 → 계약 아키타입과 가로질러 비교. 9 에이전트·542k 토큰·8.3분. 원본=`_harness_out/scenarios_procurement_expense_n4.json`. ※app/ 무관.
 - **결과: 구매·경비 둘 다 0회 pass**(무수정 1패스, severity critic 효과 일관). 구매=11 route 분기(3견적·단가편차·예산약정·쪼개기 split_score≥70·신규벤더 실사·벤더 컴플라이언스), 경비=12 route 분기(직급×비용×지역 한도표·법인카드 3-way 대사·정책금지룰셋·중복분할·OCR·riskScore≥85 SIU).
-- **★sharedArchetype(계약·구매·경비 가로질러 동일)**: 6단계 파이프라인·decide 2계층·route 3분기 서열(하드차단→HITL승급→자동승인 fallback)·gap↔게이트 1:1·임계 패밀리 5종(금액캡·결재선룩업·신뢰도컷 0.8·패턴탐지·소진초과)·결재선 위임전결표·writeback. **토큰 단위 공유.**
+- **★sharedArchetype(계약·구매·경비 가로질러 동일)**: 6단계 파이프라인·decide 2계층·route 3분기 서열(하드차단→HITL승급→자동승인 fallback)·gap↔게이트 1:1·임계 패밀리 5종(금액캡·결재선룩업·신뢰도컷 0.8·패턴탐지·소진초과)·결재선 위임전결표·writeback. **아키타입·서열·엔진 공유**(단계 수는 도메인별 가변 — 토큰 동일 ✕. `aap_트랙_리스크_진단` #5).
 - **★reuseRecipe(하니스 산출)**: 새 도메인 = ①슬롯 매핑 ②knowledge 4종(룩업·임계값·룰·정책금지) ③route 사유표 ④writeback 대상만 교체. 골격(파이프라인·decide 2계층·route 서열·gap↔게이트·임계 패밀리)은 고정.
 - **판정**: 하니스 트랙(가설 검증) **일단락** — 신뢰 가능(N1b)+범용(N4)+고객 변수 조건화(앞선 PoC) 3박자 확보.
 - **표준화 연결**: 이 6단계 파이프라인·임계 패밀리 5종·route 3분기 서열은 app/ Pack Contract v2 `decide/evaluate`가 도메인 무관 코어로 일반화할 때 **검증된 도메인 무관 골격**으로 참조 가능. 〔표준·정의 후속〕
@@ -739,5 +852,5 @@
 ## 6. 참조
 - 표준 스펙: `aap_platform_form_spec_v0_1.md` · `aap_runtime_expansion_strategy_v0_1.md` (같은 폴더)
 - capability·칩 원천: `01_선제안서/aap_proactive_offering_v0.7_260616.html` (`DEFAULT_ARCH_CHIPS`, `CHIP_TYPES`)
-- 현행 데모: `03_프로토타입/D_회의/aap_meeting_runtime_builder_v0_46.html` (준비·공유 좌측 동기화로 8단계 세분화 완성 · 요청 좌측 동기화·회의 종료 게이트 · 범례 제거·카드 self라벨·카드 압축·좌측 상태 테두리 통일·a-i↔b-i 동기화 compose+understand · 우측 폰트 확대[특히 카드] · 좌측=결과·결정만[신뢰도 점수 등 근거·로직은 우측으로] · 끊김 없는 동적 흐름[증분 렌더+입자]·HITL 모달 축소·참석자 추가·어투 정리·업무순서 화살표 / 단계 설명=좌측 화면 툴팁·우측 진행바+스피너 동적화·범례 우정렬 / 좌측 = 기업 포털 홈 + 8단계 좌측 장면(파악/계획 카드·워크스페이스·Teams 코레오·Confluence)→우측 순차 점등 / 우측 = **AAP 작동 흐름 주제목(teal 엔진 헤더)+업무 순서 하위 레일**·3안 하이브리드·세부 토글·3계열 라벨 강화·좌우 색구분·반응형 / **HITL=게이트2+운영 트리거('회의 시작')1**, §2 구조 문법)
+- 현행 데모: `03_프로토타입/D_회의/aap_meeting_runtime_builder_v0_58.html` (대한제조 고객사 맥락 명시·HITL 거부=보류 처리[확정 전 진행 정지] · 회의 진행 방식 선택[앞단 approve, Teams/Zoom/Webex/대면→회의화면 반영]·근거 모달 좌측 화면 내부·회의록 결과 카드·발송 채널 선택[뒤단 commit, 전 옵션→공유 실제 반영] · 근거 보기 드릴다운 전 단계 확장[prepare 셀·meeting·share 목업] · 구성 토글 철회[거버닝=app/ 콘솔 소관·데모는 고객 화면+AAP 작동] · KMS=Confluence 통일 · 좌측 카드 '근거 보기'→사용자 언어 드릴다운 패널[이렇게 했어요·근거·연결 시스템], 항상-박스 폐기 · 폴리시: 우측 레이저 제거·모달 내부 정돈·요청 전송 애니[문구 위로 올라가 전송] · 업무 순서 클릭=그 단계 흐름 재생[좌측 장면→우측 설명, 요청·회의 포함]·첫 로딩 포털 정적 · AAP-only 순간 A·C·E 스포트라이트+💡부연설명[aap-spot/aap-why] · AAP-only 능력 단계 내부 분기[A 함의추론·C 가역성·E 발견차단결정기록] · 준비·공유 좌측 동기화 · 요청 좌측 동기화·회의 종료 게이트 · 범례 제거·카드 self라벨·카드 압축·좌측 상태 테두리 통일·a-i↔b-i 동기화 compose+understand · 우측 폰트 확대[특히 카드] · 좌측=결과·결정만[신뢰도 점수 등 근거·로직은 우측으로] · 끊김 없는 동적 흐름[증분 렌더+입자]·HITL 모달 축소·참석자 추가·어투 정리·업무순서 화살표 / 단계 설명=좌측 화면 툴팁·우측 진행바+스피너 동적화·범례 우정렬 / 좌측 = 기업 포털 홈 + 8단계 좌측 장면(파악/계획 카드·워크스페이스·Teams 코레오·Confluence)→우측 순차 점등 / 우측 = **AAP 작동 흐름 주제목(teal 엔진 헤더)+업무 순서 하위 레일**·3안 하이브리드·세부 토글·3계열 라벨 강화·좌우 색구분·반응형 / **HITL=게이트2+운영 트리거('회의 시작')1**, §2 구조 문법)
 - 우측 레이아웃 비교 샘플: `03_프로토타입/D_회의/_sample_우측레이아웃_A_B_v0_1.html`

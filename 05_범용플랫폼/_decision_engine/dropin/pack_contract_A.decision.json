@@ -1,7 +1,6 @@
 {
   "id": "contract_A",
-  "label": "계약 관리 · A사(제조·SAP·보수) — 하니스 자동생성+evaluate게이트 검증",
-  "_note": "evaluate-in-the-loop 게이트 통과(자동 생성·자가수복). 수기 0. 독립 evaluate.js 재검증 10/10.",
+  "label": "계약 관리 · A사 — 하니스 자동생성+evaluate게이트+expectedOutcome",
   "caseModel": {
     "slots": [
       {
@@ -203,18 +202,6 @@
           }
         },
         {
-          "id": "R6B",
-          "outcome": "LEGAL_REVIEW",
-          "label": "법무검토(신종·패턴 미매칭 독소 보완)",
-          "basis": "패턴 미매칭/신종·문맥의존 독소 후보 1건 이상 → 자동승인 차단·심층검토",
-          "when": {
-            ">=": [
-              "$toxicUnmatchedCount",
-              1
-            ]
-          }
-        },
-        {
           "id": "R7",
           "outcome": "LEGAL_REVIEW",
           "label": "법무검토(보수 임계·경계대역 회부)",
@@ -252,10 +239,22 @@
           }
         },
         {
+          "id": "R8B",
+          "outcome": "LEGAL_REVIEW",
+          "label": "법무검토(미매칭 독소조항 보완 검토)",
+          "basis": "자동대조 패턴 미매칭 독소조항 1건 이상 → 자동승인 누출 차단·HITL 회부",
+          "when": {
+            ">=": [
+              "$toxicUnmatchedCount",
+              1
+            ]
+          }
+        },
+        {
           "id": "R9",
           "outcome": "AUTO_APPROVE",
           "label": "자동승인(결재선 자동구성→상신)",
-          "basis": "필수조항·독소조항(고위험·신종)·정합·제재·신뢰도·위험점수 모두 정상 → 자동승인",
+          "basis": "필수조항·독소조항(고위험·미매칭)·정합·제재·신뢰도·위험점수 모두 정상 → 자동승인",
           "when": {
             "all": [
               {
@@ -412,7 +411,8 @@
           "slot": "stampTaxAmount",
           "value": "40000"
         }
-      ]
+      ],
+      "expectedOutcome": "AUTO_APPROVE"
     },
     {
       "label": "제재리스트 거래처 — 치명 결격 반려",
@@ -482,7 +482,8 @@
           "slot": "riskGrade",
           "value": "고"
         }
-      ]
+      ],
+      "expectedOutcome": "REJECT"
     },
     {
       "label": "필수조항 누락 매매 — 핵심조항 누락 반려",
@@ -548,7 +549,8 @@
           "slot": "pdfExtractConfidence",
           "value": "0.88"
         }
-      ]
+      ],
+      "expectedOutcome": "REJECT"
     },
     {
       "label": "ERP 발주금액 불일치 — 금액 정합 실패 반려",
@@ -618,7 +620,8 @@
           "slot": "approverLine",
           "value": "CFO"
         }
-      ]
+      ],
+      "expectedOutcome": "REJECT"
     },
     {
       "label": "스캔 품질 저하 계약서 — 추출 신뢰도 저하 법무검토",
@@ -688,7 +691,8 @@
           "slot": "compositeRiskScore",
           "value": "10"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "표준템플릿 미디지털화 신규건 — 템플릿 갭 법무검토",
@@ -762,7 +766,8 @@
           "slot": "compositeRiskScore",
           "value": "25"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "무제한 배상 독소조항 — 고위험 독소 법무검토",
@@ -844,7 +849,8 @@
           "slot": "approverLine",
           "value": "CFO"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "중위험·경계대역 NDA — 보수 임계 법무검토",
@@ -922,7 +928,8 @@
           "slot": "compositeRiskScore",
           "value": "30"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "신용 D등급 거래처 — 평판·신용 간접 리스크 법무검토",
@@ -1004,11 +1011,12 @@
           "slot": "renewalNoticeDays",
           "value": "60"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     },
     {
       "label": "패턴 미매칭 신종조항 모호건 — 보수 기본값 법무검토",
-      "expectedRoute": "법무검토(신종·패턴 미매칭 독소 보완)",
+      "expectedRoute": "법무검토(미매칭 독소조항 보완 검토)",
       "input": [
         {
           "slot": "contractType",
@@ -1074,11 +1082,12 @@
           "slot": "riskGrade",
           "value": "중"
         }
-      ]
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
     }
   ],
   "provenance": {
-    "generatedBy": "harness+evaluate-in-the-loop",
+    "generatedBy": "harness+evaluate-in-the-loop+annotate",
     "gatePass": true,
     "reviewedBy": null
   }

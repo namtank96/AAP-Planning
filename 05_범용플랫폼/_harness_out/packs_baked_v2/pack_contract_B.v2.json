@@ -1,0 +1,1847 @@
+{
+  "id": "contract_B",
+  "label": "계약 B사",
+  "flow": [
+    {
+      "id": "sp1",
+      "label": "계약 건 접수·인입",
+      "kind": "input",
+      "loopPhase": "Data",
+      "explain": "Notion 계약DB의 신규 행 또는 Google Drive 업로드를 트리거로 신규체결/갱신/변경 건을 인입하고 요청자·거래처·유형을 식별한다(월 15건, 수기·SaaS 혼재)."
+    },
+    {
+      "id": "sp2",
+      "label": "계약서 파싱·핵심정보 추출",
+      "kind": "auto",
+      "loopPhase": "Data",
+      "explain": "Google Drive 계약서(PDF/문서)에서 계약 유형·금액·기간·갱신조건·주요 조항을 추출해 Notion 구조화 필드로 정규화한다."
+    },
+    {
+      "id": "sp3",
+      "label": "필수조항·표준템플릿 편차 점검",
+      "kind": "auto",
+      "loopPhase": "Reasoning",
+      "explain": "계약 유형별 필수조항(목적·대금·기간·해지·비밀유지 등) 누락 여부와 B사 표준템플릿 대비 문구 편차를 룰 기반으로 대조한다."
+    },
+    {
+      "id": "sp4",
+      "label": "독소(위험)조항 점검",
+      "kind": "auto",
+      "loopPhase": "Reasoning",
+      "explain": "무제한 손해배상·일방적 자동갱신·과도한 위약벌·관할/준거법 불리 등 위험조항을 탐지하되, 중도 성향상 핵심 위험만 플래그한다."
+    },
+    {
+      "id": "sp5",
+      "label": "거래처 제재·리스크 점검",
+      "kind": "auto",
+      "loopPhase": "Reasoning",
+      "explain": "거래처를 제재/거래제한 리스트와 대조하나, 외부 신용·제재 데이터 소스가 없어 수기 확인 보강 단계로 처리한다(데이터 갭)."
+    },
+    {
+      "id": "sp6",
+      "label": "인지세·만기/자동갱신 통지기한 산정",
+      "kind": "auto",
+      "loopPhase": "Reasoning",
+      "explain": "계약 금액·유형으로 인지세 과세 여부·세액을 산정하고, 만기일·자동갱신 통지기한(예: 만기 N일 전)을 계산해 알림 일정을 예약한다."
+    },
+    {
+      "id": "sp7",
+      "label": "금액별 결재선 결정·분기 판정",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "금액 구간·위험 등급을 종합해 자동승인/법무검토(HITL)/반려로 분기하고, 2단계 단순결재(담당→대표) 결재선을 구성한다.",
+      "gate": {
+        "label": "금액별 결재선 결정·분기 판정",
+        "decisions": [
+          {
+            "key": "LEGAL_REVIEW",
+            "label": "LEGAL_REVIEW",
+            "toast": "LEGAL_REVIEW"
+          },
+          {
+            "key": "REJECT",
+            "label": "REJECT",
+            "toast": "REJECT"
+          },
+          {
+            "key": "AUTO_APPROVE",
+            "label": "AUTO_APPROVE",
+            "toast": "AUTO_APPROVE"
+          }
+        ]
+      },
+      "next": {
+        "LEGAL_REVIEW": "review",
+        "REJECT": "reject",
+        "AUTO_APPROVE": "commit"
+      },
+      "nextBy": "evaluate(caseData, knowledge).outcome"
+    },
+    {
+      "id": "sp8",
+      "label": "법무검토(HITL) 처리",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "플래그된 위험조항·편차·제재 의심 건을 법무 검토자에게 이관해 수용/수정요청/반려를 받고 사유를 기록한다."
+    },
+    {
+      "id": "sp9",
+      "label": "결재·전자서명 체결",
+      "kind": "gate",
+      "loopPhase": "Decision",
+      "explain": "대표 결재 승인 후 DocuSign으로 전자서명을 발송·완료해 체결을 확정한다."
+    },
+    {
+      "id": "sp10",
+      "label": "계약관리대장 등록·후속 알림 설정",
+      "kind": "auto",
+      "loopPhase": "Learning",
+      "explain": "체결 완료 건을 Notion 계약관리대장에 등록하고 서명본을 Google Drive에 보관하며 만기·갱신 통지 알림을 활성화한다."
+    }
+  ],
+  "io": {
+    "inputs": [
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "contractAmount",
+        "label": "계약 금액(원)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "contractTermStart",
+        "label": "계약 시작일"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "contractTermEnd",
+        "label": "계약 만기일"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "autoRenewalClause",
+        "label": "자동갱신 조항 유무·조건"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "noticePeriodDays",
+        "label": "갱신·해지 통지기한(만기 N일 전)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "documentKind",
+        "label": "문서 종류(도급/위임/매매/임대 등, 인지세 분류)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "extractConfidence",
+        "label": "파싱 추출 신뢰도(0~1)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "requiredClausesPresent",
+        "label": "필수조항 존재 맵(목적·대금·기간·해지·비밀유지 등)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "liabilityCapAmount",
+        "label": "손해배상 상한액(없으면 무제한)"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "penaltyClauseRate",
+        "label": "위약벌·지체상금 비율"
+      },
+      {
+        "stage": "sp1",
+        "type": "file",
+        "key": "governingLawJurisdiction",
+        "label": "준거법·관할 법원"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "sanctionCheckResult",
+        "label": "거래처 제재·거래제한 해당 여부"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "legalReviewResult",
+        "label": "법무검토 결과(수용/수정요청/반려)"
+      },
+      {
+        "stage": "sp1",
+        "type": "field",
+        "key": "execApprovalResult",
+        "label": "대표 최종 결재 결과(승인/반려)"
+      }
+    ],
+    "connectors": [
+      {
+        "id": "c_Notion_계약DB(접수·대",
+        "label": "Notion 계약DB(접수·대장·상태 SSOT)",
+        "system": "Notion",
+        "stub": true
+      },
+      {
+        "id": "c_DocuSign_전자서명·체결",
+        "label": "DocuSign 전자서명·체결",
+        "system": "DocuSign",
+        "stub": true
+      },
+      {
+        "id": "c_Google_Drive_계약서",
+        "label": "Google Drive 계약서 문서 저장소",
+        "system": "Google Drive",
+        "stub": true
+      },
+      {
+        "id": "c_Notion_API_Conne",
+        "label": "Notion API Connector(읽기·쓰기·상태전이)",
+        "system": "Notion",
+        "stub": true
+      },
+      {
+        "id": "c_DocuSign_API_Con",
+        "label": "DocuSign API Connector(서명 발송·완료 콜백)",
+        "system": "DocuSign",
+        "stub": true
+      },
+      {
+        "id": "c_Google_Drive_API",
+        "label": "Google Drive API Connector(원본 조회·서명본 보관)",
+        "system": "Google Drive",
+        "stub": true
+      },
+      {
+        "id": "c_수기_제재점검_입력_Conne",
+        "label": "수기 제재점검 입력 Connector(거래처 제재 데이터 갭 보강)",
+        "system": "gap(외부 제재·신용 소스 없음)",
+        "stub": true
+      }
+    ],
+    "editable": [
+      {
+        "key": "th_renewal_notice_default",
+        "label": "갱신통지_알림예약",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_amount_legal_review",
+        "label": "고액_법무검토_의무",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_amount_auto_approve",
+        "label": "자동승인_후보",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_amount_exec_approval",
+        "label": "대표결재_필요",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_liability_cap",
+        "label": "배상한도_과다_핵심플래그",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_penalty_rate",
+        "label": "위약벌_과도",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_extract_confidence",
+        "label": "추출신뢰도_저하_HITL이관",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_renewal_notice_short",
+        "label": "거절통지기한_단기_독소",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      },
+      {
+        "key": "th_stamp_tax_threshold",
+        "label": "인지세_과세대상",
+        "type": "threshold",
+        "recompute": "evaluate(case,knowledge)"
+      }
+    ]
+  },
+  "caseModel": {
+    "slots": [
+      {
+        "key": "contractType",
+        "label": "계약 유형(신규/갱신/변경)",
+        "type": "enum",
+        "source": "Notion 계약DB",
+        "extract": "rule"
+      },
+      {
+        "key": "existingContractNo",
+        "label": "기존 계약번호(갱신/변경 매칭용)",
+        "type": "string",
+        "source": "Notion 계약DB",
+        "extract": "rule"
+      },
+      {
+        "key": "counterpartyName",
+        "label": "거래처명(계약 상대방)",
+        "type": "string",
+        "source": "Notion 계약DB",
+        "extract": "rule"
+      },
+      {
+        "key": "contractAmount",
+        "label": "계약 금액(원)",
+        "type": "number",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "contractTermStart",
+        "label": "계약 시작일",
+        "type": "date",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "contractTermEnd",
+        "label": "계약 만기일",
+        "type": "date",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "autoRenewalClause",
+        "label": "자동갱신 조항 유무·조건",
+        "type": "string",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "noticePeriodDays",
+        "label": "갱신·해지 통지기한(만기 N일 전)",
+        "type": "number",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "documentKind",
+        "label": "문서 종류(도급/위임/매매/임대 등, 인지세 분류)",
+        "type": "enum",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "extractConfidence",
+        "label": "파싱 추출 신뢰도(0~1)",
+        "type": "number",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "requiredClausesPresent",
+        "label": "필수조항 존재 맵(목적·대금·기간·해지·비밀유지 등)",
+        "type": "object",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "templateDeviationItems",
+        "label": "표준템플릿 대비 편차 항목 리스트",
+        "type": "array",
+        "source": "Google Drive",
+        "extract": "rule"
+      },
+      {
+        "key": "toxicClauseFlags",
+        "label": "독소조항 탐지 플래그(무제한배상·일방자동갱신·과도위약벌·관할불리)",
+        "type": "array",
+        "source": "Google Drive",
+        "extract": "rule"
+      },
+      {
+        "key": "liabilityCapAmount",
+        "label": "손해배상 상한액(없으면 무제한)",
+        "type": "number",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "penaltyClauseRate",
+        "label": "위약벌·지체상금 비율",
+        "type": "number",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "governingLawJurisdiction",
+        "label": "준거법·관할 법원",
+        "type": "string",
+        "source": "Google Drive",
+        "extract": "doc"
+      },
+      {
+        "key": "sanctionCheckResult",
+        "label": "거래처 제재·거래제한 해당 여부",
+        "type": "enum",
+        "source": "gap",
+        "extract": "manual"
+      },
+      {
+        "key": "requesterName",
+        "label": "요청자(계약 담당자)",
+        "type": "string",
+        "source": "Notion 계약DB",
+        "extract": "rule"
+      },
+      {
+        "key": "stampTaxAmount",
+        "label": "산정된 인지세액(원)",
+        "type": "number",
+        "source": "Notion 계약DB",
+        "extract": "rule"
+      },
+      {
+        "key": "riskGrade",
+        "label": "1차 위험 등급(low/medium/high)",
+        "type": "enum",
+        "source": "Notion 계약DB",
+        "extract": "rule"
+      },
+      {
+        "key": "signatureStatus",
+        "label": "전자서명 상태(미발송/발송/완료)",
+        "type": "enum",
+        "source": "DocuSign",
+        "extract": "connector"
+      },
+      {
+        "key": "approverChain",
+        "label": "결재선(담당→대표)",
+        "type": "array",
+        "source": "Notion 계약DB",
+        "extract": "rule"
+      },
+      {
+        "key": "legalReviewResult",
+        "label": "법무검토 결과(수용/수정요청/반려)",
+        "type": "enum",
+        "source": "Notion 계약DB",
+        "extract": "manual"
+      },
+      {
+        "key": "execApprovalResult",
+        "label": "대표 최종 결재 결과(승인/반려)",
+        "type": "enum",
+        "source": "Notion 계약DB",
+        "extract": "manual"
+      },
+      {
+        "key": "sanctionListHit"
+      },
+      {
+        "key": "missingMandatoryClauses"
+      },
+      {
+        "key": "pdfExtractConfidence"
+      },
+      {
+        "key": "templateDigitalized"
+      },
+      {
+        "key": "toxicHighCount"
+      },
+      {
+        "key": "toxicUnmatched"
+      },
+      {
+        "key": "compositeRiskScore"
+      }
+    ]
+  },
+  "knowledge": {
+    "route": {
+      "rules": [
+        {
+          "id": "r1_sanction_gap",
+          "outcome": "LEGAL_REVIEW",
+          "label": "법무검토(HITL) — 제재 데이터 갭",
+          "basis": "제재 스크리닝 결과가 미확인이거나 제재 대상 적중 시 수기 확인 필수 보강(해당 시 반려 검토). sanctionCheckResult(표시) 대신 명시 슬롯 sanctionListHit으로 분기.",
+          "when": {
+            "in": [
+              "$sanctionListHit",
+              [
+                "unknown",
+                "hit"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "r2_missing_mandatory_clause",
+          "outcome": "REJECT",
+          "label": "반려 — 필수조항 누락",
+          "basis": "필수조항 누락 항목이 존재하면 보완 후 재접수. requiredClausesPresent(표시) 대신 누락 목록 슬롯 missingMandatoryClauses의 비어있지 않음으로 분기.",
+          "when": {
+            "not": {
+              "empty": "$missingMandatoryClauses"
+            }
+          }
+        },
+        {
+          "id": "r3_low_confidence_or_unparseable",
+          "outcome": "LEGAL_REVIEW",
+          "label": "법무검토(HITL) — 비정형 조항 해석 이관",
+          "basis": "추출 신뢰도 0.7 미만이거나 비표준 조항 해석 불가 시 해석 이관. extractConfidence(표시) 대신 명시 슬롯 pdfExtractConfidence와 templateDigitalized(=false: 디지털화 안 됨=해석 불가)로 분기.",
+          "when": {
+            "any": [
+              {
+                "<": [
+                  "$pdfExtractConfidence",
+                  0.7
+                ]
+              },
+              {
+                "==": [
+                  "$templateDigitalized",
+                  false
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "r4_toxic_high_flag",
+          "outcome": "LEGAL_REVIEW",
+          "label": "법무검토(HITL) — 독소조항 실질위험 전문판단",
+          "basis": "위험=high 핵심 독소조항 플래그가 1건 이상이면 전문판단 회부. toxicClauseFlags(표시) 대신 명시 슬롯 toxicHighCount(>0) 또는 toxicUnmatched(미매칭=해석 불가)로 분기.",
+          "when": {
+            "any": [
+              {
+                ">": [
+                  "$toxicHighCount",
+                  0
+                ]
+              },
+              {
+                "not": {
+                  "empty": "$toxicUnmatched"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "r5_template_critical_deviation",
+          "outcome": "LEGAL_REVIEW",
+          "label": "법무검토(HITL) — 편차 수용 가능성 판단",
+          "basis": "표준 템플릿 대비 편차=중대 항목이 존재하면 수용 가능성 판단 회부. templateDeviationItems(표시) 대신 명시 슬롯 templateDeviationItems의 severity 중대 교집합으로 분기.",
+          "when": {
+            "intersects": [
+              "$templateDeviationItems",
+              [
+                "critical",
+                "중대"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "r6_high_amount",
+          "outcome": "LEGAL_REVIEW",
+          "label": "법무검토(HITL) → 대표 결재 — 고액 건 핵심위험 점검",
+          "basis": "계약금액 3천만원 이상 고액 건은 법무검토 후 대표 결재. contractAmount는 명시 금액 슬롯이라 직접 사용.",
+          "when": {
+            ">=": [
+              "$contractAmount",
+              30000000
+            ]
+          }
+        },
+        {
+          "id": "r7_auto_approve",
+          "outcome": "AUTO_APPROVE",
+          "label": "자동승인 — 담당 확인 종결",
+          "basis": "저위험·고액 미만·필수조항 완비·핵심플래그 없음·제재 비해당이면 담당 확인 후 자동 종결(대표 결재 생략 가능). riskGrade(표시) 대신 compositeRiskScore(저위험 임계 <30)·contractAmount(고액 임계 미만 <30000000)·missingMandatoryClauses 빈값·toxicHighCount 0·toxicUnmatched 빈값·sanctionListHit none으로 분기. (소액·중간금액 정상 건 모두 자동승인 흡수하도록 고액 임계 미만으로 상향, 회색지대 누출 방지)",
+          "when": {
+            "all": [
+              {
+                "<": [
+                  "$compositeRiskScore",
+                  30
+                ]
+              },
+              {
+                "<": [
+                  "$contractAmount",
+                  30000000
+                ]
+              },
+              {
+                "empty": "$missingMandatoryClauses"
+              },
+              {
+                "==": [
+                  "$toxicHighCount",
+                  0
+                ]
+              },
+              {
+                "empty": "$toxicUnmatched"
+              },
+              {
+                "==": [
+                  "$sanctionListHit",
+                  "none"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "default": {
+        "id": "r8_gray_zone",
+        "outcome": "LEGAL_REVIEW",
+        "label": "법무검토(HITL) 생략 가능 시 담당 → 대표 결재",
+        "basis": "그 외 회색지대 전부. 중도 성향으로 회색지대는 대표 결재로 흡수하고 핵심위험만 법무 회부. 앞 룰에 걸리지 않은 모든 건을 흡수하는 catch-all이므로 rules가 아닌 fallback으로 배치."
+      }
+    },
+    "lookupTables": [
+      {
+        "id": "lt_required_clauses",
+        "description": "계약 유형별 필수조항 체크리스트(누락 여부 결정론 대조용)",
+        "entries": [
+          {
+            "match": "유형=용역/도급",
+            "result": "필수: 계약목적·대금및지급조건·계약기간·해지(중도해지)·비밀유지·손해배상·분쟁해결(관할)"
+          },
+          {
+            "match": "유형=라이선스/SaaS구독",
+            "result": "필수: 이용범위·라이선스료·기간·자동갱신조건·SLA·데이터처리(개인정보)·해지·비밀유지"
+          },
+          {
+            "match": "유형=업무위탁/위임",
+            "result": "필수: 위탁업무범위·보수·기간·재위탁제한·비밀유지·손해배상·해지"
+          },
+          {
+            "match": "유형=매매/공급",
+            "result": "필수: 목적물·대금·인도및검수·하자담보·기간·해지·관할"
+          },
+          {
+            "match": "유형=임대차",
+            "result": "필수: 임대목적물·임대료·기간·보증금·원상복구·해지·관할"
+          },
+          {
+            "match": "유형=NDA(비밀유지)",
+            "result": "필수: 비밀정보정의·이용목적제한·유지기간·반환파기·위반시구제"
+          }
+        ]
+      },
+      {
+        "id": "lt_approval_line",
+        "description": "금액 구간별 결재선(B사 2단계 단순결재 담당→대표 반영). 모든 건은 최종 대표 결재로 종착, 자동승인 가능 건만 담당 단독 종결 허용.",
+        "entries": [
+          {
+            "match": "amount < 500만원 AND riskGrade=low",
+            "result": "결재선=[담당](자동승인 가능·담당 확인 종결)"
+          },
+          {
+            "match": "500만원 <= amount < 3000만원 AND riskGrade!=high",
+            "result": "결재선=[담당 → 대표]"
+          },
+          {
+            "match": "amount >= 3000만원 OR riskGrade=high OR 법무플래그 존재",
+            "result": "결재선=[담당 → 법무검토(HITL) → 대표]"
+          }
+        ]
+      },
+      {
+        "id": "lt_stamp_tax",
+        "description": "인지세법 기준 계약서 인지세액표(문서 1통 기준, 기재금액 구간별 정액). 전자문서도 과세대상 동일 적용.",
+        "entries": [
+          {
+            "match": "기재금액 1천만원 이하",
+            "result": "비과세(인지세 없음)"
+          },
+          {
+            "match": "1천만원 초과 ~ 3천만원 이하",
+            "result": "인지세 2만원"
+          },
+          {
+            "match": "3천만원 초과 ~ 5천만원 이하",
+            "result": "인지세 4만원"
+          },
+          {
+            "match": "5천만원 초과 ~ 1억원 이하",
+            "result": "인지세 7만원"
+          },
+          {
+            "match": "1억원 초과 ~ 10억원 이하",
+            "result": "인지세 15만원"
+          },
+          {
+            "match": "10억원 초과",
+            "result": "인지세 35만원"
+          },
+          {
+            "match": "금액 미기재 계약서",
+            "result": "비과세(단, 위탁매매 등 일부 정액 예외 확인 필요)"
+          }
+        ]
+      },
+      {
+        "id": "lt_toxic_clause_patterns",
+        "description": "독소조항 패턴 사전(탐지=자동, 수용 여부=법무 HITL). 중도 성향상 핵심 4종만 high 플래그.",
+        "entries": [
+          {
+            "match": "손해배상 상한 미설정/무제한",
+            "result": "위험=high · 핵심플래그 · 권장 상한설정 협상"
+          },
+          {
+            "match": "상대방 일방 자동갱신 + 당사 거절통지 단기(<30일)",
+            "result": "위험=high · 핵심플래그 · 통지기한 연장 권장"
+          },
+          {
+            "match": "과도한 위약벌/지체상금(>계약금액 10%)",
+            "result": "위험=medium · 핵심플래그"
+          },
+          {
+            "match": "관할/준거법이 상대방 소재지·외국법으로 일방 지정",
+            "result": "위험=medium · 핵심플래그(분쟁 시 불리)"
+          },
+          {
+            "match": "당사 일방 즉시해지 불가 + 상대방만 해지권",
+            "result": "위험=low · 참고플래그(중도 성향상 비차단)"
+          }
+        ]
+      },
+      {
+        "id": "lt_template_deviation",
+        "description": "B사 표준템플릿 대비 편차 분류(편차 탐지=자동, 수용 가능성 판단=HITL)",
+        "entries": [
+          {
+            "match": "필수문구 누락(비밀유지·손해배상 등)",
+            "result": "편차=중대 · 법무검토 회부"
+          },
+          {
+            "match": "표준 수치 변경(지급기일·하자담보기간 등)",
+            "result": "편차=경미~중대 · 임계 초과 시 법무검토"
+          },
+          {
+            "match": "표준 외 추가 조항(상대방 요구)",
+            "result": "편차=검토필요 · 법무검토 회부"
+          },
+          {
+            "match": "문구 표현 차이(의미 동일)",
+            "result": "편차=무시 가능 · 자동 통과"
+          }
+        ]
+      }
+    ],
+    "thresholds": [
+      {
+        "id": "th_renewal_notice_default",
+        "expr": "noticeAlertDate = contractTermEnd - max(noticePeriodDays, 30)일",
+        "flag": "갱신통지_알림예약"
+      },
+      {
+        "id": "th_amount_legal_review",
+        "expr": "contractAmount >= 30000000",
+        "flag": "고액_법무검토_의무"
+      },
+      {
+        "id": "th_amount_auto_approve",
+        "expr": "contractAmount < 5000000 AND riskGrade == 'low'",
+        "flag": "자동승인_후보"
+      },
+      {
+        "id": "th_amount_exec_approval",
+        "expr": "contractAmount >= 5000000",
+        "flag": "대표결재_필요"
+      },
+      {
+        "id": "th_liability_cap",
+        "expr": "liabilityCapAmount == null OR liabilityCapAmount > contractAmount * 3",
+        "flag": "배상한도_과다_핵심플래그"
+      },
+      {
+        "id": "th_penalty_rate",
+        "expr": "penaltyClauseRate > 0.10",
+        "flag": "위약벌_과도"
+      },
+      {
+        "id": "th_extract_confidence",
+        "expr": "extractConfidence < 0.7",
+        "flag": "추출신뢰도_저하_HITL이관"
+      },
+      {
+        "id": "th_renewal_notice_short",
+        "expr": "noticePeriodDays < 30 AND autoRenewalClause 존재",
+        "flag": "거절통지기한_단기_독소"
+      },
+      {
+        "id": "th_stamp_tax_threshold",
+        "expr": "contractAmount > 10000000",
+        "flag": "인지세_과세대상"
+      }
+    ]
+  },
+  "seeds": [
+    {
+      "label": "자동승인 — 소액 저위험 SaaS 구독 갱신(필수조항 완비)",
+      "expectedRoute": "자동승인 — 담당 확인 종결(대표 결재 생략 가능)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "갱신"
+        },
+        {
+          "slot": "existingContractNo",
+          "value": "BCT-2024-0117"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "(주)스택플로우"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "3600000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "라이선스/SaaS구독"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-07-01"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2027-06-30"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.94"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{이용범위:true,라이선스료:true,기간:true,자동갱신조건:true,SLA:true,데이터처리:true,해지:true,비밀유지:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDeviationItems",
+          "value": "[]"
+        },
+        {
+          "slot": "liabilityCapAmount",
+          "value": "3600000"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "low"
+        },
+        {
+          "slot": "requesterName",
+          "value": "김민지"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.94"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "0"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "15"
+        }
+      ],
+      "expectedOutcome": "AUTO_APPROVE"
+    },
+    {
+      "label": "담당→대표 결재 — 중간금액 정상 용역계약(회색지대, 핵심위험 없음)",
+      "expectedRoute": "법무검토(HITL) 생략 가능 시 담당 → 대표 결재(중도 성향: 회색지대는 대표 결재로 흡수)",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "브릿지컨설팅(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "14000000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "용역/도급"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-07-15"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2026-12-31"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.88"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{계약목적:true,대금및지급조건:true,계약기간:true,해지:true,비밀유지:true,손해배상:true,분쟁해결:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDeviationItems",
+          "value": "[{항목:지급기일,분류:경미}]"
+        },
+        {
+          "slot": "liabilityCapAmount",
+          "value": "14000000"
+        },
+        {
+          "slot": "penaltyClauseRate",
+          "value": "0.05"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "low"
+        },
+        {
+          "slot": "requesterName",
+          "value": "박서준"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.88"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "0"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "20"
+        }
+      ],
+      "expectedOutcome": "AUTO_APPROVE"
+    },
+    {
+      "label": "법무검토(HITL) → 대표 — 고액 신규 도급계약(3천만 이상)",
+      "expectedRoute": "법무검토(HITL) → 대표 결재 — 고액 건 핵심위험 점검",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "(주)클라우드메시"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "48000000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "용역/도급"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-08-01"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2027-07-31"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.91"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{계약목적:true,대금및지급조건:true,계약기간:true,해지:true,비밀유지:true,손해배상:true,분쟁해결:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDeviationItems",
+          "value": "[]"
+        },
+        {
+          "slot": "liabilityCapAmount",
+          "value": "100000000"
+        },
+        {
+          "slot": "penaltyClauseRate",
+          "value": "0.05"
+        },
+        {
+          "slot": "stampTaxAmount",
+          "value": "40000"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "medium"
+        },
+        {
+          "slot": "requesterName",
+          "value": "이도윤"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.91"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "0"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "40"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "법무검토(HITL) — 독소조항 high(손해배상 무제한)",
+      "expectedRoute": "법무검토(HITL) — 독소조항 실질위험 전문판단",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "메가테크솔루션(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "22000000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "업무위탁/위임"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-07-20"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2027-07-19"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.86"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{위탁업무범위:true,보수:true,기간:true,재위탁제한:true,비밀유지:true,손해배상:true,해지:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[손해배상 상한 미설정/무제한]"
+        },
+        {
+          "slot": "liabilityCapAmount",
+          "value": "null"
+        },
+        {
+          "slot": "penaltyClauseRate",
+          "value": "0.05"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "high"
+        },
+        {
+          "slot": "requesterName",
+          "value": "최예린"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.86"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "1"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "60"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "법무검토(HITL) — 제재 미확인(source=gap, 수기 보강 필요)",
+      "expectedRoute": "법무검토(HITL) — 제재 데이터 갭으로 수기 확인 필수 보강",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "Nexora Systems Ltd. (싱가포르)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "19500000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "라이선스/SaaS구독"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-08-10"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2027-08-09"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.84"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{이용범위:true,라이선스료:true,기간:true,자동갱신조건:true,SLA:true,데이터처리:true,해지:true,비밀유지:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[]"
+        },
+        {
+          "slot": "governingLawJurisdiction",
+          "value": "싱가포르법·싱가포르 법원"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "미확인"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "medium"
+        },
+        {
+          "slot": "requesterName",
+          "value": "정하준"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "unknown"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.84"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "0"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "45"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "법무검토(HITL) — 추출신뢰도 저하(비정형 조항 해석)",
+      "expectedRoute": "법무검토(HITL) — 비정형 조항 해석 이관",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "변경"
+        },
+        {
+          "slot": "existingContractNo",
+          "value": "BCT-2025-0042"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "(주)데이터브릿지"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "8500000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "용역/도급"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-07-01"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2026-10-31"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.58"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{계약목적:true,대금및지급조건:true,계약기간:true,해지:true,비밀유지:true,손해배상:true,분쟁해결:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDeviationItems",
+          "value": "[{항목:표준 외 추가 조항(상대방 요구),분류:검토필요}]"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "medium"
+        },
+        {
+          "slot": "requesterName",
+          "value": "한지우"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.58"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "0"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "45"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "법무검토(HITL) — 표준템플릿 중대 편차(추가 조항)",
+      "expectedRoute": "법무검토(HITL) — 편차 수용 가능성 판단",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "(주)핀테크랩스"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "12000000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "업무위탁/위임"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-08-01"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2027-01-31"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.89"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{위탁업무범위:true,보수:true,기간:true,재위탁제한:true,비밀유지:true,손해배상:true,해지:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDeviationItems",
+          "value": "[중대]"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "medium"
+        },
+        {
+          "slot": "requesterName",
+          "value": "오시현"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.89"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "0"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "45"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    },
+    {
+      "label": "반려 — 필수조항 누락(손해배상·분쟁해결 부재)",
+      "expectedRoute": "반려 — 필수조항 보완 후 재접수",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "신규"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "라이트하우스미디어(주)"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "6800000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "용역/도급"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-07-10"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2026-09-30"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.82"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{계약목적:true,대금및지급조건:true,계약기간:true,해지:true,비밀유지:false,손해배상:false,분쟁해결:false}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[]"
+        },
+        {
+          "slot": "templateDeviationItems",
+          "value": "[중대]"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "medium"
+        },
+        {
+          "slot": "requesterName",
+          "value": "윤채원"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[비밀유지,손해배상,분쟁해결]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.82"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "0"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "50"
+        }
+      ],
+      "expectedOutcome": "REJECT"
+    },
+    {
+      "label": "법무검토(HITL) — 일방 자동갱신 + 거절통지 단기(독소 high)",
+      "expectedRoute": "법무검토(HITL) — 독소조항 실질위험 전문판단",
+      "input": [
+        {
+          "slot": "contractType",
+          "value": "갱신"
+        },
+        {
+          "slot": "existingContractNo",
+          "value": "BCT-2024-0203"
+        },
+        {
+          "slot": "counterpartyName",
+          "value": "(주)서버리스원"
+        },
+        {
+          "slot": "contractAmount",
+          "value": "9200000"
+        },
+        {
+          "slot": "documentKind",
+          "value": "라이선스/SaaS구독"
+        },
+        {
+          "slot": "contractTermStart",
+          "value": "2026-09-01"
+        },
+        {
+          "slot": "contractTermEnd",
+          "value": "2027-08-31"
+        },
+        {
+          "slot": "extractConfidence",
+          "value": "0.87"
+        },
+        {
+          "slot": "autoRenewalClause",
+          "value": "상대방 자동 1년 갱신, 당사 거절통지 만기 15일 전까지"
+        },
+        {
+          "slot": "noticePeriodDays",
+          "value": "15"
+        },
+        {
+          "slot": "requiredClausesPresent",
+          "value": "{이용범위:true,라이선스료:true,기간:true,자동갱신조건:true,SLA:true,데이터처리:true,해지:true,비밀유지:true}"
+        },
+        {
+          "slot": "toxicClauseFlags",
+          "value": "[상대방 일방 자동갱신 + 당사 거절통지 단기(<30일)]"
+        },
+        {
+          "slot": "sanctionCheckResult",
+          "value": "해당없음"
+        },
+        {
+          "slot": "riskGrade",
+          "value": "high"
+        },
+        {
+          "slot": "requesterName",
+          "value": "강민호"
+        },
+        {
+          "slot": "sanctionListHit",
+          "value": "none"
+        },
+        {
+          "slot": "missingMandatoryClauses",
+          "value": "[]"
+        },
+        {
+          "slot": "pdfExtractConfidence",
+          "value": "0.87"
+        },
+        {
+          "slot": "templateDigitalized",
+          "value": "true"
+        },
+        {
+          "slot": "toxicHighCount",
+          "value": "1"
+        },
+        {
+          "slot": "toxicUnmatched",
+          "value": "[]"
+        },
+        {
+          "slot": "compositeRiskScore",
+          "value": "55"
+        }
+      ],
+      "expectedOutcome": "LEGAL_REVIEW"
+    }
+  ],
+  "components": [
+    {
+      "type": "Agent",
+      "name": "계약 검토 오케스트레이션 에이전트",
+      "L": "L3",
+      "connectsTo": ""
+    },
+    {
+      "type": "Agent",
+      "name": "계약서 파싱·추출 에이전트",
+      "L": "L3",
+      "connectsTo": "Google Drive"
+    },
+    {
+      "type": "Module",
+      "name": "필수조항·표준템플릿 편차 점검 모듈",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "Module",
+      "name": "독소조항 패턴 탐지 모듈",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "Module",
+      "name": "인지세·만기 통지기한 산정 모듈",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "Module",
+      "name": "금액별 결재선·분기 판정 모듈",
+      "L": "L4",
+      "connectsTo": ""
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "Notion 계약DB(접수·대장·상태 SSOT)",
+      "L": "L5",
+      "connectsTo": "Notion"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "DocuSign 전자서명·체결",
+      "L": "L5",
+      "connectsTo": "DocuSign"
+    },
+    {
+      "type": "기존 솔루션",
+      "name": "Google Drive 계약서 문서 저장소",
+      "L": "L5",
+      "connectsTo": "Google Drive"
+    },
+    {
+      "type": "Connector",
+      "name": "Notion API Connector(읽기·쓰기·상태전이)",
+      "L": "L5",
+      "connectsTo": "Notion"
+    },
+    {
+      "type": "Connector",
+      "name": "DocuSign API Connector(서명 발송·완료 콜백)",
+      "L": "L5",
+      "connectsTo": "DocuSign"
+    },
+    {
+      "type": "Connector",
+      "name": "Google Drive API Connector(원본 조회·서명본 보관)",
+      "L": "L5",
+      "connectsTo": "Google Drive"
+    },
+    {
+      "type": "Connector",
+      "name": "수기 제재점검 입력 Connector(거래처 제재 데이터 갭 보강)",
+      "L": "L5",
+      "connectsTo": "gap(외부 제재·신용 소스 없음)"
+    },
+    {
+      "type": "Policy",
+      "name": "HITL 게이트 정책(법무검토 회부·대표 결재 권한 경계)",
+      "L": "L7",
+      "connectsTo": ""
+    },
+    {
+      "type": "Policy",
+      "name": "분기 라우팅 정책(자동승인/법무검토/반려 임계·중도 위험성향)",
+      "L": "L7",
+      "connectsTo": ""
+    },
+    {
+      "type": "Policy",
+      "name": "거래처 제재 미확인 차단 가드레일(데이터 갭 안전장치)",
+      "L": "L7",
+      "connectsTo": ""
+    }
+  ],
+  "compose": [
+    {
+      "t": "Agent",
+      "sub": "전문 작업",
+      "cls": "tA",
+      "n": 2,
+      "items": [
+        "계약 검토 오케스트레이션 에이전트",
+        "계약서 파싱·추출 에이전트"
+      ]
+    },
+    {
+      "t": "Module",
+      "sub": "재사용 기능",
+      "cls": "tM",
+      "n": 4,
+      "items": [
+        "필수조항·표준템플릿 편차 점검 모듈",
+        "독소조항 패턴 탐지 모듈",
+        "인지세·만기 통지기한 산정 모듈",
+        "금액별 결재선·분기 판정 모듈"
+      ]
+    },
+    {
+      "t": "기존 솔루션",
+      "sub": "Buy·Integrate",
+      "cls": "tS",
+      "n": 3,
+      "items": [
+        "Notion 계약DB(접수·대장·상태 SSOT)",
+        "DocuSign 전자서명·체결",
+        "Google Drive 계약서 문서 저장소"
+      ]
+    },
+    {
+      "t": "Connector",
+      "sub": "시스템 연동",
+      "cls": "tC",
+      "n": 4,
+      "items": [
+        "Notion API Connector(읽기·쓰기·상태전이)",
+        "DocuSign API Connector(서명 발송·완료 콜백)",
+        "Google Drive API Connector(원본 조회·서명본 보관)",
+        "수기 제재점검 입력 Connector(거래처 제재 데이터 갭 보강)"
+      ]
+    },
+    {
+      "t": "Policy",
+      "sub": "통제·권한",
+      "cls": "tP",
+      "n": 3,
+      "items": [
+        "HITL 게이트 정책(법무검토 회부·대표 결재 권한 경계)",
+        "분기 라우팅 정책(자동승인/법무검토/반려 임계·중도 위험성향)",
+        "거래처 제재 미확인 차단 가드레일(데이터 갭 안전장치)"
+      ]
+    }
+  ],
+  "stepLoop": {
+    "sp1": "Data",
+    "sp2": "Data",
+    "sp3": "Reasoning",
+    "sp4": "Reasoning",
+    "sp5": "Reasoning",
+    "sp6": "Reasoning",
+    "sp7": "Decision",
+    "sp8": "Decision",
+    "sp9": "Decision",
+    "sp10": "Learning"
+  },
+  "govern": [
+    {
+      "k": "Policy",
+      "v": "책임 지점 자동 차단 후 승인(HITL)."
+    },
+    {
+      "k": "Run Trace",
+      "v": "요청→판정→분기→반영 전 구간 기록."
+    },
+    {
+      "k": "Evaluation",
+      "v": "evaluate(case,knowledge) 결정론·basis 추적."
+    },
+    {
+      "k": "Skill Library",
+      "v": "유형·룰 재사용 자산화."
+    }
+  ],
+  "surfaceSpec": {
+    "icon": "🗂️",
+    "title": "계약 B사",
+    "tabs": [
+      "개요",
+      "판정",
+      "처리",
+      "기록"
+    ],
+    "_stub": true
+  },
+  "provenance": {
+    "generatedBy": "harness+evaluate-in-the-loop+annotate",
+    "gatePass": true,
+    "route": "evaluate.js DSL",
+    "reviewedBy": null
+  },
+  "_adapterNotes": [
+    "knowledge.route=게이트 통과 실행가능 DSL(when 파싱됨). seeds=expectedOutcome 포함.",
+    "flow gate.next=verdict.outcome 바인딩(nextBy). lookup/threshold는 prose 참조(DSL화는 후속).",
+    "flow·loopPhase=휴리스틱 v0.2, app/ 세션 정통화."
+  ]
+}
