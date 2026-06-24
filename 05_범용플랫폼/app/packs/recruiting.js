@@ -1176,8 +1176,7 @@
       root.querySelectorAll('[data-filt]').forEach(e=>e.onclick=()=>{S.recrFilter=e.dataset.filt;rerender();});
       root.querySelectorAll('[data-cback]').forEach(e=>e.onclick=()=>{S.recrOpen=null;rerender();});
       /* 결정 큐 아이템 → 해당 HITL 게이트 단계로 이동(코어 일반 메커니즘 · HITL 모달 자동 노출) */
-      /* #5 절충: 그 게이트에 있으면 기준 조정 모달(openGate), 아니면 그 게이트로 이동(인라인 정착 후 '결정하기'로 모달) */
-      root.querySelectorAll('[data-gate]').forEach(e=>e.onclick=()=>{ const g=e.dataset.gate; if(!window.AAP_CORE)return; if(window.AAP_CORE.atGate(g))window.AAP_CORE.openGate(); else window.AAP_CORE.go(g); });
+      root.querySelectorAll('[data-gate]').forEach(e=>e.onclick=()=>{ if(window.AAP_CORE)window.AAP_CORE.go(e.dataset.gate); });
       /* 'AAP가 해둔 일 · 어떻게 했는지' → 「업무 진행」 탭으로 전환(코어 일반) */
       root.querySelectorAll('[data-aapsee]').forEach(e=>e.onclick=()=>{ if(window.AAP_setWsTab)window.AAP_setWsTab('progress'); });
       /* 파이프라인 전체 보기 토글 */

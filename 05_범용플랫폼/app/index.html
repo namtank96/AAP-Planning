@@ -44,11 +44,6 @@
         <button class="newcase" id="newCaseBtn" data-ic="plus" data-ic-pos="pre">새 업무 요청</button>
         <div class="inbox-proj-toggle" id="inboxProjToggle" hidden></div>
       </div>
-      <!-- 운영 요약(개입 이유별 카운트 · AAP가 분류) — core 가 채움 -->
-      <div class="inbox-stats" id="inboxStats"></div>
-      <!-- 1차 필터 = 개입 이유(왜 사람이 봐야 하나) -->
-      <div class="reason-filter" id="inboxReasonFilter"></div>
-      <!-- 2차 필터 = 업무 도메인 -->
       <div class="ty-filter" id="inboxFilter"></div>
       <div class="inbox" id="inboxList"></div>
     </div></div>
@@ -102,7 +97,7 @@
             <p class="sec-title" style="margin:0">워크플로우 빌더</p>
             <span class="wfb-sub">팔레트에서 블록을 얹어 흐름을 구성 · 결정론 Action / 비결정론 Use LLM 분리 · 저장 시 실행(run) 뷰 반영</span>
           </div>
-          <button class="newcase" id="newPromoteBtn" data-ic="plus" data-ic-pos="pre">새 업무 유형 만들기</button>
+          <button class="newcase" id="newPromoteBtn" data-ic="plus" data-ic-pos="pre">신규 격상</button>
         </div>
         <details class="wfb-summary" id="wfSummary">
           <summary>실행 구조 요약 · 실행 순서 · HITL 게이트 보기</summary>
@@ -146,8 +141,6 @@
       <span class="rt-action" id="runAction" hidden></span>
     </div>
     <div class="run-main">
-      <!-- 업무 브리핑 — 진입 시 '지금 무엇을/왜' 먼저(단계 직행 ✕). core renderRunBrief 가 채움. -->
-      <div class="run-brief" id="runBrief" hidden></div>
       <!-- 메인 = 업무 워크스페이스(PACK.surface / surfaceSpec). 상단 2탭(코어 소유):
            「내 업무」(결정 큐) / 「업무 진행」(단계 프로세스·HITL·AAP 작동 — 옛 토글 드로어 흡수). -->
       <section class="run-surface">
