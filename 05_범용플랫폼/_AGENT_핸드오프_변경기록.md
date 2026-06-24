@@ -69,6 +69,25 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### 인박스 운영 콘솔 시각 고도화 — platform.css `aap-design v0.3` override (260625, aap-design · 유저 직접지시) 〔디자인〕
+> 유저 요구: index.html(운영 콘솔)을 상용 SaaS 수준으로 — 인박스→상세→액션 흐름. 클라우드 예약 루틴이 push 실패(CCR 임시환경 권한)로 산출물 유실 → 로컬 aap-design로 직접 수행. **platform.css 말미 append만**(DOM·id·class·JS 셀렉터 불변, 신규 hex 0·토큰만).
+- **(a) 인박스 카드 밀도·위계**: 행 패딩/갭 압축, 제목 위계(자간), 메타 1줄 tabular·말줄임, 진행 막대 슬림+% tabular. (Linear 인박스·shadcn Tasks 패턴)
+- **(b) status badge·chip 토큰화**: `--bdg-pill/py/px/fs` 신규 → `.ibx-st`·`.ty-badge`·`.hd-status` 라운드·크기·자간 통일, 검토대기 행 amber 강조. (Tabler)
+- **(c) detail sheet 전환**: run 진입 fade+slide(`rsheet-in`)+reduced-motion 가드. (shadcn Sheet)
+- **(d) HITL command bar 위계**: `.op-hitlbar`/`.op-hbtn` elevation, cmodal 주/부(primary/ghost) 위계. amber=게이트 규칙 유지.
+- **(e) empty/toast 일관성**: empty 중앙정렬·여백 통일, toast 좌 teal 액센트.
+- **검증**: 헤드리스 Chrome 1440×900, 인박스 35건 렌더 정상·콘솔 에러 0·JS 훅(`#inboxList`·`.ibx-row`·`[data-open]`·`.ty-chip`·`[data-view]`) 보존.
+- **⚠️ 동시 편집**: 본 작업과 아래 '채용 RUN 서피스' 세션이 같은 날 app/ 동시 편집 — 파일은 분리됨(이 작업=platform.css만 / 채용 세션=core.js·recruiting.js·platform-fix.css). 커밋도 platform.css만 격리. [[feedback-single-writer-app]] 충돌 사례.
+- **스코프 밖**: 인박스 카드 '요청자/마감/현재 Agent 단계/HITL 필요' 신규 필드는 core.js 렌더 DOM에 없어 미적용(편집 금지) → 필드 신설 시 aap-platform 트랙 core.js 협의.
+
+### app/ 채용 RUN 서피스 개선 — 진행 중 (260625, 이 세션이 유저 직접지시로 app/ 편집 · ★단일 writer 양해)
+- **유저 6대 피드백(채용 RUN 화면)**: #1 새업무 팝오버가 다른 장면에도 잔존 / #2 새업무 화면=텍스트만→유형 분류·제시 / #3 업무 순서 2줄 wrap·기준 패널 등 케이스 진입 레이아웃 엉망 / #4 HITL 모달 강제 재검토(본화면+세부만 모달) / #5 판단 근거·로직 안 드러남.
+- **완료(검증)**: **#1** `setView`·`openCase`에 `closeNewCase()` 추가(뷰 전환·케이스 진입 시 팝오버 닫힘). **#3** `.op-strip` `nowrap`+가로스크롤·`.op-snode` 컴팩트(9단계 2줄 wrap→단일 라인) + **`.op-steer{align-items:stretch}`**(우선순위·필터·면접범위 3박스 높이 레벨 맞춤). platform-fix.css. 헤드리스 검증(`?pack=recruiting`+`AAP_CORE.load('recruiting');go('screen'/'interview')`) OK.
+- **재진단(중요)**: **근거·로직은 없는 게 아니라 단계별로 노출이 들쭉날쭉.** 면접 조율(interview)=캘린더 교차 근거·HITL이 **본 화면 인라인**으로 잘 나옴(좋은 모델). 반면 매칭/스크리닝(screen)=후보 근거(candDetail)·`evidDrill`(근거 4유형)이 **모달/aside에만**. → #5 = 매칭 단계 후보 근거·로직을 interview처럼 본 화면 인라인 + 세부만 드릴.
+- **진단(중요)**: 근거·로직 데이터는 채용 팩에 **이미 풍부**(WORK ops `ev{data,rule,logic}`·detail 테이블·컷 시뮬·verdict basis) — 단 **RUN 서피스가 아니라 모달(HITL gate·done)에만** 올라옴. opstage=`{steer(op-steer 기준),main(op-wh 후보랭킹+op-hitlbar 인라인 HITL),aside}`. 후보=막대(스킬/경력/도메인 매칭 기여)+토큰, 그러나 산식·컷·가중 '왜'는 안 드릴.
+- **남음(이어서)**: **#5** 후보/판정 클릭→사용자 언어 근거·로직 드릴(회의 데모 '근거 보기' 차용). **#4** HITL gate 모달→서피스 인라인(op-hitlbar 확장)+세부만 모달. **#2** 새업무 오버레이=입력+실시간 유형 인식 강조+유형 칩 quick-start. (single console·no-2panel 원칙 [[feedback-no-two-panel-console]] 준수)
+
+
 ### 지시서 반영 ① 인박스 = 운영 콘솔 재설계 (코어, 260624) 〔기획·UX〕
 > 외부 지시서 §1 반영. 인박스를 '티켓 목록'→**AAP가 개입 이유로 분류한 운영 큐**로. (지시서 10항 중 #1~#4·#11 일부)
 - **caseBrief 인프라**(core.js): `REASON`(사람결정/정책위반/근거부족/자료부족/SLA/시스템반영/자동처리/진행) + `caseBrief(c)` = 팩 `inboxBrief(c)` 훅 우선, 없으면 **단일케이스(knowledge.route)는 순수 `evaluate(c.caseData,knowledge)`로 판정 도출**(REJECT→정책위반·LEGAL_REVIEW→사람결정·AUTO→자동), 그 외 상태 기반. 근거=verdict.inputs 중 슬롯 라벨만(임계키 제외).

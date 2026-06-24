@@ -661,6 +661,13 @@ body.aap-drawer-on .run-evid:not(.wp-aap){flex:0 0 372px;width:372px;border-left
 .op-rflag{font-size:9px;font-weight:800;border-radius:4px;padding:1px 6px;}
 .op-rflag.warn{color:var(--amber-ink);background:var(--amber-soft);} .op-rflag.risk{color:var(--red);background:var(--red-soft);}
 .op-rc{font-size:11px;color:var(--muted);}
+/* 판정 칩(통과/보류/탈락) + 근거 이유 라인 — 본 화면 인라인(#5) */
+.op-rv{font-size:9.5px;font-weight:800;border-radius:5px;padding:1px 7px;flex:0 0 auto;}
+.op-rv.ok{color:#15803d;background:var(--green-soft,#e7f7ee);} .op-rv.warn{color:var(--amber-ink);background:var(--amber-soft);} .op-rv.risk{color:var(--red);background:var(--red-soft);}
+.op-rwhy{font-size:10.5px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.op-rbd-t{color:var(--faint);}
+.op-rmore{display:inline-flex;align-items:center;gap:3px;margin-left:4px;font-size:10px;font-weight:700;color:var(--aap);cursor:pointer;}
+.op-rmore .ic{width:11px;height:11px;} .op-row:hover .op-rmore{text-decoration:underline;}
 .op-bd{display:flex;height:7px;border-radius:4px;overflow:hidden;width:124px;flex:0 0 auto;background:var(--surf);}
 .op-bd i{display:block;height:100%;}
 .op-rmt{width:50px;text-align:right;flex:0 0 auto;} .op-rmt b{font-size:16px;font-weight:800;color:var(--aap-ink);} .op-rmt span{font-size:8.5px;color:var(--faint);font-weight:700;display:block;}
@@ -2299,3 +2306,73 @@ body.wfrun-collapsed .wfb-canvas .wfb-handle.run{display:flex;}
 .dom-pane{display:none;}
 .dom-pane.on{display:block;}
 .dom-body::after{content:"";position:sticky;bottom:0;left:0;display:block;height:20px;margin-top:-20px;background:linear-gradient(to top,var(--bg),rgba(244,247,251,0));pointer-events:none;}
+
+/* =========================================================================
+   aap-design v0.3 · 상용 SaaS 콘솔 마감 패스 (인박스 밀도·상태 토큰·전환·HITL 위계)
+   ───────────────────────────────────────────────────────────────────────
+   벤치마크(패턴만 차용): shadcn/ui Tasks·Mail · Linear 인박스 · Tabler · Datadog.
+   ★시각만 — DOM 구조·id·class 훅·JS 셀렉터 불변. 기존 토큰 보존, 확장만.
+   신규 hex 0 (teal·amber·status 기존 팔레트만). 갈아엎기 ✕ (override 캐스케이드).
+   ========================================================================= */
+
+/* ── 상태/배지 토큰 스케일(일관 라운드·크기) — 인박스·헤더 status 통일 ── */
+:root{ --bdg-pill:999px; --bdg-py:3px; --bdg-px:9px; --bdg-fs:10px; }
+
+/* (a) 인박스 카드 — 밀도·타이포 위계 (Linear/shadcn Tasks 한 줄 메타 패턴)
+   행 높이 압축·정렬 기준선 정돈. 제목=강조 / 메타=한 줄 보조 / 진행·상태=우측 시그널. */
+.ibx-rows{ gap:7px; }
+.ibx-row{ padding:11px 14px; gap:13px; align-items:center; }
+.ibx-row:hover{ transform:translateY(-1px); box-shadow:0 4px 14px rgba(15,23,42,.08); }
+/* 좌측 타입 아이콘 — 약간 작게·차분하게(제목이 1순위) */
+.ibx-ic{ width:32px; height:32px; border-radius:9px; font-size:15px; border:1px solid var(--line); }
+/* 제목 위계 — 800→750 톤다운 미세 + 행간 안정 */
+.ibx-t{ font-size:13px; font-weight:750; letter-spacing:-.1px; line-height:1.35; }
+.ibx-t .ty-badge{ font-weight:800; vertical-align:1.5px; }
+/* 메타 한 줄 — 요청자·요청 요약. tabular nums 로 정렬, 색 위계 또렷 */
+.ibx-meta{ font-size:11px; color:var(--muted); margin-top:3px; line-height:1.4;
+  font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* 진행 — 막대 얇게·% tabular 우측 정렬(Datadog 미니 메트릭 톤) */
+.ibx-prog{ width:118px; }
+.ibx-bar{ height:5px; background:var(--line); }
+.ibx-pn{ font-size:10px; font-weight:800; color:var(--faint); font-variant-numeric:tabular-nums; margin-top:5px; }
+/* (b) status badge — 토큰화(일관 라운드·크기·자간) */
+.ibx-st{ font-size:var(--bdg-fs); font-weight:800; letter-spacing:.01em;
+  padding:var(--bdg-py) var(--bdg-px); border-radius:var(--bdg-pill); line-height:1.3; }
+.ty-badge{ border-radius:var(--bdg-pill); }
+.hd-status{ border-radius:var(--bdg-pill); padding:var(--bdg-py) var(--bdg-px); letter-spacing:.01em; }
+/* 검토대기(wait) 행만 좌측 amber 보더를 또렷이(주목 우선순위 — Linear 인박스 시그널) */
+.ibx-grp:has(.gh-dot.st-wait) .ibx-row{ border-left-width:3px; }
+.ibx-grp:has(.gh-dot.st-wait) .ibx-st{ box-shadow:0 0 0 1px var(--amber-border) inset; }
+/* 그룹 헤더 — 자간·위계 정돈(섹션 구분 또렷) */
+.ibx-gh{ letter-spacing:.04em; }
+
+/* (c) detail sheet(run 뷰) 전환 — 인박스→상세 진입이 미끄러지듯(shadcn Sheet 톤).
+   .view 는 position:absolute/inset:0. [hidden]=display:none 라 표시 시점에만 등장 모션. */
+.view[data-view="run"]:not([hidden]) .runtop{ animation:rsheet-in .26s cubic-bezier(.4,0,.2,1) both; }
+.view[data-view="run"]:not([hidden]) .run-main{ animation:rsheet-in .3s cubic-bezier(.4,0,.2,1) .02s both; }
+@keyframes rsheet-in{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){
+  .view[data-view="run"]:not([hidden]) .runtop,
+  .view[data-view="run"]:not([hidden]) .run-main{ animation:none; }
+}
+
+/* (d) HITL command bar 위계 — 게이트=amber 규칙 유지, 위계만 상용급으로.
+   레이블(무엇을 결정)·서브(왜)·주액션 순. 주액션은 우측 끝·살짝 솟음(주목 1순위). */
+.op-hitlbar{ box-shadow:0 3px 12px rgba(217,119,6,.08); }
+.op-hbtn{ box-shadow:0 3px 10px rgba(217,119,6,.24); transition:filter .14s, box-shadow .14s, transform .1s; }
+.op-hbtn:hover{ filter:brightness(.97); box-shadow:0 5px 14px rgba(217,119,6,.3); }
+.op-hbtn:active{ transform:translateY(1px); }
+.op-hitlbar.auto .op-hbtn{ box-shadow:0 3px 10px rgba(22,163,74,.24); }
+/* cmodal 결정 액션 — 주(primary)/부(ghost) 위계 또렷(주가 먼저 읽히게) */
+.cmodal-actions .cp-btn.primary{ flex:1 1 auto; }
+.cmodal-actions .cp-btn.ghost{ flex:0 0 auto; }
+.cp-btn{ transition:filter .14s, box-shadow .14s, transform .1s; }
+.cp-btn:active{ transform:translateY(1px); }
+
+/* (e) empty state · toast 일관성 — platform-fix .empty-state 톤과 정합 + toast 신호 강화.
+   인박스 빈 상태: 점선 카드 안 중앙 정렬·여백 확대. toast: 좌측 teal 액센트(성공 신호 톤). */
+.ibx-empty{ padding:34px 18px; line-height:1.7; border-radius:14px; }
+.ibx-empty b{ color:var(--aap-ink); font-weight:800; }
+.ops-empty,.tr-empty{ font-size:12px; color:var(--faint); padding:26px 16px; text-align:center;
+  line-height:1.7; border:1px dashed var(--border); border-radius:14px; }
+.toast{ border-left:3px solid var(--aap); padding-left:16px; }
