@@ -1,0 +1,576 @@
+<!doctype html>
+<!--
+  ════════════════════════════════════════════════════════════════
+  AAP 사업화 계획 · 발표용 한 장 (스크롤형) v0.1 (260624)
+  출처 : 05_범용플랫폼/aap_사업화_계획서_v0_1.md (본문)
+         05_범용플랫폼/aap_사업화_경영보고_PPT구조_v0_1.md (시각화 지시)
+  디자인 : 01_선제안서/aap_proactive_offering_v0.7_260616.html 의 토큰·컴포넌트 재사용
+           (teal 주색, --muted 등 색변수, 카드/섹션/표 스타일, 8계층 포스터 패턴)
+  문체 : 합니다체 완결 문장 · 나열은 쉼표 · 기호(✕★〔〕—→'') 금지 · 강조는 볼드
+  외부 라이브러리 0 · 인라인 CSS · file:// 로 바로 열림
+  ════════════════════════════════════════════════════════════════
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agentic AI Platform 사업화 계획 · 발표 v0.1</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-550:#5f6670; --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --red2:#fff1f2; --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+  --amber:#b5710a; --amber2:#fdf6ec;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--gray-75);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55}
+.page{max-width:1320px;margin:0 auto;background:var(--gray-white);min-height:100vh;box-shadow:0 0 0 1px var(--gray-150)}
+
+/* === Section base === */
+section{padding:42px 56px;border-bottom:1px solid var(--line);background:#fff}
+.section-head{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin-bottom:22px}
+.num{height:48px;width:58px;border-radius:13px;background:var(--gray-900);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:.03em}
+h2{margin:0;font-size:27px;letter-spacing:-.03em;line-height:1.2}
+.lead{font-size:15px;color:var(--sub);margin:10px 0 0;max-width:980px;line-height:1.7}
+.lead strong{color:var(--ink)}
+.sub-h3{margin:26px 0 10px;font-size:16.5px;letter-spacing:-.01em;color:var(--ink);font-weight:900}
+.sub-h3:first-of-type{margin-top:0}
+.sub-note{font-size:13.5px;color:var(--sub);margin:0 0 10px;line-height:1.7}
+.sub-note strong{color:var(--ink)}
+
+/* === Common grid + card === */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:stretch}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:stretch}
+.card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:16px;box-shadow:0 4px 14px rgba(23,25,28,.03);display:flex;flex-direction:column}
+.card h3{margin:0 0 8px;font-size:15px;letter-spacing:-.01em;color:var(--ink);line-height:1.3;font-weight:900}
+.card p{margin:0;color:var(--gray-600);font-size:13px;line-height:1.65}
+.card p strong{color:var(--ink);font-weight:800}
+.card.accent{border-color:var(--teal);background:var(--teal2)}
+.card.accent h3{color:var(--teal-strong)}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:900;letter-spacing:.02em;margin-bottom:9px;background:var(--gray-75);color:var(--gray-600);align-self:flex-start}
+.badge.teal{background:var(--teal2);color:var(--teal-strong)}
+
+/* === Note === */
+.note{border-left:4px solid var(--red);background:var(--gray-50);padding:14px 18px;border-radius:10px;color:var(--gray-600);font-size:13.5px;margin-top:16px;line-height:1.7}
+.note strong{color:var(--ink);font-weight:800}
+.note.teal{border-left-color:var(--teal-strong)}
+
+/* === Table === */
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;font-size:12.5px;margin-top:16px}
+th{background:var(--gray-900);color:#fff;text-align:left;padding:10px 13px;font-weight:800;font-size:12px;letter-spacing:.02em}
+td{padding:10px 13px;border-top:1px solid var(--line);vertical-align:top;color:var(--gray-600);line-height:1.6}
+td strong{color:var(--ink);font-weight:800}
+tr:nth-child(even) td{background:var(--gray-50)}
+th.hl,td.hl{background:var(--teal-strong);color:#fff}
+tr:nth-child(even) td.hl{background:var(--teal-strong)}
+td.hl strong{color:#fff}
+
+/* === Cover === */
+.cover{padding:54px 56px 46px;background:linear-gradient(160deg,#fff 0%,var(--teal2) 100%);border-bottom:1px solid var(--line)}
+.cover-kicker{font-size:11px;font-weight:900;letter-spacing:.18em;color:var(--teal-strong);text-transform:uppercase;margin-bottom:14px}
+.cover h1{margin:0;font-size:40px;line-height:1.18;letter-spacing:-.035em;color:var(--ink);font-weight:900}
+.cover h1 .t{color:var(--teal-strong)}
+.cover-sub{font-size:16px;color:var(--sub);margin:16px 0 0;max-width:860px;line-height:1.7}
+.cover-sub strong{color:var(--ink)}
+.cover-oneliner{margin-top:24px;padding:18px 22px;border-radius:14px;background:#111;color:#fff;font-size:15px;line-height:1.7;font-weight:600;letter-spacing:-.005em;max-width:920px}
+.cover-oneliner span{display:block;font-size:9.5px;font-weight:900;letter-spacing:.16em;color:rgba(255,255,255,.6);margin-bottom:7px;text-transform:uppercase}
+.cover-oneliner strong{font-weight:900;color:#fff}
+.cover-oneliner .t{color:#5fd6cd;font-weight:900}
+.cover-meta{display:flex;flex-wrap:wrap;gap:22px;margin-top:24px;font-size:12px;color:var(--muted);font-weight:700}
+.cover-meta b{color:var(--ink);font-weight:900}
+
+/* === As-Is / To-Be === */
+.gap-grid{display:grid;grid-template-columns:1fr 44px 1fr;gap:0;align-items:stretch;margin-top:14px}
+.gap-col{border:1px solid var(--line);border-radius:14px;padding:16px;background:#fbfbfc}
+.gap-col.tobe{border-color:var(--teal);background:var(--teal2)}
+.gap-col-h{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.gap-col.tobe .gap-col-h{color:var(--teal-strong)}
+.gap-col-t{font-size:14.5px;font-weight:900;color:var(--ink);letter-spacing:-.01em;margin-bottom:12px;line-height:1.3}
+.gap-col.tobe .gap-col-t{color:var(--teal-strong)}
+.gap-item{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--gray-700);line-height:1.55;padding:7px 0;border-top:1px solid var(--gray-100)}
+.gap-item:first-of-type{border-top:none}
+.gap-item b{color:var(--ink);font-weight:800}
+.gap-dot{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:var(--gray-300);color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.gap-col.tobe .gap-dot{background:var(--teal-strong)}
+.gap-arrow{display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:var(--gray-300)}
+
+/* === Concentric (관계 레버리지) === */
+.lev-wrap{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;align-items:center;margin-top:14px}
+.concentric{position:relative;width:100%;aspect-ratio:1/.86;max-width:460px;margin:0 auto}
+.ring{position:absolute;border-radius:50%;display:flex;align-items:flex-start;justify-content:center;text-align:center}
+.ring-3{inset:0;background:var(--gray-50);border:1.5px dashed var(--gray-300)}
+.ring-2{inset:16%;background:var(--amber2);border:1.5px solid #e8c98a}
+.ring-1{inset:33%;background:var(--teal2);border:2px solid var(--teal)}
+.ring-lab{position:absolute;font-size:11px;font-weight:900;letter-spacing:.02em;padding:3px 9px;border-radius:999px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.06);white-space:nowrap}
+.rl-1{top:42%;left:50%;transform:translate(-50%,-50%);color:var(--teal-strong);border:1px solid var(--teal);font-size:11.5px}
+.rl-1 small{display:block;font-size:8.5px;color:var(--muted);font-weight:700;letter-spacing:0;margin-top:1px}
+.rl-2{top:21%;left:50%;transform:translate(-50%,-50%);color:var(--amber);border:1px solid #e8c98a}
+.rl-3{top:5%;left:50%;transform:translate(-50%,-50%);color:var(--gray-600);border:1px solid var(--gray-300)}
+.lev-side{display:flex;flex-direction:column;gap:9px}
+.filter-card{border:1px solid var(--line);border-radius:11px;background:#fbfbfc;padding:11px 13px}
+.filter-card.f1{border-color:var(--teal);background:var(--teal2)}
+.filter-h{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.filter-rank{flex:0 0 auto;width:20px;height:20px;border-radius:6px;background:var(--gray-400);color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.filter-card.f1 .filter-rank{background:var(--teal-strong)}
+.filter-t{font-size:13px;font-weight:900;color:var(--ink);letter-spacing:-.005em}
+.filter-card.f1 .filter-t{color:var(--teal-strong)}
+.filter-d{font-size:11.5px;color:var(--gray-600);line-height:1.55}
+
+/* === 8-layer poster (역량 육성) === */
+.cap-legend{display:flex;flex-wrap:wrap;gap:16px;margin:0 0 12px;font-size:11px;font-weight:800;color:var(--muted)}
+.cap-legend .lg{display:inline-flex;align-items:center;gap:6px}
+.cap-legend .lg i{width:22px;height:13px;border-radius:4px;display:inline-block}
+.cap-legend .i-own{background:var(--teal-strong)}
+.cap-legend .i-buy{background:var(--gray-200);border:1px solid var(--gray-300)}
+.cap-legend .i-part{background:#fff;border:1.5px dashed var(--teal)}
+.cap-stack{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:14px;background:var(--gray-25);padding:11px}
+.cap-row{display:grid;grid-template-columns:188px minmax(0,1fr) 120px;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 13px}
+.cap-row.own{border-color:var(--teal);background:var(--teal2)}
+.cap-row.part{border-style:dashed;border-color:var(--teal)}
+.cap-ln{display:flex;align-items:center;gap:9px}
+.cap-ln .n{width:24px;height:24px;border-radius:7px;background:var(--gray-900);color:#fff;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.cap-row.own .cap-ln .n{background:var(--teal-strong)}
+.cap-ln .lt{font-size:12.5px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.2}
+.cap-row.own .cap-ln .lt{color:var(--teal-strong)}
+.cap-ln .lt small{display:block;font-size:8.5px;font-weight:700;color:var(--muted);letter-spacing:0;margin-top:1px}
+.cap-desc{font-size:11.5px;color:var(--gray-600);line-height:1.5}
+.cap-desc strong{color:var(--ink);font-weight:800}
+.cap-tag{justify-self:end;font-size:10px;font-weight:900;letter-spacing:.02em;padding:4px 11px;border-radius:999px;text-align:center;white-space:nowrap}
+.cap-tag.own{background:var(--teal-strong);color:#fff}
+.cap-tag.buy{background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-200)}
+.cap-tag.part{background:#fff;color:var(--teal-strong);border:1.5px dashed var(--teal)}
+.cap-domino{margin-top:12px;border-left:4px solid var(--teal-strong);background:var(--teal2);border-radius:0 10px 10px 0;padding:13px 16px;font-size:13px;color:var(--gray-700);line-height:1.65}
+.cap-domino strong{color:var(--teal-strong);font-weight:900}
+
+/* === Funnel === */
+.funnel{display:grid;grid-template-columns:1fr 38px 1fr 38px 1fr;align-items:stretch;margin-top:14px}
+.fn-step{border:1px solid var(--line);border-radius:14px;padding:16px 15px;background:#fbfbfc;display:flex;flex-direction:column}
+.fn-step.s3{border-color:var(--teal);background:var(--teal2)}
+.fn-tag{font-size:9.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.fn-step.s3 .fn-tag{color:var(--teal-strong)}
+.fn-t{font-size:16px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.25;margin-bottom:7px}
+.fn-step.s3 .fn-t{color:var(--teal-strong)}
+.fn-d{font-size:12px;color:var(--gray-600);line-height:1.6}
+.fn-d strong{color:var(--ink);font-weight:800}
+.fn-arrow{display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--gray-300)}
+
+/* === Roadmap timeline === */
+.rm-grid{display:grid;grid-template-columns:120px repeat(3,1fr);gap:0;margin-top:16px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.rm-cell{padding:11px 13px;border-top:1px solid var(--line);border-left:1px solid var(--line);font-size:12px;color:var(--gray-700);line-height:1.55}
+.rm-cell:first-child{border-left:none}
+.rm-grid > .rm-cell:nth-child(-n+4){border-top:none}
+.rm-row-h{background:var(--gray-50);font-weight:900;color:var(--ink);font-size:11px;letter-spacing:.02em;display:flex;align-items:center}
+.rm-head{background:var(--gray-900);color:#fff;font-weight:900;font-size:12.5px;letter-spacing:-.005em}
+.rm-head small{display:block;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.6);margin-top:2px}
+.rm-head.s1{background:var(--gray-700)}
+.rm-head.s2{background:var(--gray-800)}
+.rm-head.s3{background:var(--teal-strong)}
+.rm-cell.c3{background:var(--teal2);color:var(--gray-700)}
+.rm-cell strong{color:var(--ink);font-weight:800}
+.rm-cell.c3 strong{color:var(--teal-strong)}
+.rm-gate{margin-top:14px;border:1px dashed var(--teal);background:var(--teal2);border-radius:10px;padding:12px 15px;font-size:12.5px;color:var(--gray-700);line-height:1.6}
+.rm-gate strong{color:var(--teal-strong);font-weight:900}
+
+/* === Ask (요청 사항) === */
+.ask-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.ask-card{border:1.5px solid var(--teal);border-radius:14px;background:#fff;padding:18px 16px;display:flex;flex-direction:column}
+.ask-n{width:34px;height:34px;border-radius:10px;background:var(--teal-strong);color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-bottom:11px}
+.ask-t{font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.3;margin-bottom:8px}
+.ask-d{font-size:12.5px;color:var(--gray-600);line-height:1.65}
+.ask-d strong{color:var(--ink);font-weight:800}
+.ask-foot{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ask-step{flex:1 1 0;min-width:140px;border:1px solid var(--line);border-radius:11px;background:var(--gray-50);padding:11px 13px}
+.ask-step b{display:block;font-size:11px;font-weight:900;color:var(--teal-strong);letter-spacing:.04em;margin-bottom:3px}
+.ask-step span{font-size:11.5px;color:var(--gray-600);line-height:1.5}
+
+/* timeline arrow between 시장흐름 */
+.flow-line{display:flex;align-items:stretch;gap:0;margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fbfbfc}
+.flow-yr{flex:1;padding:14px 16px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:5px}
+.flow-yr:first-child{border-left:none}
+.flow-yr.now{background:var(--teal2)}
+.flow-yr-h{font-size:13px;font-weight:900;color:var(--ink);letter-spacing:.02em}
+.flow-yr.now .flow-yr-h{color:var(--teal-strong)}
+.flow-yr-d{font-size:12px;color:var(--gray-600);line-height:1.6}
+.flow-yr-d strong{color:var(--ink);font-weight:800}
+.axis-shift{margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;font-weight:800;color:var(--gray-600);background:var(--gray-50);border:1px solid var(--line);border-radius:10px;padding:12px 15px}
+.axis-shift .from{color:var(--muted)}
+.axis-shift .ar{color:var(--teal-strong);font-weight:900;font-size:16px}
+.axis-shift .to{color:var(--teal-strong);font-weight:900}
+
+/* === Footer === */
+.footer{padding:22px 56px;background:#111;color:#fff;display:flex;justify-content:space-between;gap:20px;font-size:12px;flex-wrap:wrap}
+.footer div{color:rgba(255,255,255,.68)}
+
+/* === Responsive === */
+@media (max-width:1000px){
+  .gap-grid{grid-template-columns:1fr;gap:8px}
+  .gap-arrow{transform:rotate(90deg);padding:4px 0}
+  .lev-wrap{grid-template-columns:1fr}
+  .funnel{grid-template-columns:1fr}
+  .fn-arrow{transform:rotate(90deg);padding:6px 0}
+  .cap-row{grid-template-columns:1fr;gap:6px}
+  .cap-tag{justify-self:start}
+  .rm-grid{grid-template-columns:1fr}
+  .rm-row-h{border-top:2px solid var(--gray-300)}
+  .ask-grid{grid-template-columns:1fr}
+  .flow-line{flex-direction:column}
+  .flow-yr{border-left:none;border-top:1px solid var(--line)}
+  .flow-yr:first-child{border-top:none}
+}
+@media (max-width:680px){
+  section{padding:30px 22px}
+  .cover{padding:36px 22px}
+  .cover h1{font-size:30px}
+  .grid-4,.grid-3{grid-template-columns:1fr 1fr}
+  .ask-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ S1. 표지 ============ -->
+  <div class="cover">
+    <div class="cover-kicker">kt ds · 경영 보고</div>
+    <h1>Agentic AI Platform <span class="t">사업화 계획</span></h1>
+    <p class="cover-sub">검증을 운영으로 넘기는 <strong>기업용 운영형 AI 플랫폼</strong>입니다. 분석과 대화에서 멈추던 AI를, 판단과 승인과 시스템 반영과 학습까지 잇는 운영 레이어로 끌어올립니다.</p>
+    <div class="cover-oneliner">
+      <span>한 문장 요지</span>
+      <strong>검증에 막힌 한국 기업을 <span class="t">통제된 운영</span>으로 넘기는 플랫폼입니다.</strong><br>
+      Agent를 많이 띄우는 것이 아니라, 업무를 이해하여 적합한 것만 <strong>조합하고 통제하며 기록하는</strong> 절제된 오케스트레이션입니다.
+    </div>
+    <div class="cover-meta">
+      <span>보고 일자 <b>2026년</b></span>
+      <span>보고 범위 <b>시장, 고객, 경쟁, 역량 육성, 성장, 요청 사항</b></span>
+      <span>수치 규약 <b>모두 추정이며 파일럿으로 실측</b></span>
+    </div>
+  </div>
+
+  <!-- ============ S2. 문제에서 기회로 ============ -->
+  <section id="s2">
+    <div class="section-head">
+      <div class="num">01</div>
+      <div>
+        <h2>문제에서 기회로</h2>
+        <p class="lead">기업 AI의 진짜 병목은 모델이 아니라 <strong>운영 전환</strong>입니다. 2026년의 화두는 검증을 넘어 운영으로 배포하는 것이며, 이 전환이 우리에게 유리한 시점을 만듭니다.</p>
+      </div>
+    </div>
+
+    <h3 class="sub-h3">현재의 단절과 전환</h3>
+    <div class="gap-grid">
+      <div class="gap-col">
+        <div class="gap-col-h">As-Is, 검증에 막힌 현재</div>
+        <div class="gap-col-t">분석과 대화가 업무로 이어지지 않습니다</div>
+        <div class="gap-item"><span class="gap-dot">1</span><div><b>표준의 부재.</b> 검증 과제마다 다시 짜며 재사용되지 않습니다.</div></div>
+        <div class="gap-item"><span class="gap-dot">2</span><div><b>실행 연계의 부족.</b> 판단이 시스템 반영으로 이어지지 않아 재입력을 반복합니다.</div></div>
+        <div class="gap-item"><span class="gap-dot">3</span><div><b>책임 경계의 불명확.</b> 누가 승인하고 무엇을 차단하는지가 정해지지 않아 운영을 보류합니다.</div></div>
+        <div class="gap-item"><span class="gap-dot">4</span><div><b>운영 학습의 부족.</b> 판단 근거와 예외가 자산으로 축적되지 않습니다.</div></div>
+      </div>
+      <div class="gap-arrow">&#10148;</div>
+      <div class="gap-col tobe">
+        <div class="gap-col-h">To-Be, 통제된 운영</div>
+        <div class="gap-col-t">검증을 넘어 운영으로 배포합니다</div>
+        <div class="gap-item"><span class="gap-dot">1</span><div><b>표준 운영 객체.</b> 한 업무에서 검증한 구조를 다른 산업으로 복제합니다.</div></div>
+        <div class="gap-item"><span class="gap-dot">2</span><div><b>시스템 반영.</b> 판단 후보가 결재와 시스템 반영으로 안전하게 이어집니다.</div></div>
+        <div class="gap-item"><span class="gap-dot">3</span><div><b>승인 게이트와 거버넌스.</b> 책임이 따르는 지점은 사람이 승인합니다.</div></div>
+        <div class="gap-item"><span class="gap-dot">4</span><div><b>운영 학습.</b> 근거와 예외와 피드백을 정책과 지식으로 축적합니다.</div></div>
+      </div>
+    </div>
+
+    <h3 class="sub-h3" style="margin-top:24px">왜 지금인가</h3>
+    <div class="flow-line">
+      <div class="flow-yr">
+        <div class="flow-yr-h">2024 ~ 2025</div>
+        <div class="flow-yr-d"><strong>검증 과제가 넘쳤습니다.</strong> 모델과 대화의 가능성을 확인하는 시기였습니다.</div>
+      </div>
+      <div class="flow-yr now">
+        <div class="flow-yr-h">2026</div>
+        <div class="flow-yr-d"><strong>검증을 넘어 운영으로.</strong> 경쟁사 네 곳의 공통 방향이며, 사람 검토 게이트와 거버넌스와 결정론이 이 전환을 겨냥합니다.</div>
+      </div>
+      <div class="flow-yr">
+        <div class="flow-yr-h">규제 강화</div>
+        <div class="flow-yr-d"><strong>한국 적합성이 쐐기가 됩니다.</strong> 금융 내부통제, AI 거버넌스 인증, 공공 망분리에서 글로벌 SaaS가 약합니다.</div>
+      </div>
+    </div>
+    <div class="axis-shift">
+      <span>경쟁의 축이 옮겨갑니다</span>
+      <span class="from">모델 성능</span>
+      <span class="ar">&#10142;</span>
+      <span class="to">업무 의미화, 통제, 운영</span>
+    </div>
+  </section>
+
+  <!-- ============ S3. 고객, 시장보다 관계 ============ -->
+  <section id="s3">
+    <div class="section-head">
+      <div class="num">02</div>
+      <div>
+        <h2>고객은 시장이 아니라 관계로 정합니다</h2>
+        <p class="lead">큰 시장을 쫓지 않고, 이미 거래와 구축과 운영 관계가 있는 곳부터 가장 빠르고 가장 낮은 비용으로 진입합니다. 1차 목표는 점유율이 아니라 <strong>레퍼런스가 되는 운영 사례 서너 건</strong>입니다.</p>
+      </div>
+    </div>
+
+    <div class="lev-wrap">
+      <div class="concentric" aria-label="관계 레버리지 동심원">
+        <div class="ring ring-3"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-1"></div>
+        <div class="ring-lab rl-3">바깥, 신규 산업</div>
+        <div class="ring-lab rl-2">중간, 금융 등대 고객</div>
+        <div class="ring-lab rl-1">중심, KT그룹 계열<small>kt ds 기존 구축 고객</small></div>
+      </div>
+      <div class="lev-side">
+        <div class="filter-card f1">
+          <div class="filter-h"><span class="filter-rank">1</span><span class="filter-t">관계 레버리지</span></div>
+          <div class="filter-d">kt ds나 KT그룹이 이미 거래하거나 구축했거나 운영 중인 계정인가입니다. 가장 큰 가중치를 가집니다.</div>
+        </div>
+        <div class="filter-card">
+          <div class="filter-h"><span class="filter-rank">2</span><span class="filter-t">통증 적합</span></div>
+          <div class="filter-d">운영 전환의 통증이 뚜렷한가입니다. 사람을 늘릴 수 없는데 처리량이 늘어나는 곳입니다.</div>
+        </div>
+        <div class="filter-card">
+          <div class="filter-h"><span class="filter-rank">3</span><span class="filter-t">레퍼런스 가치</span></div>
+          <div class="filter-d">성공 한 건이 인접 계정이나 산업으로 퍼지는가입니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="sub-note" style="margin-top:18px">요지는 어떤 산업이 큰가가 아니라 우리가 어디에 이미 발을 들여놓고 있는가로 첫 서너 개 계정을 고른다는 것입니다. 동인은 시장이 아니라 관계입니다.</p>
+
+    <table>
+      <tr><th>우선순위</th><th>진입 대상</th><th>레버리지의 원천</th><th>진입 팩</th></tr>
+      <tr><td><strong>1</strong></td><td><strong>KT그룹 계열사</strong></td><td>데이터 접근과 조달 장벽이 가장 낮고, 우리가 먼저 쓴다는 가장 강한 레퍼런스가 됩니다. 6개 도메인 하니스가 이미 공급 준비를 마쳤습니다.</td><td>회의, 내부통제, 구매, 경비</td></tr>
+      <tr><td><strong>1</strong></td><td><strong>kt ds 기존 구축 고객</strong><br><span style="color:var(--muted);font-weight:600">중견 제조, 유통, 공공</span></td><td>이미 신뢰와 시스템 이해와 접점을 가지고 있어, 고객 획득 비용이 가장 낮고 성사율이 가장 높습니다.</td><td>인접 팩, 고객 응대, 품질, 승인, 민원</td></tr>
+      <tr><td><strong>2</strong></td><td>금융 내부통제<br><span style="color:var(--muted);font-weight:600">등대 고객</span></td><td>1차 검증 과제로 이미 정해져 있고, 규제 적합성이 글로벌 SaaS보다 앞섭니다.</td><td>내부통제 운영 콘솔</td></tr>
+      <tr><td><strong>3</strong></td><td>관계가 없는 신규 산업</td><td>등대 고객의 레퍼런스를 확보한 뒤에 개척합니다.</td><td>후속 결정</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ S4. 경쟁 포지셔닝 ============ -->
+  <section id="s4">
+    <div class="section-head">
+      <div class="num">03</div>
+      <div>
+        <h2>경쟁 포지셔닝</h2>
+        <p class="lead">Palantir 수준의 온톨로지와 거버넌스를, 한국의 규제와 폐쇄망에 맞추어, 구축 역량과 그룹 레퍼런스로 더 빠르고 낮은 장벽에 제공하되, <strong>Agent를 남발하지 않는 절제된 오케스트레이션</strong>으로 차별화합니다.</p>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>비교 축</th><th>Palantir AIP</th><th>SK AX, LG CNS, 메가존</th><th class="hl">AAP (kt ds)</th></tr>
+      <tr><td><strong>온톨로지, 의미화</strong></td><td>강함, 핵심 역량</td><td>중간</td><td class="hl"><strong>자체 육성으로 강화.</strong> 결정론과 LLM 블록 분리로 차별화</td></tr>
+      <tr><td><strong>거버넌스, 통제</strong></td><td>강함</td><td>중간에서 강함</td><td class="hl"><strong>제품화.</strong> 승인 게이트 2단, 결정론 게이트, 근거 재현</td></tr>
+      <tr><td><strong>한국 규제, 폐쇄망</strong></td><td>약함, 해외 기반, 고가</td><td>중간</td><td class="hl"><strong>강함.</strong> 온프레미스, 망분리, 감사, KT 보안</td></tr>
+      <tr><td><strong>가격, 도입 장벽</strong></td><td>매우 높음</td><td>중간</td><td class="hl"><strong>중간에서 낮음.</strong> 구축 결합, 그룹 시너지</td></tr>
+      <tr><td><strong>모델 종속</strong></td><td>불가지론</td><td>자체 모델 편중 가능</td><td class="hl"><strong>불가지론.</strong> Model Gateway</td></tr>
+      <tr><td><strong>구축, 운영 인력</strong></td><td>파트너 의존</td><td>자체 구축</td><td class="hl"><strong>자체 구축에 KT그룹 결합</strong></td></tr>
+    </table>
+
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card"><span class="badge">약점과 대응</span><h3>온톨로지 성숙도</h3><p>Palantir보다 낮으므로, <strong>L4 지식 계층을 자체 육성의 1순위</strong>로 둡니다.</p></div>
+      <div class="card"><span class="badge">약점과 대응</span><h3>글로벌 레퍼런스 부재</h3><p>KT그룹과 <strong>금융 등대 고객</strong>으로 상쇄합니다.</p></div>
+      <div class="card"><span class="badge">약점과 대응</span><h3>다고객 운영 미성숙</h3><p>초기에는 <strong>단일 고객 구축형</strong>으로 진행하고, 다고객 단계는 뒤로 미룹니다.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ S5. 역량 육성 8계층 ============ -->
+  <section id="s5">
+    <div class="section-head">
+      <div class="num">04</div>
+      <div>
+        <h2>역량 육성, 차별화만 직접 키웁니다</h2>
+        <p class="lead">8계층의 역량을 모두 직접 만들지는 않습니다. 차별화에 직결되는 역량만 자체 개발에 집중하고, 나머지는 도입하거나 제휴로 묶습니다. <strong>만들지 않아도 되는 것은 만들지 않는다</strong>는 원칙입니다.</p>
+      </div>
+    </div>
+
+    <div class="cap-legend">
+      <span class="lg"><i class="i-own"></i>자체 개발</span>
+      <span class="lg"><i class="i-buy"></i>도입</span>
+      <span class="lg"><i class="i-part"></i>제휴</span>
+    </div>
+
+    <div class="cap-stack">
+      <div class="cap-row">
+        <div class="cap-ln"><span class="n">1</span><span class="lt">경험 / 접근<small>Experience / Access</small></span></div>
+        <div class="cap-desc">운영 콘솔과 스튜디오를 자체적으로 만들되, 초기에는 최소한으로 결정 계층 노출부터 시작합니다.</div>
+        <span class="cap-tag own">자체 개발 (점진)</span>
+      </div>
+      <div class="cap-row">
+        <div class="cap-ln"><span class="n">2</span><span class="lt">설계 / 개발<small>Design / Development</small></span></div>
+        <div class="cap-desc">스튜디오는 자체적으로 만들되, 초기 단계에서는 최소 범위로 점진 확장합니다.</div>
+        <span class="cap-tag own">자체 개발 (점진)</span>
+      </div>
+      <div class="cap-row own">
+        <div class="cap-ln"><span class="n">3</span><span class="lt">에이전트 코어<small>Agent Runtime</small></span></div>
+        <div class="cap-desc"><strong>플랫폼의 심장입니다.</strong> 오케스트레이터와 협업과 승인 런타임을 자체 개발하되, 모델은 불가지론으로 두어 Model Gateway로 외부 모델을 씁니다.</div>
+        <span class="cap-tag own">자체 개발 (코어)</span>
+      </div>
+      <div class="cap-row own">
+        <div class="cap-ln"><span class="n">4</span><span class="lt">지식 / 시맨틱<small>Knowledge / Semantic</small></span></div>
+        <div class="cap-desc"><strong>차별화의 핵심입니다.</strong> 도메인 온톨로지와 결정론 룰과 근거 인용을 하니스가 자동으로 저작하여 자산화합니다. 경쟁의 해자가 됩니다.</div>
+        <span class="cap-tag own">자체 개발 (최우선)</span>
+      </div>
+      <div class="cap-row part">
+        <div class="cap-ln"><span class="n">5</span><span class="lt">데이터 / 연동<small>Data / Integration</small></span></div>
+        <div class="cap-desc">어댑터 인터페이스만 자체 정의하고, 구현은 상용과 파트너에 맡깁니다. kt ds Antbot을 시스템 반영 자산으로 활용합니다.</div>
+        <span class="cap-tag part">제휴, 도입</span>
+      </div>
+      <div class="cap-row">
+        <div class="cap-ln"><span class="n">6</span><span class="lt">AI 품질 / 평가<small>AI Quality / Evaluation</small></span></div>
+        <div class="cap-desc">결정론 평가는 자체적으로 하고, 모델 품질과 드리프트 모니터링은 상용 관측 도구를 도입합니다.</div>
+        <span class="cap-tag buy">자체(경량), 도입</span>
+      </div>
+      <div class="cap-row own">
+        <div class="cap-ln"><span class="n">7</span><span class="lt">컨트롤 / 거버넌스<small>Control / Governance</small></span></div>
+        <div class="cap-desc"><strong>한국 규제 적합성이 곧 차별화입니다.</strong> 승인 게이트와 결정론 게이트와 감사 재현을 제품화합니다.</div>
+        <span class="cap-tag own">자체 개발</span>
+      </div>
+      <div class="cap-row part">
+        <div class="cap-ln"><span class="n">8</span><span class="lt">인프라<small>Infrastructure</small></span></div>
+        <div class="cap-desc">KT Cloud와 보안과 망분리는 그룹 자산을 활용하고, 자체 구축은 하지 않습니다.</div>
+        <span class="cap-tag part">제휴 (KT그룹)</span>
+      </div>
+    </div>
+
+    <div class="cap-domino">
+      <strong>첫 도미노는 L4 자동 저작입니다.</strong> 하니스가 새 도메인을 게이트 통과본으로 찍어내는 능력이 곧 역량을 키우는 역량, 즉 저작 파이프라인입니다. 이것이 서면 도메인 확장의 한계비용이 급격히 낮아지며, 이는 사업 확장성의 근원이 됩니다. 한편 Connector는 직접 만들기보다 계약 스펙만 우리가 쥐고 구현은 파트너에 맡깁니다.
+    </div>
+    <p class="sub-note" style="margin-top:12px">육성 순서는 1단계에서 L4 지식 자동 저작과 L7 거버넌스와 L3 코어를 먼저 키우고, 2단계에서 L5 Connector 파트너망과 L6 운영 평가와 L2 스튜디오를 더하며, 3단계에서 L8 다고객 운영과 L1 셀프서비스와 산업 온톨로지 라이브러리화로 확장합니다. 또한 kt ds 자산을 내재화합니다. BEAST를 L3 Model Gateway로, Antbot을 L5 시스템 반영으로, AI:ON-U를 L8 서빙으로 녹여 씁니다.</p>
+  </section>
+
+  <!-- ============ S6. 시장 진입 ============ -->
+  <section id="s6">
+    <div class="section-head">
+      <div class="num">05</div>
+      <div>
+        <h2>시장 진입, 작게 진입하여 크게 키웁니다</h2>
+        <p class="lead">코어는 한 번 구축하고 팩을 늘려가는 구조가 확장 마진의 핵심입니다. 같은 코어에 팩만 꽂히므로 <strong>두 번째 팩부터 한계비용이 낮아집니다</strong>.</p>
+      </div>
+    </div>
+
+    <div class="funnel">
+      <div class="fn-step s1">
+        <div class="fn-tag">1단계, 진입</div>
+        <div class="fn-t">1팩 검증 과제</div>
+        <div class="fn-d">하나의 업무와 하나의 팩으로 <strong>석 달 규모</strong>의 검증 과제에 진입하여 운영 전환 한 건을 만듭니다. 된다는 것을 보여 줍니다.</div>
+      </div>
+      <div class="fn-arrow">&#10148;</div>
+      <div class="fn-step s2">
+        <div class="fn-tag">2단계, 확장</div>
+        <div class="fn-t">인접 팩 추가</div>
+        <div class="fn-d">인접 업무의 팩을 더해 프로젝트로 키웁니다. 같은 코어에 팩만 꽂히므로 <strong>두 번째 팩부터 한계비용이 낮아집니다</strong>.</div>
+      </div>
+      <div class="fn-arrow">&#10148;</div>
+      <div class="fn-step s3">
+        <div class="fn-tag">3단계, 확대</div>
+        <div class="fn-t">플랫폼 구독</div>
+        <div class="fn-d">전사 표준 운영 플랫폼과 거버넌스와 자산 카탈로그로 확장하여 <strong>플랫폼 라이선스로 전환</strong>합니다.</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:16px">
+      <div class="card">
+        <span class="badge teal">검증 과제 표준 제안</span>
+        <h3>맛보기와 운영을 가르는 임계선</h3>
+        <p>기간은 8주에서 12주, 진입 조건은 데이터 접근 한 종, 업무 전문가 한 명, 책임 승인자 한 명입니다. 검증이 서비스가 되는 임계선은 <strong>영속 저장과 실 Connector 한 종과 권한 관리</strong>이며, 검증 제안에 이 세 가지를 포함하는지로 맛보기와 운영을 구분합니다. <span style="color:var(--muted)">(기간과 가격은 추정)</span></p>
+      </div>
+      <div class="card">
+        <span class="badge teal">채널</span>
+        <h3>관계 순서대로 채널을 엽니다</h3>
+        <p>1차는 <strong>KT그룹 직접 판매와 내부 전개</strong>, 2차는 kt ds 기존 고객 기반의 구축 영업, 3차는 ERP와 문자 인식과 업종 소프트웨어 같은 산업 파트너입니다. 글로벌 SaaS 방식의 셀프서비스 판매는 뒤로 미룹니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ S7. 성장 로드맵 ============ -->
+  <section id="s7">
+    <div class="section-head">
+      <div class="num">06</div>
+      <div>
+        <h2>성장 로드맵</h2>
+        <p class="lead">레퍼런스 서너 건을 먼저 만들고, 구독 전환과 물량으로 이어, 산업 패키지로 키웁니다. 사업과 기술과 역량을 하나의 시간축에 정렬합니다. <strong>수치는 모두 추정입니다.</strong></p>
+      </div>
+    </div>
+
+    <div class="rm-grid">
+      <div class="rm-cell rm-head"></div>
+      <div class="rm-cell rm-head s1">1단계<small>0 ~ 6개월</small></div>
+      <div class="rm-cell rm-head s2">2단계<small>6 ~ 18개월</small></div>
+      <div class="rm-cell rm-head s3">3단계<small>18개월 이후</small></div>
+
+      <div class="rm-cell rm-row-h">사업 목표</div>
+      <div class="rm-cell">레퍼런스 운영 사례 확보</div>
+      <div class="rm-cell">반복 가능한 운영과 구독 전환</div>
+      <div class="rm-cell c3"><strong>산업 패키지와 플랫폼 사업</strong></div>
+
+      <div class="rm-cell rm-row-h">고객, 도메인</div>
+      <div class="rm-cell">KT그룹 내부 1 ~ 2곳, 금융 등대 1곳, 도메인 2 ~ 3개</div>
+      <div class="rm-cell">외부 3 ~ 5곳, 도메인 5 ~ 7개, 중견 물량 진입</div>
+      <div class="rm-cell c3">다고객, 산업별 패키지</div>
+
+      <div class="rm-cell rm-row-h">공학 단계</div>
+      <div class="rm-cell">T0에서 T1, 최소 실서비스, 영속, Connector 1종, 권한</div>
+      <div class="rm-cell">T2 다도메인 운영</div>
+      <div class="rm-cell c3">T3 다고객 운영</div>
+
+      <div class="rm-cell rm-row-h">육성 역량</div>
+      <div class="rm-cell"><strong>L4 저작, L7 거버넌스, L3</strong></div>
+      <div class="rm-cell">L5 파트너, L6, L2 스튜디오</div>
+      <div class="rm-cell c3">L8, L1, 온톨로지 라이브러리</div>
+    </div>
+
+    <div class="rm-gate">
+      <strong>2단계 진입을 가르는 기준.</strong> 운영 사례 세 건 이상, 두 번째 팩의 한계비용이 첫 번째의 절반 미만, 그리고 구독 매출 비중의 상승입니다.
+    </div>
+  </section>
+
+  <!-- ============ S8. 요청 사항 ============ -->
+  <section id="s8">
+    <div class="section-head">
+      <div class="num">07</div>
+      <div>
+        <h2>요청 사항</h2>
+        <p class="lead">본 계획의 가정을 사실로 바꾸는 출발점입니다. 거점 계정과 검증 제안과 파일럿 단위 경제를 결정해 주시기를 요청합니다. <strong>모든 수치는 추정이며 파일럿으로 실측합니다.</strong></p>
+      </div>
+    </div>
+
+    <div class="ask-grid">
+      <div class="ask-card">
+        <div class="ask-n">1</div>
+        <div class="ask-t">거점 계정 인벤토리 점수화</div>
+        <div class="ask-d">kt ds와 KT그룹의 기존 거래와 구축 계정을 정리하여 <strong>세 가지 필터로 점수</strong>를 매기고, 상위 서너 개를 1차 타깃으로 확정합니다. 가장 중요한 작업이며, 영업 데이터가 필요합니다.</div>
+      </div>
+      <div class="ask-card">
+        <div class="ask-n">2</div>
+        <div class="ask-t">검증 제안 표준화</div>
+        <div class="ask-d">검증 과제의 표준 제안을 한 장으로 만듭니다. 기간과 산출물과 진입 조건, 그리고 <strong>최소 실서비스 포함 여부</strong>를 담습니다.</div>
+      </div>
+      <div class="ask-card">
+        <div class="ask-n">3</div>
+        <div class="ask-t">단위 경제 실측</div>
+        <div class="ask-d">파일럿 세 건에서 처리 시간과 자동화율과 구축 공수를 측정할 항목을 정의하여, <strong>가정을 사실로</strong> 바꿉니다.</div>
+      </div>
+    </div>
+
+    <div class="ask-foot">
+      <div class="ask-step"><b>또한</b><span>선제안서 다음 판에 고객 프로파일과 경쟁 포지셔닝과 역량 육성을 한 장씩 반영합니다.</span></div>
+      <div class="ask-step"><b>또한</b><span>L4 자동 저작 파이프라인을 사업 자산으로 승격하여, 하니스를 도메인 공장으로 제품화합니다.</span></div>
+    </div>
+
+    <div class="note teal">
+      <strong>요약.</strong> 시장은 운영 전환에 막힌 고부가 백오피스 계정이며 점유율이 아니라 레퍼런스를 노립니다. 고객은 기존 관계를 레버리지로 삼아 KT그룹과 kt ds 기존 고객부터 시작하며, 동인은 관계입니다. 성장은 코어를 한 번 깔고 팩을 늘려 구독으로 전환하는 구조입니다. 역량은 L4 의미화와 L7 거버넌스만 직접 키우고 Connector와 인프라는 제휴로 묶습니다. 앞서가는 공식은 한국 규제 적합성과 관계 레버리지와 절제된 오케스트레이션입니다.
+    </div>
+  </section>
+
+  <div class="footer">
+    <div>Agentic AI Platform 사업화 계획 · 발표 v0.1</div>
+    <div>kt ds · 모든 수치는 검증 전 추정이며 파일럿으로 실측합니다</div>
+  </div>
+
+</div>
+</body>
+</html>

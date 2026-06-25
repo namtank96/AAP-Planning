@@ -1,14 +1,14 @@
 <!doctype html>
 <!--
   ════════════════════════════════════════════════════════════════
-  AAP 사업화 전략 — 역량 진단과 확보 전략 슬라이드본 v0.1 (260625 재생성)
+  AAP 사업화 전략 — 역량 진단과 확보 전략 슬라이드본 v0.1 (260625)
   출처(SSOT) : 06_사업화전략/역량진단_확보전략.md (문장 그대로 인용)
   보조       : 06_사업화전략/예상질문_QnA.md, 전략포인트_리서치.md
-  4.4 도식   : 06_사업화전략/도식_온톨로지_vs_AAP_v0_1.html 구조 임베드
-  스타일 기준 : 화이트 톤 (흰 배경, teal #00a39b 포인트, 다크는 강조 텍스트·라인 정도)
+  스타일 기준 : 01_선제안서/aap_proactive_offering_v0.7_260616.html 컴포넌트 → 화이트 톤 적용
+               (흰 배경, teal #00a39b 포인트, 다크는 강조 텍스트·라인 정도만)
   편집 기능 : 텍스트 직접 편집(contenteditable + localStorage) · chip 클릭 소싱색 순환 ·
               툴바(편집 토글 / 저장 상태 / Export·Import JSON / Reset) · 슬라이드 내비게이션
-  localStorage 키 = aap_strategy_v1  (편집 호환 유지)
+  localStorage 키 = aap_strategy_v1
   단일 HTML · 외부 라이브러리 0 · file:// 동작.
   ════════════════════════════════════════════════════════════════
 -->
@@ -29,6 +29,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
+/* ===== WHITE TONE: 라이트 페이지 배경 ===== */
 body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55;overflow:hidden}
 
 /* ===== Deck frame ===== */
@@ -171,62 +172,10 @@ details.det .det-body{padding:6px 16px 14px}
 .fnote{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:10px;border-top:1px dashed var(--line);padding-top:9px}
 .fnote b{color:var(--gray-700);font-weight:800}
 
-/* teal 강조 한 줄 */
+/* teal 강조 한 줄 (다크 라인 대신 화이트 톤 teal 라인) */
 .teal-line{padding:14px 18px;border-radius:11px;background:var(--teal2);border:1px solid var(--teal);color:var(--gray-700);font-size:13.5px;line-height:1.65;font-weight:600;margin-top:12px}
 .teal-line span{display:block;font-size:9px;font-weight:900;letter-spacing:.16em;color:var(--teal-strong);margin-bottom:6px;text-transform:uppercase}
 .teal-line strong{font-weight:900;color:var(--teal-strong)}
-
-/* ===== Hard-number stat (Palantir) ===== */
-.statrow{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-top:2px}
-.statbox{border:1px solid var(--line);border-radius:11px;background:#fff;padding:12px 15px;display:flex;flex-direction:column;gap:3px}
-.statbox.them{border-color:var(--gray-300);background:var(--gray-50)}
-.statbox.us{border-color:var(--teal);background:var(--teal2)}
-.statbox .slab{font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.statbox.us .slab{color:var(--teal-strong)}
-.statbox .sval{font-size:21px;font-weight:900;color:var(--ink);letter-spacing:-.02em;line-height:1.15}
-.statbox.us .sval{color:var(--teal-strong)}
-.statbox .sdesc{font-size:11px;color:var(--gray-600);line-height:1.45}
-
-/* ===== 4.4 층위 도식 (임베드) ===== */
-.stack44{display:flex;flex-direction:column;gap:0;margin-top:4px}
-.layer-aap{border:1.5px solid var(--teal);background:var(--teal2);border-radius:13px 13px 6px 6px;padding:13px 16px 14px;position:relative;z-index:2;box-shadow:0 6px 16px rgba(0,127,127,.07)}
-.layer-aap .lh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-.layer-aap .lh .tag{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--teal-strong);border-radius:5px;padding:3px 9px}
-.layer-aap .lh b{font-size:15px;font-weight:900;color:var(--teal-strong);letter-spacing:-.01em}
-.layer-aap .lh span{font-size:11.5px;color:var(--sub)}
-.oploop{display:flex;align-items:stretch;gap:0;margin-bottom:11px}
-.opstep{flex:1;border:1px solid var(--teal);background:#fff;border-radius:8px;padding:7px 4px;text-align:center;font-size:11px;font-weight:800;color:var(--teal-strong)}
-.opsep{display:flex;align-items:center;justify-content:center;width:18px;flex:0 0 auto;color:var(--teal);font-weight:900;font-size:12px}
-.diff4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-.diffc{border:1px solid var(--teal);background:#fff;border-radius:9px;padding:9px 10px}
-.diffc .dt{font-size:11px;font-weight:900;color:var(--teal-strong);margin:0 0 5px;letter-spacing:-.01em}
-.diffc .drow{display:flex;align-items:center;gap:6px;font-size:10.5px;line-height:1.35}
-.diffc .from{color:var(--muted)}
-.diffc .arr{color:var(--teal);font-weight:900;flex:0 0 auto}
-.diffc .to{color:var(--ink);font-weight:800}
-.bridge{display:flex;justify-content:center;align-items:center;height:30px;position:relative;z-index:1}
-.bridge .updown{display:flex;flex-direction:column;align-items:center;gap:1px;background:#fff;padding:0 14px}
-.bridge .updown .ar{color:var(--teal-strong);font-size:16px;font-weight:900;line-height:1}
-.bridge .updown .bl{font-size:10px;font-weight:900;color:var(--teal-strong);letter-spacing:.02em}
-.bridge::before{content:"";position:absolute;left:8%;right:8%;top:50%;height:1px;background:repeating-linear-gradient(90deg,var(--teal) 0,var(--teal) 5px,transparent 5px,transparent 10px);opacity:.5}
-.layer-onto{border:1px solid var(--line);background:var(--gray-50);border-radius:6px 6px 13px 13px;padding:13px 16px 14px;position:relative;z-index:2}
-.layer-onto .lh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-.layer-onto .lh .tag{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-700);background:var(--gray-150);border-radius:5px;padding:3px 9px}
-.layer-onto .lh b{font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-.01em}
-.layer-onto .lh span{font-size:11.5px;color:var(--sub)}
-.common3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.commc{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px}
-.commc .ct{font-size:11.5px;font-weight:900;color:var(--gray-700);margin:0 0 3px}
-.commc .cb{font-size:10.5px;color:var(--gray-600);line-height:1.45}
-.layer-onto .sharednote{font-size:10px;color:var(--muted);margin:9px 0 0;line-height:1.5}
-.layer-onto .sharednote strong{color:var(--gray-700);font-weight:800}
-.lenses{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}
-.lens{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px}
-.lens .lk{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--teal-strong);margin:0 0 5px}
-.lens .lrow{display:flex;align-items:center;gap:6px;font-size:10.5px;line-height:1.35}
-.lens .lf{color:var(--muted)}
-.lens .la{color:var(--teal);font-weight:900;flex:0 0 auto}
-.lens .lt{color:var(--ink);font-weight:800}
 
 /* 설문 리스트 */
 .qlist{display:flex;flex-direction:column;gap:7px;margin-top:6px}
@@ -303,13 +252,13 @@ body.editing .edit-only{display:inline}
   <div class="cover">
     <div class="cv-kick" data-edit="s1.kick">Agentic AI Platform · 사업화 전략 v0.1</div>
     <h1 data-edit="s1.title">AAP 사업화 전략<br><span class="hl">역량 진단과 확보 전략</span></h1>
-    <p class="cv-def" data-edit="s1.def">AAP의 8계층 기술 구현 범위를 사업 관점으로 옮긴 문서입니다. 각 역량을 두고 <strong>우리가 실제로 할 수 있는지, 경쟁사는 어떻게 하는지, 고객이 값을 매기는지, 우리는 어떻게 확보할지</strong>를 봅니다.</p>
+    <p class="cv-def" data-edit="s1.def">AAP의 8계층 기술 구현 범위를 사업 관점으로 옮긴 것입니다. 각 역량에 대해 <strong>우리가 실제로 할 수 있는지, 경쟁사는 어떻게 하는지, 고객이 값을 매기는지, 우리는 어떻게 확보할지</strong>를 함께 봅니다.</p>
     <div class="cv-strengths">
       <div class="cv-st"><b data-edit="s1.st1h">자체 개발 핵심은 L3</b><span data-edit="s1.st1b">에이전트 코어는 자체 개발로 확보하고 BEAST를 활용합니다.</span></div>
       <div class="cv-st"><b data-edit="s1.st2h">확보 과제 두 개</b><span data-edit="s1.st2b">L4 지식 시맨틱(온톨로지)과 ISO 42001 인증입니다.</span></div>
       <div class="cv-st"><b data-edit="s1.st3h">진입은 관계 자산</b><span data-edit="s1.st3b">KT그룹과 진흥기관, 협회 관계를 거점으로 삼습니다.</span></div>
     </div>
-    <div class="cv-foot" data-edit="s1.foot">기술 실무진과 임원이 같은 문서로 판단하도록 구성했습니다. 표시 확인 필요는 자사 내부 정보가 필요한 부분이며, 답을 받으면 채우고 표시를 지웁니다.</div>
+    <div class="cv-foot" data-edit="s1.foot">기술 실무진과 임원이 같은 문서로 판단할 수 있게 구성했습니다. 표시 확인 필요는 자사 내부 정보가 필요해 답을 받아야 하는 부분이며, 답을 받으면 채우고 표시를 지웁니다.</div>
   </div>
 </section>
 
@@ -326,7 +275,7 @@ body.editing .edit-only{display:inline}
     </div>
     <div class="grid-3">
       <div class="card"><span class="badge">기회</span><p data-edit="s2.c1">Gartner는 2026년까지 엔터프라이즈 앱의 40%가 에이전트를 탑재하지만 2027년까지 기업의 40%가 거버넌스 공백으로 폐기한다고 봅니다. <strong>통제와 운영을 갖춘 플랫폼이 시장 요구</strong>입니다.</p></div>
-      <div class="card accent"><span class="badge">우리 위치</span><p data-edit="s2.c2">자체 개발이 확실한 곳은 <strong>에이전트 코어(L3)</strong>입니다. 지식 시맨틱(L4)은 자체 불가라 제휴로 채우고, 거버넌스(L7)는 설계는 강하나 인증과 구현이 과제입니다.</p></div>
+      <div class="card accent"><span class="badge">우리 위치</span><p data-edit="s2.c2">자체 개발이 확실한 곳은 <strong>에이전트 코어(L3)</strong>입니다. 지식 시맨틱(L4)은 제휴로 채우고, 거버넌스(L7)는 설계는 강하나 인증과 구현이 과제입니다.</p></div>
       <div class="card warn"><span class="badge">핵심 갭</span><p data-edit="s2.c3"><strong>L4 온톨로지 확보와 ISO 42001 인증</strong> 둘입니다. 둘 다 미보유이며 경쟁사가 앞서 있습니다. 리드 고객이 공통으로 온톨로지를 원하는데 그것이 우리 약점입니다.</p></div>
       <div class="card"><span class="badge">도메인 초점</span><p data-edit="s2.c4"><strong>변수 기반 의사결정 지원</strong>입니다. 변수에 따라 선택지와 효과가 어떻게 달라지는지를 미리, 투명하게 보는 업무입니다. 은행 여신, 손해사정, 회의는 거점에서 내립니다.</p></div>
       <div class="card"><span class="badge">차별화</span><p data-edit="s2.c5">온톨로지 깊이로 Palantir와 싸우지 않습니다. <strong>비싸서 못 가는 중견, 준정부, 규제 산업에 염가로 작게 진입</strong>하고, 결정론의 투명과 재현, 한국 규제 적합으로 이깁니다.</p></div>
@@ -364,12 +313,12 @@ body.editing .edit-only{display:inline}
         </tr>
         <tr>
           <td class="lead-col" data-edit="s3.l3n">L3 에이전트 코어</td>
-          <td data-edit="s3.l3a">자체 가능, 데모로 증명, 운영 사례 0 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l3a">자체 가능, 데모로 증명 <span class="chk">확인 필요</span></td>
           <td data-edit="s3.l3b">모두 보유</td><td class="acc" data-edit="s3.l3c">필수, 부분 차별화</td><td data-edit="s3.l3d">Build, BEAST 활용</td><td data-edit="s3.l3e">지금</td><td data-edit="s3.l3f">낮음</td>
         </tr>
         <tr>
           <td class="lead-col" data-edit="s3.l4n">L4 지식 시맨틱</td>
-          <td class="risk" data-edit="s3.l4a">자체 불가, 하니스로 심사기준 구조화는 일부 가능</td>
+          <td class="risk" data-edit="s3.l4a">자체 불가, 심사기준 구조화는 일부 가능</td>
           <td data-edit="s3.l4b">Palantir 압도, 컨설팅펌 진입</td><td class="acc" data-edit="s3.l4c">차별화이나 자체 불가</td><td data-edit="s3.l4d">제휴(솔트룩스, E8, 서버키트)</td><td data-edit="s3.l4e">지금</td><td class="risk" data-edit="s3.l4f">높음, 제휴 의존</td>
         </tr>
         <tr>
@@ -384,7 +333,7 @@ body.editing .edit-only{display:inline}
         </tr>
         <tr>
           <td class="lead-col" data-edit="s3.l7n">L7 컨트롤 거버넌스</td>
-          <td data-edit="s3.l7a">설계 강점(HITL, 결정론, 감사), 구현 부분, 인증 BEAST 대상 준비 중 <span class="chk">확인 필요</span></td>
+          <td data-edit="s3.l7a">설계 강점(HITL, 결정론, 감사), 구현 부분, 인증 미보유 <span class="chk">확인 필요</span></td>
           <td data-edit="s3.l7b">메가존 ISO 42001 보유</td><td class="acc" data-edit="s3.l7c">차별화 + 필수</td><td data-edit="s3.l7d">Build + 인증 로드맵</td><td data-edit="s3.l7e">지금</td><td data-edit="s3.l7f">중, 인증 지연 시 불리</td>
         </tr>
         <tr>
@@ -410,318 +359,245 @@ body.editing .edit-only{display:inline}
   </div>
 </section>
 
-<!-- ════════ 4. 자산 카탈로그 (NEW) ════════ -->
+<!-- ════════ 4. 거점 ════════ -->
 <section class="slide" data-slide="4">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">04</div>
       <div>
-        <p class="kicker" data-edit="s4.kick">kt ds 자산 카탈로그</p>
-        <h2 data-edit="s4.title">도입으로 붙일 수 있는 자사 자산</h2>
-        <p class="lead" data-edit="s4.lead">AAP에 도입(Buy)으로 붙일 수 있는 자사 자산입니다. <strong>자산이 많을수록 도입으로 채우는 영역이 넓어지고 제휴 부담이 줄어듭니다.</strong> 매핑과 기능은 추정이라 확인이 필요합니다.</p>
+        <p class="kicker" data-edit="s4.kick">거점</p>
+        <h2 data-edit="s4.title">변수 기반 의사결정 지원으로 진입</h2>
+        <p class="lead" data-edit="s4.lead">단순한 합격 불합격 심사가 아니라, <strong>내부와 외부 변수에 따라 선택지와 예상 효과가 어떻게 달라지는지를 미리 보는 업무</strong>입니다. 무역 시나리오, 기업 간 비교, 기준이 명문화된 심사(과제, 보조금, 인증)를 포함합니다. 경쟁사가 비어 있는 자리입니다.</p>
       </div>
     </div>
-    <table class="tight">
-      <thead><tr><th style="width:150px">자산</th><th>무엇 (추정)</th><th style="width:180px">AAP 매핑 (추정)</th><th style="width:150px">상태</th></tr></thead>
-      <tbody>
-        <tr><td class="lead-col" data-edit="s4.a1k">BEAST</td><td data-edit="s4.a1w">AI · API 게이트웨이</td><td class="acc" data-edit="s4.a1m">L3 모델 · 도구 호출</td><td data-edit="s4.a1s">ISO 42001 준비 중</td></tr>
-        <tr><td class="lead-col" data-edit="s4.a2k">Antbot</td><td data-edit="s4.a2w">RPA, 업무 자동화</td><td class="acc" data-edit="s4.a2m">L5 시스템 반영</td><td data-edit="s4.a2s"><span class="chk">확인 필요</span></td></tr>
-        <tr><td class="lead-col" data-edit="s4.a3k">AI:ON-U</td><td data-edit="s4.a3w">AI 서빙</td><td class="acc" data-edit="s4.a3m">L8 인프라</td><td data-edit="s4.a3s"><span class="chk">확인 필요</span></td></tr>
-        <tr><td class="lead-col" data-edit="s4.a4k">CMP</td><td data-edit="s4.a4w">클라우드 관리 플랫폼 (추정)</td><td class="acc" data-edit="s4.a4m">L8 인프라</td><td data-edit="s4.a4s"><span class="chk">확인 필요</span></td></tr>
-        <tr><td class="lead-col" data-edit="s4.a5k">MLOps Platform</td><td data-edit="s4.a5w">모델 개발 · 배포 · 운영 (추정)</td><td class="acc" data-edit="s4.a5m">L6 품질 평가, L2</td><td data-edit="s4.a5s"><span class="chk">확인 필요</span></td></tr>
-        <tr><td class="lead-col" data-edit="s4.a6k">Code Assistant</td><td data-edit="s4.a6w">개발 보조 (추정)</td><td class="acc" data-edit="s4.a6m">L2 설계 개발</td><td data-edit="s4.a6s"><span class="chk">확인 필요</span></td></tr>
-        <tr><td class="lead-col" data-edit="s4.a7k">SaaS Management</td><td data-edit="s4.a7w">SaaS 통합 관리 (추정)</td><td class="acc" data-edit="s4.a7m">L5 연동</td><td data-edit="s4.a7s"><span class="chk">확인 필요</span></td></tr>
-        <tr><td class="lead-col" data-edit="s4.a8k">IoT Monitoring</td><td data-edit="s4.a8w">IoT 데이터 · 모니터링 (추정)</td><td class="acc" data-edit="s4.a8m">L5 데이터, 제조 도메인</td><td data-edit="s4.a8s"><span class="chk">확인 필요</span></td></tr>
-        <tr><td class="lead-col" data-edit="s4.a9k">MSSP</td><td data-edit="s4.a9w">보안 관제 서비스 (추정)</td><td class="acc" data-edit="s4.a9m">L7 · L8 보안</td><td data-edit="s4.a9s"><span class="chk">확인 필요</span></td></tr>
-      </tbody>
-    </table>
-    <p class="fnote" data-edit="s4.foot"><b>읽는 법</b> — 매핑과 기능은 추정이라 확인이 필요합니다. 민감 정보(자산, 단가, 인력)는 외부에 말하지 않아도 됩니다. 직접 행을 더하거나 고쳐 채우면 됩니다.</p>
+    <div class="two-col">
+      <div>
+        <h3 class="sub-h3" data-edit="s4.h_entry">진입 경로는 관계 자산</h3>
+        <table class="tight">
+          <thead><tr><th style="width:160px">대상</th><th>접점과 의지</th></tr></thead>
+          <tbody>
+            <tr><td class="lead-col" data-edit="s4.e1k">한국기계산업진흥회</td><td data-edit="s4.e1v">1차 사업(챗봇 구축) 이력, 2027년 본사업 의지. 온톨로지 기반 의지가 분명하고 무역 시나리오가 대표 use case</td></tr>
+            <tr><td class="lead-col" data-edit="s4.e2k">진흥기관 협회 평가기관</td><td data-edit="s4.e2v">과제, 보조금, 인증 심사의 발주처. 관계 자산이 결정적 진입로</td></tr>
+            <tr><td class="lead-col" data-edit="s4.e3k">제일일렉트릭</td><td data-edit="s4.e3v">신규 리드, 제조</td></tr>
+            <tr><td class="lead-col" data-edit="s4.e4k">애큐온저축은행</td><td data-edit="s4.e4v">차세대 구축 추정, 금융 <span class="chk">확인 필요</span></td></tr>
+          </tbody>
+        </table>
+        <p class="fnote" data-edit="s4.efoot"><b>거점은 관계로 정합니다.</b> 기준은 관계 레버리지, 통증 적합, 레퍼런스 가치 순입니다. 공통적으로 온톨로지에 대한 관심이 높습니다.</p>
+      </div>
+      <div>
+        <h3 class="sub-h3" data-edit="s4.h_out">거점에서 내리는 것</h3>
+        <div class="card warn"><h3 data-edit="s4.o1h">은행 여신 심사</h3><p data-edit="s4.o1b">신한, 하나, 기업, 우리은행과 메가존이 이미 진입한 레드오션이고 은행은 자체 개발로 갑니다. 검증용 레퍼런스로만 봅니다.</p></div>
+        <div class="card warn" style="margin-top:11px"><h3 data-edit="s4.o2h">손해사정과 회의</h3><p data-edit="s4.o2b">손해사정은 식상하고 회의는 일반적입니다. 다만 손해사정 데모의 분리 판정과 근거 재현 패턴은 심사 업무로 그대로 이식합니다.</p></div>
+        <div class="banner amber" style="margin-top:11px"><span class="blab" style="color:var(--amber)">주의</span><b data-edit="s4.o3h">내부통제</b> — <span data-edit="s4.o3b">우리금융지주 사업을 수주했으나 바로 AAP를 적용하기는 어렵습니다. PWC 같은 컨설팅펌이 온톨로지와 내부통제를 함께 타깃하고 있어 경쟁이 있습니다.</span></div>
+      </div>
+    </div>
+    <p class="fnote" data-edit="s4.foot"><b>정책 뒷받침</b> — 금융 통합 AI 가이드라인의 보조수단성, 공공 망분리 완화, 2026년 정부 AI 예산 9.9조 원이 거점과 맞물립니다. 하니스가 출발점이며, 여신 심사와 보조금 심사를 이미 결정론으로 만들어 두어 바로 쓸 자산이 있습니다.</p>
   </div>
 </section>
 
-<!-- ════════ 5. 거점 ════════ -->
+<!-- ════════ 5. 차별화 (Palantir 비교) ════════ -->
 <section class="slide" data-slide="5">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">05</div>
       <div>
-        <p class="kicker" data-edit="s5.kick">거점</p>
-        <h2 data-edit="s5.title">변수 기반 의사결정 지원으로 진입</h2>
-        <p class="lead" data-edit="s5.lead">합격 불합격 심사가 아니라, <strong>내부와 외부 변수에 따라 선택지와 효과가 어떻게 달라지는지를 미리 보는 업무</strong>입니다. 무역 시나리오, 기업 간 비교, 명문화된 심사(과제, 보조금, 인증)를 포함합니다. 경쟁사가 비어 있는 자리입니다. 단, 미래를 예측하는 것이 아니라 구조화된 모델 안에서 변화를 투명하게 보여 주는 것까지가 범위입니다.</p>
+        <p class="kicker" data-edit="s5.kick">차별화</p>
+        <h2 data-edit="s5.title">Palantir와 경쟁하지 않을 곳, 이길 곳</h2>
+        <p class="lead" data-edit="s5.lead"><strong>경쟁하지 않습니다</strong> — 온톨로지 깊이, 데이터 통합과 스케일, 예측 추론, 글로벌 레퍼런스. 여기서 정면승부하면 집니다. 대신 네 축으로 이깁니다.</p>
       </div>
     </div>
-    <div class="two-col">
-      <div>
-        <h3 class="sub-h3" data-edit="s5.h_entry">진입 경로는 관계 자산</h3>
-        <table class="tight">
-          <thead><tr><th style="width:160px">대상</th><th>접점과 의지</th></tr></thead>
-          <tbody>
-            <tr><td class="lead-col" data-edit="s5.e1k">한국기계산업진흥회</td><td data-edit="s5.e1v">1차 사업(챗봇 구축) 이력, 2027년 본사업 의지. 온톨로지 기반 의지가 분명하고 무역 시나리오가 대표 use case</td></tr>
-            <tr><td class="lead-col" data-edit="s5.e2k">진흥기관 협회 평가기관</td><td data-edit="s5.e2v">과제, 보조금, 인증 심사의 발주처. 관계 자산이 결정적 진입로</td></tr>
-            <tr><td class="lead-col" data-edit="s5.e3k">제일일렉트릭</td><td data-edit="s5.e3v">신규 리드, 제조</td></tr>
-            <tr><td class="lead-col" data-edit="s5.e4k">애큐온저축은행</td><td data-edit="s5.e4v">차세대 구축 추정, 금융 <span class="chk">확인 필요</span></td></tr>
-            <tr><td class="lead-col" data-edit="s5.e5k">KT그룹 계열사</td><td data-edit="s5.e5v">kt alpha(유통) 우선 검토, kt cs(AICC 운영). 본사는 Palantir 제휴로 제외</td></tr>
-          </tbody>
-        </table>
-        <p class="fnote" data-edit="s5.efoot"><b>거점은 관계로 정합니다.</b> 기준은 관계 레버리지, 통증 적합, 레퍼런스 가치 순입니다. 공통적으로 온톨로지에 대한 관심이 높습니다.</p>
-      </div>
-      <div>
-        <h3 class="sub-h3" data-edit="s5.h_out">거점에서 내리는 것</h3>
-        <div class="card warn"><h3 data-edit="s5.o1h">은행 여신 심사</h3><p data-edit="s5.o1b">신한, 하나, 기업, 우리은행과 메가존이 이미 진입한 레드오션이고 은행은 자체 개발로 갑니다. 검증용 레퍼런스로만 봅니다.</p></div>
-        <div class="card warn" style="margin-top:11px"><h3 data-edit="s5.o2h">손해사정과 회의</h3><p data-edit="s5.o2b">손해사정은 식상하고 회의는 일반적입니다. 다만 손해사정 데모의 분리 판정과 근거 재현 패턴은 심사 업무로 그대로 이식합니다.</p></div>
-        <div class="banner amber" style="margin-top:11px"><span class="blab" style="color:var(--amber)">주의</span><b data-edit="s5.o3h">내부통제</b> — <span data-edit="s5.o3b">우리금융지주 사업을 수주했으나 바로 AAP를 적용하기는 어렵습니다. PWC 같은 컨설팅펌이 온톨로지와 내부통제를 함께 타깃하고 있어 경쟁이 있습니다.</span></div>
-      </div>
+    <div class="grid-4">
+      <div class="card accent"><span class="badge">이깁니다 1</span><h3 data-edit="s5.w1h">가격과 접근성</h3><p data-edit="s5.w1b">Palantir는 큰 기업이 비싸게 사는 무거운 플랫폼입니다. 그것이 과하거나 비싼 <strong>중견, 준정부, 규제 산업</strong>이 우리 자리입니다. 작게, 염가로 시작할 수 있는 것이 차별점입니다.</p></div>
+      <div class="card accent"><span class="badge">이깁니다 2</span><h3 data-edit="s5.w2h">투명성과 재현성</h3><p data-edit="s5.w2b">Palantir의 추론은 무겁습니다. 우리는 <strong>결정론으로 왜 이 결과인지를 재현하고 방어</strong>할 수 있습니다. 공공과 규제 고객에게는 이것이 핵심입니다.</p></div>
+      <div class="card accent"><span class="badge">이깁니다 3</span><h3 data-edit="s5.w3h">한국 규제와 폐쇄망</h3><p data-edit="s5.w3b"><strong>KT 보안, 소버린, 온프레미스, 조달, SI 손길</strong>이 한국 시장에 맞습니다.</p></div>
+      <div class="card accent"><span class="badge">이깁니다 4</span><h3 data-edit="s5.w4h">가벼운 진입</h3><p data-edit="s5.w4b">온톨로지를 다 만들지 않아도 <strong>도메인 팩 단위로 작게 시작</strong>합니다. 온톨로지는 제휴로 채우고 결정론으로 운영합니다.</p></div>
     </div>
-    <p class="fnote" data-edit="s5.foot"><b>정책 뒷받침</b> — 금융 통합 AI 가이드라인의 보조수단성, 공공 망분리 완화, 2026년 정부 AI 예산 9.9조 원이 거점과 맞물립니다. 하니스가 출발점이며, 여신 심사와 보조금 심사를 이미 결정론으로 만들어 두어 바로 쓸 자산이 있습니다.</p>
+    <div class="teal-line"><span data-edit="s5.kmh">한 문장</span><span style="display:inline" data-edit="s5.km">Palantir가 큰 기업이 비싸게 사는 무거운 온톨로지 플랫폼이라면, <strong>AAP는 그것이 과하거나 비싼 곳이 작게 시작해 결정을 투명하게 운영하는 한국형 도구</strong>입니다.</span></div>
+    <p class="fnote" data-edit="s5.foot"><b>경쟁 포지션 주의</b> — KT 본사가 Palantir 파트너라, 온톨로지와 의사결정을 전면에 세우면 그룹 안에서 겹칩니다. AAP는 결정을 투명하게 운영하는 런타임으로 세웁니다. 컨설팅펌은 방법론은 앞서나 실행 런타임이 약해, 우리는 런타임과 HITL로 차별화합니다.</p>
   </div>
 </section>
 
-<!-- ════════ 6. 차별화 (Palantir 4축 + 하드넘버) ════════ -->
+<!-- ════════ 6. 피치와 실증 ════════ -->
 <section class="slide" data-slide="6">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">06</div>
       <div>
-        <p class="kicker" data-edit="s6.kick">차별화</p>
-        <h2 data-edit="s6.title">Palantir와 경쟁하지 않을 곳, 이길 곳</h2>
-        <p class="lead" data-edit="s6.lead"><strong>경쟁하지 않습니다</strong> — 온톨로지 깊이, 데이터 통합과 스케일, 예측 추론, 글로벌 레퍼런스. 여기서 정면승부하면 집니다. 대신 네 축으로 이깁니다.</p>
+        <p class="kicker" data-edit="s6.kick">피치와 실증</p>
+        <h2 data-edit="s6.title">온톨로지가 아니라 격상된 업무를 판다</h2>
+        <p class="lead" data-edit="s6.lead">고객은 온톨로지라는 기술 자체보다 그것이 자기 업무를 어떻게 돕는지, RAG나 기존 LLM과 무엇이 다른지를 궁금해합니다. 그래서 <strong>온톨로지를 전면에 세우지 않습니다.</strong></p>
       </div>
     </div>
-    <div class="statrow">
-      <div class="statbox them"><span class="slab">Palantir</span><span class="sval" data-edit="s6.n1v">코어당 연 £66,000부터</span><span class="sdesc" data-edit="s6.n1d">공개 가격은 코어당 연 £66,000부터이고 나머지는 비공개입니다. 중견과 준정부는 그들의 딜 하한 아래입니다. 인핸스도 Foundry 위에 지어 비용 구조를 상속합니다.</span></div>
-      <div class="statbox us"><span class="slab">AAP</span><span class="sval" data-edit="s6.n2v">2억 바우처 · 1~2주 수의계약</span><span class="sdesc" data-edit="s6.n2d">한국 중견 · 준정부는 2억 바우처와 1~2주 디지털서비스 수의계약으로 삽니다. 작게, 염가로, 조달 친화적으로 시작하는 것이 차별점입니다.</span></div>
+    <div class="grid-3">
+      <div class="card"><span class="badge">피치</span><h3 data-edit="s6.c1h">격상된 업무</h3><p data-edit="s6.c1b">고객 업무를 프로세스 단위로 분해하고, 그것을 <strong>Agentic Operation 수준으로 격상</strong>시켜 자동화하는 모습(사람 검토 포함)을 보여 줍니다. 온톨로지는 그 아래에서 의미를 잡는 기반입니다.</p></div>
+      <div class="card accent"><span class="badge">실증</span><h3 data-edit="s6.c2h">메타 AAP 시연</h3><p data-edit="s6.c2b">고객 업무 설명을 받아 그 자리에서 프로세스로 분해하고, AAP가 어떻게 처리하는지 시각적으로 보여 줍니다. <strong>6개 도메인 하니스가 엔진</strong>입니다. <span class="chk">확인 필요</span> 즉석 시연 수준의 시각화는 추가 개발이 필요합니다.</p></div>
+      <div class="card"><span class="badge">온톨로지 제휴</span><h3 data-edit="s6.c3h">솔트룩스, E8, 서버키트</h3><p data-edit="s6.c3b">온톨로지는 직접 만들지 못해 <strong>제휴로 채웁니다.</strong> 가장 강한 영업은 설명이 아니라 시연이며, Palantir AIP가 시각적 경험으로 설득하듯 우리도 보이는 결과로 설득합니다.</p></div>
     </div>
-    <div class="grid-4" style="margin-top:11px">
-      <div class="card accent"><span class="badge">이깁니다 1</span><h3 data-edit="s6.w1h">가격과 접근성</h3><p data-edit="s6.w1b">Palantir는 큰 기업이 비싸게 사는 무거운 플랫폼입니다. 그것이 과하거나 비싼 <strong>중견, 준정부, 규제 산업</strong>이 우리 자리입니다.</p></div>
-      <div class="card accent"><span class="badge">이깁니다 2</span><h3 data-edit="s6.w2h">투명성과 재현성</h3><p data-edit="s6.w2b">Palantir의 추론은 무겁습니다. 우리는 <strong>결정론으로 왜 이 결과인지를 재현하고 방어</strong>합니다. 공공과 규제 고객에게 핵심입니다.</p></div>
-      <div class="card accent"><span class="badge">이깁니다 3</span><h3 data-edit="s6.w3h">한국 규제와 폐쇄망</h3><p data-edit="s6.w3b"><strong>KT 보안, 소버린, 온프레미스, 조달, SI 손길</strong>이 한국 시장에 맞습니다.</p></div>
-      <div class="card accent"><span class="badge">이깁니다 4</span><h3 data-edit="s6.w4h">가벼운 진입</h3><p data-edit="s6.w4b">온톨로지를 다 만들지 않아도 <strong>도메인 팩 단위로 작게 시작</strong>합니다. 온톨로지는 제휴로 채우고 결정론으로 운영합니다.</p></div>
+    <h3 class="sub-h3" data-edit="s6.h_step">수행 단계와 과금</h3>
+    <div class="steps s4">
+      <div class="step accent"><span class="sn">1</span><b data-edit="s6.p1h">적용 진단</b><span data-edit="s6.p1b">Assessment</span></div>
+      <div class="step"><span class="sn">2</span><b data-edit="s6.p2h">통제된 파일럿</b><span data-edit="s6.p2b">Controlled Pilot</span></div>
+      <div class="step"><span class="sn">3</span><b data-edit="s6.p3h">구축</b><span data-edit="s6.p3b">Build</span></div>
+      <div class="step"><span class="sn">4</span><b data-edit="s6.p4h">운영과 개선</b><span data-edit="s6.p4b">Operate &amp; Improve</span></div>
     </div>
-    <div class="teal-line"><span data-edit="s6.kmh">한 문장</span><span style="display:inline" data-edit="s6.km">Palantir가 큰 기업이 비싸게 사는 무거운 온톨로지 플랫폼이라면, <strong>AAP는 그것이 과하거나 비싼 곳이 작게 시작해 결정을 투명하게 운영하는 한국형 도구</strong>입니다.</span></div>
+    <p class="fnote" data-edit="s6.foot"><b>과금 방향</b> — 검증 과제는 정액 구축 패키지로, 운영은 좌석과 구독 중심으로 둡니다. 성과 기반은 자동 처리율을 측정하는 도메인에만 선택 제시합니다. PoC는 Palantir 부트캠프를 참고해 구축형으로 설계합니다. <span class="chk">확인 필요</span> 표준 PoC의 기간과 가격은 자사 단가 기준이 필요합니다.</p>
   </div>
 </section>
 
-<!-- ════════ 7. 온톨로지 vs AAP 도식 (NEW, 4.4 임베드) ════════ -->
+<!-- ════════ 7. 오퍼링과 과금 ════════ -->
 <section class="slide" data-slide="7">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">07</div>
       <div>
-        <p class="kicker" data-edit="s7.kick">온톨로지 기반 의사결정과 AAP의 차이</p>
-        <h2 data-edit="s7.title">둘은 대립이 아니라 층입니다</h2>
-        <p class="lead" data-edit="s7.lead">둘 다 온톨로지로 의미와 관계를 구조화하고 근거를 제시합니다. AAP는 온톨로지를 대체하지 않고 <strong>그 위에 운영 층을 얹습니다.</strong> 기준은 호르무즈 데모가 목표로 하는 완성된 온톨로지 기반 의사결정 시스템입니다.</p>
+        <p class="kicker" data-edit="s7.kick">오퍼링과 과금</p>
+        <h2 data-edit="s7.title">4묶음 패키지와 좌석 구독</h2>
+        <p class="lead" data-edit="s7.lead">수행은 <strong>적용 진단, 통제된 파일럿, 구축, 운영과 개선</strong>의 네 묶음으로 패키지화합니다. 검증 과제는 정액 구축으로, 운영은 좌석과 구독 중심으로 둡니다.</p>
       </div>
     </div>
-    <div class="stack44">
-      <div class="layer-aap">
-        <div class="lh"><span class="tag">AAP</span><b data-edit="s7.aaph">운영 층</b><span data-edit="s7.aaps">분석을 통제된 운영으로, 매일 돌리고 재현 · 감사 가능하게 기록합니다.</span></div>
-        <div class="oploop">
-          <div class="opstep">분해</div><div class="opsep">›</div>
-          <div class="opstep">판단</div><div class="opsep">›</div>
-          <div class="opstep">승인</div><div class="opsep">›</div>
-          <div class="opstep">실행</div><div class="opsep">›</div>
-          <div class="opstep">기록</div><div class="opsep">›</div>
-          <div class="opstep">학습</div>
-        </div>
-        <div class="diff4">
-          <div class="diffc"><p class="dt">실행</p><div class="drow"><span class="from">분석에서 멈춤</span><span class="arr">→</span><span class="to">시스템 반영(writeback)</span></div></div>
-          <div class="diffc"><p class="dt">판단</p><div class="drow"><span class="from">확률적(LLM)</span><span class="arr">→</span><span class="to">결정론, 재현 · 감사</span></div></div>
-          <div class="diffc"><p class="dt">사람</p><div class="drow"><span class="from">결과 보고 판단</span><span class="arr">→</span><span class="to">HITL 게이트 내장</span></div></div>
-          <div class="diffc"><p class="dt">구성</p><div class="drow"><span class="from">온톨로지 의존</span><span class="arr">→</span><span class="to">구성요소 조합</span></div></div>
-        </div>
+    <div class="two-col">
+      <div>
+        <h3 class="sub-h3" data-edit="s7.h_pkg">4묶음 패키지</h3>
+        <table class="tight">
+          <thead><tr><th style="width:130px">묶음</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td class="lead-col" data-edit="s7.k1k">적용 진단</td><td data-edit="s7.k1v">업무, 시스템, 보안 조건으로 적용 후보와 우선순위 선별</td></tr>
+            <tr><td class="lead-col" data-edit="s7.k2k">통제된 파일럿</td><td data-edit="s7.k2v">통제 범위 안에서 운영 가능한 팩으로 검증, 처리 시간과 자동화율 측정</td></tr>
+            <tr><td class="lead-col" data-edit="s7.k3k">구축</td><td data-edit="s7.k3v">검증된 자산 조합, 화면과 통제와 보안 결합, 고객 시스템 연결</td></tr>
+            <tr><td class="lead-col" data-edit="s7.k4k">운영과 개선</td><td data-edit="s7.k4v">운영 기준과 개선 흐름 설계, 재사용 자산 축적</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="bridge"><div class="updown"><span class="ar">▲</span><span class="bl">운영 층을 얹습니다</span></div></div>
-      <div class="layer-onto">
-        <div class="lh"><span class="tag">공통 기반</span><b data-edit="s7.ontoh">온톨로지 기반 의사결정</b><span data-edit="s7.ontos">무엇을 해야 하는지 분석합니다.</span></div>
-        <div class="common3">
-          <div class="commc"><p class="ct">의미 · 관계 구조화</p><p class="cb">온톨로지로 의미와 관계를 구조화합니다.</p></div>
-          <div class="commc"><p class="ct">변수 기반 의사결정</p><p class="cb">변수에 따른 의사결정을 돕습니다.</p></div>
-          <div class="commc"><p class="ct">근거 제시</p><p class="cb">판단의 근거를 제시합니다.</p></div>
-        </div>
+      <div>
+        <h3 class="sub-h3" data-edit="s7.h_price">좌석과 구독</h3>
+        <div class="card accent"><h3 data-edit="s7.pr1h">좌석과 구독 중심</h3><p data-edit="s7.pr1b">운영은 좌석과 구독으로 둡니다. <strong>글로벌 리더도 예측 가능성 때문에 좌석제로 회귀</strong>했습니다. 일회성 구축이 구독으로 전환되는 비중이 사업 건전성 지표입니다.</p></div>
+        <div class="card" style="margin-top:11px"><h3 data-edit="s7.pr2h">정액 구축과 성과 기반</h3><p data-edit="s7.pr2b">검증 과제는 <strong>정액 구축 패키지</strong>로 둡니다. 성과 기반은 자동 처리율을 측정하는 도메인에만 선택 제시합니다.</p></div>
+        <div class="banner amber" style="margin-top:11px"><span class="blab" style="color:var(--amber)">확인 필요</span><span data-edit="s7.prfoot">표준 PoC의 기간과 가격, 도메인 팩별 단가는 자사 단가 기준이 필요합니다.</span></div>
       </div>
     </div>
-    <div class="lenses">
-      <div class="lens"><p class="lk">기술</p><div class="lrow"><span class="lf">분석</span><span class="la">→</span><span class="lt">통제된 실행</span></div></div>
-      <div class="lens"><p class="lk">사업</p><div class="lrow"><span class="lf">한 번 구축 분석 자산</span><span class="la">→</span><span class="lt">매일 운영 · 구독 · 확장</span></div></div>
-      <div class="lens"><p class="lk">시장</p><div class="lrow"><span class="lf">대형 중심 Decision Intelligence</span><span class="la">→</span><span class="lt">중견 · 준정부 빈자리</span></div></div>
-    </div>
-    <p class="fnote" data-edit="s7.foot"><b>연계</b> — 호르무즈, 기존 고객, 자사 자산이 이미 있습니다. 그 위에 운영 층만 더하면 됩니다. 백지에서 시작하는 경쟁자보다 빠릅니다. 단, 운영의 숫자는 제휴와 전문가 검증을 거쳐야 신뢰받습니다.</p>
+    <p class="fnote" data-edit="s7.foot"><b>PoC 형태</b> — Palantir 부트캠프(며칠 내 첫 유스케이스 배포, 전환율 약 75%)를 참고해 구축형으로 설계합니다.</p>
   </div>
 </section>
 
-<!-- ════════ 8. 피치와 실증 (데모 방향) ════════ -->
+<!-- ════════ 8. 규제와 인증 ════════ -->
 <section class="slide" data-slide="8">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">08</div>
       <div>
-        <p class="kicker" data-edit="s8.kick">피치와 실증</p>
-        <h2 data-edit="s8.title">온톨로지가 아니라 격상된 업무를 판다</h2>
-        <p class="lead" data-edit="s8.lead">고객은 온톨로지라는 기술 자체보다 그것이 자기 업무를 어떻게 돕는지, RAG나 기존 LLM과 무엇이 다른지를 궁금해합니다. 그래서 <strong>온톨로지를 전면에 세우지 않습니다.</strong></p>
+        <p class="kicker" data-edit="s8.kick">규제와 인증</p>
+        <h2 data-edit="s8.title">ISO 42001, 금융, 공공</h2>
+        <p class="lead" data-edit="s8.lead">규제 적합은 거점 진입의 게이트입니다. <strong>ISO 42001은 미보유 과제</strong>이며, 금융과 공공은 우리 설계를 가이드라인에 매핑해 정합성을 제시합니다.</p>
       </div>
     </div>
     <div class="grid-3">
-      <div class="card"><span class="badge">피치</span><h3 data-edit="s8.c1h">격상된 업무</h3><p data-edit="s8.c1b">고객 업무를 프로세스 단위로 분해하고, 그것을 <strong>Agentic Operation 수준으로 격상</strong>시켜 자동화하는 모습(사람 검토 포함)을 보여 줍니다. 온톨로지는 그 아래에서 의미를 잡는 기반입니다.</p></div>
-      <div class="card accent"><span class="badge">실증</span><h3 data-edit="s8.c2h">메타 AAP 시연</h3><p data-edit="s8.c2b">고객 업무 설명을 받아 그 자리에서 프로세스로 분해하고, AAP가 어떻게 처리하는지 시각적으로 보여 줍니다. <strong>6개 도메인 하니스가 엔진</strong>입니다. <span class="chk">확인 필요</span> 즉석 시연 수준의 시각화는 추가 개발이 필요합니다.</p></div>
-      <div class="card"><span class="badge">온톨로지 제휴</span><h3 data-edit="s8.c3h">솔트룩스, E8, 서버키트</h3><p data-edit="s8.c3b">온톨로지는 직접 만들지 못해 <strong>제휴로 채웁니다.</strong> 가장 강한 영업은 설명이 아니라 시연이며, Palantir AIP가 시각적 경험으로 설득하듯 우리도 보이는 결과로 설득합니다.</p></div>
+      <div class="card warn"><span class="badge">미보유 과제</span><h3 data-edit="s8.c1h">ISO 42001</h3><p data-edit="s8.c1b">구매자 72%가 제안 요청 전에 확인하고 메가존은 이미 보유합니다. 미보유 시 입찰에서 불리합니다.</p><p style="margin-top:7px"><span class="chk">확인 필요</span> <span data-edit="s8.c1c">우리 인증 추진 의향과 일정이 필요합니다.</span></p></div>
+      <div class="card"><span class="badge">금융</span><h3 data-edit="s8.c2h">통합 AI 가이드라인</h3><p data-edit="s8.c2b">통합 AI 가이드라인 <strong>7대 원칙에 AAP 설계를 매핑</strong>해 정합성을 제시합니다.</p></div>
+      <div class="card"><span class="badge">공공</span><h3 data-edit="s8.c3h">망분리 완화(N2SF)</h3><p data-edit="s8.c3b">망분리 완화 <strong>등급 체계에 데이터 거버넌스를 매핑</strong>합니다.</p></div>
     </div>
-    <div class="banner amber" style="margin-top:14px"><span class="blab" style="color:var(--amber)">데모 방향 주의</span><b data-edit="s8.dh">온톨로지 중심 데모는 AAP 데모가 아닙니다</b> — <span data-edit="s8.db">온톨로지를 전면에 세운 데모는 약점(L4)을 앞세우고 Palantir와 겹칩니다. AAP 데모는 반대로 온톨로지는 아래에서 받치고, <strong>변수에 따른 재계산, 결정론 판정, HITL, 투명한 근거</strong>를 전면에 둡니다.</span></div>
-    <p class="fnote" data-edit="s8.foot"><b>도메인 선정</b> — 포화된 공급망 what-if(Kinaxis, o9, Coupa)을 피하고, <strong>공공 · 준정부의 정책 · 예산 · 심사 의사결정</strong>으로 잡습니다. 온톨로지가 무엇인가가 아니라 그 위에서 업무가 어떻게 자동화되고 통제되는가를 보여 주어야 합니다.</p>
+    <div class="teal-line"><span data-edit="s8.kmh">핵심</span><span style="display:inline" data-edit="s8.km">L7 거버넌스는 차별화이자 조달 통과 요건입니다. <strong>인증 로드맵을 조기에 착수</strong>해 입찰 게이트를 통과합니다.</span></div>
   </div>
 </section>
 
-<!-- ════════ 9. 오퍼링·과금·조달 ════════ -->
+<!-- ════════ 9. Action Plan ════════ -->
 <section class="slide" data-slide="9">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">09</div>
       <div>
-        <p class="kicker" data-edit="s9.kick">오퍼링 · 과금 · 조달</p>
-        <h2 data-edit="s9.title">4묶음 패키지와 좌석 구독, 조달 경로</h2>
-        <p class="lead" data-edit="s9.lead">수행은 <strong>적용 진단, 통제된 파일럿, 구축, 운영과 개선</strong>의 네 묶음으로 패키지화합니다. 검증 과제는 정액 구축으로, 운영은 좌석과 구독 중심으로 둡니다.</p>
+        <p class="kicker" data-edit="s9.kick">Action Plan</p>
+        <h2 data-edit="s9.title">3개월과 6개월 초안</h2>
+        <p class="lead" data-edit="s9.lead">스폰서와 예산, 일정을 받아 구체화합니다. <span class="chk">확인 필요</span> 초안은 다음과 같습니다.</p>
       </div>
     </div>
-    <h3 class="sub-h3" data-edit="s9.h_step">수행 단계</h3>
-    <div class="steps s4">
-      <div class="step accent"><span class="sn">1</span><b data-edit="s9.p1h">적용 진단</b><span data-edit="s9.p1b">Assessment · 적용 후보와 우선순위 선별</span></div>
-      <div class="step"><span class="sn">2</span><b data-edit="s9.p2h">통제된 파일럿</b><span data-edit="s9.p2b">Controlled Pilot · 처리 시간, 자동화율 측정</span></div>
-      <div class="step"><span class="sn">3</span><b data-edit="s9.p3h">구축</b><span data-edit="s9.p3b">Build · 자산 조합, 화면 통제 보안 결합</span></div>
-      <div class="step"><span class="sn">4</span><b data-edit="s9.p4h">운영과 개선</b><span data-edit="s9.p4b">Operate &amp; Improve · 재사용 자산 축적</span></div>
-    </div>
-    <div class="two-col" style="margin-top:16px">
+    <div class="two-col">
       <div>
-        <h3 class="sub-h3" data-edit="s9.h_price">과금 방향</h3>
-        <div class="card accent"><h3 data-edit="s9.pr1h">좌석과 구독 중심</h3><p data-edit="s9.pr1b">운영은 좌석과 구독으로 둡니다. <strong>글로벌 리더도 예측 가능성 때문에 좌석제로 회귀</strong>했습니다. 검증 과제는 정액 구축 패키지로, 성과 기반은 자동 처리율을 측정하는 도메인에만 선택 제시합니다.</p></div>
+        <h3 class="sub-h3" data-edit="s9.h_3m">3개월</h3>
+        <div class="steps s2" style="grid-template-columns:1fr;gap:8px">
+          <div class="step accent"><span class="sn">1</span><span data-edit="s9.m1">기존 계정 목록 점수화, 1차 타겟 3~5개 확정</span></div>
+          <div class="step"><span class="sn">2</span><span data-edit="s9.m2">표준 PoC 제안 1장 작성</span></div>
+          <div class="step"><span class="sn">3</span><span data-edit="s9.m3">온톨로지 제휴 후보(솔트룩스, E8, 서버키트) 접촉</span></div>
+          <div class="step"><span class="sn">4</span><span data-edit="s9.m4">메타 AAP 즉석 시연 데모 기획</span></div>
+        </div>
       </div>
       <div>
-        <h3 class="sub-h3" data-edit="s9.h_proc">조달 경로</h3>
-        <div class="card"><h3 data-edit="s9.pc1h">바우처 · 수의계약 · 인증</h3><p data-edit="s9.pc1b">구독 SaaS와 사전심사, <strong>바우처 적합가(2억 이하)</strong>, CSAP/GS 인증으로 갑니다. 디지털서비스 수의계약으로 1~2주에 진입합니다. KT 에이센 등이 이 패턴으로 공공에 납품 중입니다.</p></div>
+        <h3 class="sub-h3" data-edit="s9.h_6m">6개월</h3>
+        <div class="steps s2" style="grid-template-columns:1fr;gap:8px">
+          <div class="step accent"><span class="sn">1</span><span data-edit="s9.s1">거점 PoC 1~2건 착수(행정 심사)</span></div>
+          <div class="step"><span class="sn">2</span><span data-edit="s9.s2">ISO 42001 추진 결정</span></div>
+          <div class="step"><span class="sn">3</span><span data-edit="s9.s3">레퍼런스 Pack화 준비</span></div>
+        </div>
+        <div class="banner teal" style="margin-top:14px"><span class="blab" style="color:var(--teal-strong)">실행 주체</span><span data-edit="s9.rr">사업개발, 영업, 수행총괄, 기술조직(L3 Build), 보안 컴플라이언스(ISO 42001 추진), 파트너(L4 제휴, Connector)로 R&amp;R을 나눕니다. <span class="chk">확인 필요</span> 실제 조직과 인력을 받아 확정합니다.</span></div>
       </div>
     </div>
-    <p class="fnote" data-edit="s9.foot"><b>PoC 형태</b> — Palantir 부트캠프(며칠 내 첫 유스케이스 배포, 전환율 약 75%)를 참고해 구축형으로 설계합니다. <span class="chk">확인 필요</span> 표준 PoC의 기간과 가격, 도메인 팩별 단가는 자사 단가 기준이 필요합니다.</p>
   </div>
 </section>
 
-<!-- ════════ 10. 규제와 인증 (AI 기본법 추가) ════════ -->
+<!-- ════════ 10. 리스크 ════════ -->
 <section class="slide" data-slide="10">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">10</div>
       <div>
-        <p class="kicker" data-edit="s10.kick">규제와 인증</p>
-        <h2 data-edit="s10.title">AI 기본법, ISO 42001, 금융, 공공</h2>
-        <p class="lead" data-edit="s10.lead">규제 적합은 거점 진입의 게이트입니다. <strong>AI 기본법 설명 · 재현 의무는 결정론 통과 요건과 1대1</strong>이며, ISO 42001은 미보유 과제입니다.</p>
+        <p class="kicker" data-edit="s10.kick">리스크</p>
+        <h2 data-edit="s10.title">핵심 리스크와 완화</h2>
+        <p class="lead" data-edit="s10.lead">차별화 두 축이 확보 과제이고 운영 레퍼런스가 아직 없다는 점이 가장 큰 리스크입니다. <strong>제휴와 인증 로드맵, KT그룹 실증</strong>으로 완화합니다.</p>
       </div>
     </div>
-    <div class="grid-2">
-      <div class="card accent"><span class="badge">AI 기본법 2026.1 시행</span><h3 data-edit="s10.c0h">설명 · 재현 의무 = 결정론 통과 요건</h3><p data-edit="s10.c0b">고영향 AI는 설명 방안 수립과 게시, 인간 관리감독이 의무입니다. <strong>AAP 결정론(재현 · 설명 · 감사 · HITL)이 이 요건과 1대1</strong>이라, 결정론이 곧 규제 통과 요건입니다.</p></div>
-      <div class="card warn"><span class="badge">미보유 과제</span><h3 data-edit="s10.c1h">ISO 42001</h3><p data-edit="s10.c1b">구매자 72%가 제안 요청 전에 확인하고 메가존은 이미 보유합니다. kt ds는 <strong>BEAST를 대상으로 준비 중</strong>이며, AAP 플랫폼 전체로 확대하는 것이 과제입니다.</p><p style="margin-top:7px"><span class="chk">확인 필요</span> <span data-edit="s10.c1c">담당과 일정이 필요합니다.</span></p></div>
-      <div class="card"><span class="badge">금융</span><h3 data-edit="s10.c2h">통합 AI 가이드라인</h3><p data-edit="s10.c2b">통합 AI 가이드라인 <strong>7대 원칙에 AAP 설계를 매핑</strong>해 정합성을 제시합니다.</p></div>
-      <div class="card"><span class="badge">공공</span><h3 data-edit="s10.c3h">망분리 완화(N2SF)</h3><p data-edit="s10.c3b">망분리 완화 <strong>등급 체계에 데이터 거버넌스를 매핑</strong>합니다.</p></div>
-    </div>
-    <div class="teal-line"><span data-edit="s10.kmh">핵심</span><span style="display:inline" data-edit="s10.km">L7 거버넌스는 차별화이자 조달 통과 요건입니다. <strong>인증 로드맵을 조기에 착수</strong>해 입찰 게이트를 통과하고, AI 기본법 요건은 결정론으로 정면 충족합니다.</span></div>
+    <table class="tight">
+      <thead><tr><th style="width:140px">리스크</th><th>내용</th><th style="width:360px">완화</th></tr></thead>
+      <tbody>
+        <tr><td class="lead-col risk" data-edit="s10.r1k">L4 자체 불가</td><td data-edit="s10.r1n">온톨로지를 직접 못 만듦, 차별화 핵심</td><td class="acc" data-edit="s10.r1m">제휴(솔트룩스, E8, 서버키트), 진입은 우위 영역에서</td></tr>
+        <tr><td class="lead-col risk" data-edit="s10.r2k">인증 미보유</td><td data-edit="s10.r2n">ISO 42001 없으면 입찰 불리</td><td class="acc" data-edit="s10.r2m">인증 로드맵 조기 착수</td></tr>
+        <tr><td class="lead-col" data-edit="s10.r3k">운영 레퍼런스 0</td><td data-edit="s10.r3n">데모만 있고 운영 사례 없음</td><td class="acc" data-edit="s10.r3m">KT그룹에서 먼저 실증</td></tr>
+        <tr><td class="lead-col" data-edit="s10.r4k">파트너 종속</td><td data-edit="s10.r4n">L4와 Connector를 외부에 의존</td><td class="acc" data-edit="s10.r4m">계약 스펙은 자체 보유</td></tr>
+        <tr><td class="lead-col" data-edit="s10.r5k">인력 조직 미정</td><td data-edit="s10.r5n">실행 주체 불명확 <span class="chk">확인 필요</span></td><td class="acc" data-edit="s10.r5m">조직 설계 선행</td></tr>
+      </tbody>
+    </table>
+    <p class="fnote" data-edit="s10.foot"><b>지속 우위</b> — 복제되는 것은 L3 코어 로직과 빌더 화면입니다. 복제되지 않는 것은 KT그룹 관계와 레퍼런스, 한국 규제 폐쇄망 운영 경험, 축적된 도메인 자산입니다. 사업의 진짜 우위는 여기에 있습니다.</p>
   </div>
 </section>
 
-<!-- ════════ 11. Action Plan ════════ -->
+<!-- ════════ 11. 확인 질문(설문) ════════ -->
 <section class="slide" data-slide="11">
   <div class="slide-inner">
     <div class="shead">
       <div class="snum">11</div>
       <div>
-        <p class="kicker" data-edit="s11.kick">Action Plan</p>
-        <h2 data-edit="s11.title">3개월과 6개월 초안</h2>
-        <p class="lead" data-edit="s11.lead">스폰서와 예산, 일정을 받아 구체화합니다. <span class="chk">확인 필요</span> 초안은 다음과 같습니다.</p>
+        <p class="kicker" data-edit="s11.kick">확인 질문 설문</p>
+        <h2 data-edit="s11.title">빈 곳을 채울 10문항</h2>
+        <p class="lead" data-edit="s11.lead">아래에 답해 주시면 앞의 <span class="chk">확인 필요</span> 부분을 채우고 문서를 다듬습니다. 아는 만큼만, 단답으로도 좋습니다.</p>
       </div>
     </div>
     <div class="two-col">
       <div>
-        <h3 class="sub-h3" data-edit="s11.h_3m">3개월</h3>
-        <div class="steps s2" style="grid-template-columns:1fr;gap:8px">
-          <div class="step accent"><span class="sn">1</span><span data-edit="s11.m1">기존 계정 목록 점수화, 1차 타겟 3~5개 확정</span></div>
-          <div class="step"><span class="sn">2</span><span data-edit="s11.m2">표준 PoC 제안 1장 작성</span></div>
-          <div class="step"><span class="sn">3</span><span data-edit="s11.m3">온톨로지 제휴 후보(솔트룩스, E8, 서버키트) 접촉</span></div>
-          <div class="step"><span class="sn">4</span><span data-edit="s11.m4">메타 AAP 즉석 시연 데모 기획</span></div>
-        </div>
-      </div>
-      <div>
-        <h3 class="sub-h3" data-edit="s11.h_6m">6개월</h3>
-        <div class="steps s2" style="grid-template-columns:1fr;gap:8px">
-          <div class="step accent"><span class="sn">1</span><span data-edit="s11.s1">거점 PoC 1~2건 착수(변수 기반 의사결정)</span></div>
-          <div class="step"><span class="sn">2</span><span data-edit="s11.s2">ISO 42001 AAP 확대 검토(BEAST는 진행 중)</span></div>
-          <div class="step"><span class="sn">3</span><span data-edit="s11.s3">레퍼런스 Pack화 준비</span></div>
-        </div>
-        <div class="banner teal" style="margin-top:14px"><span class="blab" style="color:var(--teal-strong)">실행 주체</span><span data-edit="s11.rr">사업개발, 영업, 수행총괄, 기술조직(L3 Build), 보안 컴플라이언스(ISO 42001 추진), 파트너(L4 제휴, Connector)로 R&amp;R을 나눕니다. <span class="chk">확인 필요</span> 실제 조직과 인력을 받아 확정합니다.</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ════════ 12. 리스크 ════════ -->
-<section class="slide" data-slide="12">
-  <div class="slide-inner">
-    <div class="shead">
-      <div class="snum">12</div>
-      <div>
-        <p class="kicker" data-edit="s12.kick">리스크</p>
-        <h2 data-edit="s12.title">핵심 리스크와 완화</h2>
-        <p class="lead" data-edit="s12.lead">차별화 두 축이 확보 과제이고 <strong>운영 레퍼런스가 0(확인됨)</strong>이라는 점이 가장 큰 리스크입니다. 제휴와 인증 로드맵, KT그룹 실증으로 완화합니다.</p>
-      </div>
-    </div>
-    <table class="tight">
-      <thead><tr><th style="width:150px">리스크</th><th>내용</th><th style="width:360px">완화</th></tr></thead>
-      <tbody>
-        <tr><td class="lead-col risk" data-edit="s12.r1k">L4 자체 불가</td><td data-edit="s12.r1n">온톨로지를 직접 못 만듦, 차별화 핵심</td><td class="acc" data-edit="s12.r1m">제휴(솔트룩스, E8, 서버키트), 진입은 우위 영역에서</td></tr>
-        <tr><td class="lead-col risk" data-edit="s12.r2k">ISO 42001 부분</td><td data-edit="s12.r2n">BEAST는 준비 중, AAP 플랫폼 확대가 과제</td><td class="acc" data-edit="s12.r2m">플랫폼 인증 로드맵 착수</td></tr>
-        <tr><td class="lead-col risk" data-edit="s12.r3k">운영 레퍼런스 0 (확인됨)</td><td data-edit="s12.r3n">실제 구축 · 운영 사례 없음, 온톨로지 관련 데모만 있음</td><td class="acc" data-edit="s12.r3m">KT그룹과 진흥회에서 첫 운영 실증을 최우선으로</td></tr>
-        <tr><td class="lead-col" data-edit="s12.r4k">파트너 종속</td><td data-edit="s12.r4n">L4와 Connector를 외부에 의존</td><td class="acc" data-edit="s12.r4m">계약 스펙은 자체 보유</td></tr>
-        <tr><td class="lead-col" data-edit="s12.r5k">인력 조직 미정</td><td data-edit="s12.r5n">실행 주체 불명확 <span class="chk">확인 필요</span></td><td class="acc" data-edit="s12.r5m">조직 설계 선행</td></tr>
-      </tbody>
-    </table>
-    <p class="fnote" data-edit="s12.foot"><b>지속 우위</b> — 복제되는 것은 L3 코어 로직과 빌더 화면입니다. 복제되지 않는 것은 KT그룹 관계와 레퍼런스, 한국 규제 폐쇄망 운영 경험, 축적된 도메인 자산입니다. 사업의 진짜 우위는 여기에 있습니다.</p>
-  </div>
-</section>
-
-<!-- ════════ 13. 확인 질문(설문) ════════ -->
-<section class="slide" data-slide="13">
-  <div class="slide-inner">
-    <div class="shead">
-      <div class="snum">13</div>
-      <div>
-        <p class="kicker" data-edit="s13.kick">확인 질문 설문</p>
-        <h2 data-edit="s13.title">빈 곳을 채울 10문항</h2>
-        <p class="lead" data-edit="s13.lead">아래에 답해 주시면 앞의 <span class="chk">확인 필요</span> 부분을 채우고 문서를 다듬습니다. 아는 만큼만, 단답으로도 좋습니다.</p>
-      </div>
-    </div>
-    <div class="two-col">
-      <div>
-        <div class="qgrp" data-edit="s13.gA">A. 역량 현실</div>
+        <div class="qgrp" data-edit="s11.gA">A. 역량 현실</div>
         <div class="qlist">
-          <div class="qitem"><span class="qn">1</span><p data-edit="s13.q1">L1 화면, L2 스튜디오, L6 평가의 실제 자체 개발 수준은 어디입니까. <strong>(제품 / PoC / 없음)</strong></p></div>
-          <div class="qitem"><span class="qn">2</span><p data-edit="s13.q2">자사 자산 <strong>BEAST, Antbot, AI:ON-U</strong>가 실제로 커버하는 범위는 어디까지입니까.</p></div>
-          <div class="qitem"><span class="qn">3</span><p data-edit="s13.q3">지식 시맨틱(L4)을 다룰 전담 인력이나 역량이 있습니까. 없다면 제휴 후보가 있습니까.</p></div>
-          <div class="qitem"><span class="qn">4</span><p data-edit="s13.q4">거버넌스(L7)를 어디까지 구현했습니까. <strong>ISO 42001 인증을 추진할 의향과 일정</strong>이 있습니까.</p></div>
+          <div class="qitem"><span class="qn">1</span><p data-edit="s11.q1">L1 화면, L2 스튜디오, L6 평가의 실제 자체 개발 수준은 어디입니까. <strong>(제품 / PoC / 없음)</strong></p></div>
+          <div class="qitem"><span class="qn">2</span><p data-edit="s11.q2">자사 자산 <strong>BEAST, Antbot, AI:ON-U</strong>가 실제로 커버하는 범위는 어디까지입니까.</p></div>
+          <div class="qitem"><span class="qn">3</span><p data-edit="s11.q3">지식 시맨틱(L4)을 다룰 전담 인력이나 역량이 있습니까. 없다면 제휴 후보가 있습니까.</p></div>
+          <div class="qitem"><span class="qn">4</span><p data-edit="s11.q4">거버넌스(L7)를 어디까지 구현했습니까. <strong>ISO 42001 인증을 추진할 의향과 일정</strong>이 있습니까.</p></div>
         </div>
-        <div class="qgrp" data-edit="s13.gB">B. 증명과 실적</div>
+        <div class="qgrp" data-edit="s11.gB">B. 증명과 실적</div>
         <div class="qlist">
-          <div class="qitem"><span class="qn">5</span><p data-edit="s13.q5">데모 외에 실제로 구축하거나 운영한 AAP 유사 사례가 있습니까. <strong>(파일럿 / 운영)</strong></p></div>
+          <div class="qitem"><span class="qn">5</span><p data-edit="s11.q5">데모 외에 실제로 구축하거나 운영한 AAP 유사 사례가 있습니까. <strong>(파일럿 / 운영)</strong></p></div>
         </div>
       </div>
       <div>
-        <div class="qgrp" data-edit="s13.gC">C. 관계와 시장</div>
+        <div class="qgrp" data-edit="s11.gC">C. 관계와 시장</div>
         <div class="qlist">
-          <div class="qitem"><span class="qn">6</span><p data-edit="s13.q6">KT그룹 어느 계열사에 실제 접점이나 검토가 있습니까.</p></div>
-          <div class="qitem"><span class="qn">7</span><p data-edit="s13.q7">kt ds 기존 SI 구축 고객 중 AAP 인접 업무가 있는 곳은 어디입니까. <strong>(산업, 업무)</strong></p></div>
+          <div class="qitem"><span class="qn">6</span><p data-edit="s11.q6">KT그룹 어느 계열사에 실제 접점이나 검토가 있습니까.</p></div>
+          <div class="qitem"><span class="qn">7</span><p data-edit="s11.q7">kt ds 기존 SI 구축 고객 중 AAP 인접 업무가 있는 곳은 어디입니까. <strong>(산업, 업무)</strong></p></div>
         </div>
-        <div class="qgrp" data-edit="s13.gD">D. 경제와 실행</div>
+        <div class="qgrp" data-edit="s11.gD">D. 경제와 실행</div>
         <div class="qlist">
-          <div class="qitem"><span class="qn">8</span><p data-edit="s13.q8">구축 단가나 인력 단가의 감이 있습니까. <strong>목표 매출이나 투자 규모</strong>가 정해져 있습니까.</p></div>
-          <div class="qitem"><span class="qn">9</span><p data-edit="s13.q9">AAP 전담 인력과 기술 조직의 규모, 파트너 관계는 어떻습니까.</p></div>
-          <div class="qitem"><span class="qn">10</span><p data-edit="s13.q10">이 사업의 <strong>스폰서, 예산, 의사결정 일정</strong>은 어떻게 됩니까.</p></div>
+          <div class="qitem"><span class="qn">8</span><p data-edit="s11.q8">구축 단가나 인력 단가의 감이 있습니까. <strong>목표 매출이나 투자 규모</strong>가 정해져 있습니까.</p></div>
+          <div class="qitem"><span class="qn">9</span><p data-edit="s11.q9">AAP 전담 인력과 기술 조직의 규모, 파트너 관계는 어떻습니까.</p></div>
+          <div class="qitem"><span class="qn">10</span><p data-edit="s11.q10">이 사업의 <strong>스폰서, 예산, 의사결정 일정</strong>은 어떻게 됩니까.</p></div>
         </div>
       </div>
     </div>
-    <div class="banner amber" style="margin-top:14px"><span class="blab" style="color:var(--amber)">다음</span><span data-edit="s13.foot">이 슬라이드는 답을 받아 채웁니다. 편집 켜기로 답을 직접 입력하면 자동 저장되며, Export로 백업합니다.</span></div>
+    <div class="banner amber" style="margin-top:14px"><span class="blab" style="color:var(--amber)">다음</span><span data-edit="s11.foot">이 슬라이드는 내일 답을 받아 채웁니다. 편집 켜기로 답을 직접 입력하면 자동 저장되며, Export로 백업합니다.</span></div>
   </div>
 </section>
 
@@ -729,7 +605,7 @@ body.editing .edit-only{display:inline}
 
 <div id="navbar">
   <button id="prevBtn">‹ 이전</button>
-  <span id="pageInd">1 / 13</span>
+  <span id="pageInd">1 / 11</span>
   <button id="nextBtn">다음 ›</button>
   <span id="dots"></span>
 </div>
@@ -741,7 +617,7 @@ body.editing .edit-only{display:inline}
 (function(){
   "use strict";
   var LS_KEY = "aap_strategy_v1";
-  var TOTAL = 13;
+  var TOTAL = 11;
 
   /* ===== chip sourcing data (slide 3 details) — md 2장 chip 단위 상세 기준 잠정 ===== */
   var SRC_ORDER = ["own","buy","partner","tbd"];
