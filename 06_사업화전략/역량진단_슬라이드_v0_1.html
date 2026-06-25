@@ -105,6 +105,9 @@ td.risk{color:var(--red);font-weight:700}
 .cv-st b{display:block;font-size:12.5px;font-weight:900;color:var(--teal-strong);margin-bottom:5px;letter-spacing:.02em}
 .cv-st span{font-size:12px;color:var(--sub);line-height:1.55}
 .cover .cv-foot{position:absolute;bottom:34px;left:64px;font-size:11.5px;color:var(--muted);line-height:1.6;max-width:900px}
+.cover .cv-ref{position:relative;margin-top:18px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:10.5px;color:var(--muted)}
+.cover .cv-ref b{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--teal-strong)}
+.cover .cv-ref span{background:var(--gray-50);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-weight:600}
 
 /* ===== Chips (slide 3 sourcing detail) ===== */
 .legend{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:2px 0 10px;font-size:11px;font-weight:700;color:var(--muted)}
@@ -305,10 +308,11 @@ body.editing .edit-only{display:inline}
     <h1 data-edit="s1.title">AAP 사업화 전략<br><span class="hl">역량 진단과 확보 전략</span></h1>
     <p class="cv-def" data-edit="s1.def">AAP의 8계층 기술 구현 범위를 사업 관점으로 옮긴 문서입니다. 각 역량을 두고 <strong>우리가 실제로 할 수 있는지, 경쟁사는 어떻게 하는지, 고객이 값을 매기는지, 우리는 어떻게 확보할지</strong>를 봅니다.</p>
     <div class="cv-strengths">
-      <div class="cv-st"><b data-edit="s1.st1h">자체로 확실한 세 축</b><span data-edit="s1.st1b">에이전트 코어(L3), 시스템 연동(L5, SI 본업), 거버넌스 설계(L7)는 자체입니다.</span></div>
+      <div class="cv-st"><b data-edit="s1.st1h">자체로 확실한 세 축</b><span data-edit="s1.st1b">에이전트 코어(L3), 시스템 연동(L5, SI 본업)은 자체이고, 거버넌스 설계(L7)는 설계가 자체·인증은 준비 중입니다.</span></div>
       <div class="cv-st"><b data-edit="s1.st2h">외부 의존은 L4 한 축</b><span data-edit="s1.st2b">온톨로지만 제휴로 채우고(관계 있음), 인증은 BEAST로 준비 중입니다.</span></div>
       <div class="cv-st"><b data-edit="s1.st3h">진입은 관계 자산</b><span data-edit="s1.st3b">KT그룹과 진흥기관, 협회 관계를 거점으로 삼습니다.</span></div>
     </div>
+    <div class="cv-ref"><b>정합 기준</b><span>8계층 아키텍처 PNG · 260608</span><span>고객용 설명 proactive v0.7</span><span>실행 시연 runtime builder v0.58</span></div>
     <div class="cv-foot" data-edit="s1.foot">기술 실무진과 임원이 같은 문서로 판단하도록 구성했습니다. 표시 확인 필요는 자사 내부 정보가 필요한 부분이며, 답을 받으면 채우고 표시를 지웁니다.</div>
   </div>
 </section>
@@ -321,7 +325,7 @@ body.editing .edit-only{display:inline}
       <div>
         <p class="kicker" data-edit="s2.kick">요약</p>
         <h2 data-edit="s2.title">전략 한눈에</h2>
-        <p class="lead" data-edit="s2.lead">시장은 검증을 넘어 운영으로 이동합니다. 관계가 있는 거점에서 운영 레퍼런스를 먼저 만들고, <strong>외부 의존은 L4 한 축이라 진행 중인 제휴로 메웁니다.</strong></p>
+        <p class="lead" data-edit="s2.lead">시장은 검증을 넘어 운영으로 이동합니다. 관계가 있는 거점에서 운영 레퍼런스를 먼저 만들고, <strong>외부 의존은 L4 한 축이라 진행 중인 제휴로 메웁니다.</strong> 본 전략은 8계층 아키텍처를 바꾸는 것이 아니라 Build·Buy·Partner·Roadmap으로 해석한 것입니다.</p>
       </div>
     </div>
     <div class="grid-3">
@@ -329,7 +333,7 @@ body.editing .edit-only{display:inline}
       <div class="card accent"><span class="badge">우리 위치</span><p data-edit="s2.c2">자체로 확실한 곳은 셋, <strong>에이전트 코어(L3), 시스템 연동(L5), 거버넌스 설계(L7)</strong>입니다. 외부에 기대는 축은 지식 시맨틱(L4) 하나로 제휴 관계가 이미 있고, L7은 인증만 남았습니다.</p></div>
       <div class="card warn"><span class="badge">핵심 갭</span><p data-edit="s2.c3"><strong>L4 온톨로지 확보와 ISO 42001 인증</strong> 둘입니다. 둘 다 미확보이나 진행 중으로, L4는 제휴 관계가 있고 인증은 BEAST로 준비 중입니다. 리드 고객이 공통으로 온톨로지를 원해 L4가 가장 시급합니다.</p></div>
       <div class="card"><span class="badge">도메인 초점</span><p data-edit="s2.c4"><strong>변수 기반 의사결정 지원</strong>입니다. 변수에 따라 선택지와 효과가 어떻게 달라지는지를 미리, 투명하게 보는 업무입니다. 은행 여신, 손해사정, 회의는 거점에서 내립니다.</p></div>
-      <div class="card"><span class="badge">차별화</span><p data-edit="s2.c5">온톨로지 깊이로 Palantir와 싸우지 않습니다. <strong>비싸서 못 가는 중견, 준정부, 규제 산업에 염가로 작게 진입</strong>하고, 결정론의 투명과 재현, 한국 규제 적합으로 이깁니다.</p></div>
+      <div class="card"><span class="badge">차별화</span><p data-edit="s2.c5">온톨로지 깊이로 Palantir의 강점 영역과 정면 경쟁하지 않습니다. <strong>비싸서 못 가는 중견, 준정부, 규제 산업에 염가로 작게 진입</strong>하고, 결정론의 투명과 재현, 한국 규제 적합으로 이깁니다.</p></div>
       <div class="card"><span class="badge">피치와 실증</span><p data-edit="s2.c6">온톨로지라는 기술이 아니라 <strong>고객 업무를 Agentic Operation 수준으로 격상</strong>시키는 것을 팝니다. 메타 AAP로 그 자리에서 시연합니다. 온톨로지는 제휴로 채웁니다.</p></div>
     </div>
     <div class="teal-line"><span data-edit="s2.kmh">한 수</span><span style="display:inline" data-edit="s2.km">관계가 있는 <strong>KT그룹과 기존 고객에서 운영 레퍼런스를 먼저 만듭니다.</strong> 외부 의존은 L4 한 축이라 진행 중인 제휴로 메우고, 인증은 준비 중인 것을 AAP로 확대합니다.</span></div>
@@ -394,6 +398,7 @@ body.editing .edit-only{display:inline}
         </tr>
       </tbody>
     </table>
+    <div class="banner amber" style="margin-top:12px"><span class="blab" style="color:var(--amber)">주의</span><span data-edit="s3.note">아키텍처 중요도와 자체 보유 수준은 다릅니다. <strong>L4는 AAP 차별화가 발생하는 핵심 계층</strong>이며, 자체 보유가 낮다는 것이 덜 중요하다는 뜻이 아닙니다. 단기 확보 방식이 자체 단독 개발이 아니라 제휴·전문가 검수·도메인 하니스 조합이라는 의미입니다.</span></div>
     <details class="det">
       <summary data-edit="s3.dsum">계층별 chip 단위 상세 — 각 칩을 눌러 소싱(자체 → 도입 → 제휴 → 미정)을 지정합니다</summary>
       <div class="det-body">
@@ -493,7 +498,7 @@ body.editing .edit-only{display:inline}
     </div>
     <div class="grid-4" style="margin-top:11px">
       <div class="card accent"><span class="badge">이깁니다 1</span><h3 data-edit="s6.w1h">가격과 접근성</h3><p data-edit="s6.w1b">Palantir는 큰 기업이 비싸게 사는 무거운 플랫폼입니다. 그것이 과하거나 비싼 <strong>중견, 준정부, 규제 산업</strong>이 우리 자리입니다.</p></div>
-      <div class="card accent"><span class="badge">이깁니다 2</span><h3 data-edit="s6.w2h">투명성과 재현성</h3><p data-edit="s6.w2b">Palantir의 추론은 무겁습니다. 우리는 <strong>결정론으로 왜 이 결과인지를 재현하고 방어</strong>합니다. 공공과 규제 고객에게 핵심입니다.</p></div>
+      <div class="card accent"><span class="badge">이깁니다 2</span><h3 data-edit="s6.w2h">투명성과 재현성</h3><p data-edit="s6.w2b">Palantir식 전면 온톨로지·대형 구축은 부담이 큽니다. 우리는 <strong>결정론과 HITL, 감사로 왜 이 결과인지를 재현하고 방어</strong>합니다. 공공과 규제 고객에게 핵심입니다.</p></div>
       <div class="card accent"><span class="badge">이깁니다 3</span><h3 data-edit="s6.w3h">한국 규제와 폐쇄망</h3><p data-edit="s6.w3b"><strong>KT 보안, 소버린, 온프레미스, 조달, SI 손길</strong>이 한국 시장에 맞습니다.</p></div>
       <div class="card accent"><span class="badge">이깁니다 4</span><h3 data-edit="s6.w4h">가벼운 진입</h3><p data-edit="s6.w4b">온톨로지를 다 만들지 않아도 <strong>도메인 팩 단위로 작게 시작</strong>합니다. 외부에 기대는 것은 온톨로지 한 축이고, 분해 승인 결정론 기록의 운영층은 자체입니다.</p></div>
     </div>
@@ -507,7 +512,7 @@ body.editing .edit-only{display:inline}
     <div class="shead">
       <div class="snum">07</div>
       <div>
-        <p class="kicker" data-edit="s7.kick">온톨로지 기반 의사결정과 AAP의 차이</p>
+        <p class="kicker" data-edit="s7.kick">온톨로지는 기반, AAP는 운영층</p>
         <h2 data-edit="s7.title">둘은 대립이 아니라 층입니다</h2>
         <p class="lead" data-edit="s7.lead">둘 다 온톨로지로 의미와 관계를 구조화하고 근거를 제시합니다. AAP는 온톨로지를 대체하지 않고 <strong>그 위에 운영 층을 얹습니다.</strong> 기준은 호르무즈 데모가 목표로 하는 완성된 온톨로지 기반 의사결정 시스템입니다.</p>
       </div>
@@ -561,9 +566,9 @@ body.editing .edit-only{display:inline}
       </div>
     </div>
     <div class="grid-3">
-      <div class="card"><span class="badge">피치</span><h3 data-edit="s8.c1h">격상된 업무</h3><p data-edit="s8.c1b">고객 업무를 프로세스 단위로 분해하고, 그것을 <strong>Agentic Operation 수준으로 격상</strong>시켜 자동화하는 모습(사람 검토 포함)을 보여 줍니다. 온톨로지는 그 아래에서 의미를 잡는 기반입니다.</p></div>
+      <div class="card"><span class="badge">피치</span><h3 data-edit="s8.c1h">격상된 업무</h3><p data-edit="s8.c1b">고객 업무를 프로세스 단위로 분해하고, 그것을 <strong>Agentic Operation 수준으로 격상</strong>시켜 통제된 운영 흐름으로 전환하는 모습(사람 검토 포함)을 보여 줍니다. 온톨로지는 그 아래에서 의미를 잡는 기반입니다.</p></div>
       <div class="card accent"><span class="badge">실증</span><h3 data-edit="s8.c2h">메타 AAP 시연</h3><p data-edit="s8.c2b">고객 업무 설명을 받아 그 자리에서 프로세스로 분해하고, AAP가 어떻게 처리하는지 시각적으로 보여 줍니다. <strong>6개 도메인 하니스가 엔진</strong>입니다. <span class="chk">확인 필요</span> 즉석 시연 수준의 시각화는 추가 개발이 필요합니다.</p></div>
-      <div class="card"><span class="badge">온톨로지 제휴</span><h3 data-edit="s8.c3h">솔트룩스, E8, 서버키트</h3><p data-edit="s8.c3b">온톨로지는 직접 만들지 못해 <strong>제휴로 채웁니다.</strong> 가장 강한 영업은 설명이 아니라 시연이며, Palantir AIP가 시각적 경험으로 설득하듯 우리도 보이는 결과로 설득합니다.</p></div>
+      <div class="card"><span class="badge">온톨로지 제휴</span><h3 data-edit="s8.c3h">솔트룩스, E8, 서버키트</h3><p data-edit="s8.c3b">온톨로지 전문 역량은 <strong>제휴로 보완합니다.</strong> 가장 강한 영업은 설명이 아니라 시연이며, Palantir AIP가 시각적 경험으로 설득하듯 우리도 보이는 결과로 설득합니다.</p></div>
     </div>
     <div class="banner amber" style="margin-top:14px"><span class="blab" style="color:var(--amber)">데모 방향 주의</span><b data-edit="s8.dh">온톨로지 중심 데모는 AAP 데모가 아닙니다</b> — <span data-edit="s8.db">온톨로지를 전면에 세운 데모는 약점(L4)을 앞세우고 Palantir와 겹칩니다. AAP 데모는 반대로 온톨로지는 아래에서 받치고, <strong>변수에 따른 재계산, 결정론 판정, HITL, 투명한 근거</strong>를 전면에 둡니다.</span></div>
     <p class="fnote" data-edit="s8.foot"><b>도메인 선정</b> — 포화된 공급망 what-if(Kinaxis, o9, Coupa)을 피하고, <strong>공공 · 준정부의 정책 · 예산 · 심사 의사결정</strong>으로 잡습니다. 온톨로지가 무엇인가가 아니라 그 위에서 업무가 어떻게 자동화되고 통제되는가를 보여 주어야 합니다.</p>
