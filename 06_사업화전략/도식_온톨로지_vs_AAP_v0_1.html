@@ -13,7 +13,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>온톨로지 기반 의사결정과 AAP의 차이</title>
+<title>온톨로지는 기반, AAP는 운영층</title>
 <style>
 :root{
   --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
@@ -83,6 +83,9 @@ body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacS
 .commc .cb{font-size:10.5px;color:var(--gray-600);line-height:1.45}
 .layer-onto .sharednote{font-size:10px;color:var(--muted);margin:9px 0 0;line-height:1.5}
 .layer-onto .sharednote strong{color:var(--gray-700);font-weight:800}
+.lh .layer-chips{margin-left:auto;font-size:9px;font-weight:900;letter-spacing:.03em;border-radius:5px;padding:3px 9px}
+.layer-aap .lh .layer-chips{color:var(--teal-strong);background:#fff;border:1px solid var(--teal)}
+.layer-onto .lh .layer-chips{color:var(--gray-700);background:#fff;border:1px solid var(--line)}
 
 /* ===== 하단 띠 : 세 관점 + 특장점 한 문장 ===== */
 .footzone{margin-top:13px;display:grid;grid-template-columns:1.15fr 1fr;gap:12px;align-items:stretch}
@@ -109,7 +112,7 @@ body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacS
   <div class="slide-inner">
 
     <div class="shead">
-      <p class="kicker">온톨로지 기반 의사결정과 AAP의 차이</p>
+      <p class="kicker">온톨로지는 기반, AAP는 운영층</p>
       <h2>둘은 대립이 아니라 <span class="hl">층</span>입니다</h2>
       <p class="lead">둘 다 온톨로지로 의미와 관계를 구조화하고, 변수에 따른 의사결정을 도우며, 근거를 제시합니다. AAP는 온톨로지를 버리는 것이 아니라 <strong>그 위에 운영 층을 얹는 것</strong>이며, 온톨로지는 AAP의 지식 기반입니다.</p>
     </div>
@@ -122,6 +125,7 @@ body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacS
           <span class="tag">AAP</span>
           <b>운영 층</b>
           <span>분석을 통제된 운영으로, 매일 돌리고 재현·감사 가능하게 기록합니다.</span>
+          <span class="layer-chips">L3·L5·L7 · 기록 L6 · 인프라 L8</span>
         </div>
         <div class="oploop">
           <div class="opstep">분해</div><div class="opsep">›</div>
@@ -162,13 +166,14 @@ body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacS
           <span class="tag">공통 기반</span>
           <b>온톨로지 기반 의사결정</b>
           <span>무엇을 해야 하는지 분석합니다.</span>
+          <span class="layer-chips">L4 지식·시맨틱</span>
         </div>
         <div class="common3">
           <div class="commc"><p class="ct">의미·관계 구조화</p><p class="cb">온톨로지로 의미와 관계를 구조화합니다.</p></div>
           <div class="commc"><p class="ct">변수 기반 의사결정</p><p class="cb">변수에 따른 의사결정을 돕습니다.</p></div>
           <div class="commc"><p class="ct">근거 제시</p><p class="cb">판단의 근거를 제시합니다.</p></div>
         </div>
-        <p class="sharednote"><strong>호르무즈 프로토타입이 지향하는 완성된 온톨로지 기반 의사결정 시스템</strong>이 이 층입니다. AAP의 지식 기반으로 그대로 받칩니다.</p>
+        <p class="sharednote"><strong>호르무즈 프로토타입이 지향하는 완성된 온톨로지 기반 의사결정 시스템</strong>이 이 층입니다. AAP의 지식 기반(L4)으로 그대로 받칩니다. 온톨로지는 AAP의 약점이 아니라 L4 기반입니다. 다만 모든 온톨로지 기술을 단독 보유한다는 뜻은 아니며, 업무·정책·시스템 맥락 설계는 kt ds가 주도하고 전문 온톨로지·KG 역량은 파트너와 조합합니다.</p>
       </div>
 
     </div>
