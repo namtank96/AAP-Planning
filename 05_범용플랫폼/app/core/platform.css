@@ -2401,6 +2401,25 @@ body.wfrun-collapsed .wfb-canvas .wfb-handle.run{display:flex;}
 /* 그룹 헤더 — 자간·위계 정돈(섹션 구분 또렷) */
 .ibx-gh{ letter-spacing:.04em; }
 
+/* =========================================================================
+   structural v0.5 · 모노톤을 "확실히 보이게" — 구조 전환(평면 리스트·타이포·밀도)
+   인박스: 분리된 카드 무더기 → 상태별 1패널 안 평면 리스트(Linear/Notion 테이블 감).
+   = before/after 가 누가 봐도 다르게. CSS-only·DOM·JS훅 불변.
+   ========================================================================= */
+.inbox{ gap:22px; }
+/* 상태 그룹 = 하나의 패널, 행은 하인라인 구분(카드 분리·그림자 ✕) */
+.ibx-rows{ gap:0; background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.ibx-row{ border:0; border-bottom:1px solid var(--line); border-radius:0 !important;
+  box-shadow:none !important; padding:13px 16px; transform:none !important; }
+.ibx-rows .ibx-row:last-child{ border-bottom:0; }
+.ibx-row:hover{ background:var(--surf); border-color:var(--line); }
+/* 검토대기 = 패널 안 좌측 슬레이트 레일(주목, 색 채움 ✕) */
+.ibx-grp:has(.gh-dot.st-wait) .ibx-row{ border-left:2px solid var(--slate); }
+/* 타이포 — 제목 또렷·타이트(Linear 톤), 아이콘 칩 차분(테두리만) */
+.ibx-t{ font-size:13.5px; font-weight:750; letter-spacing:-.2px; }
+.ibx-gh{ font-size:11px; letter-spacing:.06em; padding-left:2px; }
+.ibx-ic{ background:var(--surf); border:1px solid var(--line); border-radius:8px; width:32px; height:32px; }
+
 /* (c) detail sheet(run 뷰) 전환 — 인박스→상세 진입이 미끄러지듯(shadcn Sheet 톤).
    .view 는 position:absolute/inset:0. [hidden]=display:none 라 표시 시점에만 등장 모션. */
 .view[data-view="run"]:not([hidden]) .runtop{ animation:rsheet-in .26s cubic-bezier(.4,0,.2,1) both; }

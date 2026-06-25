@@ -69,6 +69,13 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### 전체 디자인 = 미니멀 모노톤 전환 v0.4~v0.5 (260625, aap-design · 유저 직접지시) 〔디자인〕
+> 유저 피드백: v0.3 시각변화 미미("하나도 안 바뀜"). 원인 = ① 1px 미세조정 no-op ② 이미 밝은 UI에 모노톤은 원래 미묘. 유저 방향 선택 = **미니멀 모노톤(Linear 정수)** + "확 바뀌게" = 색만 빼지 말고 **구조 전환**.
+- **v0.4 모노톤 시스템**: `--shadow` 하인라인(전 뷰 그림자↓), 상태배지=중립 pill+색 dot 하나, 진행바·타입칩·타입배지·nav active 중립화, **teal=주액션·nav 인디케이터만**.
+- **v0.5 구조 전환**(인박스): 분리 카드 무더기 → **상태별 1패널 안 평면 리스트**(행=하인라인, 검토대기=좌측 슬레이트 레일), 타이포 타이트. = before/after 명확.
+- **단일 writer 분담 확정**(유저 승인): **디자인·CSS=aap-design(이 트랙) / 로직·구조=채용 세션(core.js·recruiting.js)**. platform.css=디자인, platform-fix.css=채용 → 상호 비간섭. [[feedback-single-writer-app]]
+- **남은 후속**: 잔여 뷰(run·workflow·govern·domain pack) 색 채움을 같은 시스템으로 확장(헤드리스 캡처 불가 → 유저 클릭 검토 기반). 신규 hex 0·DOM/JS훅 불변.
+
 ### 인박스 운영 콘솔 시각 고도화 — platform.css `aap-design v0.3` override (260625, aap-design · 유저 직접지시) 〔디자인〕
 > 유저 요구: index.html(운영 콘솔)을 상용 SaaS 수준으로 — 인박스→상세→액션 흐름. 클라우드 예약 루틴이 push 실패(CCR 임시환경 권한)로 산출물 유실 → 로컬 aap-design로 직접 수행. **platform.css 말미 append만**(DOM·id·class·JS 셀렉터 불변, 신규 hex 0·토큰만).
 - **(a) 인박스 카드 밀도·위계**: 행 패딩/갭 압축, 제목 위계(자간), 메타 1줄 tabular·말줄임, 진행 막대 슬림+% tabular. (Linear 인박스·shadcn Tasks 패턴)
@@ -85,7 +92,9 @@
 - **완료(검증)**: **#1** `setView`·`openCase`에 `closeNewCase()` 추가(뷰 전환·케이스 진입 시 팝오버 닫힘). **#3** `.op-strip` `nowrap`+가로스크롤·`.op-snode` 컴팩트(9단계 2줄 wrap→단일 라인) + **`.op-steer{align-items:stretch}`**(우선순위·필터·면접범위 3박스 높이 레벨 맞춤). platform-fix.css. 헤드리스 검증(`?pack=recruiting`+`AAP_CORE.load('recruiting');go('screen'/'interview')`) OK.
 - **재진단(중요)**: **근거·로직은 없는 게 아니라 단계별로 노출이 들쭉날쭉.** 면접 조율(interview)=캘린더 교차 근거·HITL이 **본 화면 인라인**으로 잘 나옴(좋은 모델). 반면 매칭/스크리닝(screen)=후보 근거(candDetail)·`evidDrill`(근거 4유형)이 **모달/aside에만**. → #5 = 매칭 단계 후보 근거·로직을 interview처럼 본 화면 인라인 + 세부만 드릴.
 - **진단(중요)**: 근거·로직 데이터는 채용 팩에 **이미 풍부**(WORK ops `ev{data,rule,logic}`·detail 테이블·컷 시뮬·verdict basis) — 단 **RUN 서피스가 아니라 모달(HITL gate·done)에만** 올라옴. opstage=`{steer(op-steer 기준),main(op-wh 후보랭킹+op-hitlbar 인라인 HITL),aside}`. 후보=막대(스킬/경력/도메인 매칭 기여)+토큰, 그러나 산식·컷·가중 '왜'는 안 드릴.
-- **남음(이어서)**: **#5** 후보/판정 클릭→사용자 언어 근거·로직 드릴(회의 데모 '근거 보기' 차용). **#4** HITL gate 모달→서피스 인라인(op-hitlbar 확장)+세부만 모달. **#2** 새업무 오버레이=입력+실시간 유형 인식 강조+유형 칩 quick-start. (single console·no-2panel 원칙 [[feedback-no-two-panel-console]] 준수)
+- **#5 1차 완료(검증)**: 매칭 후보 행(`matchRows`)에 **판정 칩(통과/보류/탈락=`screenVerdict(c)`)+이유(why)+기여(스킬·경력·도메인 contrib)+'근거 보기' cue** 인라인 추가(`.op-rv/.op-rwhy/.op-rbd-t/.op-rmore` platform.css L661). DOM 검증 OK. 판단 근거·로직이 모달뿐 아니라 본 화면에.
+- **남음(이어서)**: **#5-2** 후보 클릭 candDetail/evidDrill 세부 정돈. **#4** 숏리스트 gate 풀모달(컷·가중·통과 미리보기)→본 화면(op-hitlbar+컷 조정)+세부만 모달. **#2** 새업무 오버레이=입력+실시간 유형 인식+유형 칩 quick-start.
+- **★★동시편집 경보**: aap-design 세션이 같은 날 `platform.css` 끝(L2311~ v0.3 시각 override) 동시 편집 중. 이번엔 영역 분리(나=L661·core.js·recruiting.js·platform-fix.css)로 무손실이나 **단일 writer 위반 상태 — platform.css 동시 쓰기 충돌 위험**. 코디네이션 필요(커밋으로 베이스 고정 or 한 세션만).
 
 
 ### 지시서 반영 ① 인박스 = 운영 콘솔 재설계 (코어, 260624) 〔기획·UX〕
