@@ -2369,6 +2369,10 @@ body.wfrun-collapsed .wfb-canvas .wfb-handle.run{display:flex;}
 /* 토글/옵션 선택상태 통일 — 멀티색(teal/blue/amber 제각각) → 단일 ink (ty-chip·asset-chip 와 일관) */
 .op-opt.on, .op-opt.flt.on, .op-opt.br.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
 
+/* Agent Ops KPI — 카테고리 색(성능 blue·비용 amber·품질 teal) = 장식 → 중립. 카테고리는 라벨 텍스트로 */
+.ao-card.perf, .ao-card.cost, .ao-card.qual{ border-top-color:var(--border); }
+.ao-card.perf .ao-grp, .ao-card.cost .ao-grp, .ao-card.qual .ao-grp{ color:var(--faint); }
+
 /* 카드 — 그림자 빼고 테두리로, hover=중립 강조(teal 남발 ✕) */
 .ibx-row{ box-shadow:none; }
 .ibx-row:hover{ border-color:var(--slate); box-shadow:0 2px 8px rgba(15,23,42,.06); transform:none; }
