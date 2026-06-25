@@ -76,18 +76,46 @@
    기존 8.5~16px 난립을 토큰 단계로 수렴. 본문 상향(13), 마이크로만 작게(9~11 UPPER). */
 /* 단계 strip(§5.3) — 키우고 또렷하게 */
 .op-strip-wrap{ padding-top:11px; padding-bottom:11px; }
-.op-snode{ font-size:var(--fs-body); padding:7px 12px; border-radius:var(--r-node); }
+/* ★ 9단계가 2줄로 줄바꿈되던 문제 → 단일 라인(넘치면 가로 스크롤, 스크롤바 숨김). 노드는 줄바꿈/축소 ✕ */
+.op-strip{ flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+.op-strip::-webkit-scrollbar{ display:none; }
+.op-strip .op-snode, .op-strip .op-sar{ flex:0 0 auto; }
+.op-snode{ font-size:var(--fs-sub); padding:6px 10px; border-radius:var(--r-node); white-space:nowrap; }
 .op-snode .op-sl{ letter-spacing:-.01em; }
 .op-sn{ width:21px; height:21px; font-size:11px; }
 .op-sn .ic{ width:12px; height:12px; }
 .op-snode.done, .op-snode.on, .op-snode.gate.on{ font-weight:800; }
 .op-snode.wait{ opacity:.62; }   /* 위계: 대기 흐리게(§5.3 현재/완료/대기) */
 .op-sar .ic{ width:14px; height:14px; }
-/* 의도 steering 바 */
-.op-steer{ padding-top:10px; padding-bottom:10px; gap:16px; }
+/* 의도 steering 바 — 3박스(우선순위·필터·면접범위) 높이 정렬(레벨 맞춤) */
+/* (2)(4) 옵션 패널 컴팩트 — 세로 쌓임(공간 낭비·옵션처럼 안 보임) → 가로 칩 행.
+   각 그룹 = [라벨] [칩][칩]… 한 줄. 그룹은 가로로 흐르다 폭 부족 시만 줄바꿈. */
+.op-steer{ padding-top:8px; padding-bottom:8px; gap:8px 18px; align-items:center; flex-wrap:wrap; }
+.op-steer .op-sg{ flex-direction:row; align-items:center; flex-wrap:wrap; gap:6px; background:transparent; border:none; padding:0; }
+.op-steer .op-sg .op-lab{ margin-right:3px; flex:0 0 auto; white-space:nowrap; }
+.op-steer .op-snote{ align-self:center; margin-left:auto; }
 .op-sg .op-lab{ font-size:var(--fs-micro); letter-spacing:.05em; }
-.op-opt{ font-size:12px; padding:6px 11px; border-radius:8px; }
+.op-opt{ font-size:12px; padding:5px 11px; border-radius:16px; }   /* 칩형(클릭 가능 신호) */
 .op-snote{ font-size:var(--fs-sub); }
+/* #5 매칭 후보 행 인라인 판정 칩·근거 이유(★레인=platform-fix; platform.css 중복은 aap-design이 정리) */
+.op-rv{ font-size:9.5px; font-weight:800; border-radius:5px; padding:1px 7px; flex:0 0 auto; }
+.op-rv.ok{ color:#15803d; background:#e7f7ee; } .op-rv.warn{ color:var(--amber-ink); background:var(--amber-soft); } .op-rv.risk{ color:var(--red); background:var(--red-soft); }
+.op-rwhy{ font-size:10.5px; color:var(--muted); margin-top:3px; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.op-rbd-t{ color:var(--faint); }
+.op-rmore{ display:inline-flex; align-items:center; gap:3px; margin-left:4px; font-size:10px; font-weight:700; color:var(--aap); cursor:pointer; }
+.op-rmore .ic{ width:11px; height:11px; } .op-row:hover .op-rmore{ text-decoration:underline; }
+/* #2 새 업무 오버레이 — 빈 상태 '자주 맡기는 업무' 유형 칩 */
+.nc-chips{ display:flex; flex-wrap:wrap; gap:6px; margin:7px 0 4px; }
+.nc-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--slate); background:#fff; border:1px solid var(--border); border-radius:20px; padding:6px 12px; cursor:pointer; font-family:inherit; }
+.nc-chip:hover{ border-color:var(--aap); color:var(--aap-ink); background:var(--surf); }
+.nc-chip .tc-dot{ width:7px; height:7px; border-radius:50%; background:var(--aap); flex:0 0 auto; }
+/* (1) 새 업무 오버레이 — 닫기 버튼 + textarea 크기조절 핸들 제거 */
+.nc-menu{ position:relative; }
+.ncm-x{ position:absolute; top:10px; right:10px; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--muted); border-radius:7px; cursor:pointer; padding:0; }
+.ncm-x:hover{ background:var(--surf); color:var(--slate); }
+.ncm-x .ic{ width:16px; height:16px; }
+.ncm-h{ padding-right:28px; }
+.nc-ta{ resize:none; }
 /* 본문 헤더·근거 라벨 */
 .op-wh .op-t, .ct-wh .op-t{ font-size:var(--fs-h); }
 .op-wh .op-c, .ct-wh .op-c{ font-size:var(--fs-sub); }
@@ -127,6 +155,18 @@
 .op-hitlbar.auto{ background:var(--green-soft); }
 .op-hbtn{ border-radius:var(--r-node); font-size:var(--fs-body); }
 .op-hi{ font-size:var(--fs-body); }
+/* #4 본 화면 인라인 HITL — 게이트 도달 시 결정 선택지를 모달 ✕ 본 화면에 노출. 세부 기준만 모달.
+   결정 바를 한 단계 강조(amber 굵은 보더+은은한 글로우)해 '여기가 책임 지점'임을 알린다. */
+.op-hitlbar.gate-await{ border-width:1.5px; border-color:var(--amber); box-shadow:0 4px 16px rgba(217,119,6,.13); align-items:flex-start; }
+.op-hitl-tag{ margin-left:7px; font-size:9.5px; font-weight:800; color:#fff; background:var(--amber); border-radius:5px; padding:1px 7px; letter-spacing:.02em; }
+.op-hitl-acts{ margin-left:auto; display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+.op-hitl-acts .op-hbtn{ margin-left:0; }                 /* acts 컨테이너가 우측 정렬 — 개별 버튼은 해제 */
+.op-hbtn.alt{ color:var(--amber-ink); background:#fff; border:1.5px solid var(--amber-border); box-shadow:none; }
+.op-hbtn.alt:hover{ background:var(--amber-soft); filter:none; }
+.op-hbtn.ghost{ color:var(--slate); background:#fff; border:1px solid var(--border); box-shadow:none; }
+.op-hbtn.ghost:hover{ border-color:var(--aap); color:var(--aap-ink); background:var(--surf); filter:none; }
+.op-hbtn.sm{ font-size:11.5px; padding:7px 11px; display:inline-flex; align-items:center; gap:5px; }
+.op-hbtn.ghost.sm .ic{ width:13px; height:13px; }
 /* aside 보조 레일 — 업무 표면 대비 차분하게(보조 신호) */
 .op-aside{ background:var(--surf); }
 .op-graph, .op-basis{ box-shadow:none; }

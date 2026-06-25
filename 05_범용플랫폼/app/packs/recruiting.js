@@ -673,12 +673,14 @@
       const bd=breakdown(c,C);  /* [{k,raw,w,contrib}] 스킬/경력/도메인 */
       const tot=bd.reduce((s,b)=>s+b.contrib,0)||1;
       const fs=flagsOf(c), top=fs[0], warn=top&&top.t!=='ok';
+      const v=screenVerdict(c);   /* 판정(통과/보류/탈락)+이유 — 본 화면 인라인 노출(#5) */
       const cutline=(i===cut&&cut<arr.length)?' cutline':'';
       return `<div class="op-row${cutline}" data-flip="${c.id}" data-cand="${c.id}">
         <span class="op-rk">${i+1}</span>
         <span class="recr-av">${c.ini}</span>
-        <div class="op-rmain"><div class="op-rn">${c.name}${warn?`<span class="op-rflag ${top.t}">${top.ko}</span>`:''}</div>
-          <div class="op-rc">${c.yrs}년 · ${c.cur} · ${c.dom}${isRemote(c)?' · 재택':''}</div></div>
+        <div class="op-rmain"><div class="op-rn">${c.name}<span class="op-rv ${v.t}">${v.ko}</span>${warn?`<span class="op-rflag ${top.t}">${top.ko}</span>`:''}</div>
+          <div class="op-rc">${c.yrs}년 · ${c.cur} · ${c.dom}${isRemote(c)?' · 재택':''}</div>
+          <div class="op-rwhy">${v.why}<span class="op-rbd-t"> · 기여 스킬 ${bd[0].contrib}·경력 ${bd[1].contrib}·도메인 ${bd[2].contrib}</span><span class="op-rmore">${I('search')}근거 보기</span></div></div>
         <div class="op-bd" title="스킬 ${bd[0].contrib} · 경력 ${bd[1].contrib} · 도메인 ${bd[2].contrib}">
           <i class="sk" style="width:${bd[0].contrib/tot*100}%"></i><i class="ca" style="width:${bd[1].contrib/tot*100}%"></i><i class="dm" style="width:${bd[2].contrib/tot*100}%"></i></div>
         <div class="op-rmt"><b data-numtween="m-${c.id}" data-numsuf="">${sc}</b><span>매칭</span></div>
@@ -686,14 +688,28 @@
       </div>`;
     }).join('');
   }
+  /* ── #4 게이트 인라인 결정 바 — HITL 결정을 본 화면에서(모달 ✕). 세부 기준만 '세부 보기'로 모달.
+     게이트 도달(C.S.sel===gateId && await) 시: gate.decisions 를 인라인 버튼으로 + '세부 기준 보기'.
+     그 전(매칭/슬롯 미리보기) 시: 게이트로 이동하는 안내 버튼(기존 동작 보존). */
+  function gateInlineBar(C, gateId, hi, hs, navLabel){
+    const atGate = C.S.sel===gateId && C.R.phase==='await';
+    if(!atGate){
+      return `<div class="op-hitlbar"><div><div class="op-hi">${I('user-check')}${hi}</div><div class="op-hs">${hs}</div></div>
+        <button class="op-hbtn" data-gate="${gateId}">${navLabel}</button></div>`;
+    }
+    const step=FLOW.find(s=>s.id===gateId)||{};
+    const decs=(step.gate&&step.gate.decisions)||[{key:'yes',label:'승인'},{key:'no',label:'수정 요청'}];
+    const btns=decs.map((d,i)=>`<button class="op-hbtn ${i===0?'':'alt'}" data-decide="${d.key}">${d.label}</button>`).join('');
+    return `<div class="op-hitlbar gate-await"><div><div class="op-hi">${I('user-check')}${hi}<span class="op-hitl-tag">여기서 결정</span></div><div class="op-hs">${hs}</div></div>
+      <div class="op-hitl-acts"><button class="op-hbtn ghost sm" data-gatedetail>${I('sliders-horizontal')}세부 기준 보기</button>${btns}</div></div>`;
+  }
   function opMatchMain(C){
     const arr=opRanked(C), cut=opCutN(C), w=normWeight(C), th=cutThreshold(C);
     const working=C.R.phase==='working';
     return `<div class="op-wh"><span class="op-t">후보 랭킹</span><span class="op-c">${arr.length}명 · ${WPRESET[wPresetOf(C)].lab} · 컷 ≥${th}%</span><span class="op-cut">면접 대상 ${cut}명</span></div>
       <div class="op-bdleg"><span><i class="sk"></i>스킬</span><span><i class="ca"></i>경력</span><span><i class="dm"></i>도메인</span><span class="muted">· 막대 = 매칭 기여(근거)</span></div>
       <div class="op-rows" id="opRows">${matchRows(C)}</div>
-      <div class="op-hitlbar"><div><div class="op-hi">${I('user-check')}숏리스트 확정 — 여기서 당신이 결정</div><div class="op-hs">이 기준·범위로 면접 대상 ${cut}명을 확정합니다. (책임 걸린 지점 = HITL)</div></div>
-        <button class="op-hbtn" data-gate="shortlist_gate">숏리스트 확정</button></div>`;
+      ${gateInlineBar(C,'shortlist_gate','숏리스트 확정 — 여기서 당신이 결정',`이 기준(컷 ≥${th}%)으로 면접 대상 ${cut}명을 확정합니다. 책임이 걸린 지점이라 사람이 결정합니다.`,'숏리스트 확정')}`;
   }
   function opMatchSteer(C){
     const wp=wPresetOf(C), f=intentFilt(C), sc=scopeOf(C);
@@ -790,8 +806,7 @@
         <span class="op-time">${time}</span><span class="op-panel">${iv.panel}${pn==='임원 포함'?'·임원':''}</span><span class="op-ok">가용</span></div>`;}).join('');
     return `<div class="op-wh"><span class="op-t">면접 슬롯</span><span class="op-c">충돌 0 · 후보·면접관 캘린더 교차${pref!=='무관'?` (${pref}대 우선)`:''}</span></div>
       <div class="op-slots">${slots}</div>
-      <div class="op-hitlbar"><div><div class="op-hi">${I('user-check')}면접 일정 확인 — 외부(후보) 안내 전</div><div class="op-hs">일정·패널을 확인하면 후보에게 안내가 나갑니다. (HITL)</div></div>
-        <button class="op-hbtn" data-gate="interview_gate">일정 확정·발송</button></div>`;
+      ${gateInlineBar(C,'interview_gate','면접 일정 확인 — 외부(후보) 안내 전','일정·패널을 확인하면 후보에게 안내가 나갑니다. 외부 발송 직전이라 사람이 확인합니다.','일정 확정·발송')}`;
   }
   function opIvSteer(C){
     const pref=ivSlotPref(C), pn=ivPanel(C);
@@ -832,8 +847,7 @@
         <div class="op-orow" data-flip="of-sign"><span>사이닝</span><b>${sign}</b></div>
         <div class="op-orow"><span>입사</span><b>${OFFER.start}</b></div>
         <div class="op-orow"><span>점검</span><b class="g">보상밴드 내 · 차별금지 통과</b></div></div>
-      <div class="op-hitlbar"><div><div class="op-hi">${I('user-check')}오퍼 승인 — 외부 발송 전</div><div class="op-hs">후보에게 나가는 마지막 단계. 사람이 최종 승인합니다. (HITL)</div></div>
-        <button class="op-hbtn" data-gate="offer_gate">오퍼 승인·발송</button></div>`;
+      ${gateInlineBar(C,'offer_gate','오퍼 승인 — 외부 발송 전','후보에게 나가는 마지막 단계. 사람이 최종 승인합니다.','오퍼 승인·발송')}`;
   }
   function opEvalSteer(C){
     const wk=evalWOf(C), lvl=offerLvlOf(C);
@@ -1167,6 +1181,8 @@
   const SURF_HOOKS={
     /* 근거 드릴 > 후보 상세 > HITL/done 순 우선 */
     currentCM:(S)=> S.recrEvid?'evid':(S.recrOpen?'cand':null),
+    /* #4 게이트 결정은 본 화면 인라인 → HITL 모달 자동 노출 억제. '세부 기준 보기'(recrGateDetail)일 때만 모달 허용. */
+    suppressGateModal:(S)=> !S.recrGateDetail,
     /* surface 루트(#surfHead/#surfBody)·모달(#cmodal) 공통 배선 */
     wire:(root,S,rerender)=>{
       root.querySelectorAll('[data-evid]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();S.recrEvid=e.dataset.evid;rerender();});
@@ -1175,8 +1191,12 @@
       root.querySelectorAll('[data-sort]').forEach(e=>e.onclick=()=>{S.recrSort=e.dataset.sort;rerender();});
       root.querySelectorAll('[data-filt]').forEach(e=>e.onclick=()=>{S.recrFilter=e.dataset.filt;rerender();});
       root.querySelectorAll('[data-cback]').forEach(e=>e.onclick=()=>{S.recrOpen=null;rerender();});
-      /* 결정 큐 아이템 → 해당 HITL 게이트 단계로 이동(코어 일반 메커니즘 · HITL 모달 자동 노출) */
+      /* 결정 큐 아이템 → 해당 HITL 게이트 단계로 이동(코어 일반 메커니즘) */
       root.querySelectorAll('[data-gate]').forEach(e=>e.onclick=()=>{ if(window.AAP_CORE)window.AAP_CORE.go(e.dataset.gate); });
+      /* #4 본 화면 인라인 HITL 결정(모달 ✕) — 결정 버튼은 코어 decide 를 직접 호출 */
+      root.querySelectorAll('[data-decide]').forEach(e=>e.onclick=()=>{ if(window.AAP_CORE&&window.AAP_CORE.decide)window.AAP_CORE.decide(e.dataset.decide); });
+      /* '세부 기준 보기' = 컷·가중·통과 미리보기 모달만 연다(결정 자체는 인라인) */
+      root.querySelectorAll('[data-gatedetail]').forEach(e=>e.onclick=()=>{ S.baseOnly=false; S.recrGateDetail=true; rerender(); });
       /* 'AAP가 해둔 일 · 어떻게 했는지' → 「업무 진행」 탭으로 전환(코어 일반) */
       root.querySelectorAll('[data-aapsee]').forEach(e=>e.onclick=()=>{ if(window.AAP_setWsTab)window.AAP_setWsTab('progress'); });
       /* 파이프라인 전체 보기 토글 */
@@ -1219,17 +1239,11 @@
     /* ── 의도 steering 핸들러(코어 wireSteer 가 호출) — 결정론 recompute 는 STATE 갱신만.
        반환 {intent,mono,steps?,instant?,trace?,toast?} 로 코어가 라이브 재분석/FLIP 을 구동. ── */
     steerHook:(S,key,val)=>{
-      if(key==='weight'){ const p=WPRESET[val]; if(!p)return {};
-        /* #6 결과 diff: 가중 적용 '전' 지표 먼저 캡처(S 변경 전) */
-        const Cb={S}; const thb=(typeof cutThreshold==='function')?cutThreshold(Cb):85;
-        const passB=(typeof passCount==='function')?passCount(Cb,thb):'—';
-        const topB=(typeof opRanked==='function')?(opRanked(Cb)[0]||{}).name:'';
-        S.recrWPreset=val; S.recrWeight={skill:p.skill,career:p.career,domain:p.domain};
+      if(key==='weight'){ const p=WPRESET[val]; if(!p)return {}; S.recrWPreset=val; S.recrWeight={skill:p.skill,career:p.career,domain:p.domain};
         /* 재분석을 '가중 적용 → 재산출 → 재랭킹 → 컷' 4단계로 펼쳐 각 단계 수치·근거를 보여줌(지적 1·2) */
         const Cx={S}; const pool=(typeof intentPool==='function')?intentPool(Cx):CAND;
         const th=(typeof cutThreshold==='function')?cutThreshold(Cx):85;
         const pass=(typeof passCount==='function')?passCount(Cx,th):'—';
-        const topA=(typeof opRanked==='function')?(opRanked(Cx)[0]||{}).name:'';
         return {intent:p.lab+' 우선', mono:'가중 → '+p.skill+'/'+p.career+'/'+p.domain,
           steps:[
             {t:'가중 적용',tag:'읽기',d:'스킬·경력·도메인 '+p.skill+'/'+p.career+'/'+p.domain,basis:'normWeight ← preset '+val+' · 합 100 정규화'},
@@ -1237,8 +1251,6 @@
             {t:'재랭킹',tag:'판정',d:'매칭% 내림차순 정렬',basis:'opRanked() · 동점은 종합점수 차순'},
             {t:'컷 적용',tag:'판정',d:'컷 ≥'+th+'% → 통과 '+pass+'명',basis:'shortlistIds ← match ≥ '+th+'% · 면접 대상 확정'}
           ],
-          diff:[ {label:'면접 대상(컷 통과)', from:passB+'명', to:pass+'명'},
-                 {label:'1위 후보', from:topB||'—', to:topA||'—'} ],
           trace:{st:'매칭·랭킹',t:'우선순위 · '+p.lab+' (가중 '+p.skill+'/'+p.career+'/'+p.domain+')',L:'L4',k:''}}; }
       if(key==='filter'){ const f=Object.assign({remote:false,senior:false,commerce:false}, S.recrIntentFilt||{}); f[val]=!f[val]; S.recrIntentFilt=f;
         const lab={remote:'재택 가능자만',senior:'시니어만',commerce:'커머스 경험자만'}[val];
@@ -1286,7 +1298,7 @@
     persistKeys:['recrDecisions','recrSort','recrFilter','recrCut','recrWeight','recrUploads','recrSourced','recrJdUploaded',
       'recrWPreset','recrIntentFilt','recrScope','recrSlotPref','recrPanel','recrEvalW','recrOfferLvl','recrDropped'],
     /* 케이스/단계 전환 시 초기화할 transient 키(열린 상세 모달 · 탭 탐색 · 전체 보드 펼침) */
-    transientKeys:['recrOpen','activeTab','recrAllBoard'],
+    transientKeys:['recrOpen','activeTab','recrAllBoard','recrGateDetail'],
   };
 
   /* 데모용 시드 케이스(인스턴스) — 서로 다른 진행 상태 */
@@ -1368,17 +1380,6 @@
     id:'recruiting', label:'채용', ontology:ONTOLOGY,
     times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
-    /* 인박스 카드 brief(개입 이유·판단·근거·액션) — 단계(sel) 기반 도메인 문장(지시서 #11) */
-    inboxBrief:function(c){
-      if(c.done)return {reason:'auto', judgment:'채용 절차가 끝까지 완료됐습니다 — 오퍼 발송·ATS 기록까지.', basis:['최종 후보','오퍼 승인','ATS 기록'], actions:[{l:'상세 보기',k:'secondary'}]};
-      const G={
-        shortlist_gate:{j:`지원 ${JOB.applicants}명을 점수화했고, 면접 대상 숏리스트 기준 승인이 필요합니다.`, b:['JD 요건','후보 매칭 점수','채용 정책'], a:[{l:'검토하기',k:'primary'},{l:'기준 조정',k:'secondary'}]},
-        interview_gate:{j:'면접 일정 후보를 캘린더 교차로 잡았습니다 — 충돌 0건. 후보 안내 전 확인이 필요합니다.', b:['면접 슬롯','캘린더 가용성','면접 패널'], a:[{l:'검토하기',k:'primary'},{l:'기준 조정',k:'secondary'}]},
-        offer_gate:{j:'합격 후보의 오퍼 패키지를 만들었습니다(보상밴드 내·차별금지 통과). 외부 발송 전 최종 승인이 필요합니다.', b:['보상밴드','차별금지 통과','오퍼 조건'], a:[{l:'검토하기',k:'primary'},{l:'반려',k:'secondary'}]},
-      };
-      if(G[c.sel])return {reason:'decision', judgment:G[c.sel].j, basis:G[c.sel].b, actions:G[c.sel].a};
-      return {reason:'decision', judgment:'요청을 받아 JD·요건을 분해하고 스크리닝을 준비 중입니다. 곧 숏리스트 기준 승인이 필요합니다.', basis:['JD 요건','매칭 가중','채용 정책'], actions:[{l:'검토하기',k:'primary'},{l:'기준 조정',k:'secondary'}]};
-    },
     demoScenario:DEMO_SCENARIO,
     /* ── 결정층(수렴 ②) — scored-list shape. 결정은 코어 evaluate(SCREEN_ROUTE)가 소유.
        단일케이스 evalCase 는 shape 가드로 skip(항목별 판정). caseModel.slots 없음 → 코어 generic

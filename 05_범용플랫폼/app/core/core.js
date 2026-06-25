@@ -481,6 +481,7 @@ function resolveDlv(k,C){const d=PACK.products[k];return {ic:d.ic,title:d.title,
 
 /* ===== view 전환 (운영 콘솔 IA: inbox / run / govern / domain) ===== */
 function setView(v){
+  if(typeof closeNewCase==='function')closeNewCase();   /* 새 업무 팝오버는 뷰 전환 시 닫음(다른 장면에 잔존 ✕) */
   /* ★P5 격리: 실행 뷰를 떠나면 케이스 델타를 팩 레벨로 복원 → 스튜디오/자산/로그는 공유 팩(케이스 델타 0) 기준. */
   if(v!=='run'&&STATE.view==='run'&&_caseOvActive)clearActiveCaseOverlay();
   STATE.view=v; APP.view=v;
@@ -539,6 +540,7 @@ function seedPack(key){
 /* 케이스(인스턴스) 열기 → 런타임 STATE hydrate → 실행 뷰
    ★P5 격리: 이전 케이스 델타를 팩 레벨로 되돌린 뒤, 이 케이스의 델타만 활성 팩 파생본에 얹는다. */
 function openCase(id){
+  if(typeof closeNewCase==='function')closeNewCase();   /* 케이스 진입 시 새 업무 팝오버 닫음 */
   const c=APP.cases.find(x=>x.id===id); if(!c)return;
   if(!PACKS[c.packId]){ toast('이 유형은 현재 등록돼 있지 않습니다'); setView('inbox'); return; }
   clearActiveCaseOverlay();              /* 이전 케이스 델타 제거(누수 가드) — packOverrides 미수정 */
@@ -548,8 +550,7 @@ function openCase(id){
   if(cov){ applyCaseOverlay(PACKS[c.packId], cov); _caseOvActive=c.packId; setPackRefs(c.packId); }
   APP.active=id; hydrateFromCase(c);
   clearRun(); setRunBtn(false);
-  STATE.briefOpen=true;   /* 진입 = 업무 브리핑 펼친 채로(지시서 #2 단계 직행 ✕) */
-  setView('run'); renderSeq(); restoreStep(); renderRunAction(); renderRunBrief(); saveApp();
+  setView('run'); renderSeq(); restoreStep(); renderRunAction(); saveApp();
   autoAdvanceOnOpen();   /* ★ 업무를 열면 AAP가 자동으로 단계를 흘려보냄(스테퍼 수동 진행 없음) — 게이트에서만 멈춤 */
 }
 /* 업무 열기 직후 자동 진행: 현재 단계가 사람 결정(게이트·라이브 await)·완료가 아니면 자동 재생을 시작해
@@ -625,83 +626,6 @@ function renderSeq(){
 const STATUS_ORDER=['wait','run','new','done'];
 /* 케이스 상태/진행률은 그 케이스의 팩 기준으로 산출(활성 PACK 아님) */
 function caseStatusFor(c){ return caseStatus(c); }
-/* ───────── 인박스/브리핑 brief — 카드의 'AAP 판단·개입 이유·근거·액션' (지시서 1-4·#11) ─────────
-   운영 콘솔의 핵심 = '왜 사람이 봐야 하는가'(개입 이유). 팩 inboxBrief(c) 우선,
-   없으면 단일케이스(knowledge.route + caseData)는 순수 evaluate 로 판정해 도출, 그 외엔 상태 기반.
-   반환 {reason, judgment:'쉬운 말 한 줄', basis:[칩…], actions:[{l,k}]}. ─ 도메인 무관. */
-const REASON={
-  decision:{ko:'사람 결정 필요',  cls:'amber'},
-  policy:  {ko:'정책 위반',      cls:'red'},
-  evidence:{ko:'근거 부족',      cls:'amber'},
-  missing: {ko:'자료 부족',      cls:'amber'},
-  sla:     {ko:'SLA 임박',       cls:'amber'},
-  sync:    {ko:'시스템 반영 실패', cls:'red'},
-  auto:    {ko:'자동 처리 완료',  cls:'green'},
-  run:     {ko:'진행 중',        cls:'slate'},
-};
-const REASON_ORDER=['decision','policy','evidence','missing','sla','sync','run','auto'];
-const ACT={
-  review:{l:'검토하기',k:'primary'}, decide:{l:'결정하기',k:'primary'},
-  request:{l:'자료 요청',k:'secondary'}, except:{l:'예외 승인',k:'secondary'},
-  reject:{l:'반려',k:'secondary'}, adjust:{l:'기준 조정',k:'secondary'},
-  rerun:{l:'재실행',k:'secondary'}, detail:{l:'상세 보기',k:'secondary'},
-};
-function slotLabel(packId,key){ const p=PACKS[packId]; const s=p&&p.caseModel&&(p.caseModel.slots||[]).find(x=>x.key===key); return s?s.label:key; }
-/* 카드용 순수 판정(STATE 무관) — knowledge.route 가진 단일케이스 팩만 */
-function caseEvalVerdict(c){ const p=PACKS[c.packId];
-  if(!p||!p.knowledge||!p.knowledge.route||!window.AAP_EVALUATE)return null;
-  try{ return window.AAP_EVALUATE.evaluate(c.caseData||{}, p.knowledge); }catch(e){ return null; } }
-function genericBrief(c){
-  const st=caseStatusFor(c);
-  if(st==='done')return {reason:'auto', judgment:'처리가 완료됐습니다.', basis:[], actions:[ACT.detail]};
-  if(st==='run')return {reason:'run', judgment:'AAP가 단계를 진행하고 있습니다.', basis:[], actions:[ACT.detail]};
-  const v=caseEvalVerdict(c);
-  if(v){ const o=v.outcome;
-    const reason=o==='REJECT'?'policy':o==='LEGAL_REVIEW'?'decision':'auto';
-    const p=PACKS[c.packId], hasSlot=k=>p&&p.caseModel&&(p.caseModel.slots||[]).some(x=>x.key===k);
-    const basis=v.inputs?Object.keys(v.inputs).filter(hasSlot).slice(0,4).map(k=>slotLabel(c.packId,k)):[]; /* 임계·기술키 제외(슬롯 라벨만) */
-    const actions=o==='REJECT'?[ACT.request,ACT.except,ACT.reject]:o==='LEGAL_REVIEW'?[ACT.review,ACT.adjust]:[ACT.review];
-    return {reason, judgment:(v.label||v.basis||'AAP가 판정했습니다.'), basis, actions}; }
-  return {reason:'decision', judgment:'사람 확인이 필요한 지점에서 멈춰 있습니다.', basis:[], actions:[ACT.review]};
-}
-function caseBrief(c){ const p=PACKS[c.packId];
-  if(p&&typeof p.inboxBrief==='function'){ try{ const b=p.inboxBrief(c); if(b)return b; }catch(e){} }
-  return genericBrief(c); }
-let _briefMap={};   /* 이번 인박스 렌더의 케이스별 brief 캐시(카드/스탯/필터 공통) */
-
-/* 업무 브리핑(Run 진입 첫 화면) — 단계 직행 ✕, '지금 무엇을/왜'를 먼저(지시서 #2·#6).
-   caseBrief 재사용 + 현재 단계/진행. 접기 가능(STATE.briefOpen). 도메인 무관. */
-function renderRunBrief(){
-  const el=document.getElementById('runBrief'); if(!el)return;
-  const c=activeCase();
-  if(STATE.view!=='run'||!c){ el.innerHTML=''; el.hidden=true; return; }
-  const b=caseBrief({...c, sel:STATE.sel, done:c.done});
-  const rm=REASON[b.reason]||REASON.decision;
-  const w=W(STATE.sel), ci=idxOf(STATE.sel), n=(WORK||[]).length;
-  const open=STATE.briefOpen!==false;
-  const basis=(b.basis||[]).map(x=>`<span class="rb-bchip">${x}</span>`).join('');
-  const atGate=stIsGate(w)&&RUN.phase==='await';
-  const acts=(b.actions||[]).slice(0,3).map((a,i)=>`<button class="rb-act ${a.k||'secondary'}" data-briefact="${atGate?'gate':'go'}">${a.l}</button>`).join('');
-  el.hidden=false;
-  el.innerHTML=`<div class="rb-card r-${rm.cls}${open?'':' collapsed'}">
-    <div class="rb-top">
-      <span class="rb-reason r-${rm.cls}">${rm.ko}</span>
-      <div class="rb-tt"><b>${dcText(c.title,'case.title')}</b><span class="rb-step">현재: ${w?w.label:'—'} · ${Math.min(ci+1,n)}/${n} 단계</span></div>
-      <button class="rb-fold" data-brieffold aria-label="브리핑 접기/펼치기">${_ICO(open?'chevron-up':'chevron-down')}</button>
-    </div>
-    <div class="rb-body">
-      <div class="rb-judge">${b.judgment||''}</div>
-      ${basis?`<div class="rb-basis"><span class="rb-bk">근거</span>${basis}</div>`:''}
-      ${acts?`<div class="rb-acts">${acts}</div>`:''}
-    </div>
-  </div>`;
-  const fold=el.querySelector('[data-brieffold]'); if(fold)fold.onclick=()=>{ STATE.briefOpen=!(STATE.briefOpen!==false); renderRunBrief(); };
-  el.querySelectorAll('[data-briefact]').forEach(bn=>bn.onclick=()=>{
-    if(bn.dataset.briefact==='gate'&&typeof openGate==='function'){ openGate(); }
-    else { STATE.briefOpen=false; renderRunBrief(); const sb=document.querySelector('.run-surface'); if(sb)sb.scrollIntoView({behavior:'smooth',block:'start'}); }
-  });
-}
-
 function renderInbox(){
   const list=document.getElementById('inboxList'); if(!list)return;
   /* 안전 폴백: 등록 안 된 유형(자동저작 팩은 비영속)의 케이스는 인박스에서 숨김(저장은 보존).
@@ -710,29 +634,7 @@ function renderInbox(){
   /* 등장 순서대로 토큰 안정 배정(필터 칩·배지 색 일관) */
   const presentPacks=[...new Set(all.map(c=>c.packId))].filter(id=>PACKS[id]);
   presentPacks.forEach(typeTok);
-  /* ── brief 계산(개입 이유·판단·근거·액션) — 카드/스탯/필터 공통 소스 ── */
-  _briefMap={}; all.forEach(c=>{ _briefMap[c.id]=caseBrief(c); });
-  const reasonOf=c=>(_briefMap[c.id]&&_briefMap[c.id].reason)||'decision';
-  if(!APP.reasonFilter)APP.reasonFilter='all';
-  /* ── 상단 운영 요약 스탯(개입 이유별 · AAP가 분류) ── */
-  const statsEl=document.getElementById('inboxStats');
-  if(statsEl){
-    const byR={}; all.forEach(c=>{const r=reasonOf(c);byR[r]=(byR[r]||0)+1;});
-    const order=REASON_ORDER.filter(r=>byR[r]);
-    statsEl.innerHTML=order.map(r=>`<button class="istat r-${REASON[r].cls} ${APP.reasonFilter===r?'on':''}" data-rf="${r}"><span class="is-n">${byR[r]}</span><span class="is-l">${REASON[r].ko}</span></button>`).join('')
-      || `<div class="istat-empty">분류할 업무가 없습니다</div>`;
-    statsEl.querySelectorAll('[data-rf]').forEach(e=>e.onclick=()=>{ APP.reasonFilter=(APP.reasonFilter===e.dataset.rf?'all':e.dataset.rf); saveApp(); renderInbox(); });
-  }
-  /* ── 1차 필터 = 개입 이유 ── */
-  const rfbar=document.getElementById('inboxReasonFilter');
-  if(rfbar){
-    const rc=r=>all.filter(c=>reasonOf(c)===r).length;
-    let rh=`<button class="rs-chip ${APP.reasonFilter==='all'?'on':''}" data-rf="all">전체<span class="rc-n">${all.length}</span></button>`;
-    rh+=REASON_ORDER.filter(r=>rc(r)).map(r=>`<button class="rs-chip r-${REASON[r].cls} ${APP.reasonFilter===r?'on':''}" data-rf="${r}"><span class="rc-dot"></span>${REASON[r].ko}<span class="rc-n">${rc(r)}</span></button>`).join('');
-    rfbar.innerHTML=rh;
-    rfbar.querySelectorAll('[data-rf]').forEach(e=>e.onclick=()=>{ APP.reasonFilter=e.dataset.rf; saveApp(); renderInbox(); });
-  }
-  /* 2차 유형 필터 칩 */
+  /* 유형 필터 칩 */
   const fbar=document.getElementById('inboxFilter');
   if(fbar){
     const cnt=id=>all.filter(c=>c.packId===id).length;
@@ -743,8 +645,7 @@ function renderInbox(){
   }
   /* 유형 필터가 사라진 유형을 가리키면 전체로 폴백 */
   if(APP.typeFilter!=='all' && !presentPacks.includes(APP.typeFilter)){ APP.typeFilter='all'; saveApp(); }
-  let cs=APP.typeFilter==='all'?all:all.filter(c=>c.packId===APP.typeFilter);
-  if(APP.reasonFilter&&APP.reasonFilter!=='all')cs=cs.filter(c=>reasonOf(c)===APP.reasonFilter);
+  const cs=APP.typeFilter==='all'?all:all.filter(c=>c.packId===APP.typeFilter);
   const sub=document.getElementById('inboxSub');
   if(sub)sub.textContent=`${APP.typeFilter==='all'?`전 유형 ${presentPacks.length}종`:typeLabel(APP.typeFilter)} · ${cs.length}건`;
   /* 인박스 카운트 = 전 유형 검토대기 합(통합) */
@@ -758,7 +659,7 @@ function renderInbox(){
       const b=ptg.querySelector('#projTgBtn'); if(b)b.onclick=()=>{ APP.projectsOn=!APP.projectsOn; saveApp(); renderInbox(); };
     } else { ptg.hidden=true; ptg.innerHTML=''; }
   }
-  if(!cs.length){ const why=APP.reasonFilter!=='all'?'이 분류에 해당하는 업무가 없습니다':APP.typeFilter==='all'?'아직 들어온 업무 요청이 없습니다':'이 유형의 업무가 없습니다'; list.innerHTML=`<div class="ibx-empty">${why} — <b>＋ 새 업무 요청</b>으로 시작하세요.</div>`; return; }
+  if(!cs.length){ list.innerHTML=`<div class="ibx-empty">${APP.typeFilter==='all'?'아직 들어온 업무 요청이 없습니다':'이 유형의 업무가 없습니다'} — <b>＋ 새 업무 요청</b>으로 시작하세요.</div>`; return; }
   let h;
   if(APP.projectsOn && APP.projects.length){
     /* ON = 프로젝트별 그룹(미배정은 '미배정'). 프로젝트 안에서 기존 상태 그룹 유지 */
@@ -778,16 +679,21 @@ function renderInbox(){
     h=_inboxStatusGroups(cs);
   }
   list.innerHTML=h;
-  /* 카드 클릭(액션 버튼 포함 버블) = 케이스 열기. ⋯ 메뉴·삭제는 전파 차단. */
   list.querySelectorAll('[data-open]').forEach(e=>e.onclick=(ev)=>{
-    if(ev.target.closest('[data-menu],[data-menupop],[data-delyes]'))return;
+    /* 삭제 버튼/인라인 확인 영역 클릭은 행 열기로 전파시키지 않음 */
+    if(ev.target.closest('[data-del],[data-confirm],[data-delyes],[data-delno]'))return;
     openCase(e.dataset.open);
   });
-  /* ⋯ 더보기 = 관리 메뉴(삭제) 토글 — 삭제는 주 액션 아님(지시서 1-5) */
-  list.querySelectorAll('[data-menu]').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
-    const pop=list.querySelector(`[data-menupop="${b.dataset.menu}"]`); if(!pop)return;
-    list.querySelectorAll('[data-menupop]').forEach(p=>{ if(p!==pop)p.hidden=true; });
-    pop.hidden=!pop.hidden;
+  /* 휴지통 → 행 내 인라인 확인(삭제/취소) 노출 */
+  list.querySelectorAll('[data-del]').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
+    const row=b.closest('.ibx-row'); if(!row)return;
+    row.classList.add('confirming');
+    const cf=row.querySelector('[data-confirm]'); if(cf)cf.hidden=false;
+  });
+  list.querySelectorAll('[data-delno]').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
+    const row=b.closest('.ibx-row'); if(!row)return;
+    row.classList.remove('confirming');
+    const cf=row.querySelector('[data-confirm]'); if(cf)cf.hidden=true;
   });
   list.querySelectorAll('[data-delyes]').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
     if(deleteCase(b.dataset.delyes)) toast('업무를 삭제했습니다');
@@ -802,21 +708,14 @@ function _inboxStatusGroups(cs){
     arr.sort((a,b)=>b.createdAt-a.createdAt);
     h+=`<div class="ibx-grp"><div class="ibx-gh"><span class="gh-dot st-${s}"></span>${STATUS[s].ko}<span class="gh-n">${arr.length}</span></div><div class="ibx-rows">`;
     arr.forEach(c=>{ const pg=caseProgress(c), st=caseStatusFor(c);
-      const b=(_briefMap&&_briefMap[c.id])||caseBrief(c); const rm=REASON[b.reason]||REASON.decision;
-      const basis=(b.basis||[]).slice(0,4).map(x=>`<span class="ibx-bchip">${x}</span>`).join('');
-      const acts=(b.actions||[]).slice(0,3).map(a=>`<button class="ibx-act ${a.k||'secondary'}">${a.l}</button>`).join('');
-      h+=`<div class="ibx-card" data-open="${c.id}">
-        <div class="ibx-chead">
-          <span class="ibx-ic">${c.icon||'📋'}</span>
-          <div class="ibx-ht"><div class="ibx-t">${dcText(c.title,'case.title')}</div><div class="ibx-meta">${c.customer||typeLabel(c.packId)} ${typeBadge(c.packId)}</div></div>
-          <span class="ibx-reason r-${rm.cls}">${rm.ko}</span>
-          <button class="ibx-menu" data-menu="${c.id}" title="관리" aria-label="관리 메뉴">${_ICO('more-horizontal')}</button>
-          <div class="ibx-menupop" data-menupop="${c.id}" hidden><button class="ibx-mdel" data-delyes="${c.id}">${_ICO('trash')}<span>삭제</span></button></div>
-        </div>
-        ${b.judgment?`<div class="ibx-judge">${b.judgment}</div>`:''}
-        ${basis?`<div class="ibx-basis"><span class="ibx-bk">근거</span>${basis}</div>`:''}
-        <div class="ibx-acts">${acts}<span class="ibx-spacer"></span><span class="ibx-st st-${st}">${STATUS[st].ko} · ${pg}%</span></div>
-      </div>`;
+      h+=`<div class="ibx-row" data-open="${c.id}">
+        <div class="ibx-ic">${c.icon||'📋'}</div>
+        <div class="ibx-main"><div class="ibx-t">${dcText(c.title,'case.title')} ${typeBadge(c.packId)}</div><div class="ibx-meta">${c.customer||typeLabel(c.packId)}${c.request?` · ${String(c.request).replace(/^["“]|["”]$/g,'').slice(0,46)}…`:''}</div></div>
+        <div class="ibx-prog"><div class="ibx-bar"><i style="width:${pg}%"></i></div><div class="ibx-pn">${pg}%</div></div>
+        <span class="ibx-st st-${st}">${STATUS[st].ko}</span>
+        <button class="ibx-del" data-del="${c.id}" title="이 업무 삭제" aria-label="이 업무 삭제">${_ICO('trash')}</button>
+        <span class="ibx-confirm" data-confirm="${c.id}" hidden>삭제할까요?<button class="ibc-yes" data-delyes="${c.id}">삭제</button><button class="ibc-no" data-delno="${c.id}">취소</button></span>
+        <span class="ibx-go">${_ICO('chevron-right')}</span></div>`;
     });
     h+=`</div></div>`;
   });
@@ -842,84 +741,15 @@ function createCase(packId,seed){
   openCase(c.id);
   toast(`새 ${pack.label} 업무 요청을 생성했습니다 — 실행 콘솔에 투입`);
 }
-/* ===== 새 업무 요청 = 3-step 플로우(지시서 #7) — 유형 선택 → 요청 입력 → AAP 접수 미리보기 =====
-   인박스 '새 업무 요청' = 기존 유형으로 새 케이스 생성(팩 생성 ✕ → 스튜디오, #8). 도메인 무관. */
-let _ncf=null;
-function ncfDesc(id){
-  const m={recruiting:'JD 분석 · 후보 스크리닝 · 숏리스트 승인 · 면접 조율까지 진행합니다.',
-    meeting:'참석자 · 일정 · 자료 · 안건을 준비하고 회의록까지 정리합니다.',
-    expense:'증빙 · 한도 · 중복 · 계정을 점검해 자동승인/검토/반려로 분기합니다.',
-    procurement:'견적 · 한도 · 정책을 점검해 발주 가능 여부를 정합니다.',
-    contract_a:'계약 조건 · 리스크를 검토해 승인 여부를 정합니다.',
-    voc:'문의를 분류하고 답변 초안 · 에스컬레이션을 처리합니다.'};
-  if(m[id])return m[id];
-  const w=(PACKS[id]&&(PACKS[id].work||PACKS[id].flow))||[]; return w.slice(0,4).map(x=>x.label).join(' · ')||'AAP가 단계별로 처리합니다.';
-}
-function openNewCaseFlow(){ if(_ncMenu)closeNewCase(); _ncf={step:1,packId:null,text:'',free:false};
-  let el=document.getElementById('ncFlow'); if(!el){ el=document.createElement('div'); el.id='ncFlow'; el.className='ncflow'; document.body.appendChild(el); }
-  el.hidden=false; renderNcFlow(); }
-window.AAP_NEWCASE=openNewCaseFlow;
-function closeNcFlow(){ const el=document.getElementById('ncFlow'); if(el){ el.hidden=true; el.innerHTML=''; } _ncf=null; }
-function renderNcFlow(){
-  const el=document.getElementById('ncFlow'); if(!el||!_ncf)return;
-  const ids=deployedPackIds();
-  const STEPS=['업무 유형','요청 내용','AAP 접수'];
-  const head=`<div class="ncf-steps">${STEPS.map((s,i)=>`<span class="ncf-st ${_ncf.step===i+1?'on':''}${_ncf.step>i+1?' done':''}">${i+1}. ${s}</span>`).join(`<span class="ncf-sar">${_ICO('chevron-right')}</span>`)}</div>`;
-  let body='';
-  if(_ncf.step===1){
-    body=`<div class="ncf-h">어떤 업무를 맡기시겠어요?</div><div class="ncf-sub">유형을 고르면 AAP가 그 업무 흐름으로 <b>새 케이스</b>를 만듭니다.</div>
-      <div class="ncf-grid">${ids.map(id=>`<button class="ncf-card" data-ncfpick="${id}"><span class="ty-badge ${typeTok(id)}">${dcText(PACKS[id].label,'pack.label')}</span><span class="ncf-cd">${ncfDesc(id)}</span></button>`).join('')}
-        <button class="ncf-card alt" data-ncfpick="__free__"><b>직접 설명할게요</b><span class="ncf-cd">업무를 적으면 AAP가 유형을 인식합니다.</span></button></div>`;
-  } else if(_ncf.step===2){
-    const p=PACKS[_ncf.packId]; const ph=(p&&p.workload&&p.workload.request)?String(p.workload.request).replace(/^["“]|["”]$/g,''):'예) 맡기실 업무를 적어주세요.';
-    body=`<button class="ncf-back" data-ncfback>${_ICO('chevron-left')}유형 다시</button>
-      <div class="ncf-h">${p?dcText(p.label,'pack.label')+' — 요청 내용':'업무를 설명해 주세요'}</div>
-      <textarea class="ncf-ta" id="ncfText" rows="4" placeholder="${ph}">${(_ncf.text||'').replace(/"/g,'&quot;')}</textarea>
-      <div class="ncf-attach"><span class="ncf-atl">${_ICO('upload')}첨부(선택)</span><span class="ncf-atnote">JD · 이력서 · 평가 기준 · 정책 문서 등 — 끌어다 놓기(목업)</span></div>
-      <div class="ncf-acts"><button class="cp-btn primary" data-ncfnext>AAP에 접수${_ICO('arrow-right')}</button></div>`;
-  } else if(_ncf.step===3){
-    const p=PACKS[_ncf.packId]; const work=(p&&(p.work||p.flow))||[];
-    const stages=work.map((w,i)=>`<li class="${stIsGate(w)?'gate':''}">${i+1}. ${w.label}${stIsGate(w)?` <span class="ncf-gtag">${_ICO('flag')}사람 결정</span>`:''}</li>`).join('');
-    const gates=work.filter(w=>stIsGate(w)).map(w=>w.label);
-    const inputs=((p&&p.io&&p.io.inputs)||[]).map(x=>x.label||x.field||x).filter(Boolean);
-    body=`<button class="ncf-back" data-ncfback>${_ICO('chevron-left')}내용 수정</button>
-      <div class="ncf-h">AAP가 이해한 업무</div>
-      <div class="ncf-prev">
-        <div class="ncf-pr"><span class="ncf-pk">업무 유형</span><span class="ncf-pv"><b>${p?dcText(p.label,'pack.label'):'—'}</b></span></div>
-        ${_ncf.text?`<div class="ncf-pr"><span class="ncf-pk">요청</span><span class="ncf-pv">${_ncf.text.slice(0,90)}</span></div>`:''}
-        <div class="ncf-pr col"><span class="ncf-pk">예상 실행 단계 <em>${work.length}</em></span><ol class="ncf-stages">${stages}</ol></div>
-        <div class="ncf-pr col"><span class="ncf-pk">사람 결정 예상 지점 <em>${gates.length}</em></span><div class="ncf-gates">${gates.length?gates.map(g=>`<span class="ncf-gate">${_ICO('flag')}${g}</span>`).join(''):'<span class="ncf-none">없음 — 전 단계 자동 처리</span>'}</div></div>
-        <div class="ncf-pr col"><span class="ncf-pk">필요한 입력</span><span class="ncf-pv">${inputs.length?inputs.join(' · '):'요청 내용으로 시작 — 추가 자료는 진행 중 요청합니다.'}</span></div>
-      </div>
-      <div class="ncf-acts"><button class="cp-btn primary" data-ncfstart>이대로 시작${_ICO('arrow-right')}</button><button class="cp-btn ghost" data-ncfback>수정하기</button></div>`;
-  }
-  el.innerHTML=`<div class="ncf-box">${head}<button class="ncf-x" data-ncfx aria-label="닫기">${_ICO('x')}</button>${body}</div>`;
-  if(window.AAP_hydrateIcons)window.AAP_hydrateIcons(el);
-  el.querySelector('[data-ncfx]').onclick=closeNcFlow;
-  el.onclick=(e)=>{ if(e.target===el)closeNcFlow(); };
-  el.querySelectorAll('[data-ncfpick]').forEach(b=>b.onclick=()=>{ const id=b.dataset.ncfpick; _ncf.free=(id==='__free__'); _ncf.packId=_ncf.free?null:id; _ncf.step=2; renderNcFlow(); });
-  const back=el.querySelector('[data-ncfback]'); if(back)back.onclick=()=>{ _ncf.step=Math.max(1,_ncf.step-1); renderNcFlow(); };
-  const ta=el.querySelector('#ncfText'); if(ta){ ta.oninput=()=>{ _ncf.text=ta.value; }; setTimeout(()=>ta.focus(),0); }
-  const next=el.querySelector('[data-ncfnext]'); if(next)next.onclick=()=>{
-    if(_ncf.free){ const m=matchPackByText(_ncf.text||''); if(m.packId){ _ncf.packId=m.packId; } else { toast('유형을 인식하지 못했어요 — 스튜디오에서 새 유형을 만들 수 있어요'); return; } }
-    if(!_ncf.packId){ toast('유형을 골라주세요'); return; }
-    _ncf.step=3; renderNcFlow(); };
-  const start=el.querySelector('[data-ncfstart]'); if(start)start.onclick=()=>{ const id=_ncf.packId, text=_ncf.text; closeNcFlow(); createCase(id, text?{request:text}:undefined); };
-}
-
-/* ===== On-Ramp: 업무 설명 텍스트 → 기존 등록 유형(팩) 매칭 (코어 · 도메인 무관 휴리스틱) =====
-   유형 인식 = 팩 메타(label·workload.type·purpose·outputs)와 입력 텍스트의 토큰 겹침 점수.
-   임계 미만이면 '신규 유형'으로 보고 격상 파이프라인으로 유도한다. 팩별 키워드 사전 ✕(도메인 무관). */
+/* On-Ramp 토크나이저 — 입력/팩 키워드를 공통 토큰으로(2자 이상, 한·영·숫자). */
 function _tokens(s){ return String(s||'').toLowerCase().replace(/[^0-9a-z가-힣\s]/g,' ').split(/\s+/).filter(t=>t.length>=2); }
+/* 팩의 매칭 키워드 — label·workload(type/purpose/outputs)에서 추출. */
 function packKeywords(pack){
   const wl=pack.workload||{};
   return _tokens([pack.label,wl.type,wl.purpose,(wl.outputs||[]).join(' ')].join(' '));
 }
 /* 매칭 인정 임계 — 겹친 토큰 ≥2 AND 점수 ≥0.14 (일반 동사 1~2개 우연 겹침은 신규로 흘려보냄). */
 const NC_MIN_HITS=2, NC_MIN_SCORE=0.14;
-/* 입력 텍스트 ↔ 각 팩 점수(겹친 토큰 수 / 팩 키워드 수, 0~1) + 근거 토큰(hitToks).
-   ★ ③ 유형 인식 governed: ranked[]=정렬된 전체 후보({id,score,hits,hitToks}). top-N 은 호출부에서 slice.
-   반환 호환: {packId(최고 매칭·임계 통과), score(최고 점수), ranked[]}. (기존 호출부 무회귀) */
 function matchPackByText(text){
   const inTok=new Set(_tokens(text)); if(!inTok.size)return {packId:null,score:0,ranked:[]};
   /* ★배포된 팩만 매칭 대상 — draft 유형은 운영 인식에서 제외(배포해야 On-Ramp 편입) */
@@ -949,8 +779,9 @@ function promptNewCase(anchor){
   /* On-Ramp 세션 상태(이 패널이 열린 동안) — ① io 입력값 · ② 명확화 답을 모아 seed 로 실어보냄. */
   _ncIO={}; _ncClarifyAns={};
   menu.innerHTML=`
+    <button class="ncm-x" id="ncClose" aria-label="닫기">${_ICO('x')}</button>
     <div class="ncm-h">어떤 업무를 맡기시겠어요?</div>
-    <div class="ncm-sub">업무를 설명하면 AAP가 유형을 인식해 <b>새 케이스</b>를 만듭니다. 해당 유형이 없으면 스튜디오에서 새 유형 만들기로 안내합니다.</div>
+    <div class="ncm-sub">업무를 설명하면 AAP가 유형을 인식합니다. 흐름이 있으면 바로 실행, 없으면 격상으로 안내합니다.</div>
     <textarea class="nc-ta" id="ncText" rows="3" placeholder="예) 신규 거래처 등록 심사를 맡기고 싶어요. 사업자·신용·제재 리스트를 확인하고 리스크를 판단해 승인 여부를 정해줘."></textarea>
     <div class="nc-clarify" id="ncClarify" hidden></div>
     <div class="nc-inputs" id="ncInputs" hidden></div>
@@ -961,6 +792,7 @@ function promptNewCase(anchor){
   menu.style.top=(r.bottom+6)+'px'; menu.style.left=Math.max(12,Math.min(r.left,window.innerWidth-440))+'px';
   const ta=menu.querySelector('#ncText');
   ta.oninput=()=>renderNcReco(ta.value);
+  const xb=menu.querySelector('#ncClose'); if(xb)xb.onclick=closeNewCase;   /* (1) 명시적 닫기 */
   renderNcReco('');
   setTimeout(()=>{ ta.focus(); document.addEventListener('mousedown',_ncOff,true); },0);
 }
@@ -1002,14 +834,23 @@ function renderNcReco(text){
   if(!_ncMenu)return;
   const reco=_ncMenu.querySelector('#ncReco'), acts=_ncMenu.querySelector('#ncActs');
   const clarify=_ncMenu.querySelector('#ncClarify'), inputsEl=_ncMenu.querySelector('#ncInputs');
+  try{ _renderNcRecoBody(text,reco,acts,clarify,inputsEl); }
+  catch(_e){ reco.setAttribute('data-err',(_e&&(_e.message+' @ '+(_e.stack||'').split('\n')[1]))||'x'); }
+}
+function _renderNcRecoBody(text,reco,acts,clarify,inputsEl){
   /* 명확화 답을 반영한 보강 텍스트로 매칭(②가 매칭을 실제로 개선) */
   const augText=_ncAugText(text);
   const m=matchPackByText(augText);
   const matched=m.packId?PACKS[m.packId]:null;
   if(!text.trim()){
-    reco.innerHTML=`<div class="nc-hint">${_ICO('search')} 업무를 입력하면 인식된 유형이 여기 표시됩니다.</div>`;
-    acts.innerHTML=`<button class="cp-btn ghost sm" id="ncPromoteEmpty">${_ICO('rocket')}스튜디오에서 새 유형 만들기</button>`;
+    /* 빈 상태에서도 유형을 '먼저 제시' — 자주 맡기는 업무 칩(클릭=바로 시작) + 자유 입력 안내(#2) */
+    const chips=deployedPackIds().map(id=>`<button class="nc-chip ${typeTok(id)}" data-pick="${id}"><span class="tc-dot"></span>${dcText(PACKS[id].label,'pack.label')}</button>`).join('');
+    reco.innerHTML=`<div class="nc-reco-h">자주 맡기는 업무 <span class="nc-reco-sub">클릭해서 바로 시작</span></div>
+      <div class="nc-chips">${chips}</div>
+      <div class="nc-hint">${_ICO('search')} 또는 위에 업무를 설명하면 AAP가 유형을 인식합니다.</div>`;
+    acts.innerHTML=`<button class="cp-btn ghost sm" id="ncPromoteEmpty">${_ICO('rocket')}새 유형으로 격상하기</button>`;
     if(clarify){clarify.hidden=true;clarify.innerHTML='';} if(inputsEl){inputsEl.hidden=true;inputsEl.innerHTML='';}
+    reco.querySelectorAll('.nc-chip').forEach(b=>{ b.onclick=()=>{ const id=b.dataset.pick; const seed=ncSeed('',id); closeNewCase(); createCase(id,seed); }; });
     _ncMenu.querySelector('#ncPromoteEmpty').onclick=()=>ncGoPromote(text);
     return;
   }
@@ -1019,13 +860,13 @@ function renderNcReco(text){
     const primaryId=matched?matched.id:cands[0].id;
     reco.innerHTML=`<div class="nc-reco-h">인식된 유형 <span class="nc-reco-sub">신뢰도순</span></div>`+
       cands.map(r=>_ncRecoItem(r, r.id===primaryId&&!!matched)).join('')+
-      (matched?'':`<div class="nc-noflow">${_ICO('alert-triangle')}<div><b>충분히 일치하는 유형이 없습니다.</b><span>아래에서 유형을 고르거나, 신규·비정형이면 스튜디오에서 새 유형을 만드세요.</span></div></div>`);
-    acts.innerHTML=`<button class="cp-btn ${matched?'ghost':'primary'} sm" id="ncPromote">${_ICO('rocket')}스튜디오에서 새 유형 만들기${matched?'':_ICO('arrow-right')}</button>`;
+      (matched?'':`<div class="nc-noflow">${_ICO('alert-triangle')}<div><b>충분히 일치하는 흐름이 없습니다.</b><span>아래에서 유형을 고르거나, 신규·비정형이면 격상으로 운영 흐름을 만듭니다.</span></div></div>`);
+    acts.innerHTML=`<button class="cp-btn ${matched?'ghost':'primary'} sm" id="ncPromote">${_ICO('rocket')}${matched?'새 유형으로 격상하기':'격상 파이프라인으로 진행'}${matched?'':_ICO('arrow-right')}</button>`;
     /* 후보 클릭 = 그 유형으로 실행(임계 통과 여부 무관 — 사용자가 명시 선택) */
     reco.querySelectorAll('.nc-reco-i').forEach(b=>{ b.onclick=()=>{ const id=b.dataset.pick; const seed=ncSeed(text,id); closeNewCase(); createCase(id,seed); }; });
   } else {
-    reco.innerHTML=`<div class="nc-noflow">${_ICO('alert-triangle')}<div><b>이 업무는 아직 AAP 유형이 없습니다.</b><span>새 업무 유형 만들기는 스튜디오 작업이에요 — 거기서 분해→구성→HITL→격상으로 운영 흐름을 만듭니다.</span></div></div>`;
-    acts.innerHTML=`<button class="cp-btn primary sm" id="ncPromote">${_ICO('rocket')}스튜디오에서 새 유형 만들기${_ICO('arrow-right')}</button>`;
+    reco.innerHTML=`<div class="nc-noflow">${_ICO('alert-triangle')}<div><b>이 업무는 아직 AAP 흐름이 없습니다.</b><span>신규·비정형 업무로 보입니다 — 분해→구성→HITL→격상으로 운영 가능한 흐름을 만듭니다.</span></div></div>`;
+    acts.innerHTML=`<button class="cp-btn primary sm" id="ncPromote">${_ICO('rocket')}격상 파이프라인으로 진행${_ICO('arrow-right')}</button>`;
   }
   _ncMenu.querySelector('#ncPromote').onclick=()=>ncGoPromote(augText);
   /* ① 입력 다양화 — 매칭/최고후보 팩의 io.inputs[] 로 동적 생성(없으면 숨김 = 텍스트만, 무회귀) */
@@ -1082,11 +923,9 @@ function ncSeed(text,pickId){ const t=String(text||'').trim(); if(!t&&!Object.ke
 function ncGoPromote(text){
   const t=String(text||'').trim();
   closeNewCase();
-  /* #8 분리: 새 업무 '유형' 만들기 = 스튜디오 소관. 인박스(케이스 생성)와 분리 — 스튜디오(도메인 팩)로 이동 후 격상 파이프라인. */
-  if(typeof setView==='function')setView('domain');
   if(window.AAP_PIPELINE&&window.AAP_PIPELINE.open){ window.AAP_PIPELINE.open(t||undefined); }
   else if(window.AAP_AUTHORING_OPEN){ window.AAP_AUTHORING_OPEN(); }
-  else { toast('스튜디오를 불러올 수 없습니다'); }
+  else { toast('격상 파이프라인을 불러올 수 없습니다'); }
 }
 
 /* ===== parallel track helper (코어 · RUN 상태 기반) ===== */
@@ -1201,7 +1040,7 @@ function runReanalysis(opts){
   /* 오버레이 1회 보장 */
   let ov=document.getElementById('reov');
   if(!ov){ ov=document.createElement('div'); ov.id='reov'; ov.className='reov';
-    ov.innerHTML=`<div class="recard"><div class="reh">${_ICO('zap')}<span>AAP가 다시 분석 중</span><span class="reph" id="reph"></span></div><div class="resub" id="reint"></div><div class="reprog"><i id="reprog"></i></div><div id="resteps"></div><div id="rediff" hidden></div></div>`;
+    ov.innerHTML=`<div class="recard"><div class="reh">${_ICO('zap')}<span>AAP가 다시 분석 중</span><span class="reph" id="reph"></span></div><div class="resub" id="reint"></div><div class="reprog"><i id="reprog"></i></div><div id="resteps"></div></div>`;
     rs.appendChild(ov);
   }
   const intEl=ov.querySelector('#reint'); if(intEl)intEl.textContent=opts.intent||'의도 변경 반영';
@@ -1219,15 +1058,9 @@ function runReanalysis(opts){
   function finish(){
     if(prog)prog.style.width='100%';
     if(phEl)phEl.textContent='반영';
-    /* #6 결과 diff(전→후) — steerHook 가 opts.diff=[{label,from,to}] 주면 '변경 결과'로 표시 */
-    const diffEl=ov.querySelector('#rediff'); const hasDiff=opts.diff&&opts.diff.length;
-    if(diffEl){ if(hasDiff){ diffEl.innerHTML=`<div class="rediff-h">${_ICO('check')}변경 결과</div>`+opts.diff.map(d=>{ const chg=String(d.from)!==String(d.to);
-        return `<div class="rediff-r"><span class="rd-k">${d.label}</span><span class="rd-v"><b class="rd-from">${d.from}</b>${_ICO('arrow-right')}<b class="rd-to${chg?' chg':''}">${d.to}</b></span></div>`; }).join('');
-        diffEl.hidden=false; } else { diffEl.innerHTML=''; diffEl.hidden=true; } }
-    const hold=hasDiff?RE_T.done+1500:RE_T.done;   /* diff 있으면 더 오래 노출(읽을 시간) */
     setTimeout(()=>{ ov.classList.remove('show'); if(busyEl)busyEl.classList.remove('live-busy'); _LIVE_BUSY=false;
       if(opts.onDone)opts.onDone();
-    }, hold);
+    }, RE_T.done);
   }
   function next(){
     if(i>=n){ finish(); return; }
@@ -1508,7 +1341,7 @@ function wireSteer(root){
       if(meta.trace)STATE.trace.push(meta.trace); if(meta.toast)toast(meta.toast); return;
     }
     if(meta.trace)STATE.trace.push(meta.trace);
-    runReanalysis({ intent:meta.intent, mono:meta.mono, steps:meta.steps, diff:meta.diff, onDone:()=>{
+    runReanalysis({ intent:meta.intent, mono:meta.mono, steps:meta.steps, onDone:()=>{
       renderOpConsole();   /* 섹션 모핑이 FLIP 활강·수치 트윈·그래프 트랜지션을 제자리에서 수행(이 렌더에 한해 pack reflow 플래그 살아있음) */
       /* pack 선언 reflow 키 = 1회 pulse 후 클리어(애니 끝난 뒤) → 다음 렌더부터 정상 */
       if(reflowKeys&&reflowKeys.length)setTimeout(()=>{ reflowKeys.forEach(k=>{ delete STATE[k]; }); },1200);
@@ -1922,7 +1755,9 @@ function currentCM(){
   /* 게이트 HITL 모달 = baseOnly(닫기·조용한 진입)면 자동으로 띄우지 않는다(§2-C). 사람이 콘솔을
      보고 '결정하기'로 직접 열거나, 자동 진행이 게이트에 막 도달(baseOnly=false)했을 때만 표출 →
      진입 즉시 모달로 갇히는 문제 해소. 재open = renderRunAction 의 '결정하기' / 단계 클릭. */
-  if(stIsGate(w) && RUN.phase==='await' && !STATE.baseOnly)return 'hitl';
+  /* ★ #4 인라인 HITL — 팩이 suppressGateModal(S)=true 를 반환하면 게이트 결정을 본 화면 인라인으로
+     렌더하고 모달은 자동으로 띄우지 않는다(세부 기준은 '세부 보기'로만 모달). 훅 없으면 기존대로 모달. */
+  if(stIsGate(w) && RUN.phase==='await' && !STATE.baseOnly && !(hk&&hk.suppressGateModal&&hk.suppressGateModal(STATE)))return 'hitl';
   if(stHasDoneModal(w) && RUN.phase==='done')return 'done';
   return null;
 }
@@ -2064,13 +1899,13 @@ function revealOps(){
   RUN.timers.push(setTimeout(()=>{
     RUN.reveal=n;traceStep(w);
     if(stIsLive(w)&&STATE.meetPhase==='in_meeting'){STATE.meetPhase='await_end';RUN.phase='await';renderConsole();renderRight();}
-    else if(stIsGate(w)){STATE.baseOnly=true;RUN.phase='await';renderConsole();renderRight();}   /* #5 절충: 게이트 도착 시 모달 자동으로 덮지 않음 — 결정 요약은 인라인(브리핑+콘솔+'결정하기' 큐), 기준 조정 모달은 on-demand(openGate) */
+    else if(stIsGate(w)){RUN.phase='await';renderConsole();renderRight();}
     else{RUN.phase='done';renderConsole();renderRight();if(STATE.playing)RUN.playTimer=setTimeout(playNext,OP_T.hold);}
     afterStateChange();
   },settleAt));
 }
 /* 케이스 영속 + 인박스 카운트 갱신 (런타임 상태가 바뀐 직후) */
-function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} renderRunAction(); renderRunBrief(); }
+function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} renderRunAction(); }
 function runStep(){
   clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();if(STATE.wsStepOpen)STATE.wsStepOpen.clear();clearPackTransient();const w=W(STATE.sel);
   if(stIsLive(w)){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
@@ -2615,9 +2450,8 @@ window.AAP_CORE={
   load:(id)=>{if(!PACKS[id])return;setPackRefs(id);seedPack(id);const cs=APP.cases.filter(c=>c.packId===id);if(cs.length)openCase(cs[0].id);else createCase(id);},
   has:(id)=>!!PACKS[id],
   go:(id)=>{if(activeCase()&&W(id)){STATE.sel=id;renderSeq();runStep();}},
-  /* #5 절충: 게이트 결정 모달 열기 — 현재 그 게이트면 바로 모달, 아니면 그 게이트로 이동(인라인 정착 후 '결정하기'로 모달). */
-  openGate:()=>{ if(typeof openGate==='function')openGate(); },
-  atGate:(id)=>{ const w=W(id); return !!(activeCase()&&w&&STATE.sel===id&&stIsGate(w)); },
+  /* HITL 게이트 결정(yes/no) — 본 화면 인라인 결정 바가 호출(#4: 결정은 모달 ✕ 본 화면). */
+  decide:(v)=>{ const w=W(STATE.sel); if(stIsGate(w)&&RUN.phase==='await')decide(v); },
   /* 특정 시드 케이스로 진입(deep-link · 결정론) — seedKey='packId:index'. 없으면 무시(graceful). */
   openSeed:(seedKey)=>{ const c=APP.cases.find(x=>x.seedKey===seedKey); if(c)openCase(c.id); },
   /* 현재 케이스 verdict 스냅샷(결정론 검증·deep-link 용 · 읽기전용) */
@@ -2669,7 +2503,7 @@ window.AAP_CORE={
 document.querySelectorAll('#gnav .gnav-i').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 const _runb=document.getElementById('runBtn');if(_runb)_runb.onclick=()=>STATE.playing?stopPlay():startPlay();
 document.getElementById('devToggle').onchange=e=>document.body.classList.toggle('dev-on',e.target.checked);
-const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>openNewCaseFlow();   /* #7 3-step 플로우(유형→입력→AAP 접수 미리보기) */
+const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>promptNewCase(_nc);
 /* 스튜디오 '＋ 신규 격상' → 격상 파이프라인(없으면 자동저작 오버레이) — 상단 '업무 격상' 버튼 흡수 */
 const _np=document.getElementById('newPromoteBtn');if(_np)_np.onclick=()=>{ if(window.AAP_PIPELINE)window.AAP_PIPELINE.open(); else if(window.AAP_AUTHORING_OPEN)window.AAP_AUTHORING_OPEN(); };
 const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
