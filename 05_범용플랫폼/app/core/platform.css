@@ -2366,6 +2366,8 @@ body.wfrun-collapsed .wfb-canvas .wfb-handle.run{display:flex;}
   --aap-soft:#f1f5f9; --amber-soft:#f1f5f9; --blue-soft:#f1f5f9;
   --green-soft:#f1f5f9; --violet-soft:#f1f5f9; --cyan-soft:#f1f5f9;
 }
+/* 토글/옵션 선택상태 통일 — 멀티색(teal/blue/amber 제각각) → 단일 ink (ty-chip·asset-chip 와 일관) */
+.op-opt.on, .op-opt.flt.on, .op-opt.br.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
 
 /* 카드 — 그림자 빼고 테두리로, hover=중립 강조(teal 남발 ✕) */
 .ibx-row{ box-shadow:none; }
