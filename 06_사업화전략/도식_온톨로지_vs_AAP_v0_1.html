@@ -1,0 +1,207 @@
+<!doctype html>
+<!--
+  ════════════════════════════════════════════════════════════════
+  온톨로지 기반 의사결정과 AAP의 차이 — 한 장 도식 v0.1
+  출처(SSOT) : 06_사업화전략/역량진단_확보전략.md §4.4 (문장 그대로 인용)
+  스타일 기준 : 06_사업화전략/역량진단_슬라이드_v0_1.html 디자인 토큰 정합
+               (흰 배경, teal #00a39b 포인트, 카드, Noto Sans KR)
+  메시지     : 둘은 대립이 아니라 층입니다 — 온톨로지(공통 기반) 위에 AAP 운영 층을 얹습니다.
+  16:9 한 화면 · 단일 HTML · 외부 라이브러리 0 · 인라인 CSS · file:// 동작.
+  ════════════════════════════════════════════════════════════════
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>온톨로지 기반 의사결정과 AAP의 차이</title>
+<style>
+:root{
+  --gray-white:#fff; --gray-25:#fafafa; --gray-50:#f7f7f8; --gray-75:#f3f4f6; --gray-100:#eef0f3;
+  --gray-150:#e3e6ea; --gray-200:#d7dbe1; --gray-300:#b8bec8; --gray-400:#8d95a1; --gray-500:#6f7782;
+  --gray-600:#4f5660; --gray-700:#363b42; --gray-800:#24282d; --gray-900:#17191c;
+  --ink:#17191c; --sub:#4f5660; --muted:#6f7782; --line:#d7dbe1; --soft:#f3f4f6;
+  --red:#e0282f; --teal:#00a39b; --teal-strong:#007f7f; --teal2:#eefafa;
+  --amber:#b7791f; --amber-bg:#fdf6ea; --amber-line:#ecd8ab;
+  --page:#eef1f4;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;line-height:1.55;overflow:hidden}
+
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px}
+.slide{width:100%;max-width:1280px;height:100%;max-height:720px;background:#fff;border-radius:16px;box-shadow:0 14px 44px rgba(23,25,28,.12);border:1px solid var(--gray-150);overflow:hidden;display:flex;flex-direction:column}
+.slide-inner{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:26px 34px 22px}
+
+/* ===== Head ===== */
+.shead{margin-bottom:14px}
+.kicker{font-size:10px;font-weight:900;letter-spacing:.14em;color:var(--teal-strong);text-transform:uppercase;margin:0 0 5px}
+.shead h2{margin:0;font-size:24px;letter-spacing:-.03em;line-height:1.2}
+.shead h2 .hl{color:var(--teal-strong)}
+.shead .lead{font-size:13px;color:var(--sub);margin:6px 0 0;line-height:1.6;max-width:1050px}
+.shead .lead strong{color:var(--ink)}
+
+/* ===== 층위 다이어그램 ===== */
+.stack{display:flex;flex-direction:column;gap:0}
+
+/* 위 층 = AAP 운영 층 */
+.layer-aap{border:1.5px solid var(--teal);background:var(--teal2);border-radius:13px 13px 6px 6px;padding:13px 16px 14px;position:relative;z-index:2;box-shadow:0 6px 16px rgba(0,127,127,.07)}
+.layer-aap .lh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.layer-aap .lh .tag{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--teal-strong);border-radius:5px;padding:3px 9px}
+.layer-aap .lh b{font-size:15px;font-weight:900;color:var(--teal-strong);letter-spacing:-.01em}
+.layer-aap .lh span{font-size:11.5px;color:var(--sub)}
+
+/* 운영 루프 6단계 */
+.oploop{display:flex;align-items:stretch;gap:0;margin-bottom:11px}
+.opstep{flex:1;border:1px solid var(--teal);background:#fff;border-radius:8px;padding:7px 4px;text-align:center;font-size:11px;font-weight:800;color:var(--teal-strong);position:relative}
+.opsep{display:flex;align-items:center;justify-content:center;width:18px;flex:0 0 auto;color:var(--teal);font-weight:900;font-size:12px}
+
+/* 차이 4카드 */
+.diff4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.diffc{border:1px solid var(--teal);background:#fff;border-radius:9px;padding:9px 10px}
+.diffc .dt{font-size:11px;font-weight:900;color:var(--teal-strong);margin:0 0 5px;letter-spacing:-.01em}
+.diffc .drow{display:flex;align-items:center;gap:6px;font-size:10.5px;line-height:1.35}
+.diffc .from{color:var(--muted)}
+.diffc .arr{color:var(--teal);font-weight:900;flex:0 0 auto}
+.diffc .to{color:var(--ink);font-weight:800}
+
+/* 연결 = 얹는다 */
+.bridge{display:flex;justify-content:center;align-items:center;height:30px;position:relative;z-index:1}
+.bridge .updown{display:flex;flex-direction:column;align-items:center;gap:1px;background:#fff;padding:0 14px}
+.bridge .updown .ar{color:var(--teal-strong);font-size:16px;font-weight:900;line-height:1}
+.bridge .updown .bl{font-size:10px;font-weight:900;color:var(--teal-strong);letter-spacing:.02em}
+.bridge::before{content:"";position:absolute;left:8%;right:8%;top:50%;height:1px;background:repeating-linear-gradient(90deg,var(--teal) 0,var(--teal) 5px,transparent 5px,transparent 10px);opacity:.5}
+
+/* 아래 층 = 공통 기반 (온톨로지) */
+.layer-onto{border:1px solid var(--line);background:var(--gray-50);border-radius:6px 6px 13px 13px;padding:13px 16px 14px;position:relative;z-index:2}
+.layer-onto .lh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.layer-onto .lh .tag{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-700);background:var(--gray-150);border-radius:5px;padding:3px 9px}
+.layer-onto .lh b{font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-.01em}
+.layer-onto .lh span{font-size:11.5px;color:var(--sub)}
+.common3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.commc{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px}
+.commc .ct{font-size:11.5px;font-weight:900;color:var(--gray-700);margin:0 0 3px}
+.commc .cb{font-size:10.5px;color:var(--gray-600);line-height:1.45}
+.layer-onto .sharednote{font-size:10px;color:var(--muted);margin:9px 0 0;line-height:1.5}
+.layer-onto .sharednote strong{color:var(--gray-700);font-weight:800}
+
+/* ===== 하단 띠 : 세 관점 + 특장점 한 문장 ===== */
+.footzone{margin-top:13px;display:grid;grid-template-columns:1.15fr 1fr;gap:12px;align-items:stretch}
+.lenses{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lens{border:1px solid var(--line);border-radius:9px;background:#fff;padding:8px 10px}
+.lens .lk{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--teal-strong);margin:0 0 4px}
+.lens .lrow{display:flex;align-items:center;gap:5px;font-size:10px;line-height:1.3}
+.lens .lf{color:var(--muted)}
+.lens .la{color:var(--teal);font-weight:900;flex:0 0 auto}
+.lens .lt{color:var(--ink);font-weight:800}
+.oneline{border-radius:11px;background:var(--teal2);border:1px solid var(--teal);color:var(--gray-700);font-size:12px;line-height:1.55;font-weight:600;padding:11px 15px;display:flex;flex-direction:column;justify-content:center}
+.oneline .ol-lab{display:block;font-size:8.5px;font-weight:900;letter-spacing:.14em;color:var(--teal-strong);margin-bottom:5px;text-transform:uppercase}
+.oneline strong{font-weight:900;color:var(--teal-strong)}
+
+.linknote{margin-top:11px;border-left:4px solid var(--teal-strong);background:var(--gray-50);padding:9px 14px;border-radius:9px;color:var(--gray-600);font-size:11px;line-height:1.55}
+.linknote .nlab{display:inline-block;font-size:8.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-strong);margin-right:8px}
+.linknote strong{color:var(--ink);font-weight:800}
+</style>
+</head>
+<body>
+
+<div id="deck">
+<section class="slide">
+  <div class="slide-inner">
+
+    <div class="shead">
+      <p class="kicker">온톨로지 기반 의사결정과 AAP의 차이</p>
+      <h2>둘은 대립이 아니라 <span class="hl">층</span>입니다</h2>
+      <p class="lead">둘 다 온톨로지로 의미와 관계를 구조화하고, 변수에 따른 의사결정을 도우며, 근거를 제시합니다. AAP는 온톨로지를 버리는 것이 아니라 <strong>그 위에 운영 층을 얹는 것</strong>이며, 온톨로지는 AAP의 지식 기반입니다.</p>
+    </div>
+
+    <div class="stack">
+
+      <!-- 위 층 : AAP 운영 층 -->
+      <div class="layer-aap">
+        <div class="lh">
+          <span class="tag">위 층 · AAP가 더하는 것</span>
+          <b>운영 층</b>
+          <span>분석을 통제된 운영으로, 매일 돌리고 재현·감사 가능하게 기록합니다.</span>
+        </div>
+        <div class="oploop">
+          <div class="opstep">분해</div><div class="opsep">›</div>
+          <div class="opstep">판단</div><div class="opsep">›</div>
+          <div class="opstep">승인</div><div class="opsep">›</div>
+          <div class="opstep">실행</div><div class="opsep">›</div>
+          <div class="opstep">기록</div><div class="opsep">›</div>
+          <div class="opstep">학습</div>
+        </div>
+        <div class="diff4">
+          <div class="diffc">
+            <p class="dt">실행</p>
+            <div class="drow"><span class="from">분석에서 멈춤</span><span class="arr">→</span><span class="to">시스템 반영(writeback)</span></div>
+          </div>
+          <div class="diffc">
+            <p class="dt">판단</p>
+            <div class="drow"><span class="from">확률적(LLM)</span><span class="arr">→</span><span class="to">결정론, 재현·감사</span></div>
+          </div>
+          <div class="diffc">
+            <p class="dt">사람</p>
+            <div class="drow"><span class="from">결과 보고 판단</span><span class="arr">→</span><span class="to">HITL 게이트 내장</span></div>
+          </div>
+          <div class="diffc">
+            <p class="dt">구성</p>
+            <div class="drow"><span class="from">온톨로지 의존</span><span class="arr">→</span><span class="to">구성요소 조합</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 연결 : 얹는다 -->
+      <div class="bridge">
+        <div class="updown"><span class="ar">▲</span><span class="bl">운영 층을 얹습니다</span></div>
+      </div>
+
+      <!-- 아래 층 : 공통 기반 (온톨로지) -->
+      <div class="layer-onto">
+        <div class="lh">
+          <span class="tag">아래 층 · 둘이 공유하는 토대</span>
+          <b>온톨로지 기반 의사결정</b>
+          <span>무엇을 해야 하는지 분석해 주는 공통 기반입니다.</span>
+        </div>
+        <div class="common3">
+          <div class="commc"><p class="ct">의미·관계 구조화</p><p class="cb">온톨로지로 의미와 관계를 구조화합니다.</p></div>
+          <div class="commc"><p class="ct">변수 기반 의사결정</p><p class="cb">변수에 따른 의사결정을 돕습니다.</p></div>
+          <div class="commc"><p class="ct">근거 제시</p><p class="cb">판단의 근거를 제시합니다.</p></div>
+        </div>
+        <p class="sharednote"><strong>호르무즈 프로토타입이 지향하는 완성된 온톨로지 기반 의사결정 시스템</strong>이 이 층입니다. AAP의 지식 기반으로 그대로 받칩니다.</p>
+      </div>
+
+    </div>
+
+    <!-- 하단 : 세 관점 + 특장점 한 문장 -->
+    <div class="footzone">
+      <div class="lenses">
+        <div class="lens">
+          <p class="lk">기술</p>
+          <div class="lrow"><span class="lf">분석</span><span class="la">→</span><span class="lt">통제된 실행</span></div>
+        </div>
+        <div class="lens">
+          <p class="lk">사업</p>
+          <div class="lrow"><span class="lf">한 번 구축 분석 자산</span><span class="la">→</span><span class="lt">매일 운영·구독·확장</span></div>
+        </div>
+        <div class="lens">
+          <p class="lk">시장</p>
+          <div class="lrow"><span class="lf">대형 중심 Decision Intelligence</span><span class="la">→</span><span class="lt">중견·준정부 빈자리</span></div>
+        </div>
+      </div>
+      <div class="oneline">
+        <span class="ol-lab">특장점 한 문장</span>
+        <span>온톨로지 기반 의사결정이 <strong>무엇을 해야 하는지 분석해 주는 도구</strong>라면, AAP는 그 판단을 <strong>통제된 운영으로 매일 돌리고 재현·감사 가능하게 기록하는 운영 플랫폼</strong>입니다.</span>
+      </div>
+    </div>
+
+    <div class="linknote">
+      <span class="nlab">연계성</span>이미 관계가 있는 기진회 호르무즈, 기존 SI 구축 고객, 자사 자산 위에 <strong>운영 층만 얹는 것</strong>이라 처음부터 만드는 것보다 빠르고 쉽습니다.
+    </div>
+
+  </div>
+</section>
+</div>
+
+</body>
+</html>
