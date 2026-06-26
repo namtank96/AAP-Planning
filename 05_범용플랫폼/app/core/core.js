@@ -769,12 +769,14 @@ function ncCandQualifies(r){ return !!(r&&r.hits>=NC_MIN_HITS&&r.score>=NC_MIN_S
    ① 입력이 기존 등록 유형과 매칭 → 그 유형으로 케이스 생성·실행(운영 루프).
    ② 매칭 안 됨(신규/비정형) → "AAP 흐름 없음 → 격상" 안내 + 격상 파이프라인 자동 진입(구성 루프).
    사용자가 인식 결과를 바꿀 수 있게(매칭 후보 칩 + 항상 '새 유형으로 격상' 선택지) 제공. */
-let _ncMenu=null;
-function closeNewCase(){ if(_ncMenu){ _ncMenu.remove(); _ncMenu=null; document.removeEventListener('mousedown',_ncOff,true); _ncIO={}; _ncClarifyAns={}; } }
-function _ncOff(ev){ if(_ncMenu&&!_ncMenu.contains(ev.target)&&!ev.target.closest('#newCaseBtn'))closeNewCase(); }
+let _ncMenu=null, _ncBack=null;
+function closeNewCase(){ if(_ncBack){ _ncBack.remove(); _ncBack=null; } if(_ncMenu){ _ncMenu.remove(); _ncMenu=null; document.removeEventListener('keydown',_ncEsc,true); _ncIO={}; _ncClarifyAns={}; } }
+function _ncEsc(ev){ if(ev.key==='Escape')closeNewCase(); }
 function promptNewCase(anchor){
   if(_ncMenu){ closeNewCase(); return; } /* 토글 */
-  const menu=document.createElement('div'); menu.id='newCaseMenu'; menu.className='nc-menu nc-onramp';
+  /* (1) 중앙 모달 — 백드롭 + 화면 중앙(앵커 팝오버 ✕). 백드롭 클릭 = 닫기. */
+  const back=document.createElement('div'); back.id='ncBackdrop'; back.className='nc-backdrop'; _ncBack=back;
+  const menu=document.createElement('div'); menu.id='newCaseMenu'; menu.className='nc-menu nc-onramp nc-modal';
   _ncMenu=menu;
   /* On-Ramp 세션 상태(이 패널이 열린 동안) — ① io 입력값 · ② 명확화 답을 모아 seed 로 실어보냄. */
   _ncIO={}; _ncClarifyAns={};
@@ -787,14 +789,13 @@ function promptNewCase(anchor){
     <div class="nc-inputs" id="ncInputs" hidden></div>
     <div class="nc-reco" id="ncReco"></div>
     <div class="nc-acts" id="ncActs"></div>`;
-  document.body.appendChild(menu);
-  const r=(anchor||document.getElementById('newCaseBtn')).getBoundingClientRect();
-  menu.style.top=(r.bottom+6)+'px'; menu.style.left=Math.max(12,Math.min(r.left,window.innerWidth-440))+'px';
+  back.appendChild(menu); document.body.appendChild(back);
+  back.onclick=(e)=>{ if(e.target===back)closeNewCase(); };   /* 백드롭(빈 영역) 클릭 = 닫기 */
   const ta=menu.querySelector('#ncText');
   ta.oninput=()=>renderNcReco(ta.value);
   const xb=menu.querySelector('#ncClose'); if(xb)xb.onclick=closeNewCase;   /* (1) 명시적 닫기 */
   renderNcReco('');
-  setTimeout(()=>{ ta.focus(); document.addEventListener('mousedown',_ncOff,true); },0);
+  setTimeout(()=>{ ta.focus(); document.addEventListener('keydown',_ncEsc,true); },0);
 }
 /* On-Ramp 세션 누적값 — ① io 입력(파일명·필드값) · ② 명확화 답 */
 let _ncIO={}, _ncClarifyAns={};
@@ -1218,16 +1219,18 @@ function dcSlotPanel(C){
     ${primHtml}
     ${open?`<div class="ct-grp">전체 슬롯</div><div class="ct-slots rest">${rest}</div>`:''}`;
 }
-/* 메인 = 슬롯 패널 + 판정 카드 + HITL 바 */
-function dcMain(C){
+/* 좌 main = 이 건의 정보(슬롯)만. 결정(판정카드+HITL바)은 우측 aside 로 이동(전 유형 셸 통일:
+   좌=도메인 정보·작업 / 우=결정·근거 레일). steer(임계)는 renderDataConsole 가 main 상단에 흡수. */
+function dcMain(C){ return dcSlotPanel(C); }
+/* 결정 블록(판정카드 + HITL바) — aside 상단에 둠(회의 streamHitlCard 와 같은 자리). */
+function dcDecision(C){
   const v=C&&C.S&&C.S.verdict;
   const w=C.W(C.S.sel); const atGate=stIsGate(w);
   const hitl=v&&v.outcome!=='AUTO_APPROVE';
-  return `${dcSlotPanel(C)}
-    <div class="ct-vd-wrap">${dcVerdictCard(C)}</div>
+  return `<div class="ct-vd-wrap">${dcVerdictCard(C)}</div>
     ${atGate?`<div class="op-hitlbar ${hitl?'':'auto'}">
-      <div><div class="op-hi">${_ICO(hitl?'user-check':'check-circle')}${hitl?'사람이 확정해야 하는 지점 (HITL)':'자동 진행 가능 — 그래도 마지막 확인'}</div>
-        <div class="op-hs">${hitl?'AAP가 결정·반려가 아니라, 책임 걸린 분기를 사람에게 넘겼습니다. 임계를 조정하면 판정이 다시 갈립니다.':'전 점검 통과·임계 내 — 자동 진행 준비.'}</div></div>
+      <div><div class="op-hi">${_ICO(hitl?'user-check':'check-circle')}${hitl?'사람이 확정해야 하는 지점 (HITL)':'자동 진행 가능 — 마지막 확인'}</div>
+        <div class="op-hs">${hitl?'책임 걸린 분기를 사람에게 넘겼습니다. 임계를 조정하면 판정이 다시 갈립니다.':'전 점검 통과·임계 내 — 자동 진행 준비.'}</div></div>
       <button class="op-hbtn" data-dcgate="${w.id}">${hitl?'검토 큐로 확정':'판정 확인'}</button></div>`:''}`;
 }
 /* io.editable(임계) 현재값 */
@@ -1256,13 +1259,14 @@ function dcLookups(C){
   }).join('');
 }
 function dcFstep(ic,t,d,cls){ return `<div class="op-fstep ${cls||''}"><span class="op-fd">${_ICO(ic)}</span><div class="op-ftx"><b>${t}</b><div class="op-fmono">${d}</div></div></div>`; }
-/* aside = 참조 룩업 + 'AAP가 한 일' 흐름(verdict 기반 일반) */
+/* aside = 결정(판정카드+HITL) + 'AAP가 한 일' 흐름 + 참조 룩업. 결정·근거 레일(전 유형 통일). */
 function dcAside(C){
   const v=C&&C.S&&C.S.verdict; const m=v?dcOutcome(v.outcome):null;
   const lks=dcLookups(C);
   const inputs=v&&v.inputs?Object.keys(v.inputs):[];
   const evRows=inputs.slice(0,4).map(k=>{ const val=dcSlotVal(C,k); return dcFstep('check', (dcSlotByKey()[k]?dcSlotByKey()[k].label:k), val==null?'—':val); }).join('');
-  return `<div class="op-sh">AAP가 한 일 · 근거 <span>보조</span></div>
+  return `${dcDecision(C)}
+    <div class="op-sh">AAP가 한 일 · 근거 <span>보조</span></div>
     <div class="op-flow">
       ${evRows||dcFstep('check','정보 확인','문서·연결 시스템·규칙으로 채움')}
       ${dcFstep('arrow-right','AAP 판단', v?(m.ko+'<span class="dc-tech"> · '+v.ruleId+'</span>'):'대기','v')}
@@ -1270,7 +1274,7 @@ function dcAside(C){
     ${lks?`<div class="op-sh">참조 기준 <span>제도·규정<span class="dc-tech"> · 지식·시맨틱 L4</span></span></div><div class="ct-lks">${lks}</div>`:''}`;
 }
 /* opstage 산출 = {steer,main,aside} — 팩 surface 가 없을 때 코어가 동일 콘솔을 일반 렌더 */
-function renderDataConsole(C){ return { steer:dcSteer(C), main:dcMain(C), aside:dcAside(C) }; }
+function renderDataConsole(C){ return { steer:dcSteer(C), main:dcMain(C), aside:dcAside(C) }; }   /* steer=renderOpConsole 가 main 상단 흡수 · 결정=aside */
 
 /* 코어 일반 HITL/완료 모달 — 팩 surface.cmodal 없을 때(데이터 주도). verdict·결재 일반 렌더. */
 function dcCmodal(kind,C){
@@ -1316,11 +1320,18 @@ function dcWire(root){
 /* 팩이 결정 데이터(caseModel.slots + knowledge.route)를 갖췄는지 — 코어 일반 콘솔 자격 */
 function hasDataConsole(){ return !!(PACK&&PACK.caseModel&&Array.isArray(PACK.caseModel.slots)&&PACK.caseModel.slots.length
   &&PACK.knowledge&&PACK.knowledge.route&&window.AAP_EVALUATE); }
-/* opstage 산출자 — 팩 surface.opstage 우선, 없으면 코어 일반 renderDataConsole */
-function opstageOf(C){ if(PACK.surface&&PACK.surface.opstage)return PACK.surface.opstage(C); if(hasDataConsole())return renderDataConsole(C); return null; }
+/* opstage 산출자 — 팩 surface.opstage 우선, 없으면 코어 일반 renderDataConsole,
+   둘 다 없어도 flow 만 있으면 stream 콘텐츠를 op-골격(상단 strip + 좌 main/우 aside)에 담아 통일.
+   → 전 유형이 같은 프레임(B): 결정형=슬롯·판정 / 진행형(회의·VOC)=작업흐름·산출물. 위>아래 스트림 레이아웃 폐기. */
+function opstageOf(C){
+  if(PACK.surface&&PACK.surface.opstage)return PACK.surface.opstage(C);
+  if(hasDataConsole())return renderDataConsole(C);
+  if((WORK||[]).length)return { main:streamFocus(C), aside:streamArts(C), _stream:true };
+  return null;
+}
 
-/* 조작형 surface 활성 여부 — 팩이 surface.opstage 를 제공하거나, 결정 데이터(caseModel+route)를 갖췄을 때.
-   미제공·미보유 팩(회의·VOC)은 false → 기존 streamSplit 스트림 모델로 graceful 폴백(무회귀). */
+/* 조작형 surface 활성 여부 — flow 가 있는 모든 팩은 op-골격으로 렌더(stream 폴백 포함).
+   flow 조차 없는 팩만 false → 기존 streamSplit 셸로 graceful(무회귀). */
 function hasOpSurface(C){ return !!opstageOf(C); }
 
 /* ── 의도 steering 핸들러(코어 일반) — [data-steer] 컨트롤 클릭 → 팩 steerHook 으로 STATE 갱신 →
@@ -1342,7 +1353,10 @@ function wireSteer(root){
     }
     if(meta.trace)STATE.trace.push(meta.trace);
     runReanalysis({ intent:meta.intent, mono:meta.mono, steps:meta.steps, onDone:()=>{
-      renderOpConsole();   /* 섹션 모핑이 FLIP 활강·수치 트윈·그래프 트랜지션을 제자리에서 수행(이 렌더에 한해 pack reflow 플래그 살아있음) */
+      /* ★ 재분석 결과를 모달로 명시(옵션 변경이 '먹혔다' + 전/후 + 로직·근거) — 값 변화·판단을 자세히 */
+      if(meta.diff||meta.steps){ STATE.reResult={ intent:meta.intent, mono:meta.mono, steps:meta.steps, diff:meta.diff }; }
+      else if(meta.toast){ toast(meta.toast); }
+      renderOpConsole();   /* 섹션 모핑 + renderCModal(결과 모달 표출) */
       /* pack 선언 reflow 키 = 1회 pulse 후 클리어(애니 끝난 뒤) → 다음 렌더부터 정상 */
       if(reflowKeys&&reflowKeys.length)setTimeout(()=>{ reflowKeys.forEach(k=>{ delete STATE[k]; }); },1200);
       afterStateChange();
@@ -1386,8 +1400,8 @@ function _opSig(html){ /* 가벼운 서명(djb2) — 섹션 변경 감지(통째
 function ensureOpSkeleton(sh,sb){
   let mounted=true;
   if(sh && !sh.querySelector('#opStripSlot')){
-    sh.innerHTML=`<div class="op-strip-wrap" id="opStripSlot"></div><div class="op-steer-slot" id="opSteerSlot"></div>`;
-    mounted=false; delete sh.dataset.opStripSig; delete sh.dataset.opSteerSig;
+    sh.innerHTML=`<div class="op-strip-wrap" id="opStripSlot"></div>`;   /* steer 밴드 폐지 → main 상단 흡수(renderOpConsole) */
+    mounted=false; delete sh.dataset.opStripSig;
   }
   if(sb && !sb.querySelector('.op-split')){
     sb.classList.add('op-body'); sb.classList.remove('stream-body','ws-progress-body');
@@ -1426,37 +1440,42 @@ function renderOpConsole(){
   /* ── 섹션별 부분 갱신: 변경된 슬롯만 모핑(strip/steer/main/aside) ── */
   if(sh){
     const stripSlot=sh.querySelector('#opStripSlot');
-    const steerSlot=sh.querySelector('#opSteerSlot');
     opSection(stripSlot, opStageStrip(C), sh, 'opStripSig', {animate:false});
-    const steerChanged=opSection(steerSlot, op.steer||'', sh, 'opSteerSig', {animate:false});
-    if(steerChanged)wireSteer(sh);   /* steer 바가 새로 그려진 경우에만 재배선(불변이면 핸들러 유지) */
   }
   if(sb){
     const mainSlot=sb.querySelector('#opMainSlot');
     const asideSlot=sb.querySelector('#opAsideSlot');
-    const mainChanged=opSection(mainSlot, op.main||'', sb, 'opMainSig', {animate:true});
+    /* steer(임계 튜너)는 main 상단에 흡수 — 떠있는 밴드 폐지(전 유형 셸 통일). op-main 안 op-steer = 인라인 카드(CSS). */
+    const mainChanged=opSection(mainSlot, (op.steer||'')+(op.main||''), sb, 'opMainSig', {animate:true});
     const asideChanged=opSection(asideSlot, op.aside||'', sb, 'opAsideSig', {animate:true});
-    if(mainChanged||asideChanged||!wasMounted){ wireSurface(sb); wireSteer(sb); }
+    if(mainChanged||asideChanged||!wasMounted){ wireSurface(sb); wireSteer(sb); wireStream(sb); }
     /* 그래프 = aside 슬롯이 새로 그려졌을 때만 재배선(불변이면 컨테이너·엣지 유지 → 재생성 0) */
     if((asideChanged||!wasMounted) && PACK.surface&&PACK.surface.opgraph)PACK.surface.opgraph(C, sb.querySelector('#opGraph'));
   }
   renderCModal();
 }
-/* 단계 strip(코어 일반) — flow 의 게이트·주요 단계로 진행 strip. 클릭 = 그 단계로 탐색(setSel). */
+/* 단계 strip(코어 일반) — 직전·현재·다음 3노드 윈도(8단 전체 나열 ✕ · 옛 renderSeq 패턴).
+   클릭=그 단계로 탐색(setSel). 같은 줄 우측에 케이스 요약(요청·진행) 인라인 → 상단 밴드 1줄로 압축. */
 function opStageStrip(C){
   const flow=WORK||[]; const ci=idxOf(STATE.sel);
-  /* strip 노드 = 팩이 surface.opStages 로 추린 핵심 단계, 없으면 전체 flow */
-  const nodes=(PACK.surface&&PACK.surface.opStages?PACK.surface.opStages(C):flow.map(w=>w.id));
-  return `<div class="op-strip">`+nodes.map((id,k)=>{
-    const w=W(id); if(!w)return '';
-    const wi=idxOf(id);
-    const st=wi<ci?'done':(wi===ci?'on':'wait');
-    const gate=stIsGate(w);
-    return `<button class="op-snode ${st}${gate?' gate':''}" data-opstep="${id}">
-      <span class="op-sn">${st==='done'?_ICO('check'):(gate?_ICO('user-check'):k+1)}</span>
-      <span class="op-sl">${dcText(w.label,'step.label')}</span></button>`+
-      (k<nodes.length-1?`<span class="op-sar">${_ICO('chevron-right')}</span>`:'');
-  }).join('')+`</div>`;
+  let nodes='';
+  for(let d=-1;d<=1;d++){ const i=ci+d; if(i<0||i>=flow.length)continue;
+    const w=flow[i]; if(!w)continue;
+    const st=i<ci?'done':(i===ci?'on':'wait'); const gate=stIsGate(w);
+    if(d>0||(d===0&&i>0))nodes+=`<span class="op-sar">${_ICO('chevron-right')}</span>`;
+    nodes+=`<button class="op-snode ${st}${gate?' gate':''}" data-opstep="${w.id}">
+      <span class="op-sn">${st==='done'?_ICO('check'):(gate?_ICO('user-check'):i+1)}</span>
+      <span class="op-sl">${dcText(w.label,'step.label')}</span></button>`;
+  }
+  return `<div class="op-strip">${nodes}</div>${opCaseSummary(C)}`;
+}
+/* 케이스 요약 인라인(코어 일반) — strip 같은 줄 우측. 제목·아이콘은 상단바(caseTitle)로 이동했으니
+   여기선 요청 원문 + 진행(완료/총)만. 도메인 무관(case.request + flow 길이). */
+function opCaseSummary(C){
+  const c=activeCase()||{}; const flow=WORK||[]; const ci=idxOf(STATE.sel);
+  const total=flow.length; const doneN=Math.max(0,Math.min(ci,total));
+  const req=c.request?`<span class="op-cs-req">${_ICO('flag')}"${String(c.request).replace(/^["'“”]+|["'“”]+$/g,'')}"</span>`:'';
+  return `<div class="op-cs-inline">${req}<span class="op-cs-prog">${doneN}/${total} 단계</span></div>`;
 }
 /* =========================================================================
    작업 스트림 + 산출물 뷰어 (코어 일반 · 도메인 무관) — 목업 v0.3
@@ -1509,6 +1528,59 @@ function curArtK(){
 function streamSplit(C){
   return `<div class="strm-split">${streamLeft(C)}${streamArts(C)}</div>`;
 }
+/* ── 현재 단계 초점 main (stream 팩=회의·VOC) — 결정콘솔 dcMain 과 같은 밀도·척추 ──
+   ① 지금 단계 카드(ct-vd 톤 + 단계별 작업뷰 perStep: overview/track/hint)
+   ② 이 건의 산출물 그리드(surfaceSpec.ws → ct-slots, 계약 슬롯과 동일 밀도)
+   회의·VOC 의 풍부한 데이터(perStep·ws·products)를 살려 휑한 카드 ✕ → 계약 콘솔과 같은 밀도.
+   strip 중복 '전 단계 나열' 폐기 · HITL=우측 aside(streamHitlCard) · 요약=코어 밴드(opCaseSummary).
+   새 CSS 0(기존 ct-/op-/od-/wl- 재사용). */
+function streamFocus(C){
+  const flow=WORK||[]; const ci=idxOf(STATE.sel); const w=W(STATE.sel)||{};
+  const total=flow.length;
+  const running=RUN.phase==='working';
+  const atGate=stIsGate(w);
+  const decided=atGate&&gateDecided({decisions:STATE.decisions||{},meetPhase:STATE.meetPhase},w);
+  const comps=strComps(w).map(cc=>`<span class="comp ty${cc.tk}">${cc.nm}</span>`).join('');
+  const SS=PACK.surfaceSpec||{}; const ps=(SS.perStep&&SS.perStep[w.id])||{};
+  /* ① 지금 단계 — ct-vd 카드(결정콘솔 판정카드와 동일 톤) + 단계별 작업뷰(perStep: overview/track/hint) */
+  const tone=atGate?(decided?'ok':'warn'):'info';
+  const icoH=atGate?(decided?_ICO('check-circle'):_ICO('user-check')):(running?'<span class="spin sm"></span>':_ICO('arrow-right'));
+  const sub=atGate?(decided?'결정 완료 — AAP가 이어서 진행했어요':'여기서 사람이 확정해야 합니다 (HITL)')
+                  :(running?(ps.work||'AAP가 처리하고 있어요…'):(ps.done||w.role||'AAP 자동 처리'));
+  let psBody='';
+  if(ps.mode==='overview'&&Array.isArray(ps.rows))
+    psBody=`<div class="op-detail">${ps.rows.map(r=>`<div class="od-row"><span class="od-k">${r[0]}</span><span class="od-v">${r[1]}</span></div>`).join('')}</div>`;
+  else if(Array.isArray(ps.track)&&ps.track.length)
+    psBody=`<div class="ct-vchips">${ps.track.map(t=>`<span class="comp">${running?'<span class="spin sm"></span>':_ICO('check')} ${t}</span>`).join('')}</div>`;
+  else if(ps.hint)psBody=`<div class="ct-vd-sub" style="margin-top:7px">${ps.hint}</div>`;
+  const cur=`<div class="ct-vd-wrap"><div class="ct-vd ${tone}">
+    <div class="ct-vd-top"><span class="ct-vd-ic">${icoH}</span>
+      <div><div class="ct-vd-h">${dcText(w.label,'step.label')}<span class="ct-vd-tag">${Math.min(ci+1,total)}/${total} 단계</span></div>
+      <div class="ct-vd-sub">${sub}</div></div></div>
+    ${strDesc(w)?`<div class="ct-vd-basis"><span class="ct-vd-bk">하는 일</span>${strDesc(w)}</div>`:''}
+    ${psBody}
+    ${comps?`<div class="ct-vchips">${comps}</div>`:''}</div></div>`;
+  /* ② 좌 = 이 단계 작업 내역(ops: 구성요소 타입 · feed→out · detail 표). "지금 AAP가 하는 일".
+     산출물(결과물)은 우측 aside(streamArts 탭·뷰어)에 있음 → 좌(작업)/우(산출물) 분리 · 중복 ✕. */
+  const ops=(w.ops||[]).map(o=>{ const tk=evidType(o);
+    return `<div class="se-op"><span class="se-op-ty ty${tk}">${_TYKO[tk]}</span>
+      <div><span class="se-op-nm">${dcText(o.comp,'op.comp')}</span>
+      <div class="se-op-d">${dcText(o.feed,'op.feed')} → <b>${dcText(o.out,'op.out')}</b></div>
+      ${o.detail||''}</div></div>`; }).join('');
+  const workPanel=ops?`<div class="ct-wh" style="margin-top:16px"><span class="op-t">이 단계 작업 내역</span><span class="op-c">AAP가 이 단계에서 하는 일 · 근거</span></div>
+    <div class="se-ops">${ops}</div>`:'';
+  return `${cur}${workPanel}`;
+}
+/* 우측 aside 상단 HITL 요약 카드(코어 generic surface 공통) — 게이트 미결정 시. 클릭=data-strgate→결정 모달. */
+function streamHitlCard(C){
+  const w=W(STATE.sel)||{}; if(!stIsGate(w))return '';
+  const decided=gateDecided({decisions:STATE.decisions||{},meetPhase:STATE.meetPhase},w);
+  if(decided)return '';
+  return `<button class="op-hitlcard" data-strgate="${w.id}">
+    <div class="op-hc-h">${_ICO('user-check')}<span class="op-hc-t">결정하기</span><span class="op-hitl-tag">결정 필요</span></div>
+    <div class="op-hc-s">${strDesc(w)||w.role||'여기서 사람이 확정해야 합니다'}</div>
+    <div class="op-hc-go">${_ICO('arrow-right')}클릭해 결정·근거 확인</div></button>`;
+}
 function streamLeft(C){
   const flow=WORK||[]; const ci=idxOf(STATE.sel); const total=artKeys().length;
   const running=RUN.phase==='working';
@@ -1559,7 +1631,8 @@ function strDetail(w){
 }
 function streamArts(C){
   const ks=artKeys();
-  if(!ks.length)return `<aside class="strm-arts"><div class="arts-h"><span class="at">산출물</span></div><div class="strm-doc"><div class="strm-doc-wait">${_ICO('file-text')}이 업무에는 표시할 산출물이 없습니다.</div></div></aside>`;
+  const hitl=streamHitlCard(C);   /* (옵션B) HITL 요약 카드 우측 상단 */
+  if(!ks.length)return `<aside class="strm-arts">${hitl}<div class="arts-h"><span class="at">산출물</span></div><div class="strm-doc"><div class="strm-doc-wait">${_ICO('file-text')}이 업무에는 표시할 산출물이 없습니다.</div></div></aside>`;
   const cur=curArtK();
   const tabs=ks.map((k,i)=>{ const ready=artReady(k,i,ks.length); const on=k===cur;
     return `<button class="file ${on?'on':''} ${ready?'':'wait'}" ${ready?`data-strartk="${k}"`:''}><span class="fdot"></span>${PACK.products[k].title}</button>`;
@@ -1575,6 +1648,7 @@ function streamArts(C){
     doc=`<div class="strm-doc"><div class="strm-doc-wait">${_ICO('clock')}아직 생성 전이에요.<br>AAP가 단계를 진행하면 여기에서 열립니다.</div></div>`;
   }
   return `<aside class="strm-arts">
+    ${hitl}
     <div class="arts-h"><span class="at">산출물</span><span class="ac">AAP가 만든 문서 · 열어서 확인</span></div>
     <div class="files">${tabs}</div>
     ${doc}
@@ -1582,7 +1656,8 @@ function streamArts(C){
 }
 /* 스트림 배선(코어 일반) — 게이트 카드→게이트 단계 이동(모달), 산출물 링크→우측 열기, 세부 펼침, 다운로드 stub. */
 function wireStream(root){
-  root.querySelectorAll('[data-strgate]').forEach(e=>e.onclick=()=>gotoGate(e.dataset.strgate));
+  /* HITL 카드 클릭 — 이미 그 게이트 await면 즉시 결정 모달(openGate), 아니면 그 게이트로 이동 */
+  root.querySelectorAll('[data-strgate]').forEach(e=>e.onclick=()=>{ const id=e.dataset.strgate; if(STATE.sel===id&&stIsGate(W(id))&&RUN.phase==='await'){ openGate(); } else { gotoGate(id); } });
   root.querySelectorAll('[data-strart]').forEach(e=>e.onclick=()=>{ STATE.artK=e.dataset.strart; renderConsole(); });
   root.querySelectorAll('[data-strartk]').forEach(e=>e.onclick=()=>{ STATE.artK=e.dataset.strartk; renderConsole(); });
   root.querySelectorAll('[data-strexp]').forEach(e=>e.onclick=()=>{ const id=e.dataset.strexp; STATE.wsStepOpen=STATE.wsStepOpen||new Set(); STATE.wsStepOpen.has(id)?STATE.wsStepOpen.delete(id):STATE.wsStepOpen.add(id); renderConsole(); });
@@ -1746,6 +1821,8 @@ function wirePackHooks(root){
 }
 function currentCM(){
   if(STATE.previewK)return 'preview';
+  /* ★ 옵션(steering) 변경 결과 모달 — 값 변화 전/후 + 판단 로직·근거를 모달로(도메인 무관) */
+  if(STATE.reResult)return 'reresult';
   /* 팩이 도메인 인터랙션 모달(예: 후보 상세)을 우선 표시하려면 hook 으로 kind 반환(도메인 무관) */
   const hk=PACK.surfaceHooks;
   if(hk&&hk.currentCM){ const k=hk.currentCM(STATE); if(k)return k; }
@@ -1767,9 +1844,10 @@ function renderCModal(){
   const C=ctx();let html;
   if(kind==='preview'){const d=resolveDlv(STATE.previewK,C);
     html=`<button class="cmodal-back" data-back>${_ICO('chevron-left')}뒤로</button><div class="cmodal-h">${d.ic} ${d.title}</div><div class="cmodal-sub">${d.sub}</div>${d.body}`;
-  } else html=surfCmodal(kind,C);
-  /* HITL 결정 모달은 넓게(컷·가중 편집·미리보기 수용) — 차분 톤 유지 */
-  const wide=(kind==='hitl')?' wide':'';
+  } else if(kind==='reresult'){ html=reResultModalHtml(); }
+  else html=surfCmodal(kind,C);
+  /* HITL 결정·결과 모달은 넓게(전/후 비교·로직·근거 수용) — 차분 톤 유지 */
+  const wide=(kind==='hitl'||kind==='reresult')?' wide':'';
   /* 게이트 HITL 모달엔 공통 닫기 X 를 코어가 주입(도메인 surface.cmodal 마다 안 넣어도 됨) →
      닫으면 baseOnly=true 로 콘솔 복귀(line 1749 data-close 핸들러). '갇힘' 해소(§2-C). */
   const closeX=(kind==='hitl')?`<button class="cmodal-x" data-close aria-label="닫기">${_ICO('x')}</button>`:'';
@@ -1783,6 +1861,19 @@ function renderCModal(){
   cm.querySelectorAll('[data-time]').forEach(e=>e.onclick=()=>{STATE.pickedTime=TIMES[+e.dataset.time].t;renderConsole();});
   const ms=cm.querySelector('[data-mstart]');if(ms)ms.onclick=meetingStart;
   const me=cm.querySelector('[data-mend]');if(me)me.onclick=meetingEnd;
+  cm.querySelectorAll('[data-rrclose]').forEach(e=>e.onclick=()=>{STATE.reResult=null;renderConsole();});
+}
+/* ★ 옵션 변경 결과 모달 — 값 전/후 비교 + 판단 로직(단계별 근거). steering 결과를 모달로 명시. */
+function reResultModalHtml(){
+  const r=STATE.reResult; if(!r)return '';
+  const diffRows=(r.diff||[]).map(d=>`<div class="rr-d"><span class="rr-dl">${d.label}</span><span class="rr-dv"><b class="rr-from">${d.from}</b>${_ICO('arrow-right')}<b class="rr-to">${d.to}</b></span></div>`).join('');
+  const stepRows=(r.steps||[]).map(s=>`<div class="rr-s"><div class="rr-sh"><span class="rr-st">${s.t}</span>${s.tag?`<span class="rr-tag">${s.tag}</span>`:''}</div>${s.d?`<div class="rr-sd">${s.d}</div>`:''}${s.basis?`<div class="rr-sb">${s.basis}</div>`:''}</div>`).join('');
+  return `<button class="cmodal-x" data-rrclose aria-label="닫기">${_ICO('x')}</button>
+    <div class="cmodal-h">${_ICO('zap')}기준 변경 결과</div>
+    <div class="cmodal-sub">${r.intent||'의도 변경'} — AAP가 다시 분석해 반영했습니다 (chat 아님 · 결정론 재계산)</div>
+    ${diffRows?`<div class="rr-diff-h">무엇이 바뀌었나</div><div class="rr-diff">${diffRows}</div>`:''}
+    ${stepRows?`<div class="rr-logic-h">어떻게 판단했나 · 단계별 근거</div><div class="rr-logic">${stepRows}</div>`:''}
+    <div class="cmodal-actions"><button class="cp-btn primary" data-rrclose>확인</button></div>`;
 }
 function openPreview(k){STATE.previewK=k;renderConsole();}
 
@@ -1899,7 +1990,7 @@ function revealOps(){
   RUN.timers.push(setTimeout(()=>{
     RUN.reveal=n;traceStep(w);
     if(stIsLive(w)&&STATE.meetPhase==='in_meeting'){STATE.meetPhase='await_end';RUN.phase='await';renderConsole();renderRight();}
-    else if(stIsGate(w)){RUN.phase='await';renderConsole();renderRight();}
+    else if(stIsGate(w)){RUN.phase='await';STATE.baseOnly=true;renderConsole();renderRight();}  /* (옵션B) 게이트 자동 모달 ✕ — 우측 HITL 카드 클릭 시에만 결정 모달 */
     else{RUN.phase='done';renderConsole();renderRight();if(STATE.playing)RUN.playTimer=setTimeout(playNext,OP_T.hold);}
     afterStateChange();
   },settleAt));
@@ -1907,7 +1998,7 @@ function revealOps(){
 /* 케이스 영속 + 인박스 카운트 갱신 (런타임 상태가 바뀐 직후) */
 function afterStateChange(){ persistToCase(); const navc=document.getElementById('navCnt'); if(navc){const w=APP.cases.filter(c=>c.packId===APP.pack&&isDeployed(c.packId)&&caseStatus(c)==='wait').length;navc.textContent=w?String(w):'';} renderRunAction(); }
 function runStep(){
-  clearRun();STATE.previewK=null;STATE.baseOnly=false;STATE.opOpen.clear();if(STATE.wsStepOpen)STATE.wsStepOpen.clear();clearPackTransient();const w=W(STATE.sel);
+  clearRun();STATE.previewK=null;STATE.reResult=null;STATE.baseOnly=false;STATE.opOpen.clear();if(STATE.wsStepOpen)STATE.wsStepOpen.clear();clearPackTransient();const w=W(STATE.sel);
   if(stIsLive(w)){STATE.meetPhase='await_start';RUN.phase='await';RUN.reveal=0;renderConsole();renderRight();}
   else{STATE.meetPhase='idle';startWorking();}
 }
@@ -2037,8 +2128,8 @@ function renderDesign(){
   const wl=P.workload;
   document.getElementById('waBox').innerHTML=
     `<div class="wa-row full"><span class="k">요청</span><span class="req">${wl.request}</span></div>
-     <div class="wa-row"><span class="k">유형</span><span>${wl.type}</span></div>
-     <div class="wa-row"><span class="k">목적</span><span>${wl.purpose}</span></div>
+     <div class="wa-row full"><span class="k">유형</span><span>${wl.type}</span></div>
+     <div class="wa-row full"><span class="k">목적</span><span>${wl.purpose}</span></div>
      <div class="wa-row full"><span class="k">필요 산출물</span><span class="chips">${wl.outputs.map(o=>`<span>${o}</span>`).join('')}</span></div>
      <div class="wa-row full"><span class="k">확인 지점</span><span>${wl.gates}</span></div>`;
   document.getElementById('composeGrid').innerHTML=P.compose.map(c=>`<div class="comp ${c.cls}"><div class="ct">${c.t}<span class="cn">${c.n}</span></div><div class="csub">${c.sub}</div><ul>${c.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('');
@@ -2235,6 +2326,9 @@ function renderGovern(){
   /* ── ① Eval(평가) — 전역 점수 + 4지표 게이지 + 케이스별 ── */
   const evGl=document.getElementById('opsEvalGlobal');
   if(evGl){
+    /* 실행 케이스 0이면 0점/0%를 red(_opsTone)로 알람처럼 칠하지 않고 muted 빈상태로 — 케이스 블록(opsEvalCases)과 동일 톤(.ops-empty=--faint) */
+    if(!em.ran.length){ evGl.innerHTML=`<div class="ops-empty">아직 실행된 케이스가 없어 평가 점수가 없습니다 — 인박스에서 케이스를 진행하면 Run Trace에서 지표가 산출됩니다.</div>`; }
+    else{
     const G=em.global;
     const gauge=(k,v,tip)=>`<div class="eval-m" data-tip="${tip}"><div class="em-h"><span class="em-k">${k}</span><span class="em-v ${_opsTone(v)}">${v}<i>%</i></span></div><div class="em-bar"><span class="${_opsTone(v)}" style="width:${v}%"></span></div></div>`;
     evGl.innerHTML=`<div class="eval-score ${_opsTone(G.score)}"><div class="es-v">${G.score}</div><div class="es-k">종합 Eval 점수</div><div class="es-sub">배포 유형 ${em.ran.length}개 실행 케이스 평균</div></div>`+
@@ -2244,6 +2338,7 @@ function renderGovern(){
       gauge('실행 성공률',G.exec,'케이스가 끝까지 진행된 비율(완료=100, 진행=진행률)')+
       gauge('HITL 적시 처리율',G.hitlTimely,'도달한 HITL 게이트가 적시에 처리된 비율(미처리 대기=차감)')+
       `</div>`;
+    }
   }
   const evCa=document.getElementById('opsEvalCases');
   if(evCa){
@@ -2507,6 +2602,7 @@ const _nc=document.getElementById('newCaseBtn');if(_nc)_nc.onclick=()=>promptNew
 /* 스튜디오 '＋ 신규 격상' → 격상 파이프라인(없으면 자동저작 오버레이) — 상단 '업무 격상' 버튼 흡수 */
 const _np=document.getElementById('newPromoteBtn');if(_np)_np.onclick=()=>{ if(window.AAP_PIPELINE)window.AAP_PIPELINE.open(); else if(window.AAP_AUTHORING_OPEN)window.AAP_AUTHORING_OPEN(); };
 const _rb=document.getElementById('rtBack');if(_rb)_rb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};
+const _tb=document.getElementById('tbBack');if(_tb)_tb.onclick=()=>{if(STATE.playing)stopPlay();setView('inbox');};   /* 상단 통합 '내 업무' (runtop 폐지) */
 /* ── 단계 되짚기 = 안정 조상에 클릭 위임 1회 바인딩(매 렌더 재바인딩 ✕) ──
    자동재생(autoAdvanceOnOpen) 중엔 strip/seq 가 매 reveal 틱마다 재생성되어 per-element onclick 이
    유실됐다(클릭 무반응 → 자동전진 계속 → '직전 단계로 이동 안 됨'). 위임은 재렌더 무관 항상 동작.
@@ -2578,8 +2674,14 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
   if(qv&&['inbox','run','domain','workflow','assets','logs','govern','demo'].includes(qv))view=qv;
   const qtf=q.get('type'); if(qtf&&(qtf==='all'||PACKS[qtf]))APP.typeFilter=qtf;
   const qopen=q.get('open');
+  const qseed=q.get('seed');   /* 시드 케이스 안정키(packId:index) 딥링크 — 공유·데모·검증용(id 는 비결정적이라 seedKey 로) */
+  const seedCase=qseed?APP.cases.find(c=>c.seedKey===qseed):null;
   if(qopen&&APP.cases.some(c=>c.id===qopen)){openCase(qopen);}
+  else if(seedCase){openCase(seedCase.id);}
   else if(view==='run'&&APP.active&&APP.cases.some(c=>c.id===APP.active)){openCase(APP.active);}
   else { APP.active=null; setView(view==='run'?'inbox':view); }
+  /* ?step=<stepId> — 열린 케이스를 특정 단계로 이동(게이트면 await 정지). 데모·헤드리스 게이트 검증용. */
+  const qstep=q.get('step');
+  if(qstep&&APP.active&&W(qstep)){ if(STATE.playing)stopPlay(); setSel(qstep); }
 })();
 })();

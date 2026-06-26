@@ -109,7 +109,11 @@
 .nc-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--slate); background:#fff; border:1px solid var(--border); border-radius:20px; padding:6px 12px; cursor:pointer; font-family:inherit; }
 .nc-chip:hover{ border-color:var(--aap); color:var(--aap-ink); background:var(--surf); }
 .nc-chip .tc-dot{ width:7px; height:7px; border-radius:50%; background:var(--aap); flex:0 0 auto; }
-/* (1) 새 업무 오버레이 — 닫기 버튼 + textarea 크기조절 핸들 제거 */
+/* (1) 새 업무 오버레이 = 중앙 모달(앵커 팝오버 ✕) — 백드롭 + 화면 중앙 */
+.nc-backdrop{ position:fixed; inset:0; z-index:200; background:rgba(15,23,42,.34); display:flex; align-items:flex-start; justify-content:center; padding:9vh 16px 16px; backdrop-filter:saturate(.9) blur(1px); animation:ncfade .16s ease both; }
+@keyframes ncfade{ from{opacity:0} to{opacity:1} }
+.nc-menu.nc-modal{ position:relative; inset:auto; top:auto; left:auto; margin:0; width:100%; max-width:480px; padding:18px 20px 20px; box-shadow:0 24px 60px rgba(15,23,42,.28); border-radius:16px; animation:cmcardin .24s cubic-bezier(.34,1.2,.64,1) both; max-height:82vh; overflow:auto; }
+/* (1) 닫기 버튼 + textarea 크기조절 핸들 제거 */
 .nc-menu{ position:relative; }
 .ncm-x{ position:absolute; top:10px; right:10px; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--muted); border-radius:7px; cursor:pointer; padding:0; }
 .ncm-x:hover{ background:var(--surf); color:var(--slate); }
@@ -232,7 +236,12 @@
 /* ── #2 비례: 상단 runtop(스테퍼) 압축 + 좌 work 폭 캡 + 우 근거 레일 확대 ──
    v0_58: 작동/근거 패널이 주연(40:60톤). 좌는 텍스트폭에 맞춰 과확산 방지, 우 레일은
    조연→주연급으로. 폭은 토큰(--op-maxw·rail)으로 제어 → 고정 px 비례 제거. */
-.run-surface.ws-on-op .op-strip-wrap{ padding-top:7px; padding-bottom:7px; }   /* 스테퍼 높이↓(압축) */
+.run-surface.ws-on-op .op-strip-wrap{ padding-top:5px; padding-bottom:5px; }   /* 스테퍼 높이↓(압축) */
+/* (2) 상단 스텝 네비 추가 압축 — 노드·번호 더 작게, 완료 단계는 텍스트만 옅게(공간 효율↑) */
+.run-surface.ws-on-op .op-snode{ padding:3px 8px; gap:5px; font-size:11.5px; }
+.run-surface.ws-on-op .op-sn{ width:17px; height:17px; font-size:10px; }
+.run-surface.ws-on-op .op-snode.wait .op-sl{ font-size:11px; }
+.run-surface.ws-on-op .op-sar{ opacity:.5; }   /* 단계 사이 화살표 옅게(시각 잡음↓) */
 .run-surface.ws-on-op .op-snode{ padding:5px 10px; }                            /* strip 노드 컴팩트 */
 .run-surface.ws-on-op .op-sn{ width:19px; height:19px; }
 /* 우 근거 레일을 조연→충분한 주연급으로 확대(기본 360 → 400). 좌 main 은 그대로 흐름. */
@@ -270,27 +279,65 @@
    'AAP 작동 흐름'의 위→아래 톤을, 좌/우 분할 없이.
    ※ 위 #1·#2 의 2열 폭/레일 규칙을 의도적으로 덮음(소스 후순위). 함수·DOM·data-* 불변.
    ========================================================================= */
-:root{ --op-col:960px; }
-.run-surface.ws-on-op .op-split{ flex-direction:column !important; max-width:var(--op-col) !important; margin:0 auto !important; }
-.run-surface.ws-on-op .op-main{ flex:0 0 auto !important; width:100%; padding:14px 26px 16px !important; overflow:visible; }
-/* 우 근거 레일 → 본문 아래 인라인 섹션(레일 아님): 좌측 보더·배경 제거, 위 구분선, 같은 좌우 패딩 */
-.run-surface.ws-on-op .op-aside{ flex:0 0 auto !important; width:100% !important; max-width:none !important;
-  border-left:none !important; border-top:1px solid var(--border); background:transparent !important;
-  padding:8px 26px 30px !important; overflow:visible; }
-/* 스택된 본문은 surface 가 스크롤(이중 스크롤 제거) */
-.run-surface.ws-on-op .con-body.op-body{ overflow:auto; }
-/* 매칭 그래프는 인라인에서 본문 폭 가득(좁은 레일 가정 해제) */
-.run-surface.ws-on-op .op-aside .op-graph svg{ height:220px; width:100%; }
-/* 상단 스테퍼·steer 도 같은 중앙 폭에 정렬(좌우 안 흔들리게) */
-.run-surface.ws-on-op .op-strip, .run-surface.ws-on-op .op-steer{ max-width:var(--op-col); margin-left:auto; margin-right:auto; }
-@media(min-width:1700px){ :root{ --op-col:1040px; } }
+/* (2) run 콘솔 = 2열: 좌 작업(후보·슬롯·스코어) / 우 근거·결정 레일(HITL 게이트 결정 + 근거).
+   사용자 요청(260625): HITL 결정은 우측 영역에 인라인. ≤1280 세로 스택(레일이 본문 아래로). */
+.run-surface.ws-on-op .op-split{ flex-direction:row; max-width:var(--op-maxw); margin:0 auto; }
+.run-surface.ws-on-op .op-main{ flex:1 1 auto; min-width:0; padding:14px 24px 26px; overflow:auto; }
+.run-surface.ws-on-op .op-aside{ flex:0 0 400px; width:auto; max-width:none; border-left:1px solid var(--border); border-top:none; background:var(--surf); padding:14px 18px 26px; overflow:auto; }
+.run-surface.ws-on-op .con-body.op-body{ overflow:hidden; }
+.run-surface.ws-on-op .op-aside .op-graph svg{ height:200px; width:100%; }
+/* 상단 스테퍼·steer 는 전체 폭 중앙(2열 본문 폭과 동일) */
+.run-surface.ws-on-op .op-strip, .run-surface.ws-on-op .op-steer{ max-width:var(--op-maxw); margin-left:auto; margin-right:auto; }
+@media(max-width:1280px){
+  .run-surface.ws-on-op .op-split{ flex-direction:column; }
+  .run-surface.ws-on-op .op-aside{ flex:1 1 auto; width:100%; border-left:none; border-top:1px solid var(--border); }
+}
+/* (2·옵션B) 우측 HITL = 요약 카드(클릭→결정 모달). 강조 amber, 전체 클릭 가능. */
+.op-hitlcard{ display:block; width:100%; text-align:left; font-family:inherit; cursor:pointer; margin:0 0 14px;
+  background:linear-gradient(180deg,var(--amber-soft),#fff); border:1.5px solid var(--amber); border-radius:12px;
+  padding:12px 14px; box-shadow:0 4px 16px rgba(217,119,6,.13); transition:box-shadow .14s, transform .08s; }
+.op-hitlcard:hover{ box-shadow:0 7px 20px rgba(217,119,6,.2); transform:translateY(-1px); }
+.op-hc-h{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--amber-ink); }
+.op-hc-h .ic{ width:15px; height:15px; }
+.op-hc-t{ flex:1 1 auto; }
+.op-hc-s{ font-size:11.5px; color:var(--amber-ink); opacity:.85; margin-top:5px; line-height:1.45; }
+.op-hc-go{ display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:800; color:#fff; background:var(--amber); border-radius:7px; padding:5px 10px; margin-top:9px; }
+.op-hc-go .ic{ width:13px; height:13px; }
+/* (2·옵션B) 산출물 리스트 — 클릭 = 상세 모달 */
+.op-prods{ display:flex; flex-direction:column; gap:6px; margin:4px 0 16px; }
+.op-prod{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; font-family:inherit; cursor:pointer;
+  background:#fff; border:1px solid var(--border); border-radius:10px; padding:9px 11px; transition:border-color .12s, background .12s; }
+.op-prod:hover{ border-color:var(--aap); background:var(--surf); }
+.op-prod-ic{ width:30px; height:30px; flex:0 0 auto; display:grid; place-items:center; border-radius:8px; background:var(--aap-soft); color:var(--aap-ink); }
+.op-prod-ic .ic{ width:16px; height:16px; }
+.op-prod-tx{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.op-prod-tx b{ font-size:12.5px; font-weight:700; color:var(--ink); }
+.op-prod-tx span{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.op-prod>.ic{ width:15px; height:15px; color:var(--faint); flex:0 0 auto; }
 
 /* ── #5 모달 비례: 뷰포트 비례(clamp) — 너비 대비 과대/과소 해소, 내부 정렬 일관 ──
    HITL/근거/노드 모달이 동일 비례 규율을 공유(콘솔 안 오버레이는 vw, 풀스크린 모달은 vw). */
 /* 콘솔 안 오버레이(#cmodal — .run-surface 내부 absolute): 콘솔 폭에 비례. */
-.cmodal-card{ max-width:clamp(360px, 64%, 520px); }
-.cmodal-card.wide{ max-width:clamp(440px, 78%, 620px); }
+.cmodal-card{ max-width:clamp(440px, 76%, 680px); }                 /* 모달 확대(기존 너무 작음) */
+.cmodal-card.wide{ max-width:clamp(560px, 88%, 880px); padding:20px 24px; }
 .cmodal{ padding:clamp(14px, 4%, 28px); }
+/* (3) 옵션 변경 결과 모달 — 값 전/후 비교 + 단계별 판단 로직·근거 */
+.rr-diff-h, .rr-logic-h{ font-size:11px; font-weight:800; color:var(--muted); letter-spacing:.03em; margin:14px 0 7px; }
+.rr-diff{ display:flex; flex-direction:column; gap:1px; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.rr-d{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 13px; background:#fff; }
+.rr-d:nth-child(even){ background:var(--surf); }
+.rr-dl{ font-size:12.5px; color:var(--slate); font-weight:600; }
+.rr-dv{ display:inline-flex; align-items:center; gap:8px; font-size:13px; }
+.rr-dv .ic{ width:14px; height:14px; color:var(--aap); }
+.rr-from{ color:var(--muted); font-weight:600; text-decoration:line-through; text-decoration-color:var(--border); }
+.rr-to{ color:var(--aap-ink); font-weight:800; }
+.rr-logic{ display:flex; flex-direction:column; gap:8px; }
+.rr-s{ border-left:2px solid var(--aap-border); padding:2px 0 2px 11px; }
+.rr-sh{ display:flex; align-items:center; gap:7px; }
+.rr-st{ font-size:12.5px; font-weight:800; color:var(--ink); }
+.rr-tag{ font-size:9px; font-weight:800; color:var(--aap-ink); background:var(--aap-soft); border-radius:4px; padding:1px 6px; }
+.rr-sd{ font-size:12px; color:var(--slate); margin-top:2px; }
+.rr-sb{ font-size:11px; color:var(--muted); margin-top:2px; font-family:var(--mono,ui-monospace,monospace); line-height:1.5; }
 /* 풀스크린 노드 모달(#nodeModal, 있으면) — 뷰포트 비례 */
 #nodeModal .nm-card{ max-width:clamp(420px, 56vw, 560px); }
 /* 좁은 폭에선 모달이 콘솔 폭을 거의 채워 내부 데이터가 짓눌리지 않게 */
@@ -352,3 +399,132 @@ body.dev-on .dc-tech{ display:inline; }
 .ev-k.tyC{ color:var(--type-connector,#2563eb); }   /* 조회·대조 */
 .ev-k.tyP{ color:var(--type-policy,#d97706); }       /* 규칙·정책 */
 .ev-k.tyA{ color:var(--type-agent,#0d9488); }        /* 판단 로직 */
+
+/* op-골격(B) 안에 재사용된 stream 콘텐츠(회의·VOC) — 전 유형 단일 프레임 통일.
+   strm-left/arts 가 op-main/op-aside 슬롯에 들어오므로 자체 flex-basis·이중 패딩·중복 보더 무력화
+   → 컨테이너(op-main/op-aside)가 폭·스크롤·패딩을 책임진다. */
+.op-aside>.strm-arts{ flex:none; border-left:none; background:transparent; }
+
+/* ── 상단 압축 (유저: 4겹 밴드 → 2겹). 상단바 1줄 통합 + runtop 폐지 ── */
+.topbar{ height:46px; flex-basis:46px; }
+body.run-active .brand-sub{ display:none; }            /* run 모드: 부제 숨겨 케이스명 공간 확보 */
+.tb-back{ display:none; align-items:center; gap:5px; border:1px solid var(--border); background:#fff;
+  font-family:inherit; font-size:12px; font-weight:600; color:var(--muted); padding:5px 10px; border-radius:8px; cursor:pointer; flex:0 0 auto; }
+.tb-back:hover{ border-color:var(--aap-border); color:var(--aap-ink); }
+.tb-back .ic-l .ic{ width:15px; height:15px; }
+body.run-active .tb-back{ display:inline-flex; }
+.topbar .case-title{ font-size:13px; font-weight:700; color:var(--slate,#334155); }
+.runtop{ display:none; }                                /* 폐지 — 내 업무=상단바 · 단계=strip · 시연버튼=제품 UX 아님 */
+
+/* ── 단계 strip = 직전·현재·다음 3노드 + 우측 케이스 요약(요청·진행) 한 줄 ── */
+.run-surface.ws-on-op .op-strip-wrap{ display:flex; align-items:center; gap:16px;
+  max-width:var(--op-maxw); margin:0 auto; padding-left:var(--op-padx); padding-right:var(--op-padx); box-sizing:border-box; }
+.run-surface.ws-on-op .op-strip{ max-width:none; margin:0; padding:0; width:auto; flex:0 0 auto; overflow:visible; }
+.op-cs-inline{ flex:1 1 auto; min-width:0; display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+.op-cs-req{ font-size:var(--fs-sub); color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  display:inline-flex; align-items:center; gap:5px; min-width:0; max-width:60%; }
+.op-cs-req .ic{ width:13px; height:13px; flex:0 0 auto; }
+.op-cs-prog{ font-size:var(--fs-micro); color:var(--faint); white-space:nowrap; flex:0 0 auto; }
+
+/* =========================================================================
+   ② 디자인 토큰 마감 — stream "하는 일" 카드 본문 모노톤 정합 (260625, aap-design) 〔디자인〕
+   ───────────────────────────────────────────────────────────────────────
+   유저 지적: 계획 승인의 ct-vd "하는 일" 카드 아래 텍스트(comp 타입칩·se-op 타입배지)가
+   타입색 채움으로 모노톤 미니멀(v0.4~v0.5)과 톤 불일치.
+   원칙(=monochrome system): 채움 ✕ · 텍스트 중립 · 5타입 식별은 "색 dot 하나"로만 ·
+   상태(ok/warn/info)는 단일 악센트(아이콘)로 · teal=주액션만. 신규 hex 0(토큰만).
+   대상: streamFocus·strDetail(회의·VOC)의 se-op/comp + 결정콘솔과 공유되는 ct-vd 카드.
+   ※ 근거 4유형 색 키(.ev-k·.ev-dot·.op-tdot=드릴 모달/그래프 식별)는 불변(유지).
+   ========================================================================= */
+
+/* ── (A) se-op 타입배지 = 중립 surface + 5타입 색 dot 하나(텍스트는 중립) ──
+   기존 .se-op-ty.tyA{color:aap-ink;background:aap-soft}… 멀티색 채움 → 중립화.
+   dot 색(--type-*)으로 "조합된 구조" 타입 식별은 유지(KEY MESSAGE 증명). */
+.se-op-ty{ color:var(--muted); background:var(--surf); border:1px solid var(--line);
+  display:inline-flex; align-items:center; gap:5px; }
+.se-op-ty::before{ content:""; width:6px; height:6px; border-radius:50%; flex:0 0 auto; background:var(--faint); }
+.se-op-ty.tyA, .se-op-ty.tyM, .se-op-ty.tyS, .se-op-ty.tyC, .se-op-ty.tyP{
+  color:var(--muted); background:var(--surf); }
+.se-op-ty.tyA::before{ background:var(--type-agent,#0d9488); }
+.se-op-ty.tyM::before{ background:var(--type-module,#7c3aed); }
+.se-op-ty.tyS::before{ background:var(--type-solution,#0891b2); }
+.se-op-ty.tyC::before{ background:var(--type-connector,#2563eb); }
+.se-op-ty.tyP::before{ background:var(--type-policy,#d97706); }
+
+/* ── (B) stream comp 칩(ct-vchips 안) = 타이트한 중립 칩 + 타입 dot ──
+   .comp 기본은 큰 카드 스타일(border-radius 13·padding 12) → stream 칩은 평면 칩으로.
+   ps.track 의 bare .comp(체크 아이콘)도 동일 톤. */
+.ct-vchips{ display:flex; flex-wrap:wrap; gap:6px; }
+.ct-vchips .comp{ display:inline-flex; align-items:center; gap:6px;
+  font-size:var(--fs-sub); font-weight:600; color:var(--slate);
+  background:var(--surf); border:1px solid var(--border); border-radius:var(--r-pill);
+  padding:4px 11px; box-shadow:none; }
+.ct-vchips .comp .ic{ width:13px; height:13px; color:var(--muted); }
+/* 5타입 식별 = 선행 색 dot 하나(채움 ✕). bare .comp(track)는 dot 없음 → 가드. */
+.ct-vchips .comp.tyA::before, .ct-vchips .comp.tyM::before, .ct-vchips .comp.tyS::before,
+.ct-vchips .comp.tyC::before, .ct-vchips .comp.tyP::before{
+  content:""; width:6px; height:6px; border-radius:50%; flex:0 0 auto; }
+.ct-vchips .comp.tyA::before{ background:var(--type-agent,#0d9488); }
+.ct-vchips .comp.tyM::before{ background:var(--type-module,#7c3aed); }
+.ct-vchips .comp.tyS::before{ background:var(--type-solution,#0891b2); }
+.ct-vchips .comp.tyC::before{ background:var(--type-connector,#2563eb); }
+.ct-vchips .comp.tyP::before{ background:var(--type-policy,#d97706); }
+.ct-vchips-k{ color:var(--faint); }
+
+/* ── (C) ct-vd 판정/단계 카드 = 모노톤 정합(stream·결정콘솔 공통) ──
+   기존 .ct-vd.warn{background:amber-soft(이미 중립)}+amber 헤더·테두리 → 카드 전체가 amber 워시로
+   주변 모노톤과 충돌. 원칙: 카드는 중립(흰 표면·얇은 중립 테두리), 상태는 "아이콘 하나"로만 악센트.
+   헤더 텍스트는 ink(중립). amber=HITL/gate·green=완료 = 아이콘 칩 색으로 유지(단일 악센트). */
+.ct-vd{ border:1px solid var(--border); background:#fff; box-shadow:var(--shadow); }
+.ct-vd.ok, .ct-vd.warn, .ct-vd.risk{ border-color:var(--border); }
+.ct-vd.info{ background:var(--surf); border-color:var(--line); }
+/* 헤더·서브 = 중립(상태색 텍스트 채움 ✕) */
+.ct-vd-h, .ct-vd.ok .ct-vd-h, .ct-vd.warn .ct-vd-h, .ct-vd.risk .ct-vd-h{ color:var(--ink); }
+.ct-vd-tag{ color:var(--muted); background:var(--surf); border-color:var(--line); }
+.ct-vd-basis{ background:var(--surf); border-color:var(--line); }
+.ct-vd-bk{ color:var(--faint); }
+/* 상태 악센트 = 아이콘 칩 하나만(green 완료·amber 게이트·red 위험 = 의미색 dot/아이콘 유지) */
+.ct-vd.info .ct-vd-ic{ background:var(--faint); }   /* 진행/자동 = 중립 */
+/* (risk 만 예외적으로 텍스트도 red 유지 — 위험/차단 신호) */
+.ct-vd.risk .ct-vd-h{ color:var(--red); }
+
+/* ── (A) run 셸 통일: 임계 튜너(steer)를 떠있는 밴드 → main 상단 인라인 카드로 흡수 ──
+   renderOpConsole 가 op.steer 를 op.main 앞에 prepend → 전 팩(계약·구매·경비 데이터콘솔 + 채용 매칭/면접/평가)
+   공통. band-centering(op-maxw·op-padx) 무력화 + 카드 외형 → 전 유형 「strip → 좌 본문 / 우 결정·근거 aside」 1셸. */
+.run-surface.ws-on-op .op-main .op-steer{ max-width:none; margin:0 0 14px; padding:10px 14px; width:auto;
+  border:1px solid var(--border); border-radius:var(--r-card,12px); background:#fff; box-sizing:border-box; }
+
+/* =========================================================================
+   ②-후속 · 도메인 팩 카탈로그 카드 모노톤 정합 (260625, aap-design) 〔디자인〕
+   ───────────────────────────────────────────────────────────────────────
+   감사 🔴#2: .cat-card(상단 3px 타입색 띠 5종) + 카드 안 .ty-badge(타입색 채움 pill)가
+   ②의 모노톤 전환(stream 카드 v0.4~0.5)과 톤 불일치.
+   원칙(=②와 동일): 채움 ✕ · 텍스트 중립 · 5타입 식별은 "선행 색 dot 하나"로만 · 신규 hex 0(--type-* 토큰).
+   ⚠ .ty-badge 는 인박스(.ibx-t)·typeBadge() 등에 재사용 → cat-card·catPrev 스코프로만 한정(인박스 불변).
+   ========================================================================= */
+
+/* ── (1) 카드 상단 보더 타입색 → 중립 (draft 의 dashed 보더 유지) ── */
+.cat-card.tA, .cat-card.tM, .cat-card.tS, .cat-card.tC, .cat-card.tP{
+  border-top-color:var(--border); }
+.cat-card.is-draft{ border-top-style:dashed; }   /* draft dashed 보더 유지(우선순위 보강) */
+
+/* ── (2) cat-card·catPrev 안 .ty-badge = 중립 칩(채움 ✕) + 선행 타입 색 dot 하나 ──
+   ②의 se-op 타입배지와 동일 톤(color:muted·bg:surf·border:line). 인박스 .ty-badge 는 미접촉. */
+.cat-card .ty-badge, #catPrevTitle .ty-badge{
+  color:var(--muted); background:var(--surf); border-color:var(--line);
+  display:inline-flex; align-items:center; gap:5px; }
+/* 기존 1806 의 .cat-h .ty-badge::before(currentColor dot) 를 per-type --type-* 로 재지정 +
+   catPrev 에도 동일 dot 부여(타입 식별 유지). bare 가드 없이 5타입 클래스에만 dot 출력. */
+.cat-card .cat-h .ty-badge.tA::before, .cat-card .cat-h .ty-badge.tM::before,
+.cat-card .cat-h .ty-badge.tS::before, .cat-card .cat-h .ty-badge.tC::before,
+.cat-card .cat-h .ty-badge.tP::before,
+#catPrevTitle .ty-badge.tA::before, #catPrevTitle .ty-badge.tM::before,
+#catPrevTitle .ty-badge.tS::before, #catPrevTitle .ty-badge.tC::before,
+#catPrevTitle .ty-badge.tP::before{
+  content:""; display:inline-block; width:6px; height:6px; border-radius:50%;
+  margin-right:0; vertical-align:0; flex:0 0 auto; }
+.cat-card .ty-badge.tA::before, #catPrevTitle .ty-badge.tA::before{ background:var(--type-agent,#0d9488); }
+.cat-card .ty-badge.tM::before, #catPrevTitle .ty-badge.tM::before{ background:var(--type-module,#7c3aed); }
+.cat-card .ty-badge.tS::before, #catPrevTitle .ty-badge.tS::before{ background:var(--type-solution,#0891b2); }
+.cat-card .ty-badge.tC::before, #catPrevTitle .ty-badge.tC::before{ background:var(--type-connector,#2563eb); }
+.cat-card .ty-badge.tP::before, #catPrevTitle .ty-badge.tP::before{ background:var(--type-policy,#d97706); }

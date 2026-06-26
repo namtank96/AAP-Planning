@@ -69,12 +69,88 @@
 
 ## 5. 변경 기록 (최신순 · 영역 태그)
 
+### 디자인 폴리시 패스 + 인박스 상태 분산 (260626, aap-design·aap-platform · 감사 🟢·🟡#3 후속) 〔디자인 + 표준·정의〕
+> govern 빈상태 수정에 이어 design-auditor 잔여 갭 처리. **제안 순서대로**: 🟢 폴리시 → 🟡#3 시드 분산.
+> - **🟢#5 HITL 헤더 라벨 중복 제거〔디자인〕**: run 2열에서 좌 현재단계 카드(`ct-vd-h`=단계 라벨)와 우 `streamHitlCard`(`op-hc-t`=같은 라벨)가 단계명 중복. 우 HITL카드 제목을 단계명→**동사형 "결정하기"**로 축약(core.js streamHitlCard). 의미는 좌 카드가, 행동은 우 카드가. `op-hitl-tag`("결정 필요")·desc 유지.
+> - **🟢#7 domain '개요' 정렬〔디자인〕**: `.wa` 2열 그리드에서 유형·목적이 반폭으로 나란히 떠 시선 단절. 둘 다 `.wa-row full`로 → 요청·유형·목적·산출물·확인지점 **단일 정렬 라벨-값 그리드**(core.js waBox). CSS 0.
+> - **🟡#3 인박스 status/progress 분산〔표준·정의〕**: 디자인(상태색·보더·진행바)은 이미 정상 → 원인은 **시드가 전부 같은 상태**. data-console 팩(procurement 13·expense 11·contract_a 4)이 시드를 전부 `atStep:'route_gate'`(검토대기)에 둬 인박스가 평평. **atStep 을 intake(접수)·check(진행)·route_gate(검토대기)로 분산**(procurement·expense=`i%3` 순환, contract_a=표준→check·스캔품질→intake·고위험2건 route_gate 유지). **게이트 demo 보존**: 케이스를 열면 `autoAdvanceOnOpen` 이 어차피 route_gate 까지 흘려보내 멈춤 → atStep 은 인박스 스냅샷일 뿐. 'done'은 meeting·voc·recruiting 이 이미 제공(data-console done 렌더 미검증이라 회피). recruiting.js 미접촉(타 세션 소유).
+> - **검증(헤드리스 Edge --dump-dom, 깨끗한 프로필)**: 인박스 = 4개 상태 그룹 전부(접수 11·진행 9·검토대기 12·완료 3행, 35행 정상 렌더·JS에러 0). 분산 data-console 시드(procurement:1=진행·contract_a:1=접수) 정상 오픈. govern = `#opsEvalGlobal`에 `.ops-empty` muted·`eval-score`(red) 제거 확인. node --check core.js·procurement·expense·contract_a OK. ⚠ 이미 시드된 localStorage 는 seedKey 로 재시드 건너뛰므로 분산은 **신규/깨끗한 저장소**에서 반영(기존 사용자는 시드 삭제 후 재부팅 시).
+> - **잔여 🟢〔후속〕**: #4 좌/우 세로 불균형(좌 보조블록=기능 증식이라 스킵)·#6 recruiting 정책값 amber 3색(recruiting.js=타 세션 소유 → aap-platform 후속).
+
+### govern 전역 Eval 빈상태 red 오용 제거 (260626, aap-design · design-auditor 감사 🟡#1) 〔디자인〕
+> design-upgrade-base 미커밋 상태 헤드리스 9뷰 감사 = **회귀 0건**(중앙모달·run 2열 400px 근거레일·3노드 스테퍼·tb-back 모두 정상). 남은 최우선 갭 = 운영 콘솔(govern) **전역 Eval 블록이 실행 케이스 0건일 때 종합점수 "0"·4지표 "0%"를 red로 표시**(의미색 규율상 red=차단·위반·실패 전용인데 단순 무데이터를 알람처럼). 근본원인: `renderGovern()`의 `#opsEvalGlobal`에 빈상태 가드 없이 `_opsTone(G.score)`(p<60→red) 직접 적용 — 바로 아래 케이스 블록(`#opsEvalCases`)엔 가드(`.ops-empty`) 있어 두 블록 불일치.
+> - **수정(core.js, ~3줄)**: 전역 블록에 `if(!em.ran.length)` 가드 추가 → 케이스 블록과 동일 muted 빈상태(`.ops-empty`=`--faint`, "아직 실행된 케이스가 없어…"). `_opsTone`·gauge·eval-score 마크업·RBAC·Agent Ops 불변. 신규 클래스·hex 0.
+> - **동반 해소 🟡#2(빈상태 3종 불일치)**: govern 전역·케이스 + logs(`.tr-empty`, 이미 `--faint`)가 빈상태 토큰 1세트로 수렴(platform.css:2460~2464). 추가 변경 불필요.
+> - **검증**: `node --check core/core.js` OK. Edge `?view=govern` 육안 — red "0"/"0%" 사라지고 muted 안내. 정상 데이터 경로(케이스 진행 후) 점수·게이지 복귀는 가드가 안 막음.
+> - **분리 후속 🟡#3〔aap-platform/packs〕**: 인박스 status/progress 무변별 = **디자인 아님**. `.st-new/run/wait/done` 색·행 보더·진행바 색 이미 존재(platform.css:1288~1291·2382~2385). 모든 행이 같게 보이는 건 시드 데이터가 전부 동일 상태(wait·~50%)라서 → 시드 상태/진행 분산 필요.
+
+### 가전 렌탈 시연 단독 HTML 빌드 + 감사 갭 반영 (260625, aap-platform·aap-design) 〔데모〕
+> 신규 `03_프로토타입/G_렌탈/aap_rental_시연_v0_1.html` — 가전 렌탈 고객 셀프서비스 상담 **시연 버전**. 자기완결 단독 HTML 1개(외부 src 0·CDN 0·Lucide 인라인 SVG·file:// 더블클릭). 데이터·산식은 `app/packs/rental.js` 원본 재사용(잔여 42×79,000×10%=331,800 / 표준 461,800·부분 295,900·무위약 30,000, 합 검증 일치). **시연 3계명 골격**: AAP 내부구조 노출 0(8계층·5타입·엔진룸·캐논 단계명 화면 0)·단일 콘솔(좌우 2분할/우측 레일 0, 모바일 셀프서비스 스트림 1컬럼)·고객 자율(칩/자유입력 시작, 자동재생 레일 0). 시나리오 A=단순문의 자동 종결(멈춤 0) vs B=해지·위약금 멈춤(accordion 근거 펼침→amber HITL 멈춤 카드 "해지가 확정되면 되돌릴 수 없어요"→정산 3안 사용자 선택→green 확정). design-auditor 감사 3계명 전부 합격 후 미세 갭 3종 반영: ①welcome→상주 인사 버블(empty-state) ②done 후 후속 칩("처리 현황 보기"·"다른 문의") ③표준 정산 자가설명 1줄("위약금 331,800 + 설치·철거 130,000 = 461,800"). 헤드리스 page/console error 0·A·B 동작·한글 깨짐 0 재검증. 색 5색 규율(teal·amber멈춤·green완료·red경고·slate) 준수, 신규 hex 0. app/ 미접촉.
+
+### 가전 렌탈 시연 단독 HTML 감사 (260625, design-auditor) 〔디자인·감사〕
+> `03_프로토타입/G_렌탈/aap_rental_시연_v0_1.html` 헤드리스 6상태 캡처 감사. **시연 3계명 전부 합격**(AAP 내부구조 노출 0·단일콘솔·고객자율 A자동종결/B해지 게이트+"되돌릴 수 없어요"). 색 5색 규율 준수(teal·amber멈춤·green완료·red경고·slate). 갭=경미: ①welcome→첫응답 빈 stream(empty-state 약함) ②done 후 후속 칩 안내 없음 ③kv 라벨/값 모바일 줄바꿈 여유 ④total 위약금=331,800인데 옵션 표준=461,800(설치·철거 포함, 본문 설명은 있으나 점프 체감) — 수정은 aap-design 권고표 참조. app/ 미접촉.
+
+### ②-후속 · 도메인 팩 카탈로그 카드 모노톤 정합 (260625, aap-design · design-auditor 감사 🔴#2) 〔디자인〕
+> 감사 🔴#2: `.cat-card`가 상단 3px 타입색 띠(5종) + 카드 안 `.ty-badge` 타입색 채움 pill을 유지해 ②의 모노톤 전환(stream 카드 v0.4~0.5)과 불일치. ②의 "중립 칩 + 선행 `--type-*` 색 dot 하나" 패턴을 동일 적용. **CSS(`core/platform-fix.css` override)만 · 구조·DOM·JS 불변 · 신규 hex 0(--type-* 토큰).**
+- **(1) 카드 상단 보더**: `.cat-card.tA..tP` border-top-color(teal/violet/cyan/blue/amber) → `var(--border)` 중립. `.cat-card.is-draft` dashed 보더는 우선순위 보강으로 유지.
+- **(2) 카드 안 badge**: `.cat-card .ty-badge`·`#catPrevTitle .ty-badge` 채움(color/bg/border) → 중립(`--muted`/`--surf`/`--line`, ②의 se-op 타입배지와 동일 톤). 타입 식별 = 선행 `::before` 색 dot 하나(기존 1806 currentColor → per-type `--type-*` 재지정 + catPrev에도 동일 dot 부여).
+- **⚠ 회귀 가드**: `.ty-badge`는 인박스(`.ibx-t`)·`typeBadge()` 등 재사용 → override를 `.cat-card`/`#catPrevTitle` 스코프로만 한정. 인박스 badge 미접촉.
+- **검증(헤드리스 Edge, `?view=domain`·`?view=inbox`)**: domain = 카드 상단 띠 전부 중립·badge 6종 중립 칩+타입 dot 하나(teal/violet/cyan/blue/amber)·미리보기 badge 동일. inbox = `.ibx-t .ty-badge`(경비·지출/구매·조달 등) 원래 소프트 채움 그대로·필터 칩 dot/카운트 무변화 → 회귀 0.
+
+### 새 Domain Pack — 가전 렌탈 고객상담 (rental) (260625, 유저 지시) 〔표준·정의 / 데모 한정〕
+> 회의 데모가 BD·임원 피드백으로 폐기 → "거래성(해지·위약금=되돌릴 수 없는 결정)+고객특정+write-back+HITL 필연"을 만족하는 **세라젬형 가전 렌탈 상담**으로 전환. voc.js 구조(intake→triage→execute+HITL)가 이미 원하는 형태 → 도메인만 통신→렌탈로 리스킨.
+- **신규 `app/packs/rental.js`** (voc.js 템플릿 복제·리스킨, 인터페이스 동일: 데이터 5종 + surfaceSpec / FLOW 7단계 캐논 / TIMES·SEEDS·COMPOSE·COMPONENTS·GOVERN). **코어 로직 수정 0**.
+- **시나리오 2종 대비 = "왜 agentic인가"의 답**: ① A 단순조회(윤재호 "다음 결제일·약정 만료") = read-only·자동 종결(HITL 없음) ② B 해지·위약금(정수아 안마의자) = write-back + HITL 2관문. SEEDS 3종(B@approve / A@request / 명의변경 done).
+- **결정론 숫자(소비자분쟁해결기준, 합 검증)**: 잔여 42개월×79,000×10% = 위약금 331,800 / 등록비 100,000 / 철거비 30,000. 정산 3안 = **표준 461,800 / 부분(위약금50%) 295,900 / 무위약(이사 무관리지역) 30,000**. `extExcluded`(approve='no'→'위약금 감면') = voc 의 하향 분기 패턴 재사용.
+- **빌드 가드레일 2개 준수**: ① 좌측 surface = '상담 건 처리 화면' 하나에 집중 — 인박스·로그·거버넌스 운영관리 UI는 좌측서 제외(셸 다른 뷰 소관, voc 와 동일하게 surfaceSpec 만). ② HITL 게이트①에서 사용자가 **정산 3안 직접 선택** + "해지는 되돌릴 수 없습니다" 명시 → 자동재생 레일이 아닌 사람 결정. 게이트② 발송 승인.
+- **셸 등록(surgical)**: `index.html` 에 `<script src="packs/rental.js">` 1줄 추가(voc 다음). `core.js` `SEED_PACK_IDS` 에 `'rental'` 추가 — **신규 팩은 기본 draft 라 인박스 시드가 안 깔리는 메커니즘**, voc 처럼 deployed 시드로 노출. (등록 allowlist 1토큰, 코어 로직 불변.)
+- **검증(헤드리스 Chrome + Edge)**: A·B 둘 다 렌더 OK, **page error 0**. B 가 approve 게이트에서 정지 → HITL 모달 정산 3안(461,800/295,900/30,000) 선택 + 위약금 근거(42×79,000×10%)·자료 드릴 정상. A 는 1/7 상담 접수서 계약·사용이력 패널 표출. ⚠ 헤드리스 rAF 스로틀로 `autoAdvanceOnOpen` 자동진행이 compose(3/7)에서 멈춰 보이나 **voc(known-good)도 동일** → 렌탈 결함 아님(실브라우저/Edge 정상).
+- 남은 이슈: rental SEEDS 의 PRODUCTS(계약·이력 등)는 시나리오 B(정수아) 기준 데이터 1세트 공유 → A(윤재호)·done(배수지) 케이스는 헤더·요청텍스트만 다르고 우측 산출물은 B 데이터 표출(voc 와 동일 한계). 시나리오별 데이터 분기는 차기.
+
+### run 셸 전 유형 통일 — 계약·구매·경비 (260625, 유저 (A) + design-auditor 감사) 〔표준·정의 + 로직〕
+> aap-design-auditor 1회 감사 🔴#1: "run 콘솔 본문 골격 3종(회의=좌작업/우결정 · 계약=상단 임계밴드+슬롯 · 채용=3카드). inbox→detail→action→audit 4존 중 action 위치가 화면마다 이동." 유저: "(A) 계약·채용까지 셸 통일."
+- **데이터콘솔(계약·구매·경비) 셸 = 회의와 동일화**: ① `dcMain`=슬롯만(판정카드+HITL바 제거) ② 새 `dcDecision`(판정카드+HITL)을 `dcAside` 상단으로 → **우=결정·근거 레일**(회의 streamHitlCard 와 같은 자리) ③ `renderDataConsole`가 `dcSteer`(임계 튜너)를 **main 상단에 흡수**(`{main:dcSteer+dcMain, aside:dcAside}`) → 떠있던 floating steer 밴드 폐지. platform-fix.css: `.op-main .op-steer` band-centering 무력화 + 인라인 카드 외형.
+- **결과**: 전 유형 「상단 strip → 좌 본문 / 우 결정·근거 aside」 1셸. 계약(자동승인)·구매(반려) 헤드 검증 — 판정카드·HITL이 우측 레일로, 상단 밴드 0.
+- **채용(recruiting) 게이트까지 통일 확인**(유저 "확실히 통일"): recruiting `opstage`(878) 단계별 분기 — **3 게이트 전부**(shortlist 745·interview 825·offer 867) HITL을 이미 **aside `op-hitlcard`로** 렌더(회의 streamHitlCard·계약 dcDecision 동일 패턴). 단 매칭 단계서 **steer 밴드 보유**(opMatchSteer)였음.
+- **steer 흡수 일반화**(핵심): `renderOpConsole` 가 `op.steer` 를 **`op.main` 앞에 prepend**(opSteerSlot·band 폐지) → 계약·구매·경비 **+ 채용**까지 steer 전부 main 상단 인라인 카드(`renderDataConsole` 는 steer 다시 분리 반환). → **전 유형·전 단계·전 게이트 단일 셸 완성**. 헤드 검증: recruiting shortlist_gate(좌 임계인라인+후보랭킹 / 우 '숏리스트 확정' HITL카드+근거)·계약·회의 무회귀.
+- **부수**: `?step=<stepId>` 딥링크(boot) — 열린 케이스를 특정 단계로(게이트면 await 정지). 헤드리스 게이트 검증·design-auditor 게이트 캡처용.
+- 회귀 안전: dc* + renderOpConsole steer 흡수 + skeleton(opSteerSlot 제거). stream(streamFocus)·recruiting surface 본문 미접촉.
+
+### 케이스 콘솔 — 상단 압축 + 좌→우 복원 (260625, 유저 검토승인 plan) 〔표준·정의 + 로직 / ②=디자인〕
+> 유저: "아직 위→아래(산출물 아래). 좌→우여야. 상단 4겹 너무 많음. 8단계 좌측정렬 불필요. 시연버튼 불필요." → 검토 후 plan 승인(순서 ③⑤④①②).
+- **Round A (③⑤④ 상단 압축)**: 상단 크롬 **4겹→2겹**. ①상단바 1줄 통합(`#tbBack` '내 업무'를 topbar로, 케이스명 좌측, `body.run-active`서 부제 숨김, 46px) ②`.runtop{display:none}` 폐지(시연버튼 처음/이전/다음/중단/"결정하기"=BD용 발표컨트롤, 제품 UX 아님) ③`opStageStrip`=8노드 전체→**직전·현재·다음 3노드**(옛 renderSeq 패턴) + 같은 줄 우측 인라인 요약(요청·진행). `#opSumSlot` 폐지(요약을 strip 줄로). 헤드 검증: meeting·voc·contract·inbox 정상.
+- **Round B (① 좌→우 복원)**: `streamFocus` main의 산출물 그리드(`ws`) **제거** — aside(streamArts)에 이미 산출물 탭·뷰어 존재(중복이었음). main을 **이 단계 작업 내역(`flow[ci].ops`: 구성요소타입·feed→out·detail 표, `evidType`/`_TYKO`/`se-op` 재사용)**으로 채움. → **좌=지금 AAP가 하는 일 / 우=산출물** 분리. streamArts 미접촉(채용 세션 충돌 회피). 헤드 검증: 회의·VOC 좌→우 정상.
+- **남은 ② (디자인 토큰)〔디자인·aap-design〕 ✅완료**: 아래 'stream 하는 일 카드 본문 모노톤 정합' 항목 참조.
+
+### 케이스 내부 화면 = 전 유형 단일 프레임(B) 통일 (260625, 유저 직접지시) 〔표준·정의 + 로직〕
+> 유저 진단요청: 인박스→케이스 진입 시 "유형마다 내부 화면이 다 다르다 · 어떤 건 위>아래, 어떤 건 좌>우, 너무 복잡". 같은 유형 일관 + 유형 달라도 큰 틀 일관(세부 프로세스·화면은 달라도 됨)을 원함.
+- **근본원인**: `renderConsole`의 `hasOpSurface(C)` 한 줄이 **두 골격** 분기 — ⓐ 스트림(`streamSplit`, 위>아래 타임라인, 상단 strip 無): 회의·VOC / ⓑ 조작형(`renderOpConsole`/op-split, 상단 strip + 좌 main/우 aside): 채용·계약·구매·경비. + surface 렌더 경로 3종(`surface`함수 / `surfaceSpec` / 코어 `renderDataConsole`).
+- **표준 = B 프레임으로 통일**: 전 유형이 「상단 단계 strip → (steer) → 좌 main / 우 aside」 골격 공유. 고정=골격, 가변=main/aside 콘텐츠·단계 라벨/개수.
+- **구현**(core.js, 최소 디프): `opstageOf()`에 stream 폴백 추가 — surface·dataConsole 없어도 `flow` 있으면 `{main:streamLeft, aside:streamArts}` 반환 → 회의·VOC도 op-골격 렌더. `renderOpConsole`에 `wireStream` 배선. platform-fix.css 6줄(op-main/aside 안 stream 콘텐츠 이중패딩·중복보더 무력화). **신규 콘텐츠 0줄**(기존 streamLeft/streamArts 재사용).
+- **동반효과**: 회의·VOC가 `ws-on-op` 클래스를 받게 되어 aap-design의 op-console 디자인 폴리시(strip·steer·360px aside 레일)를 **자동 동반 적용** → 프레임·디자인 동시 통일.
+- **2차(유저 선택 "현재단계 초점 재구성")**: 회의·VOC main = `streamLeft`(전 단계 feed) → **`streamFocus`로 교체**. 결정콘솔 dcMain 과 같은 척추 = ①이 건 요약(요청 원문·진행 N/N) ②현재 단계 카드(ct-vd 톤·HITL 표식) ③게이트면 결정 바(op-hitlbar). **상단 strip 과 중복되던 '전 단계 나열' 폐기** → 채용·계약·구매와 main 구조 일관. 새 CSS 0(기존 ct-/op- 클래스 재사용). aside=산출물(strm-arts) 유지. 헤드리스 캡처 검증 완료(회의·VOC 동일 구조).
+- **부수**: 시드 케이스 딥링크 `?seed=packId:index` 추가(core.js boot) — 공유·데모·헤드리스 검증용(케이스 id 비결정적이라 안정 seedKey 로).
+- **3차(유저 "계속 진행" — recruiting 오리엔테이션 일관)**: 마지막 비일관 = 첫 화면 오리엔테이션(회의·VOC·계약은 '이 건 요약'으로 시작, recruiting은 곧장 분석 카드). recruiting ATS/분석 surface는 좋은 도메인 콘텐츠라 **뭉개지 않음**(유저 "화면 달라도 됨"). 해법 = recruiting.js(채용 세션 소유) 미접촉, **코어에 전 유형 공통 '이 건 요약' 밴드 `opCaseSummary` 추가** — op-skeleton surfHead 에 `#opSumSlot`(strip 아래), 케이스 title·요청 원문·진행 N/N 한 줄. 회의·VOC·계약·**채용 4유형 전부 동일 오리엔테이션**(헤드리스 캡처 검증). 얇은 1행(aap-design 높이 압축 비충돌). streamFocus 의 자체 '이 건 요약' head 는 밴드와 중복이라 제거 → `return cur`.
+- ⚠ **실시간 충돌 봉합**: streamFocus 를 **채용 세션이 동시 리팩터**(HITL 좌측 gatebar → 우측 aside `streamHitlCard`/streamArts, return `${head}${cur}`). 이 세션이 같은 함수의 head 를 제거 → `head` undefined 런타임 에러 발생 → **즉시 reconcile**(return `${cur}`, 요약=코어 밴드·HITL=채용 세션 aside 카드 양립). **core.js 동시 편집이 실제 breakage 유발 확인** — 이후 core.js streamFocus/streamArts 는 채용 세션 단독 편집 권장, 이 세션은 코어 밴드(opCaseSummary)·opstageOf·skeleton 까지만.
+- **4차(유저 정색 "내가 요청한 걸 만족스럽게 못 함" → "너가 해봐")**: 핵심 오진 시인 — 2차에서 회의·VOC main 을 '카드 1개'로 만들며 **풍부한 도메인 데이터(perStep·ws·products)를 버려 휑하게** 만듦. 계약은 슬롯 그리드로 꽉 찬데 회의는 비어 → 여전히 "다 다름". **진짜 해법 = streamFocus 재구성**: ①현재 단계 카드에 단계별 작업뷰(`surfaceSpec.perStep`: overview rows / track / hint) 추가 ②**이 건의 산출물 그리드**(`surfaceSpec.ws` → ct-slots, 계약 슬롯과 동일 밀도 · 준비된 항목 값+보기/미준비 '준비 전'). 회의=참석자6·자료4·안건6·초대장·회의록 / VOC=고객이력·원인·보상안·응답·티켓. **네 유형 모두 「현재단계 카드 + 정보/산출물 그리드」로 밀도·구조 수렴**(헤드리스 검증). 새 CSS 0(ct-/od-/wl- 재사용).
+  - 교훈: 프레임 통일 ≠ 내부화면 일관. **각 유형의 풍부한 데이터를 살려 같은 구조에 채워야** 함(데이터 버리고 단순화 ✕).
+- **후속(deferred, ponytail)**: ⓐVOC 게이트 단계는 산출물 대부분 '준비 전'(데이터 정확하나 시각적으로 빈약) — ready 항목 우선/요약 검토 ⓑstrip 단계 라벨 캐논 ⓒstream aside 톤.
+
 ### 전체 디자인 = 미니멀 모노톤 전환 v0.4~v0.5 (260625, aap-design · 유저 직접지시) 〔디자인〕
 > 유저 피드백: v0.3 시각변화 미미("하나도 안 바뀜"). 원인 = ① 1px 미세조정 no-op ② 이미 밝은 UI에 모노톤은 원래 미묘. 유저 방향 선택 = **미니멀 모노톤(Linear 정수)** + "확 바뀌게" = 색만 빼지 말고 **구조 전환**.
 - **v0.4 모노톤 시스템**: `--shadow` 하인라인(전 뷰 그림자↓), 상태배지=중립 pill+색 dot 하나, 진행바·타입칩·타입배지·nav active 중립화, **teal=주액션·nav 인디케이터만**.
 - **v0.5 구조 전환**(인박스): 분리 카드 무더기 → **상태별 1패널 안 평면 리스트**(행=하인라인, 검토대기=좌측 슬레이트 레일), 타이포 타이트. = before/after 명확.
 - **단일 writer 분담 확정**(유저 승인): **디자인·CSS=aap-design(이 트랙) / 로직·구조=채용 세션(core.js·recruiting.js)**. platform.css=디자인, platform-fix.css=채용 → 상호 비간섭. [[feedback-single-writer-app]]
 - **남은 후속**: 잔여 뷰(run·workflow·govern·domain pack) 색 채움을 같은 시스템으로 확장(헤드리스 캡처 불가 → 유저 클릭 검토 기반). 신규 hex 0·DOM/JS훅 불변.
+
+### ② 디자인 토큰 마감 — stream "하는 일" 카드 본문 모노톤 정합 (260625, aap-design) 〔디자인〕
+> 유저 지적: 계획 승인 'ct-vd 하는 일' 카드 아래 텍스트(`comp` 타입칩·`se-op` 타입배지)가 타입색 채움이라 모노톤(v0.4~v0.5)과 톤 불일치. = Round A/B 후 남은 ②. **platform-fix.css 만 수정**(구조·DOM·data-*·JS 불변, 신규 hex 0·토큰만).
+- **원칙 = monochrome system 그대로**: 채움 ✕ · 텍스트 중립 · **5타입 식별은 "색 dot 하나"로만**(`--type-*`) · 상태(ok/warn/info)는 단일 악센트(아이콘 칩 하나) · teal=주액션만.
+- **(A) `se-op` 타입배지**: `.se-op-ty.tyA{color:aap-ink;background:aap-soft}…` 멀티색 채움 → `background:--surf · color:--muted · border:--line` + 선행 `::before` 색 dot(`--type-agent/module/solution/connector/policy`). 텍스트 중립, 타입 식별=dot. "조합된 구조"(KEY MESSAGE) 증명 유지.
+- **(B) stream `comp` 칩**(`.ct-vchips .comp`): 큰 카드 스타일(r13·pad12) → **타이트 중립 칩**(`--surf`·`--border`·`r-pill`·slate 텍스트) + `ty*` 선행 색 dot. bare `.comp`(ps.track 체크 칩)는 dot 가드(없음).
+- **(C) `ct-vd` 카드**(stream·결정콘솔 공유): warn/ok 전체 색 워시 → **중립 카드**(흰 표면·얇은 중립 테두리·ink 헤더·중립 tag·중립 basis). 상태=**아이콘 칩 하나만 악센트**(amber=HITL게이트·green=완료·info=중립 faint). risk 만 헤더 red 유지(차단/위험 신호 예외).
+- **검증(헤드리스 Edge 1440)**: meeting:0(계획 승인 gate)·voc:0(대응안 승인 gate)·contract_a:0(자동승인 verdict)·recruiting:0 캡처 확인. before=amber/teal 채움 → after=중립 카드+칩+dot. **회귀 0**: contract ct-vd '자동승인'도 green 워시→중립+green 체크 아이콘으로 동반 개선, recruiting 은 자체 surface(`wp-op-*`)라 미영향, VOC=meeting 과 동일 톤. 브레이스 균형(289/289).
+- **스코프 밖(의도 유지)**: 우측 aside `op-hitlcard`("결정 필요" amber 카드)=HITL 게이트 요약(amber=게이트 정당) · 근거 4유형 색 키(`.ev-k`·`.ev-dot`·`.op-tdot`=드릴 모달/그래프 식별) 불변.
 
 ### 인박스 운영 콘솔 시각 고도화 — platform.css `aap-design v0.3` override (260625, aap-design · 유저 직접지시) 〔디자인〕
 > 유저 요구: index.html(운영 콘솔)을 상용 SaaS 수준으로 — 인박스→상세→액션 흐름. 클라우드 예약 루틴이 push 실패(CCR 임시환경 권한)로 산출물 유실 → 로컬 aap-design로 직접 수행. **platform.css 말미 append만**(DOM·id·class·JS 셀렉터 불변, 신규 hex 0·토큰만).
@@ -93,8 +169,14 @@
 - **재진단(중요)**: **근거·로직은 없는 게 아니라 단계별로 노출이 들쭉날쭉.** 면접 조율(interview)=캘린더 교차 근거·HITL이 **본 화면 인라인**으로 잘 나옴(좋은 모델). 반면 매칭/스크리닝(screen)=후보 근거(candDetail)·`evidDrill`(근거 4유형)이 **모달/aside에만**. → #5 = 매칭 단계 후보 근거·로직을 interview처럼 본 화면 인라인 + 세부만 드릴.
 - **진단(중요)**: 근거·로직 데이터는 채용 팩에 **이미 풍부**(WORK ops `ev{data,rule,logic}`·detail 테이블·컷 시뮬·verdict basis) — 단 **RUN 서피스가 아니라 모달(HITL gate·done)에만** 올라옴. opstage=`{steer(op-steer 기준),main(op-wh 후보랭킹+op-hitlbar 인라인 HITL),aside}`. 후보=막대(스킬/경력/도메인 매칭 기여)+토큰, 그러나 산식·컷·가중 '왜'는 안 드릴.
 - **#5 1차 완료(검증)**: 매칭 후보 행(`matchRows`)에 **판정 칩(통과/보류/탈락=`screenVerdict(c)`)+이유(why)+기여(스킬·경력·도메인 contrib)+'근거 보기' cue** 인라인 추가(`.op-rv/.op-rwhy/.op-rbd-t/.op-rmore` platform.css L661). DOM 검증 OK. 판단 근거·로직이 모달뿐 아니라 본 화면에.
-- **남음(이어서)**: **#5-2** 후보 클릭 candDetail/evidDrill 세부 정돈. **#4** 숏리스트 gate 풀모달(컷·가중·통과 미리보기)→본 화면(op-hitlbar+컷 조정)+세부만 모달. **#2** 새업무 오버레이=입력+실시간 유형 인식+유형 칩 quick-start.
-- **★★동시편집 경보**: aap-design 세션이 같은 날 `platform.css` 끝(L2311~ v0.3 시각 override) 동시 편집 중. 이번엔 영역 분리(나=L661·core.js·recruiting.js·platform-fix.css)로 무손실이나 **단일 writer 위반 상태 — platform.css 동시 쓰기 충돌 위험**. 코디네이션 필요(커밋으로 베이스 고정 or 한 세션만).
+- **#2 완료(검증) + ★선행 버그 복구**: 새업무 오버레이 빈 상태에 **자주 맡기는 업무 칩**(`deployedPackIds`→타입 토큰 칩, 클릭=`createCase` 바로 시작) + 자유입력 안내. `renderNcReco` 빈 분기. **근본 원인 발견·수정**: `aee71a7`(On-Ramp ①②③) 커밋에서 `_tokens`·`packKeywords`·`NC_MIN_HITS/SCORE` **헬퍼 블록이 통째 유실** → `matchPackByText`가 `_tokens is not defined`로 throw → **On-Ramp 유형 인식 전체(텍스트 입력 인식·칩·명확화)가 죽어 있었음**. 3정의 복구(core.js, matchPackByText 직전). 검증(헤드리스 로컬서버+iframe 덤프): 빈 상태 칩 6개, "채용 후보 이력서 스크리닝…" 입력→`채용` top 인식, 에러 0. (renderNcReco는 `_renderNcRecoBody` try/catch 래퍼로 분리 — 단일 에러가 빈 메뉴로 침묵 실패하지 않게.)
+- **#4 완료(검증) — 본 화면 인라인 HITL + 세부만 모달**: 게이트 도달(`C.S.sel===gateId && await`) 시 op-hitlbar에 **gate.decisions 결정 버튼 인라인**(`data-decide`→`AAP_CORE.decide`) + **'세부 기준 보기'**(`data-gatedetail`→컷·가중·통과 미리보기 모달만). 코어 **가산 훅 2개**: `currentCM`에 `suppressGateModal(S)` 체크(훅 있으면 게이트 모달 자동 노출 ✕·인라인) + `AAP_CORE.decide(v)` 노출. recruiting `gateInlineBar()`(3게이트 공통: shortlist/interview/offer), `suppressGateModal:(S)=>!S.recrGateDetail`, `recrGateDetail` transient. **meeting 등 훅 없는 팩=원래대로 모달(무회귀)**. CSS=platform-fix.css(`.gate-await/.op-hitl-acts/.op-hitl-tag/.op-hbtn.alt/.ghost/.sm`). 검증(헤드리스 자동전진→shortlist_gate await): `cmodal.show=false`+인라인 결정 2개("이 기준으로 스크리닝/컷 좁히기")+세부 클릭→`cmodal.show=true`+edcut 4개.
+- **2차 피드백(260625) 반영**: (1) 새 업무 오버레이 **× 닫기 버튼**(`ncm-x`→closeNewCase) + textarea `resize:none`. (2) **옵션 패널 컴팩트화** — `.op-sg`를 `flex-direction:column`(세로 박스 쌓임·공간 낭비) → **가로 칩 행**(라벨+칩, 박스 보더 제거), 스텝 네비 추가 압축(노드·번호·화살표↓). 옵션 패널 ~200px→~60px, 후보 더 많이 노출. (3) 근거=행 인라인(verdict+이유+기여)+'근거 보기' 모달(기존 #5 유지). (4) **옵션 변경 피드백** — `wireSteer` 비-instant 분기가 `meta.toast`를 안 띄우던 것 수정 + 가중·필터 steerHook에 **before→after 결과 토스트**("시니어만 적용 · 후보 10→6명", "도메인 중시 우선 반영 · 면접 대상 6→7명 · 1순위 …"). 옵션은 원래도 동작했으나(재분석 ~6초·인-서피스 오버레이라 체감 약함) 토스트로 '먹혔다' 신호 명시. 검증(헤드리스): senior 클릭→.on=true·목록 10→6·토스트 텍스트 OK. CSS=platform-fix.css, JS=core.js·recruiting.js.
+- **3차 피드백(260625) 반영**: (1) **새 업무 요청 = 중앙 모달**(앵커 팝오버 ✕) — `promptNewCase`에 `.nc-backdrop`(딤+중앙)+`.nc-modal`, 백드롭/×/Esc 닫기. (2) **HITL 결정을 우측 aside로** — run 콘솔 **2컬럼 복원**(`[SINGLE-COLUMN]` 강제블록 → main 좌·aside 우 400px·≤1280 스택). `gateInlineBar`(main) → `gateDecisionPanel`(aside, 게이트 await만): 3 aside(opMatch/opIv/opEval) 상단 결정 패널 sticky, main에서 제거. (3) **옵션 변경 = 결과 모달** — `wireSteer` onDone이 `STATE.reResult`→`currentCM 'reresult'`→`reResultModalHtml`(전/후 diff + 단계별 판단 로직·근거), wide. recruiting weight/filter steerHook에 `diff[]`+filter `steps[]`. **모달 확대**(cmodal-card 360→440~680, wide→880). 검증(헤드리스): (1) backdrop+chips6+닫기, (2) aside 결정2+세부1, (3) 결과모달 wide+diff3+logic4. 무회귀: expense·meeting 2컬럼·에러0. (aside HITL=recruiting 전용·meeting은 모달 유지)
+- **4차 피드백(260625·옵션B 확정) 반영 — 우측=산출물+HITL요약 / 결정·근거=카드클릭→모달**: 사용자 질문(AskUserQuestion) 결과 옵션B 선택. (a) 우측 HITL을 **인라인 결정버튼 → 요약 카드**(`gateSummaryCard`, `.op-hitlcard`)로: 게이트 await 시 amber 카드("결정 필요"+요약), 클릭(data-gatedetail)→`recrGateDetail=true`→**'hitl' 결정 모달**(결정버튼+컷·가중 편집+미리보기, 이미 완비). 자동 모달 ✕(suppressGateModal 유지). (b) **산출물 리스트**(`productsAside`, `.op-prods`) 우측 추가 — PRODUCTS 중 `readyAt` 도달분, 클릭(data-dlv)→상세 모달. 3 aside(opMatch/opIv/opEval) 상단=HITL카드→산출물→그래프→근거. (c) 내부 근거=카드 클릭 모달(후보 candDetail·근거 evidDrill·산출물 product 전부 기존 모달). 검증(헤드리스): 우측 HITL카드+산출물·자동모달 false→카드클릭→결정모달(버튼2·"숏리스트 기준을 직접 정해 주세요"). 좌=후보 랭킹(작업). CSS=platform-fix.css, JS=recruiting.js.
+- **5차 — 옵션B를 코어 generic surface(VOC·meeting·데이터 팩)에도 전파**: VOC에서 "고친 거 맞냐"(채용만 적용됐던 문제) 지적. VOC도 op-split 2컬럼이지만 **HITL이 좌측 streamFocus 인라인**이었음. `streamFocus`에서 게이트바 제거(좌=요약+현재단계), `streamArts`(우측) 상단에 **`streamHitlCard`**(HITL 요약 카드) prepend → 우측 HITL카드+산출물. 게이트 자동 모달 ✕(`revealOps` 게이트 분기 `baseOnly=true`), 카드 클릭=`openGate`(즉시 모달)/`gotoGate`(wireStream). 검증: VOC·recruiting 자동모달 false→우측 HITL카드 클릭→모달 true, 산출물 5탭.
+- **남음(이어서)**: **#5-2** candDetail/evidDrill 세부(선택). VOC 좌 단계카드↔우 HITL카드 라벨 중복(정리 여지). ※2컬럼=260624 [SINGLE-COLUMN] 되돌림. ※게이트 자동모달 전역 ✕(카드/runAction 클릭으로만).
+- **★레인 분담 확정(유저 조율)**: **이 세션=로직·구조(core.js·recruiting.js)+`platform-fix.css`** / **aap-design=디자인·CSS+`platform.css`**. base=main(9a1d00b) 고정(무손실). → 내 #5 op-rv CSS를 platform.css→**platform-fix.css로 이동**(platform.css 더 안 건드림; platform.css 잔존 op-rv는 aap-design이 정리, platform-fix override). 남은 내 작업: #2 새업무(core.js)·#4 숏리스트 gate 인라인(core.js·recruiting.js)·#5-2 candDetail/evidDrill(recruiting.js), CSS는 전부 platform-fix.css.
 
 
 ### 지시서 반영 ① 인박스 = 운영 콘솔 재설계 (코어, 260624) 〔기획·UX〕
