@@ -262,30 +262,25 @@
         <textarea class="pl-ta" id="plText" rows="4">${esc(M.sourceText)}</textarea>
         <button class="cp-btn ghost sm" id="plRe">${ICO('sparkles')}다시 분해</button>
         <div class="pl-title-row">분해된 업무: <b>${esc(bd.title)}</b></div>
-        <div class="pl-sigs">${sigRow('데이터',bd.signals.data,'dt')}${sigRow('판단',bd.signals.decide,'dc')}${sigRow('시스템 반영',bd.signals.write,'wr')}${sigRow('외부 영향',bd.signals.external,'ex')}${sigRow('책임·규정',bd.signals.risk,'rk')}</div>
+        <div class="pl-sigs">${(function(){var S=bd.signals,L=[];[['데이터',S.data],['판단',S.decide],['시스템 반영',S.write],['외부 영향',S.external],['책임·규정',S.risk]].forEach(function(p){if(p[1]&&p[1].length)L.push(p[0]);});return L.length?'<span style="font-size:11px;color:var(--muted);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:3px 9px;display:inline-flex;align-items:center;gap:5px;">'+ICO('search')+'감지 신호 '+L.length+'종 · '+L.join(' · ')+'</span>':'';})()}</div>
       </div>
-      <div class="pl-sech">${ICO('layers')}단계·작업·데이터·결정점·리스크 분해</div>
-      <div class="pl-tks">${bd.steps.map(taskCard).join('')}</div>`;
+      <div id="plViz"><div style="color:var(--muted);font-size:12.5px;padding:14px">분해 뷰 준비 중…</div></div>`;
     $('plRe').onclick=()=>{ M.sourceText=$('plText').value; initModel(M.sourceText); render(); };
+    /* 분해 뷰 = 공용 AAP_VIZ(라이브 LLM 우선·결정론 폴백). 모듈 미로드 시 기존 task 카드로 폴백. */
+    if(window.AAP_VIZ_BRIDGE){ AAP_VIZ_BRIDGE.analyze(M.sourceText, document.getElementById('plViz')); }
+    else { document.getElementById('plViz').innerHTML='<div class="pl-tks">'+bd.steps.map(taskCard).join('')+'</div>'; }
   }
 
-  /* ── ② 실행 구조 구성 (5타입 매핑 · 사람 수정) ──
-     뷰 2종: graph(다크 엔진룸 노드 그래프 · 작동 증명) / list(편집). M._cmpView 로 토글 */
+  /* ── ② 실행 구조 편집 (5타입 매핑 · 사람 수정) ──
+     재구성 '보기'는 ① 분해 뷰(AAP_VIZ 다크 엔진룸)가 소유 → 여기선 편집 리스트만(이디엄 중복 제거). */
   function renderCompose(){
-    if(!M._cmpView)M._cmpView='graph';
-    /* 타입별 합계(디자인 계약: 5타입 색 칩) */
+    /* 타입별 합계(5타입 색 칩) */
     const cnt={}; M.compose.forEach(t=>t.comps.forEach(c=>{const k=typeMeta(c.type).k;cnt[k]=(cnt[k]||0)+1;}));
-    const view=M._cmpView;
     $('plBody').innerHTML=`
-      <div class="pl-sech">${ICO('boxes')}작업별 구성요소 매핑 <span class="pl-secsub">AAP는 Agent만이 아니라 5타입을 골라 <b>조합</b>합니다 — Agent가 잔뜩 도는 그림이 아니라 <b>조합된 실행 구조</b></span>
-        <span class="pl-cmp-toggle">
-          <button class="pl-cmp-tg ${view==='graph'?'on':''}" data-cv="graph">${ICO('git-branch')}노드 그래프</button>
-          <button class="pl-cmp-tg ${view==='list'?'on':''}" data-cv="list">${ICO('list')}편집</button>
-        </span></div>
+      <div class="pl-sech">${ICO('boxes')}구성요소 편집 <span class="pl-secsub">①에서 본 실행 구조를 여기서 다듬습니다 — 작업별 5타입을 추가·교체·삭제 (결정론 Action / 비결정론 Use LLM 분리)</span></div>
       <div class="pl-typebar">${TYPES.map(t=>`<span class="pl-t ${t.cls}"><span class="pl-t-dot"></span>${t.k} ${cnt[t.k]||0}</span>`).join('')}</div>
-      ${view==='graph'?renderComposeGraph():renderComposeList()}`;
-    $('plBody').querySelectorAll('.pl-cmp-tg').forEach(e=>e.onclick=()=>{ M._cmpView=e.dataset.cv; renderCompose(); });
-    if(view==='list')wireComposeList();
+      ${renderComposeList()}`;
+    wireComposeList();
   }
   /* ── ②-graph: 다크 엔진룸 SVG 노드 그래프(작업→구성요소) — 5타입 teal 색 정합 ── */
   function renderComposeGraph(){

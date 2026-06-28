@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AAP Platform · Workload Runtime Builder</title>
+<title>AAP Maestro · Workload Runtime Builder</title>
 <link rel="stylesheet" href="core/platform.css">
 <link rel="stylesheet" href="core/platform-fix.css"><!-- 디자인 부채 override(스크롤바 비표시·토큰·a11y·상태) -->
 </head>
@@ -12,10 +12,12 @@
 <!-- ===== TOP BAR (platform shell · 도메인 무관) ===== -->
 <div class="topbar">
   <button class="nav-toggle" id="navToggle" data-ic="menu" data-tip="좌측 메뉴 접기/펼치기"></button>
-  <div class="brand"><span class="logo">A</span><b>AAP Platform</b><span class="brand-sub">운영 콘솔 · 통합 인박스</span></div>
+  <div class="brand"><span class="logo">A</span><b>AAP Maestro</b><span class="brand-sub">운영 콘솔 · 통합 인박스</span></div>
   <button class="tb-back" id="tbBack" data-tip="내 업무(인박스)로 돌아가기"><span class="ic-l" data-ic="chevron-left"></span>내 업무</button>
+  <span class="run-id" data-tip="업무 실행 화면"><span class="ri-l">런타임</span><span class="gn-en"> · Agentic Operation</span></span>
   <span class="case-title" id="caseTitle"></span>
   <div class="sp"></div>
+  <button class="tb-fde" id="fdeToggle" data-tip="AI FDE · 플랫폼 설계 보조 — 업무 구조화·근거 설명·온톨로지 초안"><span class="tbf-ic" data-ic="sparkles"></span><span class="tbf-tx"><span class="tbf-l">AI FDE</span><span class="tbf-s">플랫폼 설계 보조</span></span></button>
   <label class="devtg"><input type="checkbox" id="devToggle"> 개발자 보기</label>
 </div>
 
@@ -24,16 +26,16 @@
 <!-- ===== LEFT GLOBAL NAV (그룹형 IA · 운영/스튜디오/관리 · 도메인 무관) ===== -->
 <nav class="gnav" id="gnav">
   <div class="gnav-grp">운영</div>
-  <button class="gnav-i" data-view="inbox" data-label="인박스"><span class="gn-ic" data-ic="inbox"></span><span class="gn-l">인박스</span><span class="gn-c" id="navCnt"></span></button>
+  <button class="gnav-i" data-view="inbox" data-label="인박스"><span class="gn-ic" data-ic="inbox"></span><span class="gn-tx"><span class="gn-l">인박스</span><span class="gn-sub">요청·검토 업무 운영 입구</span></span><span class="gn-c" id="navCnt"></span></button>
   <div class="gnav-grp">스튜디오</div>
-  <button class="gnav-i" data-view="domain" data-label="도메인 팩"><span class="gn-ic" data-ic="boxes"></span><span class="gn-l">도메인 팩</span></button>
-  <button class="gnav-i" data-view="workflow" data-label="워크플로우"><span class="gn-ic" data-ic="workflow"></span><span class="gn-l">워크플로우</span></button>
-  <button class="gnav-i" data-view="assets" data-label="자산"><span class="gn-ic" data-ic="layers"></span><span class="gn-l">자산</span></button>
+  <button class="gnav-i" data-view="domain" data-label="지식 라이브러리"><span class="gn-ic" data-ic="boxes"></span><span class="gn-tx"><span class="gn-l">지식 라이브러리</span><span class="gn-sub">도메인 지식·규칙·템플릿</span><span class="gn-en">Knowledge / Domain Pack</span></span></button>
+  <button class="gnav-i" data-view="workflow" data-label="워크로드 스튜디오"><span class="gn-ic" data-ic="workflow"></span><span class="gn-tx"><span class="gn-l">워크로드 스튜디오</span><span class="gn-sub">업무 요청을 실행 구조로 분해</span><span class="gn-en">Decomposer / Builder</span></span></button>
+  <button class="gnav-i" data-view="assets" data-label="자산 카탈로그"><span class="gn-ic" data-ic="layers"></span><span class="gn-tx"><span class="gn-l">자산 카탈로그</span><span class="gn-sub">Agent · Tool · Connector · Policy</span><span class="gn-en">Assets</span></span></button>
   <div class="gnav-grp">관리</div>
-  <button class="gnav-i" data-view="logs" data-label="로그 · 트레이스"><span class="gn-ic" data-ic="git-branch"></span><span class="gn-l">로그 · 트레이스</span></button>
-  <button class="gnav-i" data-view="govern" data-label="거버넌스 · 정책"><span class="gn-ic" data-ic="shield"></span><span class="gn-l">거버넌스 · 정책</span></button>
+  <button class="gnav-i" data-view="logs" data-label="실행 추적"><span class="gn-ic" data-ic="git-branch"></span><span class="gn-tx"><span class="gn-l">실행 추적</span><span class="gn-sub">데이터·판단·실행 기록</span><span class="gn-en">Run Trace / Decision Log</span></span></button>
+  <button class="gnav-i" data-view="govern" data-label="거버넌스"><span class="gn-ic" data-ic="shield"></span><span class="gn-tx"><span class="gn-l">거버넌스</span><span class="gn-sub">정책·권한·감사</span><span class="gn-en">Governance</span></span></button>
   <div class="gnav-sp"></div>
-  <button class="gnav-i demo-nav" data-view="demo" data-label="시연"><span class="gn-ic" data-ic="presentation"></span><span class="gn-l">시연</span></button>
+  <button class="gnav-i demo-nav" data-view="demo" data-label="시연"><span class="gn-ic" data-ic="presentation"></span><span class="gn-tx"><span class="gn-l">시연</span><span class="gn-sub">데모 모드</span></span></button>
 </nav>
 
 <div class="views">
@@ -56,7 +58,7 @@
     <div class="dom-shell">
       <!-- 카탈로그(유형 선택) 상단 고정 -->
       <div class="dom-top">
-        <p class="sec-title" style="margin-top:0">도메인 팩</p>
+        <p class="sec-title" style="margin-top:0">지식 라이브러리 <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 도메인 팩 · 업무 유형 패키지</span></p>
         <div class="catalog" id="catGrid"></div>
       </div>
       <!-- 하단 탭: 개요 / 온톨로지 / 아키텍처 (세로 스택 → 탭 전환으로 1뷰포트화) -->
@@ -95,7 +97,7 @@
         <button class="wfb-handle run" id="wfRunHandle" data-tip="Run 펼치기"><span class="ph-i" data-ic="panel-right-open"></span><span class="ph-lab">Run</span></button>
         <div class="wfb-canvas-top">
           <div>
-            <p class="sec-title" style="margin:0">워크플로우 빌더</p>
+            <p class="sec-title" style="margin:0">워크로드 스튜디오 <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 워크플로우 빌더</span></p>
             <span class="wfb-sub">팔레트에서 블록을 얹어 흐름을 구성 · 결정론 Action / 비결정론 Use LLM 분리 · 저장 시 실행(run) 뷰 반영</span>
           </div>
           <button class="newcase" id="newPromoteBtn" data-ic="plus" data-ic-pos="pre">신규 격상</button>
@@ -158,7 +160,7 @@
   <!-- ============ ASSETS VIEW (스튜디오 · 자산 = 전역 5타입 레지스트리, 전 도메인 팩 union) ============ -->
   <section class="view" data-view="assets" hidden>
     <div class="scroll"><div class="wrapc">
-      <p class="sec-title">자산 · 조합 재료 (5타입 + Master) <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 전 도메인 팩 통합 카탈로그(중복 자산은 1개로 합산)</span></p>
+      <p class="sec-title">자산 카탈로그 <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 조합 재료 5타입 + Master · 전 도메인 팩 통합(중복 자산은 1개로 합산)</span></p>
       <div class="master-card">
         <div class="mi" data-ic="brain"></div>
         <div><div class="mt">총괄 · 오케스트레이터 (Supervisor)</div><h3>Master Agent</h3>
@@ -173,7 +175,7 @@
   <!-- ============ LOGS VIEW (관리 · 로그·트레이스 · 전역 집계) ============ -->
   <section class="view" data-view="logs" hidden>
     <div class="scroll"><div class="wrapc">
-      <p class="sec-title">Run Trace · Decision Log <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 전 케이스 집계(감사·재현)</span></p>
+      <p class="sec-title">실행 추적 <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· Run Trace · Decision Log · 전 케이스 집계(감사·재현)</span></p>
       <div class="log-kpis" id="logKpi"></div>
       <div class="asset-filter" id="logCaseFilter"></div>
       <div class="trace" id="traceLog"></div>
@@ -183,7 +185,9 @@
   <!-- ============ GOVERN VIEW (관리 · 운영 콘솔 = 거버넌스·Eval·RBAC·Agent Ops) ============ -->
   <section class="view" data-view="govern" hidden>
     <div class="scroll"><div class="wrapc">
-      <p class="sec-title">운영 콘솔 <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 거버넌스 · 평가(Eval) · 권한(RBAC) · Agent Ops</span></p>
+      <p class="sec-title">거버넌스 <span style="font-weight:500;font-size:11.5px;color:var(--muted)">· 운영 콘솔 · 평가(Eval) · 권한(RBAC) · Agent Ops</span></p>
+      <!-- 운영 요약(상단) — 전 케이스 trace 에서 결정론 집계(승인 대기·정책 차단·자동 실행·사람 확인 전환·실패/재시도) -->
+      <div class="gov-summary" id="govSummary"></div>
       <div class="ops-deploy" id="opsDeploy"></div>
       <p class="ops-sub">거버넌스 4축</p>
       <div class="gov-strip" id="govStrip"></div>
@@ -199,6 +203,44 @@
 
 </div>
 </div><!-- /.shell -->
+
+<!-- ===== AI FDE 전역 패널 (플랫폼 설계 보조 · 모든 화면에서 토글 접근) =====
+     챗봇 ✕ → 실무형 액션 어시스턴트: 업무 구조화(분해→생성)·근거 설명·온톨로지 초안.
+     제안 결과가 분해 뷰·생성·온톨로지로 반영(대화 거품 ✕). 결정론(프록시 없어도 detViz 폴백). -->
+<aside class="fde-panel" id="fdePanel" aria-hidden="true">
+  <div class="fde-h">
+    <span class="fde-h-ic" data-ic="sparkles"></span>
+    <div class="fde-h-tx"><b>AI FDE</b><span>플랫폼 설계 보조 · Forward Deployed</span></div>
+    <button class="fde-x" id="fdeClose" aria-label="패널 닫기" data-ic="x"></button>
+  </div>
+  <div class="fde-body">
+    <!-- 액션 1: 이 업무 구조화 -->
+    <div class="fde-card">
+      <div class="fde-card-h"><span data-ic="workflow"></span>이 업무 구조화</div>
+      <div class="fde-card-s">업무를 설명하면 AAP가 단계·구성요소·HITL 게이트로 분해합니다 — 프록시 없으면 결정론.</div>
+      <textarea class="fde-ta" id="fdeText" rows="3" placeholder="예) 신규 거래처 등록 심사 — 사업자·신용·제재 확인 후 리스크 판단해 승인 여부 결정"></textarea>
+      <div class="fde-acts">
+        <button class="fde-btn primary" id="fdeDecompBtn"><span data-ic="workflow"></span>분해</button>
+        <button class="fde-btn" id="fdeCreateBtn"><span data-ic="rocket"></span>새 업무 유형으로 생성</button>
+      </div>
+      <div class="fde-decomp" id="fdeDecomp" hidden></div>
+    </div>
+    <!-- 액션 2: 현재 화면 근거 설명 -->
+    <div class="fde-card">
+      <div class="fde-card-h"><span data-ic="compass"></span>근거 설명 · 현재 화면</div>
+      <div class="fde-card-s">지금 보고 있는 화면과 업무 맥락을 한눈에 요약합니다.</div>
+      <button class="fde-btn" id="fdeCtxBtn"><span data-ic="info"></span>현재 화면 설명</button>
+      <div class="fde-ctx" id="fdeCtx" hidden></div>
+    </div>
+    <!-- 액션 3: 온톨로지 초안 -->
+    <div class="fde-card">
+      <div class="fde-card-h"><span data-ic="boxes"></span>온톨로지 초안 · 현재 팩</div>
+      <div class="fde-card-s">현재 업무 유형이 다루는 객체(엔티티·문서·기준정보) 초안을 보여줍니다.</div>
+      <button class="fde-btn" id="fdeOntoBtn"><span data-ic="boxes"></span>온톨로지 초안 보기</button>
+      <div class="fde-onto" id="fdeOnto" hidden></div>
+    </div>
+  </div>
+</aside>
 
 <div id="tip"></div>
 <div class="toast" id="toast"></div>
@@ -238,6 +280,9 @@ document.addEventListener('DOMContentLoaded',function(){window.AAP_hydrateIcons(
 <script src="core/demo.js"></script>
 <script src="core/wfeditor.js"></script>
 <script src="core/core.js"></script>
+<script src="core/viz_decomp.js"></script><!-- 분해·재구성·온톨로지·Lineage 공용 렌더 (window.AAP_VIZ) -->
+<script src="core/llm_breakdown.js"></script><!-- 라이브 LLM 분해 어댑터 (window.AAP_LLM_BREAKDOWN · 프록시 없으면 폴백) -->
+<script src="core/viz_bridge.js"></script><!-- 업무설명→분해뷰 연결 (window.AAP_VIZ_BRIDGE.analyze) -->
 <script src="core/authoring.js"></script>
 <script src="core/pipeline.js"></script>
 </body>

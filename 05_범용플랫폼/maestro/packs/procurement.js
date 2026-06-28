@@ -207,7 +207,10 @@
     {title:'전PASS·고액 결재선 — 생산기술팀', customer:'생산기술팀', vals:{case_id:'PR-2026-04588', requester:'임재현(생산기술팀)', department:'생산기술팀', purchase_type:'일반구매', budget_code:'BG-PRD-2026-024', delivery_due:'2026-08-30', order_amount:'68000000', vendor_id:'220-81-88440', is_new_vendor:'false', vendor_status:'정상', vendor_biz_no_valid:'true', quote_count:'3', spec_attached:'true', quote_valid_until:'2026-08-15', quote_expired:'false', budget_after_order:'82000000', budget_usage_pct:'50', split_score:'14', unit_price_deviation_pct:'2', quote_extract_confidence:'0.93', spec_match:'적정'}},
   ];
   function mkInput(o){ const all=Object.assign({}, TH, o); return Object.keys(all).map(k=>({slot:k, value:all[k]})); }
-  const SEEDS=RAW.map(r=>({ title:r.title, customer:r.customer, icon:'🧾', atStep:'route_gate', input:mkInput(r.vals) }));
+  /* 인박스 상태 분산(접수·진행·검토대기) — 한 화면이 검토대기로만 평평해지지 않게.
+     게이트 demo 보존: 케이스를 열면 autoAdvanceOnOpen 이 어차피 route_gate 까지 흘려보내 멈춤(atStep 은 인박스 스냅샷). */
+  const _SEED_STAGES=['route_gate','check','intake'];   /* wait · run · new */
+  const SEEDS=RAW.map((r,i)=>({ title:r.title, customer:r.customer, icon:'🧾', atStep:_SEED_STAGES[i%3], input:mkInput(r.vals) }));
 
   const GOVERN=[
     {k:'Policy', v:'예산 초과·견적 의무 하드 가드레일 + 보수 임계 HITL 게이트.'},

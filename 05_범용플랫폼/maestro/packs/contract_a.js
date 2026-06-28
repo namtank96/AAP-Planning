@@ -233,13 +233,13 @@
     return { title, customer, icon:'🗂️', atStep, input:mkInput(Object.assign({}, TH, vals)) };
   }
   const SEEDS=[
-    seed('표준 매매계약 — (주)한성정밀소재', '플랫폼개발팀 구매', 'route_gate', {
+    seed('표준 매매계약 — (주)한성정밀소재', '플랫폼개발팀 구매', 'check', {
       contractType:'매매', contractNature:'신규', counterpartyId:'CP-10231 / (주)한성정밀소재', contractAmount:'42000000',
       contractStartDate:'2026-07-01', contractEndDate:'2027-06-30',
       clausesPresent:'손해배상·하자담보·해지·소유권이전·대금지급·관할·준거법', missingMandatoryClauses:'[]', toxicClauseHits:'[]',
       templateDigitalized:'true', amountMatchesPo:'true', erpPoAmount:'42000000', sanctionListHit:'false', creditGrade:'B',
       pdfExtractConfidence:'0.93', compositeRiskScore:'0', riskGrade:'저', approverLine:'본부장', stampTaxDue:'true', stampTaxAmount:'40000' }),
-    seed('스캔 품질 저하 용역계약 — 동양엔지니어링(주)', '플랫폼개발팀 구매', 'route_gate', {
+    seed('스캔 품질 저하 용역계약 — 동양엔지니어링(주)', '플랫폼개발팀 구매', 'intake', {
       contractType:'용역', contractNature:'신규', counterpartyId:'CP-15670 / 동양엔지니어링(주)', contractAmount:'55000000',
       clausesPresent:'손해배상·해지·비밀유지·납품/검수·관할·준거법', missingMandatoryClauses:'[]', toxicClauseHits:'[]',
       templateDigitalized:'true', amountMatchesPo:'true', erpPoAmount:'55000000', sanctionListHit:'false', creditGrade:'C',
