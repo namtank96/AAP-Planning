@@ -527,6 +527,7 @@ function setPackRefs(key){
    이미 그 키의 케이스가 있거나 사용자가 삭제(APP.deletedSeeds)한 시드는 다시 깔지 않는다. */
 function seedPack(key){
   const pack=PACKS[key];
+  if(!APP.demo)return;   /* 더미 시드 케이스는 데모 모드(?demo=1)에서만 — 기본 부팅=빈 인박스(제품감), 케이스는 '새 업무 요청'으로 라이브 생성 */
   const seeds=pack.seeds||[{}];
   let added=false;
   seeds.forEach((s,i)=>{
@@ -3128,7 +3129,9 @@ document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]')
 (function(){
   const q=new URLSearchParams(location.search);
   if(q.get('dev')==='1'){document.body.classList.add('dev-on');document.getElementById('devToggle').checked=true;}
+  APP.demo=q.get('demo')==='1';   /* ?demo=1 일 때만 더미 시드 케이스 로드 — 기본은 빈 인박스 */
   loadApp();
+  if(!APP.demo)APP.cases=APP.cases.filter(c=>!c.seedKey);  /* 비데모 부팅: 이전 데모서 영속된 더미 시드 제거(사용자 생성 케이스=seedKey 없음=보존) */
   applyCollapse(); applyDomTab();  /* 레이아웃 접힘·도메인 탭 영속 복원 */
   const keys=Object.keys(PACKS);
   /* 유형 토큰 안정 배정(등록 순서) — 카탈로그·인박스·필터 색 일관 */
