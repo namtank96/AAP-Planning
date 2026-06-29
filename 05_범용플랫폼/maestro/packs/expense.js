@@ -120,14 +120,14 @@
 
   /* ── flow — 단일 케이스형 결정 콘솔 4단계(접수·점검·판정·반영) ── */
   const FLOW=[
-    {id:'intake', label:'지출결의 접수·영수증 OCR', role:'요청', kind:'input', loopPhase:'Data',
+    {id:'intake', label:'지출결의 접수·영수증 OCR', role:'요청', kind:'input', actor:'aap', loopPhase:'Data',
       explain:'직원이 지출결의를 제출하면 경비시스템에서 케이스를 생성하고, 영수증 OCR로 금액·가맹점·일자를 추출해 슬롯을 채웁니다.',
       ops:[
         {g:1, comp:'경비심사 오케스트레이터 Agent', feed:'접수 건·경비시스템', out:'케이스 생성·슬롯 초기화', L:'L3', kind:'llm'},
         {g:1, comp:'영수증 OCR Agent', feed:'영수증 이미지', out:'금액·가맹점·일자 추출', L:'L3', kind:'llm', badge:'추출'},
         {g:1, comp:'경비시스템 커넥터', feed:'경비시스템(SaaS)', out:'결의 read', L:'L5', kind:'det'},
       ]},
-    {id:'check', label:'증빙·한도·중복·계정 점검', role:'AAP', kind:'auto', loopPhase:'Semantic', showCompose:true,
+    {id:'check', label:'증빙·한도·중복·계정 점검', role:'AAP', kind:'auto', actor:'aap', loopPhase:'Semantic', showCompose:true,
       explain:'적격증빙·직급 한도·중복/분할·법인카드 대사·계정 분류·정책 금지품목·청구 기한을 결정론 규칙으로 점검하고 위험점수를 산정합니다.',
       ops:[
         {g:1, comp:'적격증빙 점검 엔진', feed:'적격증빙 기준표 대조', out:'적격 여부·증빙 충족', L:'L4', kind:'det', badge:'결정론'},
@@ -212,8 +212,50 @@
   const surfaceSpec={ icon:'💳', title:'경비·지출', customer:'임직원/재무', owner:'재무·경비 담당',
     tabs:['개요','판정','처리','기록'], status:{}, perStep:{}, ws:[], hitl:{}, done:{} };
 
+  /* workload — 워크로드 스튜디오 카탈로그 미리보기·운영 라벨(다른 팩과 동일 계약). */
+  const WORKLOAD={
+    request:'"이 경비 청구 건 증빙·한도 확인하고 결재 올려줘"',
+    type:'경비·지출 심사', purpose:'적격증빙·직급 한도·중복/분할·계정·정책 금지를 점검해 자동승인·검토·반려를 판정하고 결재·전표',
+    outputs:['영수증 OCR 추출','증빙·한도 점검','위험 판정','위임전결 결재선','ERP 전표·지급'],
+    gates:'분기 판정·재무 회부 · 결재·전표 (책임이 걸린 곳만 담당자 확인 · HITL)',
+  };
+  /* planProduces — 단계별 산출물(워크로드 스튜디오 Execution Plan). stepId=work[].id. */
+  const PLAN_PRODUCES={ intake:['영수증 OCR 추출'], check:['증빙·한도·중복 점검','위험점수'],
+    route_gate:['분기 verdict(자동/검토/반려)'], commit:['ERP 전표·지급 반영'] };
+
+  /* 온톨로지(L4) — AAP가 경비·지출 심사 업무를 어떻게 이해하는지(객체·관계·단계별 사용). 도메인 고유 객체. */
+  const ONTOLOGY={
+    objects:[
+      {k:'ExpenseClaim', n:'ExpenseClaim(경비청구)', kind:'entity', a:['청구목적','경비유형','청구금액','지급수단'], on:['extract']},
+      {k:'Receipt', n:'Receipt(증빙)', kind:'document', a:['증빙유형','적격 여부','OCR 금액','신뢰도'], on:['ocr','check_evidence']},
+      {k:'ExpensePolicy', n:'ExpensePolicy(지출규정)', kind:'master', a:['직급 한도','금지품목','청구 기한'], on:['check_limit']},
+      {k:'Claimant', n:'Claimant(청구인)', kind:'master', a:['직급','부서','법인카드'], on:['reconcile_card']},
+      {k:'RiskFinding', n:'RiskFinding(점검판정)', kind:'event', a:['한도 초과','중복/분할','위험점수','verdict'], on:['detect_dup','route']},
+      {k:'Voucher', n:'Voucher(전표·정산)', kind:'event', a:['위임전결 결재선','ERP 전표','세무코드','지급 상태'], on:['approve_line','post_voucher']},
+    ],
+    touch:{ intake:['ExpenseClaim','Receipt'], check:['Receipt','ExpensePolicy','Claimant','RiskFinding'] },
+    relations:[
+      {from:'ExpenseClaim', label:'submitted-by', to:'Claimant', t:'ExpenseClaim —<em>submitted-by</em>→ Claimant'},
+      {from:'ExpenseClaim', label:'evidenced-by', to:'Receipt', t:'ExpenseClaim —<em>evidenced-by</em>→ Receipt'},
+      {from:'ExpenseClaim', label:'checked-against', to:'ExpensePolicy', t:'ExpenseClaim —<em>checked-against</em>→ ExpensePolicy'},
+      {from:'RiskFinding', label:'flags', to:'ExpenseClaim', t:'RiskFinding —<em>flags</em>→ ExpenseClaim'},
+      {from:'Voucher', label:'settles', to:'ExpenseClaim', t:'Voucher —<em>settles</em>→ ExpenseClaim'},
+    ],
+    actions:[
+      {key:'extract', n:'지출결의 추출', mode:'auto'},
+      {key:'ocr', n:'영수증 OCR', mode:'auto'},
+      {key:'check_evidence', n:'적격증빙 점검', mode:'auto'},
+      {key:'check_limit', n:'직급 한도·정책 점검', mode:'auto'},
+      {key:'reconcile_card', n:'법인카드 대사', mode:'auto'},
+      {key:'detect_dup', n:'중복·분할 탐지', mode:'auto'},
+      {key:'route', n:'분기 판정(자동/검토/반려)', mode:'auto'},
+      {key:'approve_line', n:'위임전결 결재', mode:'confirm'},
+      {key:'post_voucher', n:'ERP 전표 생성·지급 반영', mode:'confirm'},
+    ],
+  };
+
   (window.AAP_PACKS=window.AAP_PACKS||{}).expense={
-    id:'expense', label:'경비·지출',
+    id:'expense', label:'경비·지출', ontology:ONTOLOGY, workload:WORKLOAD, planProduces:PLAN_PRODUCES,
     flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE, gates:GATES, govern:GOVERN, seeds:SEEDS,
     /* ── 결정층 — 코어 evalCase 가 caseModel+knowledge 로 evaluate 실행. surface 함수 0줄 ── */
     caseModel:{ slots:SLOTS },

@@ -321,8 +321,39 @@
     {title:'고객사 정기 점검 회의', customer:'한빛테크', icon:'📅', request:'"한빛테크 월간 점검 회의 준비해줘"', status:'done'},
   ];
 
+  /* 온톨로지(L4) — AAP가 회의 업무를 어떻게 이해하는지(객체·관계·단계별 사용). 채용과 다른 객체 구조. */
+  const ONTOLOGY={
+    objects:[
+      {k:'Meeting', n:'Meeting(회의)', kind:'entity', a:['유형','목적','일정','진행 방식','상태'], on:['schedule_meeting','publish']},
+      {k:'Attendee', n:'Attendee(참석자)', kind:'entity', a:['이름','역할','소속','참석 확정'], on:['invite_attendee']},
+      {k:'Agenda', n:'Agenda(안건)', kind:'document', a:['안건 항목','순서','발표자'], on:['compose_agenda']},
+      {k:'Material', n:'Material(회의자료)', kind:'document', a:['자료명','출처','버전'], on:['collect_material']},
+      {k:'Decision', n:'Decision(결정사항)', kind:'event', a:['안건','결론','근거'], on:['capture_decision']},
+      {k:'ActionItem', n:'ActionItem(액션아이템)', kind:'event', a:['담당','기한','상태'], on:['assign_action']},
+    ],
+    touch:{ understand:['Meeting','Agenda'], compose:['Agenda','Material','Attendee'],
+            prepare:['Attendee','Material','Meeting'], share:['Decision','ActionItem','Meeting'] },
+    relations:[
+      {from:'Meeting', label:'has', to:'Agenda', t:'Meeting —<em>has</em>→ Agenda'},
+      {from:'Meeting', label:'invites', to:'Attendee', t:'Meeting —<em>invites</em>→ Attendee'},
+      {from:'Material', label:'attached-to', to:'Meeting', t:'Material —<em>attached-to</em>→ Meeting'},
+      {from:'Decision', label:'decided-in', to:'Meeting', t:'Decision —<em>decided-in</em>→ Meeting'},
+      {from:'ActionItem', label:'assigned-to', to:'Attendee', t:'ActionItem —<em>assigned-to</em>→ Attendee'},
+      {from:'ActionItem', label:'follows', to:'Decision', t:'ActionItem —<em>follows</em>→ Decision'},
+    ],
+    actions:[
+      {key:'compose_agenda', n:'안건 초안 작성', mode:'auto'},
+      {key:'collect_material', n:'회의자료 수집·정리', mode:'auto'},
+      {key:'invite_attendee', n:'참석자 초대·확정 요청', mode:'auto'},
+      {key:'schedule_meeting', n:'회의 일정·진행 방식 확정', mode:'confirm'},
+      {key:'capture_decision', n:'결정사항 기록', mode:'auto'},
+      {key:'assign_action', n:'액션아이템 배정', mode:'confirm'},
+      {key:'publish', n:'회의록 공유·발송', mode:'confirm'},
+    ],
+  };
+
   (window.AAP_PACKS=window.AAP_PACKS||{}).meeting={
-    id:'meeting', label:'회의',
+    id:'meeting', label:'회의', ontology:ONTOLOGY,
     times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
     io:{ inputs:[], editable:[], connectors:[] },   /* Pack Contract v2 · 2a 슬롯 예약(실동작 2c) */

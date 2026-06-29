@@ -146,7 +146,7 @@
      단계는 4개 핵심(접수·점검·판정·체결)으로 압축 — 단일 케이스형 결정 콘솔에 맞게.
      ======================================================================= */
   const FLOW=[
-    {id:'intake', label:'계약 건 접수·문서 추출', role:'요청', kind:'input', loopPhase:'Data',
+    {id:'intake', label:'계약 건 접수·문서 추출', role:'요청', kind:'input', actor:'aap', loopPhase:'Data',
       explain:'현업/구매가 계약 건을 접수하면 계약마스터에 케이스를 생성하고, SharePoint 계약서 PDF에서 금액·기간·자동갱신·조항을 추출해 슬롯을 채웁니다.',
       ops:[
         {g:1, comp:'계약심사 오케스트레이터 Agent', feed:'접수 건·계약마스터', out:'케이스 생성·슬롯 초기화', L:'L3', kind:'llm'},
@@ -154,7 +154,7 @@
           micro:['금액·기간·자동갱신·통지기한','준거법·관할·조항 목록'], detail:'스캔/이미지 PDF는 추출 신뢰도 저하 가능 → 신뢰도 슬롯 기록'},
         {g:1, comp:'SharePoint 파일 커넥터', feed:'문서저장소(온프레미스)', out:'PDF read', L:'L5', kind:'det'},
       ]},
-    {id:'check', label:'필수조항·독소·거래처·금액 점검', role:'AAP', kind:'auto', loopPhase:'Semantic', showCompose:true,
+    {id:'check', label:'필수조항·독소·거래처·금액 점검', role:'AAP', kind:'auto', actor:'aap', loopPhase:'Semantic', showCompose:true,
       explain:'필수조항 누락·독소조항·표준템플릿 편차·거래처 제재/신용·ERP 발주금액 정합을 결정론 규칙으로 점검하고 종합 위험점수를 산정합니다.',
       ops:[
         {g:1, comp:'필수조항 누락 점검 엔진', feed:'유형별 필수조항표 대조', out:'누락 목록 산출', L:'L4', kind:'det', badge:'결정론',
@@ -455,8 +455,49 @@
   const surfaceSpec={ icon:'🗂️', title:'계약 관리', customer:'현업/구매', owner:'법무·계약 담당',
     tabs:['개요','판정','처리','기록'], status:{}, perStep:{}, ws:[], hitl:{}, done:{} };
 
+  /* workload — 워크로드 스튜디오 카탈로그 미리보기·운영 라벨(다른 팩과 동일 계약). */
+  const WORKLOAD={
+    request:'"이번 매매계약 건 리스크 검토하고 결재 올려줘"',
+    type:'계약 심사·체결', purpose:'필수조항·독소조항·거래처·금액 리스크를 점검해 자동승인·법무검토·반려를 판정하고 결재·체결',
+    outputs:['계약 추출 슬롯','리스크 판정','법무검토 회부','위임전결 결재선','계약관리대장 등록'],
+    gates:'분기 판정·법무 회부 · 결재·체결 (책임이 걸린 곳만 담당자 확인 · HITL)',
+  };
+  /* planProduces — 단계별 산출물(워크로드 스튜디오 Execution Plan). stepId=work[].id. */
+  const PLAN_PRODUCES={ intake:['계약 추출 슬롯'], check:['리스크 판정·위험점수'],
+    route_gate:['분기 verdict(자동/검토/반려)'], commit:['결재·체결·대장 등록'] };
+
+  /* 온톨로지(L4) — AAP가 계약 심사 업무를 어떻게 이해하는지(객체·관계·단계별 사용). 도메인 고유 객체. */
+  const ONTOLOGY={
+    objects:[
+      {k:'Contract', n:'Contract(계약)', kind:'entity', a:['유형','금액','기간','자동갱신','상태'], on:['extract','register']},
+      {k:'Counterparty', n:'Counterparty(거래처)', kind:'master', a:['거래처명','사업자번호','제재 여부','신용등급'], on:['screen_party']},
+      {k:'Clause', n:'Clause(조항)', kind:'document', a:['필수조항','독소조항','준거법·관할'], on:['check_clause']},
+      {k:'RiskFinding', n:'RiskFinding(위험판정)', kind:'event', a:['위험유형','위험점수','등급','verdict'], on:['score_risk','route']},
+      {k:'LegalReview', n:'LegalReview(법무검토의견)', kind:'document', a:['회부 사유','검토의견','결론'], on:['legal_review']},
+      {k:'Approval', n:'Approval(결재·체결)', kind:'event', a:['위임전결 결재선','전자결재 상신','체결·대장 등록'], on:['approve_line']},
+    ],
+    touch:{ intake:['Contract','Clause'], check:['Clause','Counterparty','RiskFinding'] },
+    relations:[
+      {from:'Contract', label:'between', to:'Counterparty', t:'Contract —<em>between</em>→ Counterparty'},
+      {from:'Contract', label:'contains', to:'Clause', t:'Contract —<em>contains</em>→ Clause'},
+      {from:'RiskFinding', label:'found-in', to:'Clause', t:'RiskFinding —<em>found-in</em>→ Clause'},
+      {from:'RiskFinding', label:'triggers', to:'LegalReview', t:'RiskFinding —<em>triggers</em>→ LegalReview'},
+      {from:'Approval', label:'authorizes', to:'Contract', t:'Approval —<em>authorizes</em>→ Contract'},
+    ],
+    actions:[
+      {key:'extract', n:'계약서 추출·정규화', mode:'auto'},
+      {key:'check_clause', n:'필수조항·독소조항 점검', mode:'auto'},
+      {key:'screen_party', n:'거래처 제재·신용 점검', mode:'auto'},
+      {key:'score_risk', n:'종합 위험점수 산정', mode:'auto'},
+      {key:'route', n:'분기 판정(자동/검토/반려)', mode:'auto'},
+      {key:'legal_review', n:'법무 심층검토', mode:'confirm'},
+      {key:'approve_line', n:'위임전결 결재·체결·대장 등록', mode:'confirm'},
+      {key:'register', n:'계약관리대장 등록', mode:'auto'},
+    ],
+  };
+
   (window.AAP_PACKS=window.AAP_PACKS||{}).contract_a={
-    id:'contract_a', label:'계약 관리',
+    id:'contract_a', label:'계약 관리', ontology:ONTOLOGY, workload:WORKLOAD, planProduces:PLAN_PRODUCES,
     flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE, gates:GATES, govern:GOVERN, seeds:SEEDS,
     /* ── 결정층(N3 §D) — 코어 evalCase 가 caseModel+knowledge 로 evaluate 실행 ── */
     caseModel:{ slots:SLOTS },

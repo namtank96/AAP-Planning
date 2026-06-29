@@ -250,8 +250,38 @@
     {title:'데이터 차단 오작동 항의', customer:'고객 이도윤 · VOC-20455', icon:'🎧', request:'"한도 남았는데 데이터가 끊겼어요. 보상해 주세요."', status:'done'},
   ];
 
+  /* 온톨로지(L4) — AAP가 VOC 대응 업무를 어떻게 이해하는지(객체·관계·단계별 사용). 도메인 고유 객체. */
+  const ONTOLOGY={
+    objects:[
+      {k:'Customer', n:'Customer(고객)', kind:'master', a:['고객명','등급(VIP)','계약 상품','이전 VOC'], on:['lookup_history']},
+      {k:'VocTicket', n:'VocTicket(VOC 접수)', kind:'entity', a:['유형','채널','접수일','우선순위'], on:['classify','prioritize']},
+      {k:'ComplaintType', n:'ComplaintType(불만유형)', kind:'master', a:['유형코드','분류(요금/품질)','표준 대응','SLA']},
+      {k:'Compensation', n:'Compensation(보상)', kind:'event', a:['보상유형','금액','근거'], on:['assess_comp']},
+      {k:'Response', n:'Response(응대문서)', kind:'document', a:['응답 내용','채널','상태'], on:['draft_response','send_response']},
+      {k:'CaseHistory', n:'CaseHistory(처리이력)', kind:'event', a:['처리 단계','담당','일시'], on:['log_history']},
+    ],
+    touch:{ understand:['VocTicket','Customer','ComplaintType'], compose:['Customer','ComplaintType','Compensation'],
+            prepare:['Compensation','Response','CaseHistory'], share:['Response','CaseHistory','Customer'] },
+    relations:[
+      {from:'VocTicket', label:'raised-by', to:'Customer', t:'VocTicket —<em>raised-by</em>→ Customer'},
+      {from:'VocTicket', label:'classified-as', to:'ComplaintType', t:'VocTicket —<em>classified-as</em>→ ComplaintType'},
+      {from:'Compensation', label:'for', to:'VocTicket', t:'Compensation —<em>for</em>→ VocTicket'},
+      {from:'Response', label:'answers', to:'VocTicket', t:'Response —<em>answers</em>→ VocTicket'},
+      {from:'CaseHistory', label:'records', to:'VocTicket', t:'CaseHistory —<em>records</em>→ VocTicket'},
+    ],
+    actions:[
+      {key:'classify', n:'불만 유형 분류', mode:'auto'},
+      {key:'prioritize', n:'우선순위·VIP 판정', mode:'auto'},
+      {key:'lookup_history', n:'고객 이력·과금 조회', mode:'auto'},
+      {key:'assess_comp', n:'보상 산정(대응안)', mode:'confirm'},
+      {key:'draft_response', n:'응답 초안 작성', mode:'auto'},
+      {key:'send_response', n:'응답 발송', mode:'confirm'},
+      {key:'log_history', n:'처리이력·CRM 기록', mode:'auto'},
+    ],
+  };
+
   (window.AAP_PACKS=window.AAP_PACKS||{}).voc={
-    id:'voc', label:'VOC 대응',
+    id:'voc', label:'VOC 대응', ontology:ONTOLOGY,
     times:TIMES, products:PRODUCTS, flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE,
     workload:WORKLOAD, planProduces:PLAN_PRODUCES, gates:GATES, govern:GOVERN, seeds:SEEDS,
     io:{ inputs:[], editable:[], connectors:[] },   /* Pack Contract v2 · 2a 슬롯 예약(실동작 2c) */

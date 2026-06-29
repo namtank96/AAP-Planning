@@ -123,14 +123,14 @@
 
   /* ── flow — 단일 케이스형 결정 콘솔 4단계(접수·점검·판정·반영). 코어 strip/우측 레일이 ops 소비 ── */
   const FLOW=[
-    {id:'intake', label:'구매 건 접수·증빙 추출', role:'요청', kind:'input', loopPhase:'Data',
+    {id:'intake', label:'구매 건 접수·증빙 추출', role:'요청', kind:'input', actor:'aap', loopPhase:'Data',
       explain:'현업이 구매품의를 접수하면 전자조달에서 케이스를 채번하고, 견적 PDF·사양서에서 금액·견적·유효기간을 추출해 슬롯을 채웁니다.',
       ops:[
         {g:1, comp:'구매심사 오케스트레이터 Agent', feed:'접수 건·전자조달', out:'케이스 생성·슬롯 초기화', L:'L3', kind:'llm'},
         {g:1, comp:'견적 추출 Agent', feed:'견적 PDF·사양서', out:'금액·견적수·유효기간 추출', L:'L3', kind:'llm', badge:'추출'},
         {g:1, comp:'전자조달 커넥터', feed:'전자조달(자체구축 DB)', out:'품의 read', L:'L5', kind:'det'},
       ]},
-    {id:'check', label:'예산·벤더·증빙·단가 점검', role:'AAP', kind:'auto', loopPhase:'Semantic', showCompose:true,
+    {id:'check', label:'예산·벤더·증빙·단가 점검', role:'AAP', kind:'auto', actor:'aap', loopPhase:'Semantic', showCompose:true,
       explain:'예산 잔액·벤더 제재/신용·3견적 의무·사양 증빙·단가 편차·쪼개기 패턴을 결정론 규칙으로 점검하고 위험을 산정합니다.',
       ops:[
         {g:1, comp:'예산 점검 엔진', feed:'SAP(FI) 예산마스터 잔액', out:'발주 후 잔액·소진율', L:'L4', kind:'det', badge:'결정론'},
@@ -229,8 +229,49 @@
   const surfaceSpec={ icon:'🧾', title:'구매·조달', customer:'현업/구매', owner:'구매·재무 담당',
     tabs:['개요','판정','처리','기록'], status:{}, perStep:{}, ws:[], hitl:{}, done:{} };
 
+  /* workload — 워크로드 스튜디오 카탈로그 미리보기·운영 라벨(다른 팩과 동일 계약). */
+  const WORKLOAD={
+    request:'"이번 발주 건 예산·견적 확인하고 결재 올려줘"',
+    type:'구매·조달 심사', purpose:'예산 잔액·벤더 리스크·3견적·단가 편차·쪼개기를 점검해 자동승인·구매검토·반려를 판정하고 결재·발주',
+    outputs:['견적 추출 슬롯','예산·벤더 점검','위험 판정','위임전결 결재선','PO 발주·ERP 반영'],
+    gates:'분기 판정·구매 회부 · 결재·발주 (책임이 걸린 곳만 담당자 확인 · HITL)',
+  };
+  /* planProduces — 단계별 산출물(워크로드 스튜디오 Execution Plan). stepId=work[].id. */
+  const PLAN_PRODUCES={ intake:['견적 추출 슬롯'], check:['예산·벤더·증빙 점검','위험 판정'],
+    route_gate:['분기 verdict(자동/검토/반려)'], commit:['PO 발주·ERP 반영'] };
+
+  /* 온톨로지(L4) — AAP가 구매·조달 심사 업무를 어떻게 이해하는지(객체·관계·단계별 사용). 도메인 고유 객체. */
+  const ONTOLOGY={
+    objects:[
+      {k:'Purchase', n:'Purchase(구매건)', kind:'entity', a:['구매유형','발주금액','납기','상태'], on:['extract','issue_po']},
+      {k:'Vendor', n:'Vendor(공급사)', kind:'master', a:['공급사명','사업자번호','거래 상태','신용등급'], on:['screen_vendor']},
+      {k:'Quote', n:'Quote(견적)', kind:'document', a:['견적 수','유효기간','단가 편차'], on:['check_quote']},
+      {k:'Budget', n:'Budget(예산)', kind:'master', a:['예산코드','잔액','소진율'], on:['check_budget']},
+      {k:'RiskFinding', n:'RiskFinding(위험판정)', kind:'event', a:['쪼개기 점수','위험요인','verdict'], on:['detect_split','route']},
+      {k:'Approval', n:'Approval(결재·발주)', kind:'event', a:['위임전결 결재선','전자결재 상신','PO 발번'], on:['approve_line']},
+    ],
+    touch:{ intake:['Purchase','Quote'], check:['Budget','Vendor','Quote','RiskFinding'] },
+    relations:[
+      {from:'Purchase', label:'to', to:'Vendor', t:'Purchase —<em>to</em>→ Vendor'},
+      {from:'Quote', label:'for', to:'Purchase', t:'Quote —<em>for</em>→ Purchase'},
+      {from:'Purchase', label:'charged-to', to:'Budget', t:'Purchase —<em>charged-to</em>→ Budget'},
+      {from:'RiskFinding', label:'flags', to:'Purchase', t:'RiskFinding —<em>flags</em>→ Purchase'},
+      {from:'Approval', label:'authorizes', to:'Purchase', t:'Approval —<em>authorizes</em>→ Purchase'},
+    ],
+    actions:[
+      {key:'extract', n:'견적·사양 추출', mode:'auto'},
+      {key:'check_budget', n:'예산 잔액·소진 점검', mode:'auto'},
+      {key:'screen_vendor', n:'벤더 제재·신용 점검', mode:'auto'},
+      {key:'check_quote', n:'3견적·증빙 점검', mode:'auto'},
+      {key:'detect_split', n:'쪼개기 패턴 탐지', mode:'auto'},
+      {key:'route', n:'분기 판정(자동/검토/반려)', mode:'auto'},
+      {key:'approve_line', n:'위임전결 결재', mode:'confirm'},
+      {key:'issue_po', n:'PO 발주·ERP 반영', mode:'confirm'},
+    ],
+  };
+
   (window.AAP_PACKS=window.AAP_PACKS||{}).procurement={
-    id:'procurement', label:'구매·조달',
+    id:'procurement', label:'구매·조달', ontology:ONTOLOGY, workload:WORKLOAD, planProduces:PLAN_PRODUCES,
     flow:FLOW, work:FLOW, components:COMPONENTS, compose:COMPOSE, gates:GATES, govern:GOVERN, seeds:SEEDS,
     /* ── 결정층 — 코어 evalCase 가 caseModel+knowledge 로 evaluate 실행. surface 함수 0줄 ── */
     caseModel:{ slots:SLOTS },
