@@ -2348,10 +2348,15 @@ function renderOntology(P){
   }
   const objs=o.objects||[], rels=o.relations||[], acts=o.actions||[];
   const actByKey={}; acts.forEach(a=>{ if(a.key)actByKey[a.key]=a; });
-  /* ── 결정론적 원형 레이아웃: 객체 노드를 원 위에 균등 배치(노드 ≥1) ── */
+  /* ── 결정론적 원형 레이아웃: 객체 노드를 원 위에 균등 배치(노드 ≥1) ──
+     반지름 R 을 노드 수(N)에 비례시켜 인접 노드 현(弦) 간격이 노드 폭을 넘게 → 6개여도 겹침 0.
+     캔버스 W·H 는 R+노드 반치수에 맞춰 산출(빈 여백·잘림 방지, 도메인 객체 수 5~6 균일). */
   const N=objs.length;
-  const W=520, H=Math.max(300, 230+N*8), cx=W/2, cy=H/2, R=Math.min(W,H)/2-90;
   const NW=132, NH=46;
+  const R=N<=1?0:Math.max(118,Math.round(N*26));
+  const W=Math.max(520,2*(R+NW/2)+48);
+  const H=Math.max(300,2*(R+NH)+96);
+  const cx=W/2, cy=H/2;
   const pos={}; const nodes=objs.map((x,i)=>{
     const ang=(-Math.PI/2)+(i*2*Math.PI/Math.max(1,N));
     const x0=N===1?cx:cx+R*Math.cos(ang), y0=N===1?cy:cy+R*Math.sin(ang);
@@ -2377,7 +2382,8 @@ function renderOntology(P){
     const badges=onAct.map((a,j)=>{ const m=a.mode==='confirm'?'confirm':'auto';
       return `<circle class="onto-badge ${m}" cx="${(x-NW/2+12+j*13).toFixed(1)}" cy="${(y+NH/2-7).toFixed(1)}" r="4"/>`; }).join('');
     const nm=dcText(nd.obj.n,'onto.obj');
-    return `<g class="onto-node" data-onode="${i}" tabindex="0">`+
+    const km=KIND_M[nd.obj.kind]?nd.obj.kind:'entity';   /* 노드 테두리=kind 색(카드와 동일·5타입 토큰 재사용) */
+    return `<g class="onto-node ${KIND_M[km].cls}" data-onode="${i}" tabindex="0">`+
       `<rect x="${(x-NW/2).toFixed(1)}" y="${(y-NH/2).toFixed(1)}" width="${NW}" height="${NH}" rx="10"/>`+
       `<text class="onto-ntl" x="${x.toFixed(1)}" y="${(y-3).toFixed(1)}">${nm}</text>`+
       `<text class="onto-nattr" x="${x.toFixed(1)}" y="${(y+12).toFixed(1)}">속성 ${(nd.obj.a||[]).length} · Action ${onAct.length}</text>`+
@@ -2394,7 +2400,10 @@ function renderOntology(P){
     `<defs><marker id="ontoArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="#2dd4bf" opacity="0.55"/></marker></defs>`+
     `<g class="onto-edges">${edgeP}</g>${nodeN}</svg></div>`+
     `<div class="onto-detail" id="ontoDetail"><span class="onto-hint">노드를 누르면 속성·Action 상세가 표시됩니다.</span></div>`+
-    `<div class="plg-leg"><span class="plg-lg"><span class="onto-badge-leg auto"></span>자동</span><span class="plg-lg"><span class="onto-badge-leg confirm"></span>사람 확인</span><span class="plg-leg-note">객체=노드 · 관계=엣지 · 배지=객체에 걸린 Action</span></div></div>`;
+    `<div class="plg-leg">`+
+    Object.keys(KIND_M).map(k=>`<span class="plg-lg"><span class="onto-klg ${KIND_M[k].cls}"></span>${KIND_M[k].ko}</span>`).join('')+
+    `<span class="plg-lg dimv"><span class="onto-badge-leg auto"></span>자동</span><span class="plg-lg dimv"><span class="onto-badge-leg confirm"></span>사람 확인</span>`+
+    `<span class="plg-leg-note">사각 테두리=객체 유형 · 점=Action · 관계=엣지</span></div></div>`;
   /* ── 카드 뷰(기본) — 업무 객체 카드(kind 색)·관계·단계별 만지는 객체·객체 드릴(AAP_VIZ.ontologyHtml 급) ── */
   const objByKey=k=>objs.filter(x=>_ontoKey(x)===k)[0];
   const objName=k=>{ const x=objByKey(k); return x?dcText(x.n,'onto.obj'):k; };
