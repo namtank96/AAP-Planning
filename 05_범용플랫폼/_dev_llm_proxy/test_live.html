@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAP 라이브 분해 — 체인 검증</title>
+<style>
+body{font-family:system-ui,"Malgun Gothic",sans-serif;background:#f4f7fb;color:#0f172a;margin:0;padding:22px;}
+.wrap{max-width:1080px;margin:0 auto;}
+h1{font-size:17px;margin:0 0 4px;}
+.sub{color:#64748b;font-size:12.5px;margin-bottom:14px;}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;margin-bottom:14px;}
+.status.on{color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;}
+.status.off{color:#dc2626;background:#fef2f2;border:1px solid #fecaca;}
+textarea{width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;font:inherit;font-size:13px;color:#0f172a;resize:vertical;min-height:90px;box-sizing:border-box;}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px;}
+.ex{font-size:11.5px;color:#334155;background:#fff;border:1px solid #e2e8f0;border-radius:999px;padding:6px 11px;cursor:pointer;}
+.ex:hover{border-color:#99f6e4;background:#f0fdfa;}
+.go{margin-top:8px;border:none;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:700;background:#0d9488;color:#fff;cursor:pointer;}
+.go:disabled{opacity:.55;cursor:default;}
+.note{font-size:12px;color:#64748b;margin-top:10px;}
+#out{margin-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AAP 라이브 분해 — 체인 검증</h1>
+  <div class="sub">프록시(localhost:8787) + 어댑터(llm_breakdown.js) + 공용 모듈(viz_decomp.js) end-to-end. 정본=maestro(동일 체인).</div>
+  <div id="status" class="status off">프록시 확인 중…</div>
+  <textarea id="text" placeholder="업무 설명을 입력하세요 (예: 고객 환불 요청을 접수하면 주문·결제·배송 상태를 확인하고 환불 가능 여부를 판단해 승인하고 PG·ERP에 반영한 뒤 고객에게 통지한다. 고액·부분환불은 책임자 승인이 필요하다.)"></textarea>
+  <div class="row" id="examples"></div>
+  <button class="go" id="go">▶ 라이브 분해</button>
+  <div class="note" id="note"></div>
+  <div id="out"></div>
+</div>
+
+<script src="../app/core/viz_decomp.js"></script>
+<script src="../app/core/llm_breakdown.js"></script>
+<script>
+var EX=[
+  '고객 환불 요청을 접수하면 주문·결제·배송 상태를 확인하고 환불 가능 여부를 판단해 승인하고 PG·ERP에 반영한 뒤 고객에게 통지한다. 고액·부분환불은 책임자 승인이 필요하다.',
+  '병원 보험 청구서가 접수되면 진료내역·약관·한도를 대조해 지급 여부와 금액을 산정하고, 이상 청구는 심사로 보내며 승인 건은 지급 시스템에 반영한다.',
+  '신규 입사자 온보딩 요청이 오면 계정·장비·권한을 부서·직무 기준으로 발급하고 보안 교육을 배정한 뒤 인사·IT 시스템에 기록한다.'
+];
+var $=function(id){return document.getElementById(id);};
+$('examples').innerHTML=EX.map(function(e,i){return '<button class="ex" data-i="'+i+'">예시 '+(i+1)+'</button>';}).join('');
+$('examples').querySelectorAll('.ex').forEach(function(b){b.onclick=function(){$('text').value=EX[+b.dataset.i];};});
+
+function refreshStatus(){
+  window.AAP_LLM_BREAKDOWN.available().then(function(ok){
+    var s=$('status');
+    if(ok){s.className='status on';s.textContent='● 프록시 연결됨 ('+window.AAP_LLM_BREAKDOWN.endpoint+')';}
+    else{s.className='status off';s.textContent='● 프록시 꺼짐 — _dev_llm_proxy 에서 npm start 후 새로고침 (지금은 라이브 호출 불가)';}
+  });
+}
+refreshStatus();
+
+$('go').onclick=function(){
+  var text=$('text').value.trim();
+  if(!text){$('note').textContent='업무 설명을 입력하세요.';return;}
+  $('go').disabled=true;$('go').textContent='분해 중…';$('note').textContent='';
+  var t0=Date.now();
+  window.AAP_LLM_BREAKDOWN.run(text).then(function(data){
+    $('note').textContent='✓ 라이브 분해 완료 ['+(data._model||'')+'] '+(Date.now()-t0)+'ms · '+(data.work?data.work.length:0)+'단계';
+    window.AAP_VIZ.mount('out',data);
+  }).catch(function(e){
+    $('note').innerHTML='✗ 실패: '+e.message+' — 프록시(npm start)·키 확인. (app/에선 이 자리에서 결정론 폴백)';
+  }).then(function(){$('go').disabled=false;$('go').textContent='▶ 라이브 분해';});
+};
+</script>
+</body>
+</html>

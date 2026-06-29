@@ -1,0 +1,13 @@
+{
+  "name": "aap-decomp-proxy",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "AAP 분해 프록시 — localhost dev LLM proxy (Phase 2). 요청 텍스트 → Claude 구조화 분해 JSON.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest"
+  }
+}
